@@ -1,0 +1,144 @@
+﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using System.Collections.Concurrent;
+using System.Text;
+using System.Text.Json;
+
+using JsonException = System.Text.Json.JsonException;
+using JsonSerializer = System.Text.Json.JsonSerializer;
+
+namespace Midjourney.Infrastructure.Services
+{
+    /// <summary>
+    /// 通知服务实现类。
+    /// </summary>
+    public class NotifyServiceImpl : INotifyService
+    {
+        private static readonly JsonSerializerOptions _jsonSerializerOptions = new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        };
+
+        private readonly ILogger<NotifyServiceImpl> _logger;
+        private readonly ConcurrentDictionary<string, string> _taskStatusMap = new ConcurrentDictionary<string, string>();
+        private readonly HttpClient _httpClient;
+        private readonly SemaphoreSlim _semaphoreSlim;
+        private readonly int _notifyPoolSize;
+
+        public NotifyServiceImpl(
+            IOptions<ProxyProperties> properties,
+            ILogger<NotifyServiceImpl> logger,
+            HttpClient httpClient)
+        {
+            _logger = logger;
+            _httpClient = httpClient;
+            _notifyPoolSize = properties.Value.NotifyPoolSize;
+
+            var max = Math.Max(1, Math.Min(_notifyPoolSize, 12));
+
+            _semaphoreSlim = new SemaphoreSlim(max, max);
+        }
+
+        public async Task NotifyTaskChange(TaskInfo task)
+        {
+            string notifyHook = task.GetProperty<string>(Constants.TASK_PROPERTY_NOTIFY_HOOK, default);
+            if (string.IsNullOrWhiteSpace(notifyHook))
+            {
+                return;
+            }
+
+            string taskId = task.Id;
+            string statusStr = $"{task.Status}:{task.Progress}";
+            _logger.LogTrace("Wait notify task change, task: {0}({1}), hook: {2}", taskId, statusStr, notifyHook);
+
+            try
+            {
+                string paramsStr = JsonSerializer.Serialize(task, _jsonSerializerOptions);
+                await Task.Run(async () =>
+                {
+                    try
+                    {
+                        await ExecuteNotify(taskId, statusStr, notifyHook, paramsStr);
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.LogWarning("Notify task change error, task: {0}({1}), hook: {2}, msg: {3}", taskId, statusStr, notifyHook, e.Message);
+                    }
+                });
+            }
+            catch (JsonException e)
+            {
+                _logger.LogError(e, e.Message);
+            }
+        }
+
+        private async Task ExecuteNotify(string taskId, string currentStatusStr, string notifyHook, string paramsStr)
+        {
+            await _semaphoreSlim.WaitAsync();
+
+            try
+            {
+                if (_taskStatusMap.TryGetValue(taskId, out var existStatusStr))
+                {
+                    int compare = CompareStatusStr(currentStatusStr, existStatusStr);
+                    if (compare <= 0)
+                    {
+                        // 忽略消息
+                        //_logger.LogDebug("Ignore this change, task: {0}({1})", taskId, currentStatusStr);
+                        return;
+                    }
+                }
+
+                _taskStatusMap[taskId] = currentStatusStr;
+            }
+            finally
+            {
+                _semaphoreSlim.Release();
+            }
+
+            _logger.LogDebug("Push task change, task: {0}({1}), hook: {2}", taskId, currentStatusStr, notifyHook);
+
+            HttpResponseMessage response = await PostJson(notifyHook, paramsStr);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Notify task change fail, task: {0}({1}), hook: {2}, code: {3}, msg: {4}", taskId, currentStatusStr, notifyHook, (int)response.StatusCode, response.Content.ReadAsStringAsync().Result);
+            }
+        }
+
+        private async Task<HttpResponseMessage> PostJson(string notifyHook, string paramsJson)
+        {
+            var content = new StringContent(paramsJson, Encoding.UTF8, "application/json");
+            return await _httpClient.PostAsync(notifyHook, content);
+        }
+
+        private int CompareStatusStr(string statusStr1, string statusStr2)
+        {
+            if (statusStr1 == statusStr2)
+            {
+                return 0;
+            }
+
+            float o1 = ConvertOrder(statusStr1);
+            float o2 = ConvertOrder(statusStr2);
+            return o1.CompareTo(o2);
+        }
+
+        private float ConvertOrder(string statusStr)
+        {
+            var split = statusStr.Split(':');
+            TaskStatus status = Enum.Parse<TaskStatus>(split[0]);
+            if (status != TaskStatus.IN_PROGRESS || split.Length == 1)
+            {
+                return status.GetOrder();
+            }
+
+            string progress = split[1];
+            if (progress.EndsWith("%"))
+            {
+                return status.GetOrder() + float.Parse(progress.TrimEnd('%')) / 100;
+            }
+
+            return status.GetOrder();
+        }
+    }
+}

@@ -1,0 +1,41 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.8.34330.188
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Midjourney.API", "src\Midjourney.API\Midjourney.API.csproj", "{D58E9E83-1F78-4E72-AE5B-C31FB9199F31}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Midjourney.Infrastructure", "src\Midjourney.Infrastructure\Midjourney.Infrastructure.csproj", "{6812FA3A-CB56-42A2-BA01-3D31C36E0AFB}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "doc", "doc", "{D2283666-6952-4C0C-AF8C-CAC635CBD68D}"
+	ProjectSection(SolutionItems) = preProject
+		docs\api.md = docs\api.md
+		CHANGELOG.md = CHANGELOG.md
+		docs\config.md = docs\config.md
+		docs\discord-params.md = docs\discord-params.md
+		docs\docker-start.md = docs\docker-start.md
+		README.md = README.md
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D58E9E83-1F78-4E72-AE5B-C31FB9199F31}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D58E9E83-1F78-4E72-AE5B-C31FB9199F31}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D58E9E83-1F78-4E72-AE5B-C31FB9199F31}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D58E9E83-1F78-4E72-AE5B-C31FB9199F31}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6812FA3A-CB56-42A2-BA01-3D31C36E0AFB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6812FA3A-CB56-42A2-BA01-3D31C36E0AFB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6812FA3A-CB56-42A2-BA01-3D31C36E0AFB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6812FA3A-CB56-42A2-BA01-3D31C36E0AFB}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {2B9B805F-CE67-43CA-B757-F4A3F1CF72AD}
+	EndGlobalSection
+EndGlobal

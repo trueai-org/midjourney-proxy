@@ -1,0 +1,54 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="IdGen" Version="3.0.7" />
+		<PackageReference Include="LiteDB" Version="5.0.20" />
+		<PackageReference Include="RestSharp" Version="110.2.0" />
+		<PackageReference Include="Discord.Net" Version="3.15.2" />
+		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+		<PackageReference Include="Swashbuckle.AspNetCore.Annotations" Version="6.6.2" />
+		<PackageReference Include="Serilog" Version="3.1.1" />
+		<PackageReference Include="Serilog.Extensions.Hosting" Version="8.0.0" />
+		<PackageReference Include="Serilog.Extensions.Logging" Version="8.0.0" />
+		<PackageReference Include="Serilog.Settings.Configuration" Version="8.0.0" />
+		<PackageReference Include="Serilog.Sinks.Console" Version="5.0.1" />
+		<PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
+		<PackageReference Include="UAParser" Version="3.1.47" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Content Remove="Resources\ApiParams\blend.json" />
+		<Content Remove="Resources\ApiParams\describe.json" />
+		<Content Remove="Resources\ApiParams\imagine.json" />
+		<Content Remove="Resources\ApiParams\message.json" />
+		<Content Remove="Resources\ApiParams\reroll.json" />
+		<Content Remove="Resources\ApiParams\upscale.json" />
+		<Content Remove="Resources\ApiParams\variation.json" />
+		<Content Remove="Resources\ApiParams\action.json" />
+		<Content Remove="Resources\mime.types" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<EmbeddedResource Include="Resources\ApiParams\reroll.json" />
+		<EmbeddedResource Include="Resources\ApiParams\upscale.json" />
+		<EmbeddedResource Include="Resources\ApiParams\action.json" />
+		<EmbeddedResource Include="Resources\ApiParams\variation.json" />
+		<EmbeddedResource Include="Resources\ApiParams\blend.json" />
+		<EmbeddedResource Include="Resources\ApiParams\describe.json" />
+		<EmbeddedResource Include="Resources\ApiParams\imagine.json" />
+		<EmbeddedResource Include="Resources\ApiParams\message.json" />
+		<EmbeddedResource Include="Resources\mime.types" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Update="Resources\bannedWords.txt">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </None>
+	</ItemGroup>
+	
+</Project>
