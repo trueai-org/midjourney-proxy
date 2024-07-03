@@ -1,6 +1,8 @@
 # Midjourney Proxy
 
-MidJourney api 的 C# 客户端。
+**开发进行中，即将发布正式版，敬请期待！**
+
+Midjourney api 的 C# 客户端。
 
 完全开源，不会存在部分开源或闭源的可能，欢迎 PR。
 
