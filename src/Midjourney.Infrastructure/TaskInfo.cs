@@ -1,8 +1,4 @@
-﻿using Discord;
-using LiteDB;
-using Midjourney.Infrastructure.Domain;
-using Midjourney.Infrastructure.Models;
-using Midjourney.Infrastructure.Services;
+﻿using Midjourney.Infrastructure.Domain;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace Midjourney.Infrastructure
