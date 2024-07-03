@@ -38,7 +38,6 @@ Midjourney api 的 C# 版本。
 
 ## 相关文档
 1. [API接口说明](./docs/api.md)
-2. [版本更新记录](https://github.com/novicezk/midjourney-proxy/wiki/%E6%9B%B4%E6%96%B0%E8%AE%B0%E5%BD%95)
 
 ## 注意事项
 1. 作图频繁等行为，可能会触发midjourney账号警告，请谨慎使用
