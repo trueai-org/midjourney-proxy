@@ -1,4 +1,4 @@
-﻿namespace Midjourney.API
+﻿namespace Midjourney.Infrastructure
 {
     /// <summary>
     /// 逻辑异常

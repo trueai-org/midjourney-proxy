@@ -1,9 +1,7 @@
 ﻿using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.LoadBalancer;
-using Midjourney.Infrastructure.Result;
 using Midjourney.Infrastructure.Util;
 using Serilog;
-using System.Diagnostics;
 
 namespace Midjourney.Infrastructure.Services
 {

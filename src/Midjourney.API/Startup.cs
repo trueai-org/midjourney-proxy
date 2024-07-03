@@ -1,4 +1,5 @@
 ﻿global using Midjourney.Infrastructure;
+global using Midjourney.Infrastructure.Models;
 
 using Microsoft.AspNetCore.Mvc;
 using Serilog;

@@ -1,5 +1,4 @@
 ﻿using Midjourney.Infrastructure.Domain;
-using Midjourney.Infrastructure.Result;
 using Midjourney.Infrastructure.Services;
 
 namespace Midjourney.Infrastructure.LoadBalancer

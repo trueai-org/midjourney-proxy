@@ -1,6 +1,4 @@
-﻿using LiteDB;
-using Microsoft.Extensions.DependencyInjection;
-using Midjourney.Infrastructure.Handle;
+﻿using Midjourney.Infrastructure.Handle;
 using Midjourney.Infrastructure.LoadBalancer;
 using Midjourney.Infrastructure.Services;
 
@@ -27,7 +25,9 @@ namespace Midjourney.API
             services.AddSingleton<ITranslateService, BaiduTranslateService>();
 
             // 存储服务
+            // 内存
             //services.AddSingleton<ITaskStoreService, InMemoryTaskStoreServiceImpl>();
+            // LiteDB
             services.AddSingleton<ITaskStoreService>(new LiteDBRepository("data/mj.db"));
 
             // 账号负载均衡服务

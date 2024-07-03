@@ -1,6 +1,4 @@
-﻿using Midjourney.Infrastructure.Result;
-
-namespace Midjourney.Infrastructure.Services
+﻿namespace Midjourney.Infrastructure.Services
 {
     /// <summary>
     /// Discord服务接口，定义了与Discord服务交互的基本方法。

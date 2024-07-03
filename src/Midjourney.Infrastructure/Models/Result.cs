@@ -1,4 +1,4 @@
-﻿namespace Midjourney.API
+﻿namespace Midjourney.Infrastructure.Models
 {
     /// <summary>
     /// 结果

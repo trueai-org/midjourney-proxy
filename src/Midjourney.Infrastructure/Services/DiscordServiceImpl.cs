@@ -1,5 +1,4 @@
 ﻿using Midjourney.Infrastructure.Domain;
-using Midjourney.Infrastructure.Result;
 using Newtonsoft.Json.Linq;
 using Serilog;
 using System.Net.Http.Headers;

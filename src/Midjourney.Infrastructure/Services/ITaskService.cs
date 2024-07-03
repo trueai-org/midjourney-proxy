@@ -1,5 +1,4 @@
 ﻿using Midjourney.Infrastructure.Dto;
-using Midjourney.Infrastructure.Result;
 
 namespace Midjourney.Infrastructure.Services
 {

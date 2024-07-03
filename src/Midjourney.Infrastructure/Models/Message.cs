@@ -1,4 +1,4 @@
-﻿namespace Midjourney.Infrastructure.Result
+﻿namespace Midjourney.Infrastructure.Models
 {
     /// <summary>
     /// 通用消息类，用于封装返回结果。

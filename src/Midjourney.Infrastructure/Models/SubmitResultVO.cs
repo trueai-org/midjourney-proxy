@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json;
 
-namespace Midjourney.Infrastructure.Result
+namespace Midjourney.Infrastructure.Models
 {
     /// <summary>
     /// 提交结果类。

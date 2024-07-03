@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Midjourney.Infrastructure.Dto;
-using Midjourney.Infrastructure.Result;
 using Midjourney.Infrastructure.Services;
 using Midjourney.Infrastructure.Util;
 using System.Text.RegularExpressions;
