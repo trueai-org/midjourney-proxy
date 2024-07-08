@@ -65,6 +65,12 @@ docker run --name mjproxy -d --restart=always \
  registry.cn-guangzhou.aliyuncs.com/trueai-org/midjourney-proxy
 ```
 
+> 配置使用
+
+启动 docker 后，配置代理为 `http://ip:8081/mj` 即可
+
+![示例](./docs/screenshots/chrome_EDzoztHa2b.png)
+
 ## 相关文档
 1. [API接口说明](./docs/api.md)
 
