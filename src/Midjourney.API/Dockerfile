@@ -9,6 +9,7 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["src/Midjourney.API/Midjourney.API.csproj", "src/Midjourney.API/"]
+COPY ["src/Midjourney.Infrastructure/Midjourney.Infrastructure.csproj", "src/Midjourney.Infrastructure/"]
 RUN dotnet restore "./src/Midjourney.API/./Midjourney.API.csproj"
 COPY . .
 WORKDIR "/src/src/Midjourney.API"

@@ -1,0 +1,34 @@
+name: Alibaba Cloud Registry Docker Image CI
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  push_to_acr:
+    name: Push Docker image to Alibaba Cloud Registry
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+
+      - name: Log in to Alibaba Cloud Registry
+        run: |
+          echo "${{ secrets.ACR_PASSWORD }}" | docker login --username="${{ secrets.ACR_USERNAME }}" --password-stdin ${{ secrets.ACR_REGISTRY }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v1
+        with:
+          images: ${{ secrets.ACR_REGISTRY }}/trueai-org/midjourney-proxy
+
+      - name: Build and push Docker image to Alibaba Cloud Registry
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: ./src/Midjourney.API/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.ACR_REGISTRY }}/trueai-org/midjourney-proxy:${{ steps.meta.outputs.version }}
+            ${{ secrets.ACR_REGISTRY }}/trueai-org/midjourney-proxy:latest
+          labels: ${{ steps.meta.outputs.labels }}
