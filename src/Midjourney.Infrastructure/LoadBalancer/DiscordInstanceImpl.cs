@@ -106,17 +106,47 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     Thread.Sleep(100);
                 }
 
-                // 允许同时执行 N 个信号量的任务
-                while (_queueTasks.TryDequeue(out var info))
-                {
-                    // 判断是否还有资源可用
-                    while (!_semaphoreSlimLock.TryWait(100))
-                    {
-                        // 等待
-                        Thread.Sleep(100);
-                    }
+                //// 允许同时执行 N 个信号量的任务
+                //while (_queueTasks.TryDequeue(out var info))
+                //{
+                //    // 判断是否还有资源可用
+                //    while (!_semaphoreSlimLock.TryWait(100))
+                //    {
+                //        // 等待
+                //        Thread.Sleep(100);
+                //    }
 
-                    _taskFutureMap[info.Item1.Id] = ExecuteTaskAsync(info.Item1, info.Item2);
+                //    _taskFutureMap[info.Item1.Id] = ExecuteTaskAsync(info.Item1, info.Item2);
+                //}
+
+                // 允许同时执行 N 个信号量的任务
+                while (true)
+                {
+                    if (_queueTasks.TryPeek(out var info))
+                    {
+                        // 判断是否还有资源可用
+                        if (_semaphoreSlimLock.TryWait(100))
+                        {
+                            // 从队列中移除任务，并开始执行
+                            if (_queueTasks.TryDequeue(out info))
+                            {
+                                _taskFutureMap[info.Item1.Id] = ExecuteTaskAsync(info.Item1, info.Item2);
+
+                                // 等待
+                                Thread.Sleep(10);
+                            }
+                        }
+                        else
+                        {
+                            // 如果没有可用资源，等待
+                            Thread.Sleep(100);
+                        }
+                    }
+                    else
+                    {
+                        // 队列为空，退出循环
+                        break;
+                    }
                 }
 
                 // 重新设置信号
@@ -134,9 +164,29 @@ namespace Midjourney.Infrastructure.LoadBalancer
             SaveAndNotify(task);
 
             // 判断 _queueTasks 队列中是否存在指定任务，如果有则移除
+            //if (_queueTasks.Any(c => c.Item1.Id == task.Id))
+            //{
+            //    _queueTasks = new ConcurrentQueue<(TaskInfo, Func<Task<Message>>)>(_queueTasks.Where(c => c.Item1.Id != task.Id));
+            //}
+
+            // 判断 _queueTasks 队列中是否存在指定任务，如果有则移除
+            // 使用线程安全的方式移除
             if (_queueTasks.Any(c => c.Item1.Id == task.Id))
             {
-                _queueTasks = new ConcurrentQueue<(TaskInfo, Func<Task<Message>>)>(_queueTasks.Where(c => c.Item1.Id != task.Id));
+                // 移除 _queueTasks 队列中指定的任务
+                var tempQueue = new ConcurrentQueue<(TaskInfo, Func<Task<Message>>)>();
+
+                // 将不需要移除的元素加入到临时队列中
+                while (_queueTasks.TryDequeue(out var item))
+                {
+                    if (item.Item1.Id != task.Id)
+                    {
+                        tempQueue.Enqueue(item);
+                    }
+                }
+
+                // 交换队列引用
+                _queueTasks = tempQueue;
             }
         }
 
@@ -156,13 +206,24 @@ namespace Midjourney.Infrastructure.LoadBalancer
         {
             _taskStoreService.Save(info);
 
-            int currentWaitNumbers = _queueTasks.Count;
+            // 在任务提交时，前面的的任务数量
+            var currentWaitNumbers = _queueTasks.Count;
+
             try
             {
                 _queueTasks.Enqueue((info, discordSubmit));
 
                 // 通知后台服务有新的任务
                 _mre.Set();
+
+                //// 当执行中的任务没有满时，重新计算队列中的任务数量
+                //if (_runningTasks.Count < _account.CoreSize)
+                //{
+                //    // 等待 10ms 检查
+                //    Thread.Sleep(10);
+                //}
+
+                //currentWaitNumbers = _queueTasks.Count;
 
                 if (currentWaitNumbers == 0)
                 {
