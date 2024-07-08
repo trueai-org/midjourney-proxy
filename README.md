@@ -38,6 +38,33 @@ Midjourney api 的 C# 版本。
 - mj.translate-way: 中文prompt翻译成英文的方式，可选null(默认)、baidu、gpt
 - 更多配置查看 [配置项](./docs/config.md)
 
+## 安装与使用
+
+### 快速启动
+
+> Docker 版本
+
+```bash
+# 阿里云镜像（推荐国内使用）
+docker pull registry.cn-guangzhou.aliyuncs.com/trueai-org/midjourney-proxy
+docker run --name mjproxy -d --restart=always \
+ -p 8081:8080 --user root \
+ -e TZ=Asia/Shanghai \
+ -v /etc/localtime:/etc/localtime:ro \
+ -v /etc/timezone:/etc/timezone:ro \
+ registry.cn-guangzhou.aliyuncs.com/trueai-org/midjourney-proxy
+
+# 演示站点启动配置
+docker pull registry.cn-guangzhou.aliyuncs.com/trueai-org/midjourney-proxy
+docker run --name mjproxy -d --restart=always \
+ -p 8081:8080 --user root \
+ -v /root/mjproxy/appsettings.Production.json:/app/appsettings.Production.json:ro \
+ -e TZ=Asia/Shanghai \
+ -v /etc/localtime:/etc/localtime:ro \
+ -v /etc/timezone:/etc/timezone:ro \
+ registry.cn-guangzhou.aliyuncs.com/trueai-org/midjourney-proxy
+```
+
 ## 相关文档
 1. [API接口说明](./docs/api.md)
 
