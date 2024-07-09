@@ -93,7 +93,7 @@
         REROLL,
 
         /// <summary>
-        /// 图转prompt.
+        /// 图转 prompt.
         /// </summary>
         DESCRIBE,
 
@@ -107,9 +107,17 @@
         /// </summary>
         ACTION,
 
+        /// <summary>
+        /// 平移
+        /// </summary>
+        PAN,
+
+        /// <summary>
+        /// 变焦
+        /// </summary>
+        OUTPAINT,
 
         //ZOOM
-        //PAN
         //SHORTEN
     }
 
