@@ -100,7 +100,7 @@ namespace Midjourney.Infrastructure.Handle
                         };
                     }
                     return null;
-                }).Where(c => c != null).ToList();
+                }).Where(c => c != null && !string.IsNullOrWhiteSpace(c.CustomId)).ToList();
 
             if (string.IsNullOrWhiteSpace(task.Description))
             {
