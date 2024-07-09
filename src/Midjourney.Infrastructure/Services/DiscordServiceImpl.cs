@@ -122,6 +122,30 @@ namespace Midjourney.Infrastructure.Services
             return await PostJsonAndCheckStatusAsync(paramsStr);
         }
 
+        /// <summary>
+        /// 自定义变焦
+        /// </summary>
+        /// <param name="messageId"></param>
+        /// <param name="customId"></param>
+        /// <param name="prompt"></param>
+        /// <param name="nonce"></param>
+        /// <returns></returns>
+        public async Task<Message> ZoomAsync(string messageId, string customId, string prompt, string nonce)
+        {
+            customId = customId.Replace("MJ::CustomZoom::", "MJ::OutpaintCustomZoomModal::");
+
+            string paramsStr = ReplaceInteractionParams(_paramsMap["zoom"], nonce)
+                .Replace("$message_id", messageId)
+                .Replace("$prompt", prompt);
+
+            var obj = JObject.Parse(paramsStr);
+
+            obj["data"]["custom_id"] = customId;
+
+            paramsStr = obj.ToString();
+            return await PostJsonAndCheckStatusAsync(paramsStr);
+        }
+
         public async Task<Message> RerollAsync(string messageId, string messageHash, int messageFlags, string nonce)
         {
             string paramsStr = ReplaceInteractionParams(_paramsMap["reroll"], nonce)

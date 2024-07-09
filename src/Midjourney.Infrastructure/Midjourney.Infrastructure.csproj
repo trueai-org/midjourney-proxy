@@ -30,10 +30,12 @@
 		<Content Remove="Resources\ApiParams\upscale.json" />
 		<Content Remove="Resources\ApiParams\variation.json" />
 		<Content Remove="Resources\ApiParams\action.json" />
+		<Content Remove="Resources\ApiParams\zoom.json" />
 		<Content Remove="Resources\mime.types" />
 	</ItemGroup>
 
 	<ItemGroup>
+		<EmbeddedResource Include="Resources\ApiParams\zoom.json" />
 		<EmbeddedResource Include="Resources\ApiParams\reroll.json" />
 		<EmbeddedResource Include="Resources\ApiParams\upscale.json" />
 		<EmbeddedResource Include="Resources\ApiParams\action.json" />

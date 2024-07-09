@@ -56,6 +56,16 @@
         Task<Message> ActionAsync(string messageId, string customId, int messageFlags, string nonce);
 
         /// <summary>
+        /// 执行 ZOOM
+        /// </summary>
+        /// <param name="messageId"></param>
+        /// <param name="customId"></param>
+        /// <param name="prompt"></param>
+        /// <param name="nonce"></param>
+        /// <returns></returns>
+        Task<Message> ZoomAsync(string messageId, string customId, string prompt, string nonce);
+
+        /// <summary>
         /// 提交描述任务。
         /// </summary>
         /// <param name="finalFileName">最终文件名。</param>

@@ -44,6 +44,11 @@
         public const string TASK_PROPERTY_PROGRESS_MESSAGE_ID = "progressMessageId";
 
         /// <summary>
+        /// 执行动作 custom_id
+        /// </summary>
+        public const string TASK_PROPERTY_CUSTOM_ID = "custom_id";
+
+        /// <summary>
         /// 标志.
         /// </summary>
         public const string TASK_PROPERTY_FLAGS = "flags";

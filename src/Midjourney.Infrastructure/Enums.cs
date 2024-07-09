@@ -117,7 +117,10 @@
         /// </summary>
         OUTPAINT,
 
-        //ZOOM
+        ///// <summary>
+        ///// 自定义变焦
+        ///// </summary>
+        //ZOOM,
         //SHORTEN
     }
 

@@ -3,6 +3,7 @@ using Midjourney.Infrastructure.Services;
 using Midjourney.Infrastructure.Util;
 using Serilog;
 using System.Collections.Concurrent;
+using System.Threading.Tasks;
 
 namespace Midjourney.Infrastructure.LoadBalancer
 {
@@ -202,7 +203,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <param name="info">任务信息</param>
         /// <param name="discordSubmit">Discord提交任务的委托</param>
         /// <returns>任务提交结果</returns>
-        public SubmitResultVO SubmitTask(TaskInfo info, Func<Task<Message>> discordSubmit)
+        public SubmitResultVO SubmitTaskAsync(TaskInfo info, Func<Task<Message>> discordSubmit)
         {
             _taskStoreService.Save(info);
 
@@ -370,6 +371,17 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <returns></returns>
         public Task<Message> ActionAsync(string messageId, string customId, int messageFlags, string nonce) =>
               _service.ActionAsync(messageId, customId, messageFlags, nonce);
+
+        /// <summary>
+        /// 执行 ZOOM
+        /// </summary>
+        /// <param name="messageId"></param>
+        /// <param name="customId"></param>
+        /// <param name="prompt"></param>
+        /// <param name="nonce"></param>
+        /// <returns></returns>
+        public Task<Message> ZoomAsync(string messageId, string customId, string prompt, string nonce) =>
+            _service.ZoomAsync(messageId, customId, prompt, nonce);
 
         /// <summary>
         /// 异步执行描述任务。

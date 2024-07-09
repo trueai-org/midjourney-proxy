@@ -322,6 +322,13 @@ namespace Midjourney.API.Controllers
                 {
                     task.Action = TaskAction.ACTION;
                 }
+                // 自定义变焦
+                // "MJ::CustomZoom::439f8670-52e8-4f57-afaa-fa08f6d6c751"
+                else if (actionDTO.CustomId.StartsWith("MJ::CustomZoom::"))
+                {
+                    task.Action = TaskAction.ACTION;
+                    task.Description = "Waiting for window confirm";
+                }
                 else
                 {
                     task.Action = TaskAction.ACTION;
@@ -335,6 +342,59 @@ namespace Midjourney.API.Controllers
 
             return Ok(_taskService.SubmitAction(task, actionDTO));
         }
+
+        /// <summary>
+        /// 提交 Modal
+        /// </summary>
+        /// <param name="actionDTO"></param>
+        /// <returns></returns>
+        [HttpPost("modal")]
+        public ActionResult<SubmitResultVO> Modal([FromBody] SubmitModalDTO actionDTO)
+        {
+            if (string.IsNullOrWhiteSpace(actionDTO.TaskId) || string.IsNullOrWhiteSpace(actionDTO.Prompt))
+            {
+                return BadRequest(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "参数错误"));
+            }
+
+            var targetTask = _taskStoreService.Get(actionDTO.TaskId);
+            if (targetTask == null)
+            {
+                return NotFound(SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "关联任务不存在或已失效"));
+            }
+
+            var prompt = actionDTO.Prompt;
+            var task = targetTask;
+
+            var promptEn = TranslatePrompt(prompt);
+            try
+            {
+                BannedPromptUtils.CheckBanned(promptEn);
+            }
+            catch (BannedPromptException e)
+            {
+                return BadRequest(SubmitResultVO.Fail(ReturnCode.BANNED_PROMPT, "可能包含敏感词")
+                    .SetProperty("promptEn", promptEn)
+                    .SetProperty("bannedWord", e.Message));
+            }
+
+            //List<string> base64Array = imagineDTO.Base64Array ?? new List<string>();
+
+            //List<DataUrl> dataUrls = new List<DataUrl>();
+            //try
+            //{
+            //    dataUrls = ConvertUtils.ConvertBase64Array(base64Array);
+            //}
+            //catch (Exception e)
+            //{
+            //    _logger.LogError(e, "base64格式转换异常");
+            //    return BadRequest(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "base64格式错误"));
+            //}
+
+            task.PromptEn = promptEn;
+
+            return Ok(_taskService.SubmitModal(task, actionDTO));
+        }
+
 
         /// <summary>
         /// 创建新的任务对象
@@ -353,10 +413,10 @@ namespace Midjourney.API.Controllers
             var notifyHook = string.IsNullOrWhiteSpace(baseDTO.NotifyHook) ? _properties.NotifyHook : baseDTO.NotifyHook;
             task.SetProperty(Constants.TASK_PROPERTY_NOTIFY_HOOK, notifyHook);
 
-            var none = SnowFlake.NextId();
-            task.Nonce = none;
+            var nonce = SnowFlake.NextId();
+            task.Nonce = nonce;
 
-            task.SetProperty(Constants.TASK_PROPERTY_NONCE, none);
+            task.SetProperty(Constants.TASK_PROPERTY_NONCE, nonce);
 
             return task;
         }

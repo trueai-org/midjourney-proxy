@@ -56,7 +56,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <param name="task">任务实例。</param>
         /// <param name="discordSubmit">提交操作。</param>
         /// <returns>提交结果。</returns>
-        SubmitResultVO SubmitTask(TaskInfo task, Func<Task<Message>> discordSubmit);
+        SubmitResultVO SubmitTaskAsync(TaskInfo task, Func<Task<Message>> discordSubmit);
 
         IEnumerable<TaskInfo> FindRunningTask(Func<TaskInfo, bool> condition);
 

@@ -2,6 +2,7 @@
 using Midjourney.Infrastructure.LoadBalancer;
 using Midjourney.Infrastructure.Util;
 using Serilog;
+using System.Diagnostics;
 
 namespace Midjourney.Infrastructure.Services
 {
@@ -34,7 +35,7 @@ namespace Midjourney.Infrastructure.Services
 
             info.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, instance.GetInstanceId());
 
-            return instance.SubmitTask(info, async () =>
+            return instance.SubmitTaskAsync(info, async () =>
             {
                 var imageUrls = new List<string>();
                 foreach (var dataUrl in dataUrls)
@@ -72,7 +73,7 @@ namespace Midjourney.Infrastructure.Services
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "账号不可用: " + instanceId);
             }
-            return discordInstance.SubmitTask(task, async () =>
+            return discordInstance.SubmitTaskAsync(task, async () =>
                 await discordInstance.UpscaleAsync(targetMessageId, index, targetMessageHash, messageFlags, task.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default)));
         }
 
@@ -84,7 +85,7 @@ namespace Midjourney.Infrastructure.Services
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "账号不可用: " + instanceId);
             }
-            return discordInstance.SubmitTask(task, async () =>
+            return discordInstance.SubmitTaskAsync(task, async () =>
                 await discordInstance.VariationAsync(targetMessageId, index, targetMessageHash, messageFlags, task.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default)));
         }
 
@@ -96,7 +97,7 @@ namespace Midjourney.Infrastructure.Services
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "账号不可用: " + instanceId);
             }
-            return discordInstance.SubmitTask(task, async () =>
+            return discordInstance.SubmitTaskAsync(task, async () =>
                 await discordInstance.RerollAsync(targetMessageId, targetMessageHash, messageFlags, task.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default)));
         }
 
@@ -108,7 +109,7 @@ namespace Midjourney.Infrastructure.Services
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
             task.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, discordInstance.GetInstanceId());
-            return discordInstance.SubmitTask(task, async () =>
+            return discordInstance.SubmitTaskAsync(task, async () =>
             {
                 var taskFileName = $"{task.Id}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
                 var uploadResult = await discordInstance.UploadAsync(taskFileName, dataUrl);
@@ -129,7 +130,7 @@ namespace Midjourney.Infrastructure.Services
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
             task.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, discordInstance.GetInstanceId());
-            return discordInstance.SubmitTask(task, async () =>
+            return discordInstance.SubmitTaskAsync(task, async () =>
             {
                 var finalFileNames = new List<string>();
                 foreach (var dataUrl in dataUrls)
@@ -146,7 +147,6 @@ namespace Midjourney.Infrastructure.Services
             });
         }
 
-
         /// <summary>
         /// 执行动作
         /// </summary>
@@ -162,20 +162,93 @@ namespace Midjourney.Infrastructure.Services
             }
             task.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, discordInstance.GetInstanceId());
 
-            return discordInstance.SubmitTask(task, async () =>
+            var targetTask = _taskStoreService.Get(submitAction.TaskId)!;
+            var messageFlags = targetTask.GetProperty<int>(Constants.TASK_PROPERTY_FLAGS, default);
+            var messageId = targetTask.GetProperty<string>(Constants.TASK_PROPERTY_MESSAGE_ID, default);
+
+            task.BotType = targetTask.BotType;
+            task.SetProperty(Constants.TASK_PROPERTY_BOT_TYPE, targetTask.BotType);
+            task.SetProperty(Constants.TASK_PROPERTY_CUSTOM_ID, submitAction.CustomId);
+
+            // 设置任务的提示信息 = 父级任务的提示信息
+            task.Prompt = targetTask.Prompt;
+            task.PromptEn = targetTask.PromptEn;
+
+            // 如果是 Modal 作业，则直接返回
+            if (submitAction.CustomId.StartsWith("MJ::CustomZoom::"))
             {
-                var targetTask = _taskStoreService.Get(submitAction.TaskId)!;
-                var messageFlags = targetTask.GetProperty<int>(Constants.TASK_PROPERTY_FLAGS, default);
-                var messageId = targetTask.GetProperty<string>(Constants.TASK_PROPERTY_MESSAGE_ID, default);
+                task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_ID, targetTask.MessageId);
+                task.SetProperty(Constants.TASK_PROPERTY_FLAGS, messageFlags);
 
-                // 设置任务的提示信息 = 父级任务的提示信息
-                task.Prompt = targetTask.Prompt;
-                task.PromptEn = targetTask.PromptEn;
-                task.BotType = targetTask.BotType;
-                task.SetProperty(Constants.TASK_PROPERTY_BOT_TYPE, targetTask.BotType);
+                _taskStoreService.Save(task);
+                return SubmitResultVO.Of(ReturnCode.SUCCESS, "提交成功", task.Id);
+            }
 
+            return discordInstance.SubmitTaskAsync(task, async () =>
+            {
                 return await discordInstance.ActionAsync(messageId ?? targetTask.MessageId,
                     submitAction.CustomId, messageFlags, task.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default));
+            });
+        }
+
+        /// <summary>
+        /// 执行 Modal
+        /// </summary>
+        /// <param name="task"></param>
+        /// <param name="submitAction"></param>
+        /// <returns></returns>
+        public SubmitResultVO SubmitModal(TaskInfo task, SubmitModalDTO submitAction)
+        {
+            var discordInstance = _discordLoadBalancer.ChooseInstance();
+            if (discordInstance == null)
+            {
+                return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
+            }
+            task.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, discordInstance.GetInstanceId());
+
+            return discordInstance.SubmitTaskAsync(task, async () =>
+            {
+                var messageFlags = task.GetProperty<int>(Constants.TASK_PROPERTY_FLAGS, default);
+                var messageId = task.GetProperty<string>(Constants.TASK_PROPERTY_MESSAGE_ID, default);
+
+                var customId = task.GetProperty<string>(Constants.TASK_PROPERTY_CUSTOM_ID, default);
+                var nonce = task.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default);
+
+                // 弹出，再执行变焦
+                var res = await discordInstance.ActionAsync(messageId, customId, messageFlags, nonce);
+                if(res.Code != ReturnCode.SUCCESS)
+                {
+                    return res;
+                }
+
+                // 等待获取 messageId
+                // 等待最大超时 5min
+                var sw = new Stopwatch();
+                sw.Start();
+
+                do
+                {
+                    Thread.Sleep(500);
+                    task = discordInstance.GetRunningTask(task.Id);
+
+                    if (string.IsNullOrWhiteSpace(task.MessageId))
+                    {
+                        if (sw.ElapsedMilliseconds > 300000)
+                        {
+                            return Message.Of(ReturnCode.NOT_FOUND, "超时，未找到消息 ID");
+                        }
+                    }
+                } while (string.IsNullOrWhiteSpace(task.MessageId));
+
+                nonce = SnowFlake.NextId();
+                task.Nonce = nonce;
+                task.SetProperty(Constants.TASK_PROPERTY_NONCE, nonce);
+
+                // 变焦
+                return await discordInstance.ZoomAsync(task.MessageId,
+                    customId,
+                    task.PromptEn,
+                    nonce);
             });
         }
     }
