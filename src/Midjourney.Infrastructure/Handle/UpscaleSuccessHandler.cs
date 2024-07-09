@@ -59,6 +59,8 @@ namespace Midjourney.Infrastructure.Handle
             task.SetProperty(Constants.MJ_MESSAGE_HANDLED, true);
             task.SetProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, finalPrompt);
             task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_HASH, messageHash);
+            task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_CONTENT, message.Content);
+
             task.ImageUrl = imageUrl;
             FinishTask(task, message);
             task.Awake();

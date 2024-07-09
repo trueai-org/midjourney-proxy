@@ -110,6 +110,10 @@ namespace Midjourney.Infrastructure.Handle
             {
                 task.FailReason = "";
             }
+            if (string.IsNullOrWhiteSpace(task.State))
+            {
+                task.State = "";
+            }
 
             task.Success();
         }
