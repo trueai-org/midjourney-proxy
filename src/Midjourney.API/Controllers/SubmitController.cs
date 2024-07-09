@@ -81,6 +81,7 @@ namespace Midjourney.API.Controllers
                 return BadRequest(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "base64格式错误"));
             }
 
+            task.BotType = imagineDTO.BotType;
             task.PromptEn = promptEn;
             task.Description = $"/imagine {prompt}";
 
@@ -232,6 +233,8 @@ namespace Midjourney.API.Controllers
             }
             catch (Exception e)
             {
+                _logger.LogError(e, "base64格式错误");
+
                 return BadRequest(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "base64格式错误"));
             }
             var task = NewTask(blendDTO);

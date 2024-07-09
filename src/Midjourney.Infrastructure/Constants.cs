@@ -13,9 +13,20 @@
         public const string TASK_PROPERTY_NOTIFY_HOOK = "notifyHook";
 
         /// <summary>
+        /// bot类型，mj(默认)或niji
+        /// MID_JOURNEY | NIJI_JOURNEY
+        /// </summary>
+        public const string TASK_PROPERTY_BOT_TYPE = "botType";
+
+        /// <summary>
         /// 最终提示.
         /// </summary>
         public const string TASK_PROPERTY_FINAL_PROMPT = "finalPrompt";
+
+        /// <summary>
+        /// 原始消息内容
+        /// </summary>
+        public const string TASK_PROPERTY_MESSAGE_CONTENT = "messageContent";
 
         /// <summary>
         /// 消息ID.

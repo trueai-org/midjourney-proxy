@@ -172,6 +172,8 @@ namespace Midjourney.Infrastructure.Services
                 task.Prompt = targetTask.Prompt;
                 task.PromptEn = targetTask.PromptEn;
 
+                task.SetProperty(Constants.TASK_PROPERTY_BOT_TYPE,targetTask.BotType);
+
                 return await discordInstance.ActionAsync(messageId ?? targetTask.MessageId,
                     submitAction.CustomId, messageFlags, task.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default));
             });

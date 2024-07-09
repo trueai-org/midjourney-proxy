@@ -72,6 +72,8 @@ namespace Midjourney.Infrastructure.Handle
             task.SetProperty(Constants.MJ_MESSAGE_HANDLED, true);
             task.SetProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, finalPrompt);
             task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_HASH, messageHash);
+            task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_CONTENT, message.Content);
+
             task.ImageUrl = imageUrl;
             FinishTask(task, message);
             task.Awake();
@@ -99,6 +101,15 @@ namespace Midjourney.Infrastructure.Handle
                     }
                     return null;
                 }).Where(c => c != null).ToList();
+
+            if (string.IsNullOrWhiteSpace(task.Description))
+            {
+                task.Description = "Submit success";
+            }
+            if (string.IsNullOrWhiteSpace(task.FailReason))
+            {
+                task.FailReason = "";
+            }
 
             task.Success();
         }
