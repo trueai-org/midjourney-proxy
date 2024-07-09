@@ -168,6 +168,10 @@ namespace Midjourney.Infrastructure.Services
                 var messageFlags = targetTask.GetProperty<int>(Constants.TASK_PROPERTY_FLAGS, default);
                 var messageId = targetTask.GetProperty<string>(Constants.TASK_PROPERTY_MESSAGE_ID, default);
 
+                // 设置任务的提示信息 = 父级任务的提示信息
+                task.Prompt = targetTask.Prompt;
+                task.PromptEn = targetTask.PromptEn;
+
                 return await discordInstance.ActionAsync(messageId ?? targetTask.MessageId,
                     submitAction.CustomId, messageFlags, task.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default));
             });
