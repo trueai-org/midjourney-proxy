@@ -52,7 +52,7 @@ namespace Midjourney.Infrastructure
         /// 任务状态。
         /// </summary>
         [SwaggerSchema("任务状态")]
-        public TaskStatus Status { get; set; } = TaskStatus.NOT_START;
+        public TaskStatus? Status { get; set; } = TaskStatus.NOT_START;
 
         /// <summary>
         /// 提示词。

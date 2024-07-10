@@ -182,7 +182,7 @@ namespace Midjourney.Infrastructure.Services
                 // 如果是局部重绘，则设置任务状态为进行中
                 if (task.Action == TaskAction.INPAINT)
                 {
-                    task.Status = TaskStatus.IN_PROGRESS;
+                    task.Status = null;
                 }
 
                 task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_ID, targetTask.MessageId);
