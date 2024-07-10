@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.Services;
@@ -15,6 +16,7 @@ namespace Midjourney.API.Controllers
     [ApiController]
     [Route("mj/submit")]
     [Route("submit")]
+    [AllowAnonymous]
     public class SubmitController : ControllerBase
     {
         private readonly ITranslateService _translateService;

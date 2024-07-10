@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Midjourney.Infrastructure.Domain;
 using Midjourney.Infrastructure.LoadBalancer;
 using Swashbuckle.AspNetCore.Annotations;
@@ -10,6 +11,7 @@ namespace Midjourney.API.Controllers
     /// </summary>
     [ApiController]
     [Route("account")]
+    [Authorize()]
     public class AccountController : ControllerBase
     {
         private readonly DiscordLoadBalancer _loadBalancer;

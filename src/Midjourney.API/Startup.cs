@@ -81,6 +81,9 @@ namespace Midjourney.API
 
             app.UseRouting();
 
+            // 使用自定义中间件
+            app.UseMiddleware<SimpleAuthMiddleware>(); 
+
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>

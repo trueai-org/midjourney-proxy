@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.LoadBalancer;
 using Midjourney.Infrastructure.Services;
@@ -12,6 +13,7 @@ namespace Midjourney.API.Controllers
     [ApiController]
     [Route("task")]
     [Route("mj/task")]
+    [AllowAnonymous]
     public class TaskController : ControllerBase
     {
         private readonly ITaskStoreService _taskStoreService;
