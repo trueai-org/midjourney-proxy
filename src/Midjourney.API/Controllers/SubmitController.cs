@@ -143,7 +143,7 @@ namespace Midjourney.API.Controllers
             {
                 return NotFound(SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "关联任务不存在或已失效"));
             }
-            if (targetTask.Status != TaskStatus.SUCCESS)
+            if (targetTask.StatusValue != TaskStatus.SUCCESS)
             {
                 return BadRequest(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "关联任务状态错误"));
             }
@@ -263,7 +263,7 @@ namespace Midjourney.API.Controllers
                 return NotFound(SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "关联任务不存在或已失效"));
             }
 
-            if (targetTask.Status != TaskStatus.SUCCESS)
+            if (targetTask.StatusValue != TaskStatus.SUCCESS)
             {
                 return BadRequest(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "关联任务状态错误"));
             }
@@ -405,7 +405,7 @@ namespace Midjourney.API.Controllers
                 Id = $"{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}{RandomUtils.RandomNumbers(3)}",
                 SubmitTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
                 State = baseDTO.State,
-                Status = TaskStatus.NOT_START
+                StatusValue = TaskStatus.NOT_START
             };
 
             var notifyHook = string.IsNullOrWhiteSpace(baseDTO.NotifyHook) ? _properties.NotifyHook : baseDTO.NotifyHook;

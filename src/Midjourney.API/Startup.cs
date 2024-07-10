@@ -3,7 +3,9 @@ global using Midjourney.Infrastructure.Models;
 
 using Microsoft.AspNetCore.Mvc;
 using Serilog;
+using System.Text.Json;
 using System.Text.Json.Serialization;
+using TaskStatus = Midjourney.Infrastructure.TaskStatus;
 
 namespace Midjourney.API
 {
@@ -29,9 +31,11 @@ namespace Midjourney.API
             }).AddJsonOptions(options =>
             {
                 // 配置枚举序列化为字符串
-                // 如果是 null 枚举项，则返回空字符串
                 options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
-            }); ;
+
+                // 如果枚举值是 null ，则返回空字符串
+                // TODO
+            });
 
             // 自定义配置 API 行为选项
             // 配置 api 视图模型验证 400 错误处理，需要在 AddControllers 之后配置

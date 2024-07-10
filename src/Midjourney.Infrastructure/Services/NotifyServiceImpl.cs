@@ -48,7 +48,7 @@ namespace Midjourney.Infrastructure.Services
             }
 
             string taskId = task.Id;
-            string statusStr = $"{task.Status}:{task.Progress}";
+            string statusStr = $"{task.StatusValue}:{task.Progress}";
             _logger.LogTrace("Wait notify task change, task: {0}({1}), hook: {2}", taskId, statusStr, notifyHook);
 
             try

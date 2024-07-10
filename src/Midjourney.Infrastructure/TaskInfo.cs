@@ -1,5 +1,7 @@
-﻿using Midjourney.Infrastructure.Domain;
+﻿using LiteDB;
+using Midjourney.Infrastructure.Domain;
 using Swashbuckle.AspNetCore.Annotations;
+using System.Text.Json.Serialization;
 
 namespace Midjourney.Infrastructure
 {
@@ -52,7 +54,14 @@ namespace Midjourney.Infrastructure
         /// 任务状态。
         /// </summary>
         [SwaggerSchema("任务状态")]
-        public TaskStatus? Status { get; set; }
+        public TaskStatus? StatusValue { get; set; }
+
+        /// <summary>
+        /// 任务类型。
+        /// </summary>
+        [JsonIgnore]
+        [BsonIgnore]
+        public string Status => Status?.ToString() ?? string.Empty;
 
         /// <summary>
         /// 提示词。
@@ -125,7 +134,7 @@ namespace Midjourney.Infrastructure
         public void Start()
         {
             StartTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
-            Status = TaskStatus.SUBMITTED;
+            StatusValue = TaskStatus.SUBMITTED;
             Progress = "0%";
         }
 
@@ -135,7 +144,7 @@ namespace Midjourney.Infrastructure
         public void Success()
         {
             FinishTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
-            Status = TaskStatus.SUCCESS;
+            StatusValue = TaskStatus.SUCCESS;
             Progress = "100%";
         }
 
@@ -146,7 +155,7 @@ namespace Midjourney.Infrastructure
         public void Fail(string reason)
         {
             FinishTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
-            Status = TaskStatus.FAILURE;
+            StatusValue = TaskStatus.FAILURE;
             FailReason = reason;
             Progress = "";
         }
