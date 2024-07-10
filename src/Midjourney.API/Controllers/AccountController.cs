@@ -10,7 +10,7 @@ namespace Midjourney.API.Controllers
     /// 控制器用于查询账号信息
     /// </summary>
     [ApiController]
-    [Route("account")]
+    [Route("mj/account")]
     [Authorize()]
     public class AccountController : ControllerBase
     {
