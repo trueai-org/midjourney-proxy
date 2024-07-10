@@ -29,6 +29,7 @@ namespace Midjourney.API
             }).AddJsonOptions(options =>
             {
                 // 配置枚举序列化为字符串
+                // 如果是 null 枚举项，则返回空字符串
                 options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
             }); ;
 

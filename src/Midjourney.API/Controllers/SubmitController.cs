@@ -404,7 +404,8 @@ namespace Midjourney.API.Controllers
             {
                 Id = $"{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}{RandomUtils.RandomNumbers(3)}",
                 SubmitTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
-                State = baseDTO.State
+                State = baseDTO.State,
+                Status = TaskStatus.NOT_START
             };
 
             var notifyHook = string.IsNullOrWhiteSpace(baseDTO.NotifyHook) ? _properties.NotifyHook : baseDTO.NotifyHook;
