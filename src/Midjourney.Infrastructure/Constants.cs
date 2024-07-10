@@ -68,6 +68,11 @@
         /// </summary>
         public const string TASK_PROPERTY_REFERENCED_MESSAGE_ID = "referencedMessageId";
 
+        /// <summary>
+        /// 局部重绘弹窗 custom_id
+        /// </summary>
+        public const string TASK_PROPERTY_IFRAME_MODAL_CREATE_CUSTOM_ID = "iframe_modal_custom_id";
+
         // 任务扩展属性 end
 
         /// <summary>

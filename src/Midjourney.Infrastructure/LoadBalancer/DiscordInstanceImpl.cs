@@ -383,6 +383,17 @@ namespace Midjourney.Infrastructure.LoadBalancer
         public Task<Message> ZoomAsync(string messageId, string customId, string prompt, string nonce) =>
             _service.ZoomAsync(messageId, customId, prompt, nonce);
 
+
+        /// <summary>
+        /// 局部重绘
+        /// </summary>
+        /// <param name="customId"></param>
+        /// <param name="prompt"></param>
+        /// <param name="maskBase64"></param>
+        /// <returns></returns>
+        public Task<Message> InpaintAsync(string customId, string prompt, string maskBase64) =>
+            _service.InpaintAsync(customId, prompt, maskBase64);
+
         /// <summary>
         /// 异步执行描述任务。
         /// </summary>

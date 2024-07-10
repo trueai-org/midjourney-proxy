@@ -11,7 +11,6 @@ namespace Midjourney.Infrastructure.Services
     /// </summary>
     public class DiscordServiceImpl : IDiscordService
     {
-        private static readonly string DefaultSessionId = "f1a313a09ce079ce252459dc70231f30";
         private readonly DiscordAccount _account;
         private readonly HttpClient _httpClient;
         private readonly DiscordHelper _discordHelper;
@@ -41,6 +40,11 @@ namespace Midjourney.Infrastructure.Services
             _discordAttachmentUrl = $"{discordServer}/api/v9/channels/{account.ChannelId}/attachments";
             _discordMessageUrl = $"{discordServer}/api/v9/channels/{account.ChannelId}/messages";
         }
+
+        /// <summary>
+        /// 默认会话ID。
+        /// </summary>
+        public string DefaultSessionId { get; set; } = "f1a313a09ce079ce252459dc70231f30";
 
         public async Task<Message> ImagineAsync(string prompt, string nonce)
         {
@@ -144,6 +148,48 @@ namespace Midjourney.Infrastructure.Services
 
             paramsStr = obj.ToString();
             return await PostJsonAndCheckStatusAsync(paramsStr);
+        }
+
+        /// <summary>
+        /// 局部重绘
+        /// </summary>
+        /// <param name="customId"></param>
+        /// <param name="prompt"></param>
+        /// <param name="maskBase64"></param>
+        /// <returns></returns>
+        public async Task<Message> InpaintAsync(string customId, string prompt, string maskBase64)
+        {
+            try
+            {
+                customId = customId.Replace("MJ::iframe::", "");
+
+                // mask.replace(/^data:.+?;base64,/, ''),
+                maskBase64 = maskBase64.Replace("data:image/png;base64,", "");
+
+                var obj = new
+                {
+                    customId = customId,
+                    //full_prompt = null,
+                    mask = maskBase64,
+                    prompt = prompt,
+                    userId = "0",
+                    username = "0",
+                };
+                var paramsStr = Newtonsoft.Json.JsonConvert.SerializeObject(obj);
+                var response = await PostJsonAsync("https://936929561302675456.discordsays.com/inpaint/api/submit-job",
+                    paramsStr);
+
+                if (response.StatusCode == System.Net.HttpStatusCode.OK)
+                {
+                    return Message.Success();
+                }
+
+                return Message.Of((int)response.StatusCode, "提交失败");
+            }
+            catch (HttpRequestException e)
+            {
+                return ConvertHttpRequestException(e);
+            }
         }
 
         public async Task<Message> RerollAsync(string messageId, string messageHash, int messageFlags, string nonce)

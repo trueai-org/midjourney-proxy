@@ -1,4 +1,5 @@
 ﻿using Midjourney.Infrastructure.Domain;
+using Midjourney.Infrastructure.Services;
 using Midjourney.Infrastructure.Util;
 using Serilog;
 using System.Net;
@@ -21,18 +22,21 @@ namespace Midjourney.Infrastructure
 
         private ClientWebSocket _webSocketSession = null;
         private ResumeData _resumeData = null;
+        private DiscordServiceImpl _discordService;
 
         public WebSocketStarter(
             DiscordAccount account,
             DiscordHelper discordHelper,
             BotMessageListener userMessageListener,
-            WebProxy webProxy)
+            WebProxy webProxy,
+            DiscordServiceImpl discordService)
         {
             _account = account;
             _userMessageListener = userMessageListener;
             _discordHelper = discordHelper;
             _logger = Log.Logger;
             _webProxy = webProxy;
+            _discordService = discordService;
         }
 
         public async Task StartAsync()
@@ -67,6 +71,7 @@ namespace Midjourney.Infrastructure
         {
             _resumeData = new ResumeData(sessionId, sequence, resumeGatewayUrl);
             _running = true;
+            _discordService.DefaultSessionId = sessionId;
 
             NotifyWssLock(ReturnCode.SUCCESS, "");
         }
@@ -212,6 +217,8 @@ namespace Midjourney.Infrastructure
                 SessionId = sessionId;
                 Sequence = sequence;
                 ResumeGatewayUrl = resumeGatewayUrl;
+
+              
             }
         }
     }

@@ -78,6 +78,6 @@ namespace Midjourney.Infrastructure.Services
         /// <param name="task"></param>
         /// <param name="submitAction"></param>
         /// <returns></returns>
-        SubmitResultVO SubmitModal(TaskInfo task, SubmitModalDTO submitAction);
+        SubmitResultVO SubmitModal(TaskInfo task, SubmitModalDTO submitAction, DataUrl dataUrl = null);
     }
 }

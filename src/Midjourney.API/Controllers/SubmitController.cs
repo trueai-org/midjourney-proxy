@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.Services;
 using Midjourney.Infrastructure.Util;
+using System.Buffers.Text;
 using System.Text.RegularExpressions;
 
 using TaskStatus = Midjourney.Infrastructure.TaskStatus;
@@ -329,6 +330,12 @@ namespace Midjourney.API.Controllers
                     task.Action = TaskAction.ACTION;
                     task.Description = "Waiting for window confirm";
                 }
+                // 局部绘制
+                // MJ::Inpaint::1::da2b1fda-0455-4952-9f0e-d4cb891f8b1e::SOLO
+                else if (actionDTO.CustomId.StartsWith("MJ::Inpaint::"))
+                {
+                    task.Action = TaskAction.ACTION;
+                }
                 else
                 {
                     task.Action = TaskAction.ACTION;
@@ -377,22 +384,21 @@ namespace Midjourney.API.Controllers
                     .SetProperty("bannedWord", e.Message));
             }
 
-            //List<string> base64Array = imagineDTO.Base64Array ?? new List<string>();
-
-            //List<DataUrl> dataUrls = new List<DataUrl>();
-            //try
-            //{
-            //    dataUrls = ConvertUtils.ConvertBase64Array(base64Array);
-            //}
-            //catch (Exception e)
-            //{
-            //    _logger.LogError(e, "base64格式转换异常");
-            //    return BadRequest(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "base64格式错误"));
-            //}
+            // 不检查
+            DataUrl dataUrl = null;
+            try
+            {
+                //dataUrl = DataUrl.Parse(actionDTO.MaskBase64);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "base64格式转换异常");
+                return BadRequest(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "base64格式错误"));
+            }
 
             task.PromptEn = promptEn;
 
-            return Ok(_taskService.SubmitModal(task, actionDTO));
+            return Ok(_taskService.SubmitModal(task, actionDTO, dataUrl));
         }
 
 

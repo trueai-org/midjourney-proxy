@@ -153,6 +153,16 @@
         /// 
         /// </summary>
         INTERACTION_SUCCESS,
+
+        /// <summary>
+        /// 
+        /// </summary>
+        INTERACTION_IFRAME_MODAL_CREATE,
+
+        /// <summary>
+        /// 
+        /// </summary>
+        INTERACTION_MODAL_CREATE
     }
 
     public static class MessageTypeExtensions
@@ -171,6 +181,8 @@
                 "MESSAGE_DELETE" => MessageType.DELETE,
                 "INTERACTION_CREATE" => MessageType.INTERACTION_CREATE,
                 "INTERACTION_SUCCESS" => MessageType.INTERACTION_SUCCESS,
+                "INTERACTION_IFRAME_MODAL_CREATE" => MessageType.INTERACTION_IFRAME_MODAL_CREATE,
+                "INTERACTION_MODAL_CREATE" => MessageType.INTERACTION_MODAL_CREATE,
                 _ => null
             };
         }

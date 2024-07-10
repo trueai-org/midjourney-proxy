@@ -103,7 +103,9 @@ namespace Midjourney.Infrastructure
             _messageListener = new BotMessageListener(account.BotToken, account, webProxy);
 
             // 用户 WebSocket 连接
-            var webSocket = new WebSocketStarter(account, _discordHelper, _messageListener, webProxy);
+            var webSocket = new WebSocketStarter(account, _discordHelper, _messageListener,
+                webProxy, discordService);
+
             await webSocket.StartAsync();
 
             _messageListener.Init(discordInstance, _messageHandlers);

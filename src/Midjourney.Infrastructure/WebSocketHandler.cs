@@ -1,4 +1,5 @@
 ﻿using Midjourney.Infrastructure.Domain;
+using Midjourney.Infrastructure.Services;
 using Serilog;
 using System.IO.Compression;
 using System.Net;
@@ -268,6 +269,10 @@ namespace Midjourney.Infrastructure
                             _logger.Information("用户 WebSocket 连接已关闭。");
                             HandleFailure((int)result.CloseStatus, result.CloseStatusDescription);
                         }
+                        else
+                        {
+                            _logger.Warning("用户收到未知消息");
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -284,7 +289,7 @@ namespace Midjourney.Infrastructure
         /// <param name="message">接收到的消息内容</param>
         private void HandleMessage(string message)
         {
-            //_logger.Information("用户 收到消息: {0}", message);
+            //_logger.Debug("用户 收到消息: {0}", message);
 
             var data = JsonDocument.Parse(message).RootElement;
             var opCode = data.GetProperty("op").GetInt32();
@@ -381,6 +386,7 @@ namespace Midjourney.Infrastructure
             {
                 _sessionId = data.GetProperty("d").GetProperty("session_id").GetString();
                 _resumeGatewayUrl = data.GetProperty("d").GetProperty("resume_gateway_url").GetString() + "/?encoding=json&v=9&compress=zlib-stream";
+
                 OnSuccess();
             }
             else if (data.TryGetProperty("t", out var resumed) && resumed.GetString() == "RESUMED")

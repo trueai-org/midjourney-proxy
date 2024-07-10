@@ -175,7 +175,8 @@ namespace Midjourney.Infrastructure.Services
             task.PromptEn = targetTask.PromptEn;
 
             // 如果是 Modal 作业，则直接返回
-            if (submitAction.CustomId.StartsWith("MJ::CustomZoom::"))
+            if (submitAction.CustomId.StartsWith("MJ::CustomZoom::")
+                || submitAction.CustomId.StartsWith("MJ::Inpaint::"))
             {
                 task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_ID, targetTask.MessageId);
                 task.SetProperty(Constants.TASK_PROPERTY_FLAGS, messageFlags);
@@ -197,7 +198,7 @@ namespace Midjourney.Infrastructure.Services
         /// <param name="task"></param>
         /// <param name="submitAction"></param>
         /// <returns></returns>
-        public SubmitResultVO SubmitModal(TaskInfo task, SubmitModalDTO submitAction)
+        public SubmitResultVO SubmitModal(TaskInfo task, SubmitModalDTO submitAction, DataUrl dataUrl = null)
         {
             var discordInstance = _discordLoadBalancer.ChooseInstance();
             if (discordInstance == null)
@@ -216,7 +217,7 @@ namespace Midjourney.Infrastructure.Services
 
                 // 弹出，再执行变焦
                 var res = await discordInstance.ActionAsync(messageId, customId, messageFlags, nonce);
-                if(res.Code != ReturnCode.SUCCESS)
+                if (res.Code != ReturnCode.SUCCESS)
                 {
                     return res;
                 }
@@ -240,15 +241,26 @@ namespace Midjourney.Infrastructure.Services
                     }
                 } while (string.IsNullOrWhiteSpace(task.MessageId));
 
-                nonce = SnowFlake.NextId();
-                task.Nonce = nonce;
-                task.SetProperty(Constants.TASK_PROPERTY_NONCE, nonce);
+                // 自定义变焦
+                if (customId.StartsWith("MJ::CustomZoom::"))
+                {
+                    nonce = SnowFlake.NextId();
+                    task.Nonce = nonce;
+                    task.SetProperty(Constants.TASK_PROPERTY_NONCE, nonce);
 
-                // 变焦
-                return await discordInstance.ZoomAsync(task.MessageId,
-                    customId,
-                    task.PromptEn,
-                    nonce);
+                    return await discordInstance.ZoomAsync(task.MessageId, customId, task.PromptEn, nonce);
+                }
+                // 局部重绘
+                else if (customId.StartsWith("MJ::Inpaint::"))
+                {
+                    var ifarmeCustomId = task.GetProperty<string>(Constants.TASK_PROPERTY_IFRAME_MODAL_CREATE_CUSTOM_ID, default);
+                    return await discordInstance.InpaintAsync(ifarmeCustomId, task.PromptEn, submitAction.MaskBase64);
+                }
+                else
+                {
+                    // 不支持
+                    return Message.Of(ReturnCode.NOT_FOUND, "不支持的操作");
+                }
             });
         }
     }

@@ -79,8 +79,6 @@ namespace Midjourney.Infrastructure
             // Subscribe a handler to see if a message invokes a command.
             _client.MessageReceived += HandleCommandAsync;
             _client.MessageUpdated += MessageUpdatedAsync;
-
-            //_client.InteractionCreated += HandleInteractionAsync;
         }
 
         private DiscordSocketClient _client;
@@ -236,7 +234,6 @@ namespace Midjourney.Infrastructure
                 return;
             }
 
-
             // 如果有渠道 id，但不是当前渠道 id，则忽略
             if (data.TryGetProperty("channel_id", out JsonElement channelIdElement) && channelIdElement.GetString() != _discordAccount.ChannelId)
             {
@@ -270,7 +267,6 @@ namespace Midjourney.Infrastructure
             {
                 var id = idElement.GetString();
                 _logger.Debug($"用户消息, {messageType}, {_discordAccount.GetDisplay()} - {authorName}: {contentStr}, id: {id}, mid: {metaId}");
-
 
                 // 判断账号是否用量已经用完
                 if (messageType == MessageType.CREATE && data.TryGetProperty("embeds", out var em))
@@ -319,6 +315,18 @@ namespace Midjourney.Infrastructure
                             if (messageType == MessageType.INTERACTION_SUCCESS)
                             {
                                 task.InteractionMetadataId = id;
+                            }
+                            // MJ 局部重绘完成后
+                            else if (messageType == MessageType.INTERACTION_IFRAME_MODAL_CREATE
+                                && data.TryGetProperty("custom_id", out var custom_id))
+                            {
+                                task.SetProperty(Constants.TASK_PROPERTY_IFRAME_MODAL_CREATE_CUSTOM_ID, custom_id.GetString());
+                                task.MessageId = id;
+
+                                if (!task.MessageIds.Contains(id))
+                                {
+                                    task.MessageIds.Add(id);
+                                }
                             }
                             else
                             {

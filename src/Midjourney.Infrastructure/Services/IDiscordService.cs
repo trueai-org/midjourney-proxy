@@ -65,6 +65,16 @@
         /// <returns></returns>
         Task<Message> ZoomAsync(string messageId, string customId, string prompt, string nonce);
 
+
+        /// <summary>
+        /// 局部重绘
+        /// </summary>
+        /// <param name="customId"></param>
+        /// <param name="prompt"></param>
+        /// <param name="maskBase64"></param>
+        /// <returns></returns>
+        Task<Message> InpaintAsync(string customId, string prompt, string maskBase64);
+
         /// <summary>
         /// 提交描述任务。
         /// </summary>
