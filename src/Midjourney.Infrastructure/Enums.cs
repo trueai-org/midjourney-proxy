@@ -51,7 +51,12 @@
         /// <summary>
         /// 弹窗
         /// </summary>
-        MODAL = 6
+        MODAL = 6,
+
+        /// <summary>
+        /// 取消
+        /// </summary>
+        CANCEL = 7
     }
 
     public static class TaskStatusExtensions
