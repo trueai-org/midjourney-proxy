@@ -182,7 +182,7 @@ namespace Midjourney.Infrastructure.Services
                 // 如果是局部重绘，则设置任务状态为进行中
                 if (task.Action == TaskAction.INPAINT)
                 {
-                    task.StatusValue = null;
+                    task.Status = TaskStatus.MODAL;
                     task.Prompt = "";
                     task.PromptEn = "";
                     task.Description = "Waiting for window confirm";

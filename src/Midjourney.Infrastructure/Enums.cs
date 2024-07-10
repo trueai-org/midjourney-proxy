@@ -46,7 +46,12 @@
         /// <summary>
         /// 成功.
         /// </summary>
-        SUCCESS = 5
+        SUCCESS = 5,
+
+        /// <summary>
+        /// 弹窗
+        /// </summary>
+        MODAL = 6
     }
 
     public static class TaskStatusExtensions

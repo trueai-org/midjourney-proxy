@@ -270,24 +270,24 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 {
                     info.Fail(result.Description);
                     SaveAndNotify(info);
-                    _logger.Debug("[{AccountDisplay}] task finished, id: {TaskId}, status: {TaskStatus}", _account.GetDisplay(), info.Id, info.StatusValue);
+                    _logger.Debug("[{AccountDisplay}] task finished, id: {TaskId}, status: {TaskStatus}", _account.GetDisplay(), info.Id, info.Status);
                     return;
                 }
 
-                info.StatusValue = TaskStatus.SUBMITTED;
+                info.Status = TaskStatus.SUBMITTED;
                 info.Progress = "0%";
 
                 await Task.Delay(1000);
 
                 await AsyncSaveAndNotify(info);
 
-                while (info.StatusValue == TaskStatus.SUBMITTED || info.StatusValue == TaskStatus.IN_PROGRESS)
+                while (info.Status == TaskStatus.SUBMITTED || info.Status == TaskStatus.IN_PROGRESS)
                 {
                     await Task.Delay(1000);
                     await AsyncSaveAndNotify(info);
                 }
 
-                _logger.Debug("[{AccountDisplay}] task finished, id: {TaskId}, status: {TaskStatus}", _account.GetDisplay(), info.Id, info.StatusValue);
+                _logger.Debug("[{AccountDisplay}] task finished, id: {TaskId}, status: {TaskStatus}", _account.GetDisplay(), info.Id, info.Status);
             }
             catch (Exception ex)
             {

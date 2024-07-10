@@ -54,13 +54,13 @@ namespace Midjourney.Infrastructure
         /// 任务状态。
         /// </summary>
         [SwaggerSchema("任务状态")]
-        public TaskStatus? StatusValue { get; set; }
+        public TaskStatus? Status { get; set; }
 
-        /// <summary>
-        /// 任务类型。
-        /// </summary>
-        [BsonIgnore]
-        public string Status => StatusValue?.ToString() ?? string.Empty;
+        ///// <summary>
+        ///// 任务类型。
+        ///// </summary>
+        //[BsonIgnore]
+        //public string Status => StatusValue?.ToString() ?? string.Empty;
 
         /// <summary>
         /// 提示词。
@@ -133,7 +133,7 @@ namespace Midjourney.Infrastructure
         public void Start()
         {
             StartTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
-            StatusValue = TaskStatus.SUBMITTED;
+            Status = TaskStatus.SUBMITTED;
             Progress = "0%";
         }
 
@@ -143,7 +143,7 @@ namespace Midjourney.Infrastructure
         public void Success()
         {
             FinishTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
-            StatusValue = TaskStatus.SUCCESS;
+            Status = TaskStatus.SUCCESS;
             Progress = "100%";
         }
 
@@ -154,7 +154,7 @@ namespace Midjourney.Infrastructure
         public void Fail(string reason)
         {
             FinishTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
-            StatusValue = TaskStatus.FAILURE;
+            Status = TaskStatus.FAILURE;
             FailReason = reason;
             Progress = "";
         }

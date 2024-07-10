@@ -46,7 +46,7 @@ namespace Midjourney.Infrastructure.Handle
                 {
                     task.SetProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, parseData.Prompt);
                 }
-                task.StatusValue = TaskStatus.IN_PROGRESS;
+                task.Status = TaskStatus.IN_PROGRESS;
                 task.Awake();
             }
             else if (messageType == MessageType.UPDATE && parseData != null)
@@ -74,7 +74,7 @@ namespace Midjourney.Infrastructure.Handle
 
                 task.SetProperty(Constants.MJ_MESSAGE_HANDLED, true);
                 task.SetProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, parseData.Prompt);
-                task.StatusValue = TaskStatus.IN_PROGRESS;
+                task.Status = TaskStatus.IN_PROGRESS;
                 task.Progress = parseData.Status;
 
                 string imageUrl = GetImageUrl(message);
