@@ -3,7 +3,6 @@ using Microsoft.Extensions.Options;
 using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.Services;
 using Midjourney.Infrastructure.Util;
-using System.Buffers.Text;
 using System.Text.RegularExpressions;
 
 using TaskStatus = Midjourney.Infrastructure.TaskStatus;
@@ -346,7 +345,6 @@ namespace Midjourney.API.Controllers
                 task.Action = TaskAction.ACTION;
             }
 
-
             return Ok(_taskService.SubmitAction(task, actionDTO));
         }
 
@@ -400,7 +398,6 @@ namespace Midjourney.API.Controllers
 
             return Ok(_taskService.SubmitModal(task, actionDTO, dataUrl));
         }
-
 
         /// <summary>
         /// 创建新的任务对象
