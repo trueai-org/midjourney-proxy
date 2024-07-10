@@ -125,7 +125,7 @@ namespace Midjourney.Infrastructure
         /// <summary>
         /// 按钮
         /// </summary>
-        public List<CustomComponentModel> Buttons { get; set; } = new List<CustomComponentModel>();
+        public List<CustomComponentModel> Buttons { get; set; }
 
         /// <summary>
         /// 启动任务。

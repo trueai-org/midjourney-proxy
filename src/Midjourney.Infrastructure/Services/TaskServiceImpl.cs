@@ -183,6 +183,13 @@ namespace Midjourney.Infrastructure.Services
                 if (task.Action == TaskAction.INPAINT)
                 {
                     task.StatusValue = null;
+                    task.Prompt = "";
+                    task.PromptEn = "";
+                    task.Description = "Waiting for window confirm";
+                    task.StartTime = 0;
+                    task.FinishTime = 0;
+                    task.ImageUrl = "";
+                    task.Buttons = null;
                 }
 
                 task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_ID, targetTask.MessageId);

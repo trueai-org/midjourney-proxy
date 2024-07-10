@@ -388,6 +388,11 @@ namespace Midjourney.API.Controllers
                 return BadRequest(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "base64格式错误"));
             }
 
+            if (string.IsNullOrWhiteSpace(task.Prompt))
+            {
+                task.Prompt = prompt;
+            }
+
             task.PromptEn = promptEn;
 
             return Ok(_taskService.SubmitModal(task, actionDTO, dataUrl));
