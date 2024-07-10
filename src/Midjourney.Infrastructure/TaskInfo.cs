@@ -59,9 +59,8 @@ namespace Midjourney.Infrastructure
         /// <summary>
         /// 任务类型。
         /// </summary>
-        [JsonIgnore]
         [BsonIgnore]
-        public string Status => Status?.ToString() ?? string.Empty;
+        public string Status => StatusValue?.ToString() ?? string.Empty;
 
         /// <summary>
         /// 提示词。

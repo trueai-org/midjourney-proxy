@@ -3,9 +3,7 @@ global using Midjourney.Infrastructure.Models;
 
 using Microsoft.AspNetCore.Mvc;
 using Serilog;
-using System.Text.Json;
 using System.Text.Json.Serialization;
-using TaskStatus = Midjourney.Infrastructure.TaskStatus;
 
 namespace Midjourney.API
 {
@@ -34,7 +32,7 @@ namespace Midjourney.API
                 options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
 
                 // 如果枚举值是 null ，则返回空字符串
-                // TODO
+                //options.JsonSerializerOptions.Converters.Add(new NullableEnumConverter<TaskStatus>());
             });
 
             // 自定义配置 API 行为选项
