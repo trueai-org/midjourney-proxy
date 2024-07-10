@@ -271,74 +271,68 @@ namespace Midjourney.API.Controllers
             var task = NewTask(actionDTO);
 
             // 识别 mj action
-            if (actionDTO.CustomId.StartsWith("MJ::JOB::"))
+
+            // 放大
+            // MJ::JOB::upsample::2::898416ec-7c18-4762-bf03-8e428fee1860
+            if (actionDTO.CustomId.StartsWith("MJ::JOB::upsample::"))
             {
-                // 放大
-                // MJ::JOB::upsample::2::898416ec-7c18-4762-bf03-8e428fee1860
-                if (actionDTO.CustomId.StartsWith("MJ::JOB::upsample::"))
-                {
-                    task.Action = TaskAction.UPSCALE;
-                }
-                // 微调
-                // MJ::JOB::variation::2::898416ec-7c18-4762-bf03-8e428fee1860
-                else if (actionDTO.CustomId.StartsWith("MJ::JOB::variation::"))
-                {
-                    task.Action = TaskAction.VARIATION;
-                }
-                // 重绘
-                // MJ::JOB::reroll::0::898416ec-7c18-4762-bf03-8e428fee1860::SOLO
-                else if (actionDTO.CustomId.StartsWith("MJ::JOB::reroll::"))
-                {
-                    task.Action = TaskAction.REROLL;
-                }
-                // 强变化
-                // MJ::JOB::high_variation::1::7af96d1a-67c7-4d74-b173-8430c98c7631::SOLO
-                else if (actionDTO.CustomId.StartsWith("MJ::JOB::high_variation::"))
-                {
-                    task.Action = TaskAction.VARIATION;
-                }
-                // 弱变化
-                // MJ::JOB::low_variation::1::7af96d1a-67c7-4d74-b173-8430c98c7631::SOLO
-                else if (actionDTO.CustomId.StartsWith("MJ::JOB::low_variation::"))
-                {
-                    task.Action = TaskAction.VARIATION;
-                }
-                // 变焦
-                // MJ::Outpaint::50::1::7af96d1a-67c7-4d74-b173-8430c98c7631::SOLO
-                else if (actionDTO.CustomId.StartsWith("MJ::Outpaint::"))
-                {
-                    task.Action = TaskAction.ACTION;
-                }
-                // 平移
-                // MJ::JOB::pan_left::1::7af96d1a-67c7-4d74-b173-8430c98c7631::SOLO
-                else if (actionDTO.CustomId.StartsWith("MJ::JOB::pan_"))
-                {
-                    task.Action = TaskAction.PAN;
-                }
-                // 高清 2x / 2x 创意
-                // MJ::JOB::upsample_v6_2x_subtle::1::7af96d1a-67c7-4d74-b173-8430c98c7631::SOLO
-                // MJ::JOB::upsample_v6_2x_creative::1::7af96d1a-67c7-4d74-b173-8430c98c7631::SOLO
-                else if (actionDTO.CustomId.StartsWith("MJ::JOB::upsample_"))
-                {
-                    task.Action = TaskAction.ACTION;
-                }
-                // 自定义变焦
-                // "MJ::CustomZoom::439f8670-52e8-4f57-afaa-fa08f6d6c751"
-                else if (actionDTO.CustomId.StartsWith("MJ::CustomZoom::"))
-                {
-                    task.Action = TaskAction.ACTION;
-                    task.Description = "Waiting for window confirm";
-                }
-                // 局部绘制
-                // MJ::Inpaint::1::da2b1fda-0455-4952-9f0e-d4cb891f8b1e::SOLO
-                else if (actionDTO.CustomId.StartsWith("MJ::Inpaint::"))
-                {
-                    task.Action = TaskAction.INPAINT;
-                }
-                else
-                {
-                    task.Action = TaskAction.ACTION;
-                }
+                task.Action = TaskAction.UPSCALE;
+            }
+            // 微调
+            // MJ::JOB::variation::2::898416ec-7c18-4762-bf03-8e428fee1860
+            else if (actionDTO.CustomId.StartsWith("MJ::JOB::variation::"))
+            {
+                task.Action = TaskAction.VARIATION;
+            }
+            // 重绘
+            // MJ::JOB::reroll::0::898416ec-7c18-4762-bf03-8e428fee1860::SOLO
+            else if (actionDTO.CustomId.StartsWith("MJ::JOB::reroll::"))
+            {
+                task.Action = TaskAction.REROLL;
+            }
+            // 强变化
+            // MJ::JOB::high_variation::1::7af96d1a-67c7-4d74-b173-8430c98c7631::SOLO
+            else if (actionDTO.CustomId.StartsWith("MJ::JOB::high_variation::"))
+            {
+                task.Action = TaskAction.VARIATION;
+            }
+            // 弱变化
+            // MJ::JOB::low_variation::1::7af96d1a-67c7-4d74-b173-8430c98c7631::SOLO
+            else if (actionDTO.CustomId.StartsWith("MJ::JOB::low_variation::"))
+            {
+                task.Action = TaskAction.VARIATION;
+            }
+            // 变焦
+            // MJ::Outpaint::50::1::7af96d1a-67c7-4d74-b173-8430c98c7631::SOLO
+            else if (actionDTO.CustomId.StartsWith("MJ::Outpaint::"))
+            {
+                task.Action = TaskAction.ACTION;
+            }
+            // 平移
+            // MJ::JOB::pan_left::1::7af96d1a-67c7-4d74-b173-8430c98c7631::SOLO
+            else if (actionDTO.CustomId.StartsWith("MJ::JOB::pan_"))
+            {
+                task.Action = TaskAction.PAN;
+            }
+            // 高清 2x / 2x 创意
+            // MJ::JOB::upsample_v6_2x_subtle::1::7af96d1a-67c7-4d74-b173-8430c98c7631::SOLO
+            // MJ::JOB::upsample_v6_2x_creative::1::7af96d1a-67c7-4d74-b173-8430c98c7631::SOLO
+            else if (actionDTO.CustomId.StartsWith("MJ::JOB::upsample_"))
+            {
+                task.Action = TaskAction.ACTION;
+            }
+            // 自定义变焦
+            // "MJ::CustomZoom::439f8670-52e8-4f57-afaa-fa08f6d6c751"
+            else if (actionDTO.CustomId.StartsWith("MJ::CustomZoom::"))
+            {
+                task.Action = TaskAction.ACTION;
+                task.Description = "Waiting for window confirm";
+            }
+            // 局部绘制
+            // MJ::Inpaint::1::da2b1fda-0455-4952-9f0e-d4cb891f8b1e::SOLO
+            else if (actionDTO.CustomId.StartsWith("MJ::Inpaint::"))
+            {
+                task.Action = TaskAction.INPAINT;
             }
             else
             {

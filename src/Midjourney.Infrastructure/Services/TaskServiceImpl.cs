@@ -184,8 +184,9 @@ namespace Midjourney.Infrastructure.Services
                 _taskStoreService.Save(task);
 
                 // 状态码为 21
-                return SubmitResultVO.Of(ReturnCode.EXISTED, "提交成功", task.Id)
-                    .SetProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, task.PromptEn);
+                return SubmitResultVO.Of(ReturnCode.EXISTED, "Waiting for window confirm", task.Id)
+                    .SetProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, task.PromptEn)
+                    .SetProperty(Constants.TASK_PROPERTY_REMIX, true);
             }
 
             return discordInstance.SubmitTaskAsync(task, async () =>

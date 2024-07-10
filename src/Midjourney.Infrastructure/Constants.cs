@@ -24,6 +24,11 @@
         public const string TASK_PROPERTY_FINAL_PROMPT = "finalPrompt";
 
         /// <summary>
+        /// TODO
+        /// </summary>
+        public const string TASK_PROPERTY_REMIX = "remix";
+
+        /// <summary>
         /// 原始消息内容
         /// </summary>
         public const string TASK_PROPERTY_MESSAGE_CONTENT = "messageContent";
