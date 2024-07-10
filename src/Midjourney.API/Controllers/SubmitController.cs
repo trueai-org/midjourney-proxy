@@ -333,7 +333,7 @@ namespace Midjourney.API.Controllers
                 // MJ::Inpaint::1::da2b1fda-0455-4952-9f0e-d4cb891f8b1e::SOLO
                 else if (actionDTO.CustomId.StartsWith("MJ::Inpaint::"))
                 {
-                    task.Action = TaskAction.ACTION;
+                    task.Action = TaskAction.INPAINT;
                 }
                 else
                 {

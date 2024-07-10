@@ -117,6 +117,11 @@
         /// </summary>
         OUTPAINT,
 
+        /// <summary>
+        /// 局部重绘
+        /// </summary>
+        INPAINT,
+
         ///// <summary>
         ///// 自定义变焦
         ///// </summary>
