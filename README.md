@@ -62,6 +62,7 @@ docker run --name mjproxy -d --restart=always \
 docker pull registry.cn-guangzhou.aliyuncs.com/trueai-org/midjourney-proxy
 docker run --name mjproxy -d --restart=always \
  -p 8081:8080 --user root \
+ -v /root/mjproxy/data:/app/data:rw \
  -v /root/mjproxy/appsettings.Production.json:/app/appsettings.Production.json:ro \
  -e TZ=Asia/Shanghai \
  -v /etc/localtime:/etc/localtime:ro \
