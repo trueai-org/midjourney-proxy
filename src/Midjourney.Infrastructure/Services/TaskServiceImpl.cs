@@ -178,6 +178,13 @@ namespace Midjourney.Infrastructure.Services
             if (submitAction.CustomId.StartsWith("MJ::CustomZoom::")
                 || submitAction.CustomId.StartsWith("MJ::Inpaint::"))
             {
+
+                // 如果是局部重绘，则设置任务状态为进行中
+                if (task.Action == TaskAction.INPAINT)
+                {
+                    task.Status = TaskStatus.IN_PROGRESS;
+                }
+
                 task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_ID, targetTask.MessageId);
                 task.SetProperty(Constants.TASK_PROPERTY_FLAGS, messageFlags);
 
