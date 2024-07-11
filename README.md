@@ -1,8 +1,8 @@
 # Midjourney Proxy
 
-代理 Midjourney 的 Discord 频道，实现 API 形式调用 AI 绘图，公益项目，全球所有 AI 模型免费使用。
-
 **完全开源，不会存在部分开源或部分闭源，欢迎 PR。**
+
+代理 Midjourney 的 Discord 频道，实现 API 形式调用 AI 绘图，公益项目，全球所有 AI 模型免费使用。
 
 ## 主要功能
 
