@@ -209,7 +209,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
             var currentWaitNumbers = _queueTasks.Count;
             if (_account.MaxQueueSize > 0 && currentWaitNumbers >= _account.MaxQueueSize)
             {
-                return SubmitResultVO.Fail(ReturnCode.FAILURE, "提交失败，队列已满，请稍后重拾")
+                return SubmitResultVO.Fail(ReturnCode.FAILURE, "提交失败，队列已满，请稍后重试")
                     .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, GetInstanceId());
             }
 
