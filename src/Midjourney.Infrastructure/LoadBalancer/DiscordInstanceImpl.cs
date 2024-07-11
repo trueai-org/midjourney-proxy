@@ -205,21 +205,18 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <returns>任务提交结果</returns>
         public SubmitResultVO SubmitTaskAsync(TaskInfo info, Func<Task<Message>> discordSubmit)
         {
-            _taskStoreService.Save(info);
-
             // 在任务提交时，前面的的任务数量
             var currentWaitNumbers = _queueTasks.Count;
+            if (_account.MaxQueueSize > 0 && currentWaitNumbers >= _account.MaxQueueSize)
+            {
+                return SubmitResultVO.Fail(ReturnCode.FAILURE, "提交失败，队列已满，请稍后重拾")
+                    .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, GetInstanceId());
+            }
+
+            _taskStoreService.Save(info);
 
             try
             {
-                if (_account.MaxQueueSize > 0 && currentWaitNumbers >= _account.MaxQueueSize)
-                {
-                    _taskStoreService.Delete(info.Id);
-
-                    return SubmitResultVO.Fail(ReturnCode.FAILURE, "提交失败，队列已满，请稍后重拾")
-                        .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, GetInstanceId());
-                }
-
                 _queueTasks.Enqueue((info, discordSubmit));
 
                 // 通知后台服务有新的任务
