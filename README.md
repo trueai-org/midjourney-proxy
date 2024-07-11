@@ -21,6 +21,21 @@ Midjourney Api 的 C# 版本。
 - [x] 支持获取图片的 seed 值
 - [x] 支持指定生成速度模式 RELAX | FAST | TURBO 
 
+## 公益接口
+
+公益接口为慢速模式，请合理使用。
+
+- 绘图公益接口地址：<https://ai.googlec.cc/mj-relax>
+- 绘图工艺接口密钥：`无需密钥或任意值`
+
+## 客户端推荐
+
+- **ChatGPT Web Midjourney Proxy**: <https://github.com/Dooy/chatgpt-web-midjourney-proxy> 
+  - 或直接打开 <https://vercel.ddaiai.com> 输入接口地址即可使用
+
+![参考](./docs/screenshots/3RMDpVbIlu.png)
+
+
 ## 配置项
 - mj.accounts: 参考 [账号池配置](./docs/config.md#%E8%B4%A6%E5%8F%B7%E6%B1%A0%E9%85%8D%E7%BD%AE%E5%8F%82%E8%80%83)
 - mj.task-store.type: 任务存储方式，默认in_memory(内存\重启后丢失)，可选redis
@@ -45,7 +60,7 @@ docker run --name mjproxy -d --restart=always \
  -v /etc/timezone:/etc/timezone:ro \
  registry.cn-guangzhou.aliyuncs.com/trueai-org/midjourney-proxy
 
-# 演示站点启动配置
+# 公益站点启动配置
 docker pull registry.cn-guangzhou.aliyuncs.com/trueai-org/midjourney-proxy
 docker run --name mjproxy -d --restart=always \
  -p 8081:8080 --user root \
