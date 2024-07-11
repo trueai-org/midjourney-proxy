@@ -14,11 +14,12 @@ Midjourney Api 的 C# 版本。
 - [x] prompt 敏感词预检测，支持覆盖调整
 - [x] user-token 连接 wss，可以获取错误信息和完整功能
 - [x] 支持 Shorten(prompt分析) 指令
-- [x] 支持焦点移动: Pan ⬅️➡⬆️⬇️
-- [x] 支持局部重绘: Vary (Region) 🖌
+- [x] 支持焦点移动：Pan ⬅️➡⬆️⬇️
+- [x] 支持局部重绘：Vary (Region) 🖌
 - [x] 支持几乎所有的关联按钮动作和 🎛️ Remix 模式
 - [x] 支持图片变焦，自定义变焦 Zoom 🔍
 - [x] 支持获取图片的 seed 值
+- [x] 支持指定生成速度模式 RELAX | FAST | TURBO 
 
 ## 配置项
 - mj.accounts: 参考 [账号池配置](./docs/config.md#%E8%B4%A6%E5%8F%B7%E6%B1%A0%E9%85%8D%E7%BD%AE%E5%8F%82%E8%80%83)

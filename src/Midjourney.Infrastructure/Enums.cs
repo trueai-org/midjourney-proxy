@@ -180,6 +180,16 @@
         INTERACTION_MODAL_CREATE
     }
 
+    /// <summary>
+    /// 生成速度模式枚举.
+    /// </summary>
+    public enum GenerationSpeedMode
+    {
+        RELAX,
+        FAST,
+        TURBO
+    }
+
     public static class MessageTypeExtensions
     {
         /// <summary>

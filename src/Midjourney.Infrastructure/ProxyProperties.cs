@@ -139,6 +139,11 @@ namespace Midjourney.Infrastructure
         /// 任务超时时间(分钟).
         /// </summary>
         public int TimeoutMinutes { get; set; } = 5;
+
+        /// <summary>
+        /// 指定生成速度模式 --fast, --relax, or --turbo parameter at the end.
+        /// </summary>
+        public GenerationSpeedMode? Mode { get; set; }
     }
 
     /// <summary>

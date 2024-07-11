@@ -1,9 +1,7 @@
 ﻿using Midjourney.Infrastructure.Domain;
 using Newtonsoft.Json.Linq;
 using Serilog;
-using System;
 using System.Net.Http.Headers;
-using System.Reflection;
 using System.Text;
 
 namespace Midjourney.Infrastructure.Services
@@ -50,6 +48,8 @@ namespace Midjourney.Infrastructure.Services
 
         public async Task<Message> ImagineAsync(string prompt, string nonce)
         {
+            prompt = GetPrompt(prompt);
+
             string paramsStr = ReplaceInteractionParams(_paramsMap["imagine"], nonce);
             JObject paramsJson = JObject.Parse(paramsStr);
             paramsJson["data"]["options"][0]["value"] = prompt;
@@ -195,6 +195,7 @@ namespace Midjourney.Infrastructure.Services
         public async Task<Message> ZoomAsync(string messageId, string customId, string prompt, string nonce)
         {
             customId = customId.Replace("MJ::CustomZoom::", "MJ::OutpaintCustomZoomModal::");
+            prompt = GetPrompt(prompt);
 
             string paramsStr = ReplaceInteractionParams(_paramsMap["zoom"], nonce)
                 .Replace("$message_id", messageId)
@@ -209,6 +210,42 @@ namespace Midjourney.Infrastructure.Services
         }
 
         /// <summary>
+        /// 获取 prompt 格式化
+        /// </summary>
+        /// <param name="prompt"></param>
+        /// <returns></returns>
+        public string GetPrompt(string prompt)
+        {
+            if (string.IsNullOrWhiteSpace(prompt))
+            {
+                return prompt;
+            }
+
+            if (_account.Mode != null)
+            {
+                // 移除 prompt 可能的的参数
+                prompt = prompt.Replace("--fast", "").Replace("--relax", "").Replace("--turbo", "");
+
+                switch (_account.Mode.Value)
+                {
+                    case GenerationSpeedMode.RELAX:
+                        prompt += " --relax";
+                        break;
+                    case GenerationSpeedMode.FAST:
+                        prompt += " --relax";
+                        break;
+                    case GenerationSpeedMode.TURBO:
+                        prompt += " --relax";
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            return prompt;
+        }
+
+        /// <summary>
         /// 局部重绘
         /// </summary>
         /// <param name="customId"></param>
@@ -219,6 +256,8 @@ namespace Midjourney.Infrastructure.Services
         {
             try
             {
+                prompt = GetPrompt(prompt);
+
                 customId = customId.Replace("MJ::iframe::", "");
 
                 // mask.replace(/^data:.+?;base64,/, ''),

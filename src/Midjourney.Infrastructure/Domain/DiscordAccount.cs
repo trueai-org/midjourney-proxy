@@ -82,6 +82,12 @@ namespace Midjourney.Infrastructure.Domain
         public int TimeoutMinutes { get; set; } = 5;
 
         /// <summary>
+        /// 指定生成速度模式 --fast, --relax, or --turbo parameter at the end.
+        /// </summary>
+        [Display(Name = "生成速度模式 fast | relax | turbo")]
+        public GenerationSpeedMode? Mode { get; set; }
+
+        /// <summary>
         /// 获取显示名称。
         /// </summary>
         /// <returns>频道ID。</returns>
