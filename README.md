@@ -141,6 +141,8 @@ https://discord.com/oauth2/authorize?client_id=xxx&permissions=8&scope=bot
 - https://github.com/litter-coder/midjourney-proxy-plus
 - https://github.com/Dooy/chatgpt-web-midjourney-proxy
 - https://github.com/erictik/midjourney-api
+- https://github.com/yokonsan/midjourney-api
+- https://github.com/imagineapi/imagineapi
 
 ## 常用链接
 - Open AI官网: <https://openai.com>
