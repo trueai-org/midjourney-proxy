@@ -79,5 +79,12 @@ namespace Midjourney.Infrastructure.Services
         /// <param name="submitAction"></param>
         /// <returns></returns>
         SubmitResultVO SubmitModal(TaskInfo task, SubmitModalDTO submitAction, DataUrl dataUrl = null);
+
+        /// <summary>
+        /// 获取图片 seed
+        /// </summary>
+        /// <param name="task"></param>
+        /// <returns></returns>
+        Task<SubmitResultVO> SubmitSeed(TaskInfo task);
     }
 }

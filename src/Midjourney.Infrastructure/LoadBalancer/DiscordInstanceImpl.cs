@@ -304,6 +304,16 @@ namespace Midjourney.Infrastructure.LoadBalancer
             }
         }
 
+        public void AddRunningTask(TaskInfo task)
+        {
+            _runningTasks.Add(task);
+        }   
+
+        public void RemoveRunningTask(TaskInfo task)
+        {
+            _runningTasks.Remove(task);
+        }   
+
         /// <summary>
         /// 异步保存和通知任务。
         /// </summary>
@@ -371,6 +381,24 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <returns></returns>
         public Task<Message> ActionAsync(string messageId, string customId, int messageFlags, string nonce) =>
               _service.ActionAsync(messageId, customId, messageFlags, nonce);
+
+        /// <summary>
+        /// 图片 seed 值
+        /// </summary>
+        /// <param name="jobId"></param>
+        /// <param name="nonce"></param>
+        /// <returns></returns>
+        public Task<Message> SeedAsync(string jobId, string nonce) =>
+            _service.SeedAsync(jobId, nonce);
+
+        /// <summary>
+        /// 图片 seed 值消息
+        /// </summary>
+        /// <param name="jobId"></param>
+        /// <param name="nonce"></param>
+        /// <returns></returns>
+        public Task<Message> SeedMessagesAsync(string url) =>
+            _service.SeedMessagesAsync(url);
 
         /// <summary>
         /// 执行 ZOOM

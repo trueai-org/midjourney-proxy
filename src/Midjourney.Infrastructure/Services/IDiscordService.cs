@@ -56,6 +56,23 @@
         Task<Message> ActionAsync(string messageId, string customId, int messageFlags, string nonce);
 
         /// <summary>
+        /// 图片 seed 值
+        /// </summary>
+        /// <param name="jobId"></param>
+        /// <param name="nonce"></param>
+        /// <returns></returns>
+        Task<Message> SeedAsync(string jobId, string nonce);
+
+
+        /// <summary>
+        /// 图片 seed 值消息
+        /// </summary>
+        /// <param name="jobId"></param>
+        /// <param name="nonce"></param>
+        /// <returns></returns>
+        Task<Message> SeedMessagesAsync(string url);
+
+        /// <summary>
         /// 执行 ZOOM
         /// </summary>
         /// <param name="messageId"></param>
@@ -64,7 +81,6 @@
         /// <param name="nonce"></param>
         /// <returns></returns>
         Task<Message> ZoomAsync(string messageId, string customId, string prompt, string nonce);
-
 
         /// <summary>
         /// 局部重绘

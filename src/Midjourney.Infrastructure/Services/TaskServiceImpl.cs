@@ -275,5 +275,95 @@ namespace Midjourney.Infrastructure.Services
                 }
             });
         }
+
+        /// <summary>
+        /// 获取图片 seed
+        /// </summary>
+        /// <param name="task"></param>
+        /// <returns></returns>
+        public async Task<SubmitResultVO> SubmitSeed(TaskInfo task)
+        {
+            var discordInstance = _discordLoadBalancer.ChooseInstance();
+            if (discordInstance == null)
+            {
+                return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
+            }
+            var privateChannelId = discordInstance.Account().PrivateChannelId;
+            if (string.IsNullOrWhiteSpace(privateChannelId))
+            {
+                return SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "请配置私聊频道");
+            }
+
+            try
+            {
+                discordInstance.AddRunningTask(task);
+
+                var hash = task.GetProperty<string>(Constants.TASK_PROPERTY_MESSAGE_HASH, default);
+
+                var nonce = SnowFlake.NextId();
+                task.Nonce = nonce;
+                task.SetProperty(Constants.TASK_PROPERTY_NONCE, nonce);
+
+                // /show job_id
+                // https://discord.com/api/v9/interactions
+                var res = await discordInstance.SeedAsync(hash, nonce);
+                if (res.Code != ReturnCode.SUCCESS)
+                {
+                    return SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, res.Description);
+                }
+
+                // 等待获取 seed messageId
+                // 等待最大超时 5min
+                var sw = new Stopwatch();
+                sw.Start();
+
+                do
+                {
+                    Thread.Sleep(50);
+                    task = discordInstance.GetRunningTask(task.Id);
+
+                    if (string.IsNullOrWhiteSpace(task.SeedMessageId))
+                    {
+                        if (sw.ElapsedMilliseconds > 1000 * 60 * 3)
+                        {
+                            return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "超时，未找到 seed messageId");
+                        }
+                    }
+                } while (string.IsNullOrWhiteSpace(task.SeedMessageId));
+
+                // 添加反应
+                // https://discord.com/api/v9/channels/1256495659683676190/messages/1260598192333127701/reactions/✉️/@me?location=Message&type=0
+                var url = $"https://discord.com/api/v9/channels/{privateChannelId}/messages/{task.SeedMessageId}/reactions/%E2%9C%89%EF%B8%8F/%40me?location=Message&type=0";
+                var msgRes = await discordInstance.SeedMessagesAsync(url);
+                if (msgRes.Code != ReturnCode.SUCCESS)
+                {
+                    return SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, res.Description);
+                }
+
+                sw.Start();
+                do
+                {
+                    Thread.Sleep(50);
+                    task = discordInstance.GetRunningTask(task.Id);
+
+                    if (string.IsNullOrWhiteSpace(task.Seed))
+                    {
+                        if (sw.ElapsedMilliseconds > 1000 * 60 * 3)
+                        {
+                            return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "超时，未找到 seed");
+                        }
+                    }
+                } while (string.IsNullOrWhiteSpace(task.Seed));
+
+                // 保存任务
+                _taskStoreService.Save(task);
+            }
+            finally
+            {
+                discordInstance.RemoveRunningTask(task);
+            }
+
+            return SubmitResultVO.Of(ReturnCode.SUCCESS, "成功", task.Seed);
+        }
     }
 }

@@ -56,12 +56,6 @@ namespace Midjourney.Infrastructure
         [SwaggerSchema("任务状态")]
         public TaskStatus? Status { get; set; }
 
-        ///// <summary>
-        ///// 任务类型。
-        ///// </summary>
-        //[BsonIgnore]
-        //public string Status => StatusValue?.ToString() ?? string.Empty;
-
         /// <summary>
         /// 提示词。
         /// </summary>
@@ -126,6 +120,16 @@ namespace Midjourney.Infrastructure
         /// 按钮
         /// </summary>
         public List<CustomComponentModel> Buttons { get; set; }
+
+        /// <summary>
+        /// 任务的种子。
+        /// </summary>
+        public string Seed { get; set; }
+
+        /// <summary>
+        /// Seed 消息 ID
+        /// </summary>
+        public string SeedMessageId { get; set; }
 
         /// <summary>
         /// 启动任务。

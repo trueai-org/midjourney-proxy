@@ -100,7 +100,7 @@ namespace Midjourney.Infrastructure
             {
                 webProxy = new WebProxy(_properties.Proxy.Host, _properties.Proxy.Port ?? 80);
             }
-            _messageListener = new BotMessageListener(account.BotToken, account, webProxy);
+            _messageListener = new BotMessageListener(account.BotToken, account, _discordHelper, webProxy);
 
             // 用户 WebSocket 连接
             var webSocket = new WebSocketStarter(account, _discordHelper, _messageListener,

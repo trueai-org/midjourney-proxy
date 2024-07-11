@@ -27,6 +27,12 @@ namespace Midjourney.Infrastructure.Domain
         public string ChannelId { get; set; }
 
         /// <summary>
+        /// 私信频道ID, 用来接收 seed 值
+        /// </summary>
+        [Display(Name = "私信频道ID")]
+        public string PrivateChannelId { get; set; }
+
+        /// <summary>
         /// 用户Token。
         /// </summary>
         [Required]
@@ -62,6 +68,12 @@ namespace Midjourney.Infrastructure.Domain
         /// </summary>
         [Display(Name = "等待队列长度")]
         public int QueueSize { get; set; } = 10;
+
+        /// <summary>
+        /// 等待最大队列长度
+        /// </summary>
+        [Display(Name = "等待最大队列长度")]
+        public int MaxQueueSize { get; set; } = 100;
 
         /// <summary>
         /// 任务超时时间（分钟）。

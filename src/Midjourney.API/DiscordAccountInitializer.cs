@@ -66,7 +66,9 @@ namespace Midjourney.API
                     CoreSize = configAccount.CoreSize,
                     QueueSize = configAccount.QueueSize,
                     BotToken = configAccount.BotToken,
-                    TimeoutMinutes = configAccount.TimeoutMinutes
+                    TimeoutMinutes = configAccount.TimeoutMinutes,
+                    PrivateChannelId = configAccount.PrivateChannelId,
+                    MaxQueueSize = configAccount.MaxQueueSize
                 };
 
                 try

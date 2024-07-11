@@ -33,6 +33,18 @@ namespace Midjourney.Infrastructure.LoadBalancer
         List<TaskInfo> GetRunningTasks();
 
         /// <summary>
+        /// 添加正在运行的任务。
+        /// </summary>
+        /// <param name="task"></param>
+        void AddRunningTask(TaskInfo task);
+
+        /// <summary>
+        /// 移除正在运行的任务。
+        /// </summary>
+        /// <param name="task"></param>
+        void RemoveRunningTask(TaskInfo task);
+
+        /// <summary>
         /// 获取排队中的任务列表。
         /// </summary>
         /// <returns>排队中的任务列表。</returns>

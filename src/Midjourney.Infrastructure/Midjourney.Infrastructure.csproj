@@ -31,10 +31,12 @@
 		<Content Remove="Resources\ApiParams\variation.json" />
 		<Content Remove="Resources\ApiParams\action.json" />
 		<Content Remove="Resources\ApiParams\zoom.json" />
+		<Content Remove="Resources\ApiParams\seed.json" />
 		<Content Remove="Resources\mime.types" />
 	</ItemGroup>
 
 	<ItemGroup>
+		<EmbeddedResource Include="Resources\ApiParams\seed.json" />
 		<EmbeddedResource Include="Resources\ApiParams\zoom.json" />
 		<EmbeddedResource Include="Resources\ApiParams\reroll.json" />
 		<EmbeddedResource Include="Resources\ApiParams\upscale.json" />

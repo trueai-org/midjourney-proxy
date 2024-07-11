@@ -15,6 +15,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "doc", "doc", "{D2283666-695
 		docs\discord-params.md = docs\discord-params.md
 		docs\docker-start.md = docs\docker-start.md
 		README.md = README.md
+		docs\TODO.md = docs\TODO.md
 	EndProjectSection
 EndProject
 Global

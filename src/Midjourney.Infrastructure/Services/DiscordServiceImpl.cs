@@ -1,7 +1,9 @@
 ﻿using Midjourney.Infrastructure.Domain;
 using Newtonsoft.Json.Linq;
 using Serilog;
+using System;
 using System.Net.Http.Headers;
+using System.Reflection;
 using System.Text;
 
 namespace Midjourney.Infrastructure.Services
@@ -124,6 +126,62 @@ namespace Midjourney.Infrastructure.Services
 
             paramsStr = obj.ToString();
             return await PostJsonAndCheckStatusAsync(paramsStr);
+        }
+
+        /// <summary>
+        /// 图片 seed 值
+        /// </summary>
+        /// <param name="jobId"></param>
+        /// <param name="nonce"></param>
+        /// <returns></returns>
+        public async Task<Message> SeedAsync(string jobId, string nonce)
+        {
+            var paramsStr = _paramsMap["seed"]
+              .Replace("$channel_id", _account.PrivateChannelId)
+              .Replace("$session_id", DefaultSessionId)
+              .Replace("$nonce", nonce)
+              .Replace("$job_id", jobId);
+
+            var obj = JObject.Parse(paramsStr);
+            paramsStr = obj.ToString();
+            return await PostJsonAndCheckStatusAsync(paramsStr);
+        }
+
+        /// <summary>
+        /// 图片 seed 值消息
+        /// </summary>
+        /// <param name="jobId"></param>
+        /// <param name="nonce"></param>
+        /// <returns></returns>
+        public async Task<Message> SeedMessagesAsync(string url)
+        {
+            try
+            {
+                // 解码
+                url = System.Web.HttpUtility.UrlDecode(url);
+
+                HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Put, url)
+                {
+                    Content = new StringContent("", Encoding.UTF8, "application/json")
+                };
+
+                request.Headers.UserAgent.ParseAdd(_account.UserAgent);
+
+                // 设置 request Authorization 为 UserToken，不需要 Bearer 前缀
+                request.Headers.Add("Authorization", _account.UserToken);
+
+                var response = await _httpClient.SendAsync(request);
+
+                if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
+                {
+                    return Message.Success();
+                }
+                return Message.Of((int)response.StatusCode, "请求失败");
+            }
+            catch (HttpRequestException e)
+            {
+                return ConvertHttpRequestException(e);
+            }
         }
 
         /// <summary>
