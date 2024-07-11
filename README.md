@@ -128,5 +128,30 @@ https://discord.com/oauth2/authorize?client_id=xxx&permissions=8&scope=bot
 ## 相关文档
 1. [API接口说明](./docs/api.md)
 
-## 其它
-如果觉得这个项目对您有所帮助，请帮忙点个 Star
+## 支持与赞助
+
+- 如果觉得这个项目对您有所帮助，请帮忙点个 Star⭐
+
+## 友情链接
+
+- https://github.com/dolfies/discord.py-self
+- https://github.com/bao-io/midjourney-sdk
+- https://github.com/webman-php/midjourney-proxy
+- https://github.com/novicezk/midjourney-proxy
+- https://github.com/litter-coder/midjourney-proxy-plus
+- https://github.com/Dooy/chatgpt-web-midjourney-proxy
+- https://github.com/erictik/midjourney-api
+
+## 常用链接
+- Open AI官网: <https://openai.com>
+- Discord官网: <https://discord.com>
+- Discord开放平台: <https://discord.com/developers/applications>
+- 文心一言官网: <https://cloud.baidu.com/product/wenxinworkshop>
+- 星火模型官网: <https://xinghuo.xfyun.cn/>
+- Api2d官网: <https://api2d.com/>
+- OpenAI-SB官网: <https://www.openai-sb.com>
+- 宝塔官网: <https://bt.cn>
+- 阿里云官网: <https://aliyun.com>
+- 腾讯云官网: <https://cloud.tencent.com/>
+- 短信宝官网: <http://www.smsbao.com/>
+- OneAPI项目: <https://github.com/songquanpeng/one-api>
