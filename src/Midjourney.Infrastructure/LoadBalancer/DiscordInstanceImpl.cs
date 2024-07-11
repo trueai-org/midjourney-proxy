@@ -212,6 +212,14 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
             try
             {
+                if (_account.MaxQueueSize > 0 && currentWaitNumbers >= _account.MaxQueueSize)
+                {
+                    _taskStoreService.Delete(info.Id);
+
+                    return SubmitResultVO.Fail(ReturnCode.FAILURE, "提交失败，队列已满，请稍后重拾")
+                        .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, GetInstanceId());
+                }
+
                 _queueTasks.Enqueue((info, discordSubmit));
 
                 // 通知后台服务有新的任务
@@ -307,12 +315,12 @@ namespace Midjourney.Infrastructure.LoadBalancer
         public void AddRunningTask(TaskInfo task)
         {
             _runningTasks.Add(task);
-        }   
+        }
 
         public void RemoveRunningTask(TaskInfo task)
         {
             _runningTasks.Remove(task);
-        }   
+        }
 
         /// <summary>
         /// 异步保存和通知任务。
