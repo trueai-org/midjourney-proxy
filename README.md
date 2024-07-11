@@ -30,17 +30,11 @@
 
 ## 客户端推荐
 
-- 【开源客户端】**ChatGPT Web Midjourney Proxy**: <https://github.com/Dooy/chatgpt-web-midjourney-proxy> 
-  - 或直接打开 <https://vercel.ddaiai.com> 输入接口地址即可使用
+- **ChatGPT Web Midjourney Proxy**: <https://github.com/Dooy/chatgpt-web-midjourney-proxy> 
+  - 打开网站 <https://vercel.ddaiai.com> -> 设置 -> MJ 绘画接口地址 -> <https://ai.googlec.cc/mj-relax>
 
-![参考](./docs/screenshots/3RMDpVbIlu.png)
-
-- 【非开源客户端】**GoAmzAI**: <https://github.com/Licoy/GoAmzAI>
-![参考](./docs/screenshots/msedge_mFud58p78k.png)
-
-
-- 【非开源客户端】**SparkAi**: <https://ai.sparkaigf.com>
-![参考](./docs/screenshots/ABQTNSa55l.png)
+- **GoAmzAI**: <https://github.com/Licoy/GoAmzAI>
+  -	打开后台 -> 绘画管理 -> 新增 -> MJ 绘画接口地址 -> <https://ai.googlec.cc/mj-relax/mj>
 
 ## 配置项
 - mj.accounts: 参考 [账号池配置](./docs/config.md#%E8%B4%A6%E5%8F%B7%E6%B1%A0%E9%85%8D%E7%BD%AE%E5%8F%82%E8%80%83)
