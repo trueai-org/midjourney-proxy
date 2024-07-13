@@ -120,6 +120,16 @@ namespace Midjourney.Infrastructure.Domain
         public string SettingsMessageId { get; set; }
 
         /// <summary>
+        /// 执行中的任务数
+        /// </summary>
+        public int RunningCount { get; set; }
+
+        /// <summary>
+        /// 队列中的任务数
+        /// </summary>
+        public int QueueCount { get; set; }
+
+        /// <summary>
         /// 按钮
         /// </summary>
         [BsonIgnore]

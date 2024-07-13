@@ -1,8 +1,8 @@
 # Midjourney Proxy
 
-**完全开源，不会存在部分开源或部分闭源，欢迎 PR。**
-
 代理 Midjourney 的 Discord 频道，实现 API 形式调用 AI 绘图，公益项目，全球所有 AI 模型免费使用。
+
+完全开源，不会存在部分开源或部分闭源，欢迎 PR。
 
 功能最全、最安全、占用内存最小的 Midjourney Proxy 开源项目~~
 
@@ -26,7 +26,7 @@
 - [x] 账号池持久化，动态维护
 - [x] 支持获取账号 /info、/settings 信息
 - [x] 账号 settings 设置
-- [x] zstd-stream 安全压缩传输 <https://discord.com/developers/docs/topics/gateway>
+- [x] zlib-stream 安全压缩传输 <https://discord.com/developers/docs/topics/gateway>
 - [x] 内嵌管理后台页面 <https://github.com/trueai-org/midjourney-proxy-webui>
 
 ## 公益接口（免费）

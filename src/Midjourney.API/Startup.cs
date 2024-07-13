@@ -2,6 +2,7 @@
 global using Midjourney.Infrastructure.Models;
 
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.OpenApi.Models;
 using Serilog;
 using System.Reflection;
@@ -21,6 +22,19 @@ namespace Midjourney.API
         public void ConfigureServices(IServiceCollection services)
         {
             services.Configure<ProxyProperties>(Configuration.GetSection("mj"));
+
+            // 是否为演示模式
+            var isDemoMode = Configuration.GetSection("Demo").Get<bool?>();
+            if (isDemoMode != true)
+            {
+                if (bool.TryParse(Environment.GetEnvironmentVariable("DEMO"), out var demo) && demo)
+                {
+                    isDemoMode = demo;
+                }
+            }
+            GlobalConfiguration.IsDemoMode = isDemoMode;
+
+            services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
             // API 异常过滤器
             // API 方法/模型过滤器

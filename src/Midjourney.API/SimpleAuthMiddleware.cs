@@ -20,6 +20,13 @@ namespace Midjourney.API
 
         public async Task Invoke(HttpContext context)
         {
+            // 演示模式下不需要验证
+            if (GlobalConfiguration.IsDemoMode == true)
+            {
+                await _next(context);
+                return;
+            }
+
             // 如果都为空，则不需要验证
             if (string.IsNullOrWhiteSpace(_userToken) && string.IsNullOrWhiteSpace(_adminToken))
             {

@@ -17,6 +17,9 @@ namespace Midjourney.API.Controllers
     {
         private readonly ITaskService _taskService;
 
+        // 是否匿名用户
+        private readonly bool _isAnonymous;
+
         private readonly string _adminToken;
         private readonly DiscordLoadBalancer _loadBalancer;
         private readonly DiscordAccountInitializer _discordAccountInitializer;
@@ -25,13 +28,24 @@ namespace Midjourney.API.Controllers
             ITaskService taskService,
             IConfiguration configuration,
             DiscordLoadBalancer loadBalancer,
-            DiscordAccountInitializer discordAccountInitializer)
+            DiscordAccountInitializer discordAccountInitializer,
+            IHttpContextAccessor httpContextAccessor)
         {
             _loadBalancer = loadBalancer;
             _taskService = taskService;
             _discordAccountInitializer = discordAccountInitializer;
 
             _adminToken = configuration["AdminToken"];
+
+            var hasAuthHeader = httpContextAccessor.HttpContext.Request.Headers.TryGetValue("Authorization", out var authHeader);
+            var hasApiSecretHeader = httpContextAccessor.HttpContext.Request.Headers.TryGetValue("Mj-Api-Secret", out var apiSecretHeader);
+            var token = hasAuthHeader ? authHeader.ToString() : apiSecretHeader.ToString();
+
+            var isAdmin = _adminToken == token;
+            var isDemo = GlobalConfiguration.IsDemoMode == true;
+
+            // 如果不是管理员，并且是演示模式时，则是为匿名用户
+            _isAnonymous = !isAdmin && isDemo;
         }
 
         /// <summary>
@@ -48,6 +62,15 @@ namespace Midjourney.API.Controllers
                 {
                     code = 0,
                     description = "登录口令错误",
+                });
+            }
+
+            if (_isAnonymous && string.IsNullOrWhiteSpace(token))
+            {
+                return Ok(new
+                {
+                    code = 1,
+                    apiSecret = "",
                 });
             }
 
@@ -76,12 +99,20 @@ namespace Midjourney.API.Controllers
         [HttpGet("current")]
         public ActionResult Current()
         {
+            var name = "Admin";
+            var token = _adminToken;
+            if (_isAnonymous)
+            {
+                name = "Guest";
+                token = "";
+            }
+
             return Ok(new
             {
-                id = "admin",
-                userid = "admin",
-                name = "Admin",
-                apiSecret = _adminToken,
+                id = name,
+                userid = name,
+                name = name,
+                apiSecret = token,
                 version = "v2.0.0",
                 active = true,
                 imagePrefix = "",
@@ -148,8 +179,23 @@ namespace Midjourney.API.Controllers
         [HttpGet("account/{id}")]
         public ActionResult<DiscordAccount> Fetch(string id)
         {
-            var instance = _loadBalancer.GetDiscordInstance(id);
-            return instance == null ? (ActionResult<DiscordAccount>)NotFound() : Ok(instance.Account);
+            //var instance = _loadBalancer.GetDiscordInstance(id);
+            //return instance == null ? (ActionResult<DiscordAccount>)NotFound() : Ok(instance.Account);
+
+            var item = DbHelper.AccountStore.Get(id);
+            if (item == null)
+            {
+                throw new LogicException("账号不存在");
+            }
+
+            if (_isAnonymous)
+            {
+                // Token 加密
+                item.UserToken = item.UserToken?.Substring(0, 4) + "****" + item.UserToken?.Substring(item.UserToken.Length - 4);
+                item.BotToken = item.BotToken?.Substring(0, 4) + "****" + item.BotToken?.Substring(item.BotToken.Length - 4);
+            }
+
+            return Ok(item);
         }
 
         /// <summary>
@@ -160,6 +206,11 @@ namespace Midjourney.API.Controllers
         [HttpPost("account-sync/{id}")]
         public async Task<Result> SyncAccount(string id)
         {
+            if (_isAnonymous)
+            {
+                return Result.Fail("演示模式，禁止操作");
+            }
+
             await _taskService.InfoSetting(id);
             return Result.Ok();
         }
@@ -173,6 +224,11 @@ namespace Midjourney.API.Controllers
         [HttpPost("account-change-version/{id}")]
         public async Task<Result> AccountChangeVersion(string id, [FromQuery] string version)
         {
+            if (_isAnonymous)
+            {
+                return Result.Fail("演示模式，禁止操作");
+            }
+
             await _taskService.AccountChangeVersion(id, version);
             return Result.Ok();
         }
@@ -186,6 +242,11 @@ namespace Midjourney.API.Controllers
         [HttpPost("account-action/{id}")]
         public async Task<Result> AccountAction(string id, [FromQuery] string customId)
         {
+            if (_isAnonymous)
+            {
+                return Result.Fail("演示模式，禁止操作");
+            }
+
             await _taskService.AccountAction(id, customId);
             return Result.Ok();
         }
@@ -198,6 +259,11 @@ namespace Midjourney.API.Controllers
         [HttpPost("account")]
         public async Task<Result> AccountAdd([FromBody] DiscordAccountConfig accountConfig)
         {
+            if (_isAnonymous)
+            {
+                return Result.Fail("演示模式，禁止操作");
+            }
+
             var model = DbHelper.AccountStore.Get(accountConfig.ChannelId);
             if (model != null)
             {
@@ -216,6 +282,11 @@ namespace Midjourney.API.Controllers
         [HttpPut("account/{id}")]
         public Result AccountEdit([FromBody] DiscordAccount account)
         {
+            if (_isAnonymous)
+            {
+                return Result.Fail("演示模式，禁止操作");
+            }
+
             var model = DbHelper.AccountStore.Get(account.Id);
             if (model == null)
             {
@@ -240,6 +311,11 @@ namespace Midjourney.API.Controllers
         [HttpPut("account-reconnect/{id}")]
         public async Task<Result> AccountReconnect([FromBody] DiscordAccount account)
         {
+            if (_isAnonymous)
+            {
+                return Result.Fail("演示模式，禁止操作");
+            }
+
             await _discordAccountInitializer.ReconnectAccount(account);
             return Result.Ok();
         }
@@ -251,6 +327,11 @@ namespace Midjourney.API.Controllers
         [HttpDelete("account/{id}")]
         public Result AccountDelete(string id)
         {
+            if (_isAnonymous)
+            {
+                return Result.Fail("演示模式，禁止操作");
+            }
+
             _discordAccountInitializer.DeleteAccount(id);
             return Result.Ok();
         }
@@ -263,7 +344,22 @@ namespace Midjourney.API.Controllers
         public ActionResult<List<DiscordAccount>> List()
         {
             var db = DbHelper.AccountStore;
-            var data = db.GetAll();
+            var data = db.GetAll().ToList();
+
+            foreach (var item in data)
+            {
+                var inc = _loadBalancer.GetDiscordInstance(item.ChannelId);
+
+                item.RunningCount = inc?.GetRunningFutures().Count ?? 0;
+                item.QueueCount = inc?.GetQueueTasks().Count ?? 0;
+
+                if (_isAnonymous)
+                {
+                    // Token 加密
+                    item.UserToken = item.UserToken?.Substring(0, 4) + "****" + item.UserToken?.Substring(item.UserToken.Length - 4);
+                    item.BotToken = item.BotToken?.Substring(0, 4) + "****" + item.BotToken?.Substring(item.BotToken.Length - 4);
+                }
+            }
 
             return Ok(data);
         }
