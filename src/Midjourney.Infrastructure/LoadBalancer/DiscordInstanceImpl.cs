@@ -213,6 +213,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, GetInstanceId);
             }
 
+            info.InstanceId = GetInstanceId;
             _taskStoreService.Save(info);
 
             try

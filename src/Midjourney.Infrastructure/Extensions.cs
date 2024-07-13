@@ -1,5 +1,7 @@
-﻿using System.ComponentModel;
+﻿using LiteDB;
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using System.Linq.Expressions;
 
 namespace Midjourney.Infrastructure
 {
@@ -179,6 +181,19 @@ namespace Midjourney.Infrastructure
         /// <param name="predicate"></param>
         /// <returns></returns>
         public static IEnumerable<T> WhereIf<T>(this IEnumerable<T> query, bool condition, Func<T, bool> predicate)
+        {
+            return condition ? query.Where(predicate) : query;
+        }
+
+        /// <summary>
+        /// Lite DB 查询条件扩展
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="query"></param>
+        /// <param name="condition"></param>
+        /// <param name="predicate"></param>
+        /// <returns></returns>
+        public static ILiteQueryable<T> WhereIf<T>(this ILiteQueryable<T> query, bool condition, Expression<Func<T, bool>> predicate)
         {
             return condition ? query.Where(predicate) : query;
         }

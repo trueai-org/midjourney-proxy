@@ -147,7 +147,7 @@ namespace Midjourney.API.Controllers
             {
                 return BadRequest(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "关联任务状态错误"));
             }
-            if (!new[] { TaskAction.IMAGINE, TaskAction.VARIATION, TaskAction.REROLL, TaskAction.BLEND }.Contains(targetTask.Action))
+            if (!new[] { TaskAction.IMAGINE, TaskAction.VARIATION, TaskAction.REROLL, TaskAction.BLEND }.Contains(targetTask.Action.Value))
             {
                 return BadRequest(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "关联任务不允许执行变化"));
             }
@@ -155,9 +155,12 @@ namespace Midjourney.API.Controllers
             task.Action = changeDTO.Action;
             task.Prompt = targetTask.Prompt;
             task.PromptEn = targetTask.PromptEn;
+
             task.SetProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, targetTask.GetProperty<string>(Constants.TASK_PROPERTY_FINAL_PROMPT, default));
             task.SetProperty(Constants.TASK_PROPERTY_PROGRESS_MESSAGE_ID, targetTask.GetProperty<string>(Constants.TASK_PROPERTY_MESSAGE_ID, default));
             task.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, targetTask.GetProperty<string>(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, default));
+
+            task.InstanceId = targetTask.InstanceId;
             task.Description = description;
             int messageFlags = targetTask.GetProperty<int>(Constants.TASK_PROPERTY_FLAGS, default);
             string messageId = targetTask.GetProperty<string>(Constants.TASK_PROPERTY_MESSAGE_ID, default);

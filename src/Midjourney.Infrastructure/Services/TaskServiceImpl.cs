@@ -36,6 +36,7 @@ namespace Midjourney.Infrastructure.Services
             }
 
             info.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, instance.GetInstanceId);
+            info.InstanceId = instance.GetInstanceId;
 
             return instance.SubmitTaskAsync(info, async () =>
             {
@@ -111,6 +112,8 @@ namespace Midjourney.Infrastructure.Services
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
             task.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, discordInstance.GetInstanceId);
+            task.InstanceId = discordInstance.GetInstanceId;
+
             return discordInstance.SubmitTaskAsync(task, async () =>
             {
                 var taskFileName = $"{task.Id}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
@@ -131,6 +134,7 @@ namespace Midjourney.Infrastructure.Services
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
+            task.InstanceId = discordInstance.GetInstanceId;
             task.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, discordInstance.GetInstanceId);
             return discordInstance.SubmitTaskAsync(task, async () =>
             {
@@ -162,6 +166,8 @@ namespace Midjourney.Infrastructure.Services
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
+
+            task.InstanceId = discordInstance.GetInstanceId;
             task.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, discordInstance.GetInstanceId);
 
             var targetTask = _taskStoreService.Get(submitAction.TaskId)!;
@@ -219,6 +225,8 @@ namespace Midjourney.Infrastructure.Services
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
+
+            task.InstanceId = discordInstance.GetInstanceId;
             task.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, discordInstance.GetInstanceId);
 
             return discordInstance.SubmitTaskAsync(task, async () =>

@@ -38,6 +38,11 @@ namespace Midjourney.Infrastructure
         public string MessageId { get; set; }
 
         /// <summary>
+        /// 账号实例 ID = 账号渠道 ID
+        /// </summary>
+        public string InstanceId { get; set; }
+
+        /// <summary>
         /// 消息 ID
         /// 创建消息 ID -> 进度消息 ID -> 完成消息 ID
         /// </summary>
@@ -47,7 +52,7 @@ namespace Midjourney.Infrastructure
         /// 任务类型。
         /// </summary>
         [SwaggerSchema("任务类型")]
-        public TaskAction Action { get; set; }
+        public TaskAction? Action { get; set; }
 
         /// <summary>
         /// 任务状态。

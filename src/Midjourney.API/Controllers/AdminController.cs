@@ -273,17 +273,27 @@ namespace Midjourney.API.Controllers
         /// </summary>
         /// <returns>所有任务信息</returns>
         [HttpPost("tasks")]
-        public ActionResult<StandardTableResult<TaskInfo>> Tasks([FromBody] StandardTableParam request)
+        public ActionResult<StandardTableResult<TaskInfo>> Tasks([FromBody] StandardTableParam<TaskInfo> request)
         {
             var page = request.Pagination;
+            var param = request.Search;
 
-            var list = DbHelper.TaskStore.GetCollection().Query()
+            var query = DbHelper.TaskStore.GetCollection().Query()
+                .WhereIf(!string.IsNullOrWhiteSpace(param.Id), c => c.Id == param.Id || c.State == param.Id)
+                .WhereIf(!string.IsNullOrWhiteSpace(param.InstanceId), c => c.InstanceId == param.InstanceId)
+                .WhereIf(param.Status.HasValue, c => c.Status == param.Status)
+                .WhereIf(param.Action.HasValue, c => c.Action == param.Action)
+                .WhereIf(!string.IsNullOrWhiteSpace(param.FailReason), c => c.FailReason.Contains(param.FailReason))
+                .WhereIf(!string.IsNullOrWhiteSpace(param.Description), c => c.Description.Contains(param.Description) || c.Prompt.Contains(param.Description) || c.PromptEn.Contains(param.Description));
+
+            var count = query.Count();
+            var list = query
                 .OrderByDescending(c => c.SubmitTime)
                 .Skip((page.Current - 1) * page.PageSize)
                 .Limit(page.PageSize)
                 .ToList();
 
-            var data = list.ToTableResult(request.Pagination.Current, request.Pagination.PageSize, list.Count);
+            var data = list.ToTableResult(request.Pagination.Current, request.Pagination.PageSize, count);
 
             return Ok(data);
         }
