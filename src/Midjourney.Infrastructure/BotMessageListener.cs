@@ -230,7 +230,8 @@ namespace Midjourney.Infrastructure
             var isPrivareChannel = false;
             if (data.TryGetProperty("channel_id", out JsonElement channelIdElement))
             {
-                if (channelIdElement.GetString() == _discordAccount.PrivateChannelId)
+                if (channelIdElement.GetString() == _discordAccount.PrivateChannelId
+                    || channelIdElement.GetString() == _discordAccount.NijiBotChannelId)
                 {
                     isPrivareChannel = true;
                 }
@@ -243,7 +244,8 @@ namespace Midjourney.Infrastructure
                 // 都不相同
                 // 如果有渠道 id，但不是当前渠道 id，则忽略
                 if (channelIdElement.GetString() != _discordAccount.ChannelId
-                    && channelIdElement.GetString() != _discordAccount.PrivateChannelId)
+                    && channelIdElement.GetString() != _discordAccount.PrivateChannelId
+                    && channelIdElement.GetString() != _discordAccount.NijiBotChannelId)
                 {
                     return;
                 }
@@ -323,9 +325,17 @@ namespace Midjourney.Infrastructure
 
             // 作者
             var authorName = string.Empty;
-            if (data.TryGetProperty("author", out JsonElement author) && author.TryGetProperty("username", out JsonElement username))
+            if (data.TryGetProperty("author", out JsonElement author)
+                && author.TryGetProperty("username", out JsonElement username))
             {
                 authorName = username.GetString();
+            }
+
+            // 应用 ID 即机器人 ID
+            var applicationId = string.Empty;
+            if (data.TryGetProperty("application_id", out JsonElement application))
+            {
+                applicationId = application.GetString();
             }
 
             // 交互元数据 id
@@ -394,7 +404,21 @@ namespace Midjourney.Infrastructure
                                         var dic = ParseDiscordData(description.GetString());
                                         foreach (var d in dic)
                                         {
-                                            _discordAccount.SetProperty(d.Key, d.Value);
+                                            if (d.Key == "Job Mode")
+                                            {
+                                                if (applicationId == Constants.NIJI_APPLICATION_ID)
+                                                {
+                                                    _discordAccount.SetProperty($"Niji {d.Key}", d.Value);
+                                                }
+                                                else if (applicationId == Constants.MJ_APPLICATION_ID)
+                                                {
+                                                    _discordAccount.SetProperty(d.Key, d.Value);
+                                                }
+                                            }
+                                            else
+                                            {
+                                                _discordAccount.SetProperty(d.Key, d.Value);
+                                            }
                                         }
 
                                         var db = DbHelper.AccountStore;
@@ -412,11 +436,20 @@ namespace Midjourney.Infrastructure
                         var eventData = data.Deserialize<EventData>();
                         if (eventData != null && eventData.InteractionMetadata?.Name == "settings" && eventData.Components?.Count > 0)
                         {
-                            _discordAccount.Components = eventData.Components;
-                            _discordAccount.SettingsMessageId = id;
+                            if (applicationId == Constants.NIJI_APPLICATION_ID)
+                            {
+                                _discordAccount.NijiComponents = eventData.Components;
+                                _discordAccount.NijiSettingsMessageId = id;
 
-                            var db = DbHelper.AccountStore;
-                            db.Update(_discordAccount);
+                                DbHelper.AccountStore.Update(_discordAccount);
+                            }
+                            else if (applicationId == Constants.MJ_APPLICATION_ID)
+                            {
+                                _discordAccount.Components = eventData.Components;
+                                _discordAccount.SettingsMessageId = id;
+
+                                DbHelper.AccountStore.Update(_discordAccount);
+                            }
                         }
 
                         return;

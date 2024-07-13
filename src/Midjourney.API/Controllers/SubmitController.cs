@@ -1,5 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.TagHelpers.Cache;
 using Microsoft.Extensions.Options;
 using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.Services;
@@ -152,7 +152,9 @@ namespace Midjourney.API.Controllers
                 return BadRequest(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "关联任务不允许执行变化"));
             }
             var task = NewTask(changeDTO);
+
             task.Action = changeDTO.Action;
+            task.BotType = targetTask.BotType;
             task.Prompt = targetTask.Prompt;
             task.PromptEn = targetTask.PromptEn;
 
@@ -204,7 +206,10 @@ namespace Midjourney.API.Controllers
             }
 
             var task = NewTask(describeDTO);
+
+            task.BotType = describeDTO.BotType;
             task.Action = TaskAction.DESCRIBE;
+
             string taskFileName = $"{task.Id}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
             task.Description = $"/describe {taskFileName}";
             return Ok(_taskService.SubmitDescribe(task, dataUrl));
@@ -241,6 +246,8 @@ namespace Midjourney.API.Controllers
                 return BadRequest(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "base64格式错误"));
             }
             var task = NewTask(blendDTO);
+
+            task.BotType = blendDTO.BotType;
             task.Action = TaskAction.BLEND;
             task.Description = $"/blend {task.Id} {dataUrlList.Count}";
             return Ok(_taskService.SubmitBlend(task, dataUrlList, blendDTO.Dimensions.Value));
@@ -273,6 +280,7 @@ namespace Midjourney.API.Controllers
 
             var task = NewTask(actionDTO);
             task.InstanceId = targetTask.InstanceId;
+            task.BotType = targetTask.BotType;
 
             // 识别 mj action
 

@@ -91,6 +91,7 @@ namespace Midjourney.API
                         BotToken = configAccount.BotToken,
                         TimeoutMinutes = configAccount.TimeoutMinutes,
                         PrivateChannelId = configAccount.PrivateChannelId,
+                        NijiBotChannelId = configAccount.NijiBotChannelId,
                         MaxQueueSize = configAccount.MaxQueueSize,
                         Mode = configAccount.Mode,
                         Weight = configAccount.Weight,
@@ -165,6 +166,7 @@ namespace Midjourney.API
             model.ChannelId = account.ChannelId;
             model.GuildId = account.GuildId;
             model.PrivateChannelId = account.PrivateChannelId;
+            model.NijiBotChannelId = account.NijiBotChannelId;
             model.UserAgent = account.UserAgent;
             model.RemixAutoSubmit = account.RemixAutoSubmit;
             model.CoreSize = account.CoreSize;

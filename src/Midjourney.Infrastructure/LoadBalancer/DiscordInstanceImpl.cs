@@ -432,16 +432,17 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// </summary>
         /// <param name="nonce"></param>
         /// <returns></returns>
-        public Task<Message> InfoAsync(string nonce) =>
-            _service.InfoAsync(nonce);
+        public Task<Message> InfoAsync(string nonce, bool isNiji = false) =>
+            _service.InfoAsync(nonce, isNiji);
 
         /// <summary>
         /// 执行 setting 操作
         /// </summary>
         /// <param name="nonce"></param>
+        /// <param name="isNiji"></param>
         /// <returns></returns>
-        public Task<Message> SettingAsync(string nonce) =>
-            _service.SettingAsync(nonce);
+        public Task<Message> SettingAsync(string nonce, bool isNiji = false) =>
+            _service.SettingAsync(nonce, isNiji);
 
         /// <summary>
         /// 执行 settings button 操作
@@ -449,8 +450,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <param name="nonce"></param>
         /// <param name="custom_id"></param>
         /// <returns></returns>
-        public Task<Message> SettingButtonAsync(string nonce, string custom_id) =>
-              _service.SettingButtonAsync(nonce, custom_id);
+        public Task<Message> SettingButtonAsync(string nonce, string custom_id, BotType botType) =>
+              _service.SettingButtonAsync(nonce, custom_id, botType);
 
         /// <summary>
         /// 执行 settings select 操作

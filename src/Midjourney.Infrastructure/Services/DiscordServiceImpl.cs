@@ -11,6 +11,8 @@ namespace Midjourney.Infrastructure.Services
     /// </summary>
     public class DiscordServiceImpl : IDiscordService
     {
+
+
         private readonly DiscordAccount _account;
         private readonly HttpClient _httpClient;
         private readonly DiscordHelper _discordHelper;
@@ -136,6 +138,7 @@ namespace Midjourney.Infrastructure.Services
         /// <returns></returns>
         public async Task<Message> SeedAsync(string jobId, string nonce)
         {
+            // TODO: 请配置私聊频道
             var paramsStr = _paramsMap["seed"]
               .Replace("$channel_id", _account.PrivateChannelId)
               .Replace("$session_id", DefaultSessionId)
@@ -209,14 +212,18 @@ namespace Midjourney.Infrastructure.Services
             return await PostJsonAndCheckStatusAsync(paramsStr);
         }
 
+
         /// <summary>
         /// 执行 info 操作
         /// </summary>
         /// <param name="nonce"></param>
+        /// <param name="isNiji"></param>
         /// <returns></returns>
-        public async Task<Message> InfoAsync(string nonce)
+        public async Task<Message> InfoAsync(string nonce, bool isNiji = false)
         {
-            var paramsStr = ReplaceInteractionParams(_paramsMap["info"], nonce);
+            var content = isNiji ? _paramsMap["infoniji"] : _paramsMap["info"];
+
+            var paramsStr = ReplaceInteractionParams(content, nonce);
             var obj = JObject.Parse(paramsStr);
             paramsStr = obj.ToString();
             return await PostJsonAndCheckStatusAsync(paramsStr);
@@ -227,19 +234,33 @@ namespace Midjourney.Infrastructure.Services
         /// </summary>
         /// <param name="nonce"></param>
         /// <param name="custom_id"></param>
+        /// <param name="botType"></param>
         /// <returns></returns>
-        public async Task<Message> SettingButtonAsync(string nonce, string custom_id)
+        public async Task<Message> SettingButtonAsync(string nonce, string custom_id, BotType botType)
         {
             var paramsStr = ReplaceInteractionParams(_paramsMap["settingbutton"], nonce)
-                .Replace("$message_id", _account.SettingsMessageId)
                 .Replace("$custom_id", custom_id);
+
+            if (botType == BotType.NIJI_JOURNEY)
+            {
+                paramsStr = paramsStr
+                    .Replace("$application_id", Constants.NIJI_APPLICATION_ID)
+                    .Replace("$message_id", _account.NijiSettingsMessageId);
+            }
+            else if (botType == BotType.MID_JOURNEY)
+            {
+                paramsStr = paramsStr
+                    .Replace("$application_id", Constants.MJ_APPLICATION_ID)
+                    .Replace("$message_id", _account.SettingsMessageId);
+            }
+
             var obj = JObject.Parse(paramsStr);
             paramsStr = obj.ToString();
             return await PostJsonAndCheckStatusAsync(paramsStr);
         }
 
         /// <summary>
-        /// 执行 settings select 操作
+        /// MJ 执行 settings select 操作
         /// </summary>
         /// <param name="nonce"></param>
         /// <param name="values"></param>
@@ -253,14 +274,18 @@ namespace Midjourney.Infrastructure.Services
             paramsStr = obj.ToString();
             return await PostJsonAndCheckStatusAsync(paramsStr);
         }
+
         /// <summary>
         /// 执行 setting 操作
         /// </summary>
         /// <param name="nonce"></param>
+        /// <param name="isNiji"></param>
         /// <returns></returns>
-        public async Task<Message> SettingAsync(string nonce)
+        public async Task<Message> SettingAsync(string nonce, bool isNiji = false)
         {
-            var paramsStr = ReplaceInteractionParams(_paramsMap["setting"], nonce);
+            var content = isNiji ? _paramsMap["settingniji"] : _paramsMap["setting"];
+
+            var paramsStr = ReplaceInteractionParams(content, nonce);
             var obj = JObject.Parse(paramsStr);
             paramsStr = obj.ToString();
             return await PostJsonAndCheckStatusAsync(paramsStr);

@@ -289,7 +289,7 @@ namespace Midjourney.Infrastructure
         /// <param name="message">接收到的消息内容</param>
         private void HandleMessage(string message)
         {
-            //_logger.Debug("用户 收到消息: {0}", message);
+            //_logger.Debug("用户收到消息: {0}", message);
 
             var data = JsonDocument.Parse(message).RootElement;
             var opCode = data.GetProperty("op").GetInt32();

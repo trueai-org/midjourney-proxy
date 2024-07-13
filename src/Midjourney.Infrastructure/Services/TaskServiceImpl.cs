@@ -325,6 +325,8 @@ namespace Midjourney.Infrastructure.Services
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
+
+            // TODO: 请配置私聊频道
             var privateChannelId = discordInstance.Account.PrivateChannelId;
             if (string.IsNullOrWhiteSpace(privateChannelId))
             {
@@ -414,25 +416,37 @@ namespace Midjourney.Infrastructure.Services
             {
                 throw new LogicException("无可用的账号实例");
             }
-            var accsount = discordInstance.Account;
 
-            var nonce = SnowFlake.NextId();
-            accsount.SetProperty(Constants.TASK_PROPERTY_NONCE, nonce);
-            var res = await discordInstance.InfoAsync(nonce);
+            var res = await discordInstance.InfoAsync(SnowFlake.NextId(),false);
             if (res.Code != ReturnCode.SUCCESS)
             {
                 throw new LogicException(res.Description);
             }
 
-            var nonce2 = SnowFlake.NextId();
-            accsount.SetProperty(Constants.TASK_PROPERTY_NONCE, nonce2);
-            var res2 = await discordInstance.SettingAsync(nonce2);
+            Thread.Sleep(2000);
+
+            var res0 = await discordInstance.InfoAsync(SnowFlake.NextId(), true);
+            if (res0.Code != ReturnCode.SUCCESS)
+            {
+                throw new LogicException(res0.Description);
+            }
+
+            Thread.Sleep(2000);
+
+            var res2 = await discordInstance.SettingAsync(SnowFlake.NextId(), false);
             if (res2.Code != ReturnCode.SUCCESS)
             {
                 throw new LogicException(res2.Description);
             }
-        }
 
+            Thread.Sleep(2000);
+
+            var res3 = await discordInstance.SettingAsync(SnowFlake.NextId(), true);
+            if (res3.Code != ReturnCode.SUCCESS)
+            {
+                throw new LogicException(res3.Description);
+            }
+        }
 
         /// <summary>
         /// 修改版本
@@ -458,6 +472,8 @@ namespace Midjourney.Infrastructure.Services
                 throw new LogicException(res.Description);
             }
 
+            Thread.Sleep(2000);
+
             await InfoSetting(id);
         }
 
@@ -467,8 +483,9 @@ namespace Midjourney.Infrastructure.Services
         /// </summary>
         /// <param name="id"></param>
         /// <param name="customId"></param>
+        /// <param name="botType"></param>
         /// <returns></returns>
-        public async Task AccountAction(string id, string customId)
+        public async Task AccountAction(string id, string customId, BotType botType)
         {
             var discordInstance = _discordLoadBalancer.GetDiscordInstance(id);
             if (discordInstance == null)
@@ -480,11 +497,13 @@ namespace Midjourney.Infrastructure.Services
 
             var nonce = SnowFlake.NextId();
             accsount.SetProperty(Constants.TASK_PROPERTY_NONCE, nonce);
-            var res = await discordInstance.SettingButtonAsync(nonce, customId);
+            var res = await discordInstance.SettingButtonAsync(nonce, customId, botType);
             if (res.Code != ReturnCode.SUCCESS)
             {
                 throw new LogicException(res.Description);
             }
+
+            Thread.Sleep(2000);
 
             await InfoSetting(id);
         }

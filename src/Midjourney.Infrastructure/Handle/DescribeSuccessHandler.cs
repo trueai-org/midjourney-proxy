@@ -19,7 +19,7 @@ namespace Midjourney.Infrastructure.Handle
         {
             if (messageType == MessageType.CREATE
                 && message.Author.IsBot
-                && message.Author.Username.Equals("Midjourney Bot", StringComparison.OrdinalIgnoreCase)
+                && message.Author.Username.Contains("journey Bot", StringComparison.OrdinalIgnoreCase)
                 && message is SocketUserMessage msg && msg != null)
             {
                 // 图生文完成

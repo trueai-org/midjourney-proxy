@@ -12,7 +12,7 @@ namespace Midjourney.Infrastructure.Dto
         /// bot 类型，mj(默认)或niji
         /// MID_JOURNEY | 枚举值: NIJI_JOURNEY
         /// </summary>
-        public string BotType { get; set; }
+        public BotType BotType { get; set; } = BotType.MID_JOURNEY;
 
         /// <summary>
         /// 提示词。

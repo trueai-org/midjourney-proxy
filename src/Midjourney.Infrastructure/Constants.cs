@@ -5,6 +5,16 @@
     /// </summary>
     public static class Constants
     {
+        /// <summary>
+        /// niji journey Bot 应用 ID
+        /// </summary>
+        public const string NIJI_APPLICATION_ID = "1022952195194359889";
+
+        /// <summary>
+        /// Midjourney Bot 应用 ID
+        /// </summary>
+        public const string MJ_APPLICATION_ID = "936929561302675456";
+
         // 任务扩展属性 start
 
         /// <summary>

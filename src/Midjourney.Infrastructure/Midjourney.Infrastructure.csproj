@@ -40,11 +40,16 @@
 		<Content Remove="Resources\ApiParams\info.json" />
 		<Content Remove="Resources\ApiParams\setting.json" />
 		<Content Remove="Resources\ApiParams\settingbutton.json" />
+		<Content Remove="Resources\ApiParams\settingniji.json" />
 		<Content Remove="Resources\ApiParams\settingselect.json" />
+		<Content Remove="Resources\ApiParams\infoniji.json" />
 		<Content Remove="Resources\mime.types" />
 	</ItemGroup>
 
+
 	<ItemGroup>
+		<EmbeddedResource Include="Resources\ApiParams\infoniji.json" />
+		<EmbeddedResource Include="Resources\ApiParams\settingniji.json" />
 		<EmbeddedResource Include="Resources\ApiParams\settingselect.json" />
 		<EmbeddedResource Include="Resources\ApiParams\settingbutton.json" />
 		<EmbeddedResource Include="Resources\ApiParams\setting.json" />
@@ -67,5 +72,7 @@
 	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 	  </None>
 	</ItemGroup>
+
+	<ProjectExtensions><VisualStudio><UserProperties resources_4apiparams_4info_1json__JsonSchema="https://raw.githubusercontent.com/DannyBen/bashly/master/schemas/strings.json" /></VisualStudio></ProjectExtensions>
 	
 </Project>

@@ -1,6 +1,22 @@
 ﻿namespace Midjourney.Infrastructure
 {
     /// <summary>
+    /// Bot类型枚举 MID_JOURNEY | 枚举值: NIJI_JOURNEY
+    /// </summary>
+    public enum BotType
+    {
+        /// <summary>
+        /// Midjourney
+        /// </summary>
+        MID_JOURNEY,
+
+        /// <summary>
+        /// Niji
+        /// </summary>
+        NIJI_JOURNEY
+    }
+
+    /// <summary>
     /// 账号选择规则
     /// </summary>
     public enum AccountChooseRule

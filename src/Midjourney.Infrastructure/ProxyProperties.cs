@@ -77,9 +77,14 @@
         public string ChannelId { get; set; }
 
         /// <summary>
-        /// 私信频道ID, 用来接收 seed 值
+        /// MJ 私信频道ID, 用来接收 seed 值
         /// </summary>
         public string PrivateChannelId { get; set; }
+
+        /// <summary>
+        /// Niji 私信频道ID, 用来接收 seed 值
+        /// </summary>
+        public string NijiBotChannelId { get; set; }
 
         /// <summary>
         /// 用户 Token.

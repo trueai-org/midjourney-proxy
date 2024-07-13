@@ -244,16 +244,17 @@ namespace Midjourney.API.Controllers
         /// </summary>
         /// <param name="id"></param>
         /// <param name="customId"></param>
+        /// <param name="botType"></param>
         /// <returns></returns>
         [HttpPost("account-action/{id}")]
-        public async Task<Result> AccountAction(string id, [FromQuery] string customId)
+        public async Task<Result> AccountAction(string id, [FromQuery] string customId, [FromQuery] BotType botType)
         {
             if (_isAnonymous)
             {
                 return Result.Fail("演示模式，禁止操作");
             }
 
-            await _taskService.AccountAction(id, customId);
+            await _taskService.AccountAction(id, customId, botType);
             return Result.Ok();
         }
 
@@ -299,6 +300,7 @@ namespace Midjourney.API.Controllers
                 throw new LogicException("账号不存在");
             }
 
+            model.NijiBotChannelId = account.NijiBotChannelId;
             model.PrivateChannelId = account.PrivateChannelId;
             model.RemixAutoSubmit = account.RemixAutoSubmit;
             model.TimeoutMinutes = account.TimeoutMinutes;

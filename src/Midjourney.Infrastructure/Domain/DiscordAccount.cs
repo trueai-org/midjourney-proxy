@@ -29,10 +29,15 @@ namespace Midjourney.Infrastructure.Domain
         public string GuildId { get; set; }
 
         /// <summary>
-        /// 私信频道ID, 用来接收 seed 值
+        /// Mj 私信频道ID, 用来接收 seed 值
         /// </summary>
         [Display(Name = "私信频道ID")]
         public string PrivateChannelId { get; set; }
+
+        /// <summary>
+        /// Niji 私信频道ID, 用来接收 seed 值
+        /// </summary>
+        public string NijiBotChannelId { get; set; }
 
         /// <summary>
         /// 用户Token。
@@ -109,15 +114,24 @@ namespace Midjourney.Infrastructure.Domain
         public GenerationSpeedMode? Mode { get; set; }
 
         /// <summary>
-        /// 组件列表。
+        /// MJ 组件列表。
         /// </summary>
-        [JsonPropertyName("components")]
         public List<Component> Components { get; set; } = new List<Component>();
 
         /// <summary>
-        /// 设置消息 ID
+        /// MJ 设置消息 ID
         /// </summary>
         public string SettingsMessageId { get; set; }
+
+        /// <summary>
+        /// NIJI 组件列表。
+        /// </summary>
+        public List<Component> NijiComponents { get; set; } = new List<Component>();
+
+        /// <summary>
+        /// NIJI 设置消息 ID
+        /// </summary>
+        public string NijiSettingsMessageId { get; set; }
 
         /// <summary>
         /// 执行中的任务数
@@ -130,7 +144,7 @@ namespace Midjourney.Infrastructure.Domain
         public int QueueCount { get; set; }
 
         /// <summary>
-        /// 按钮
+        /// Mj 按钮
         /// </summary>
         [BsonIgnore]
         public List<CustomComponentModel> Buttons => Components.Where(c => c.Id != 1).SelectMany(x => x.Components)
@@ -147,10 +161,10 @@ namespace Midjourney.Infrastructure.Domain
             }).Where(c => c != null && !string.IsNullOrWhiteSpace(c.CustomId)).ToList();
 
         /// <summary>
-        /// 按钮
+        /// Niji 按钮
         /// </summary>
         [BsonIgnore]
-        public List<CustomComponentModel> NijiButtons => Components.Where(c => c.Id != 1).SelectMany(x => x.Components)
+        public List<CustomComponentModel> NijiButtons => NijiComponents.SelectMany(x => x.Components)
             .Select(c =>
             {
                 return new CustomComponentModel
@@ -164,7 +178,7 @@ namespace Midjourney.Infrastructure.Domain
             }).Where(c => c != null && !string.IsNullOrWhiteSpace(c.CustomId)).ToList();
 
         /// <summary>
-        /// 下拉框
+        /// Mj 下拉框
         /// </summary>
         [BsonIgnore]
         public List<CustomComponentModel> VersionSelector => Components.Where(c => c.Id == 1)
@@ -215,7 +229,7 @@ namespace Midjourney.Infrastructure.Domain
                 }
 
                 dic["mode"] = Properties.ContainsKey("Job Mode") ? Properties["Job Mode"] : "";
-                dic["nijiMode"] = Properties.ContainsKey("Job Mode") ? Properties["Job Mode"] : "";
+                dic["nijiMode"] = Properties.ContainsKey("Niji Job Mode") ? Properties["Niji Job Mode"] : "";
 
                 return dic;
             }

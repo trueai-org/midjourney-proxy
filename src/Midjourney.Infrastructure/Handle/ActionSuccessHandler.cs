@@ -22,7 +22,7 @@ namespace Midjourney.Infrastructure.Handle
             var parseData = GetParseData(content);
 
             if (messageType == MessageType.CREATE && HasImage(message) && parseData != null
-                && message.Author.IsBot && message.Author.Username.Equals("Midjourney Bot", StringComparison.OrdinalIgnoreCase))
+                && message.Author.IsBot && message.Author.Username.Contains("journey Bot", StringComparison.OrdinalIgnoreCase))
             {
                 FindAndFinishImageTask(instance, TaskAction.ACTION, parseData.Prompt, message);
             }

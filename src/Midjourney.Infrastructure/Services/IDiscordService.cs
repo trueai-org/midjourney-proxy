@@ -90,14 +90,15 @@ namespace Midjourney.Infrastructure.Services
         /// </summary>
         /// <param name="nonce"></param>
         /// <returns></returns>
-        Task<Message> InfoAsync(string nonce);
+        Task<Message> InfoAsync(string nonce, bool isNiji = false);
 
         /// <summary>
         /// 执行 setting 操作
         /// </summary>
         /// <param name="nonce"></param>
+        /// <param name="isNiji"></param>
         /// <returns></returns>
-        Task<Message> SettingAsync(string nonce);
+        Task<Message> SettingAsync(string nonce, bool isNiji = false);
 
         /// <summary>
         /// 执行 settings button 操作
@@ -105,7 +106,7 @@ namespace Midjourney.Infrastructure.Services
         /// <param name="nonce"></param>
         /// <param name="custom_id"></param>
         /// <returns></returns>
-        Task<Message> SettingButtonAsync(string nonce, string custom_id);
+        Task<Message> SettingButtonAsync(string nonce, string custom_id, BotType botType);
 
         /// <summary>
         /// 执行 settings select 操作

@@ -9,6 +9,12 @@ namespace Midjourney.Infrastructure.Dto
     public class SubmitBlendDTO : BaseSubmitDTO
     {
         /// <summary>
+        /// bot 类型，mj(默认)或niji
+        /// MID_JOURNEY | 枚举值: NIJI_JOURNEY
+        /// </summary>
+        public BotType BotType { get; set; } = BotType.MID_JOURNEY;
+
+        /// <summary>
         /// 图片base64数组。
         /// </summary>
         [SwaggerSchema("图片base64数组", Description = "[\"data:image/png;base64,xxx1\", \"data:image/png;base64,xxx2\"]")]

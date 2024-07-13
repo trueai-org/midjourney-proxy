@@ -5,7 +5,7 @@
   "session_id": "$session_id",
   "nonce": "$nonce",
   "message_id": "$message_id",
-  "application_id": "936929561302675456",
+  "application_id": "$application_id",
   "message_flags": 64,
   "data": {
     "component_type": 2,
