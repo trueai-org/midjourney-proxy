@@ -22,7 +22,7 @@
 - [x] 支持图片变焦，自定义变焦 Zoom 🔍
 - [x] 支持获取图片的 seed 值
 - [x] 支持账号指定生成速度模式 RELAX | FAST | TURBO 
-- [x] 支持多账号配置，每个账号可设置对应的任务队列
+- [x] 支持多账号配置，每个账号可设置对应的任务队列，支持账号选择模式 BestWaitIdle | Random | Weight | Polling
 - [x] 账号池持久化，动态维护
 - [x] 支持获取账号 /info、/settings 信息
 - [x] 账号 settings 设置

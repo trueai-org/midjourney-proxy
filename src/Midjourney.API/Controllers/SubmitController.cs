@@ -272,6 +272,7 @@ namespace Midjourney.API.Controllers
             }
 
             var task = NewTask(actionDTO);
+            task.InstanceId = targetTask.InstanceId;
 
             // 识别 mj action
 

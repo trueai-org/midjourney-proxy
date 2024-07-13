@@ -2,6 +2,7 @@
 global using Midjourney.Infrastructure.Models;
 
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.OpenApi.Models;
 using Serilog;
@@ -21,7 +22,9 @@ namespace Midjourney.API
 
         public void ConfigureServices(IServiceCollection services)
         {
-            services.Configure<ProxyProperties>(Configuration.GetSection("mj"));
+            var configSec = Configuration.GetSection("mj");
+            var config = configSec.Get<ProxyProperties>();
+            services.Configure<ProxyProperties>(configSec);
 
             // 是否为演示模式
             var isDemoMode = Configuration.GetSection("Demo").Get<bool?>();
@@ -67,7 +70,7 @@ namespace Midjourney.API
             services.AddHttpClient();
 
             // 注册 Midjourney 服务
-            services.AddMidjourneyServices();
+            services.AddMidjourneyServices(config);
 
             // 注册 Discord 账号初始化器
             services.AddSingleton<DiscordAccountInitializer>();
@@ -131,7 +134,7 @@ namespace Midjourney.API
 
         public void Configure(IApplicationBuilder app, IHostEnvironment env)
         {
-            if (env.IsDevelopment())
+            if (env.IsDevelopment() || GlobalConfiguration.IsDemoMode == true)
             {
                 app.UseDeveloperExceptionPage();
 

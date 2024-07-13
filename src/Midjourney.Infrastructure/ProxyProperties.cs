@@ -1,6 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-
-namespace Midjourney.Infrastructure
+﻿namespace Midjourney.Infrastructure
 {
     /// <summary>
     /// 代理配置属性类.
@@ -8,15 +6,9 @@ namespace Midjourney.Infrastructure
     public class ProxyProperties
     {
         /// <summary>
-        /// 任务存储配置.
-        /// </summary>
-        public TaskStoreConfig TaskStore { get; set; } = new TaskStoreConfig();
-
-        /// <summary>
         /// Discord账号选择规则.
         /// </summary>
-        [Required]
-        public string AccountChooseRule { get; set; } = "BestWaitIdleRule";
+        public AccountChooseRule AccountChooseRule { get; set; } = AccountChooseRule.BestWaitIdle;
 
         /// <summary>
         /// Discord单账号配置.
@@ -211,38 +203,6 @@ namespace Midjourney.Infrastructure
         /// 相似度，取值 0-2.
         /// </summary>
         public double Temperature { get; set; } = 0;
-    }
-
-    /// <summary>
-    /// 任务存储配置.
-    /// </summary>
-    public class TaskStoreConfig
-    {
-        /// <summary>
-        /// 任务过期时间，默认30天.
-        /// </summary>
-        public TimeSpan Timeout { get; set; } = TimeSpan.FromDays(30);
-
-        /// <summary>
-        /// 任务存储方式: redis(默认)、in_memory.
-        /// </summary>
-        public StoreType Type { get; set; } = StoreType.IN_MEMORY;
-
-        /// <summary>
-        /// 任务存储类型.
-        /// </summary>
-        public enum StoreType
-        {
-            /// <summary>
-            /// redis.
-            /// </summary>
-            REDIS,
-
-            /// <summary>
-            /// in_memory.
-            /// </summary>
-            IN_MEMORY
-        }
     }
 
     /// <summary>

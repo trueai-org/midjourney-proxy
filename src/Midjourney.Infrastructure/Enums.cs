@@ -1,5 +1,31 @@
 ﻿namespace Midjourney.Infrastructure
 {
+    /// <summary>
+    /// 账号选择规则
+    /// </summary>
+    public enum AccountChooseRule
+    {
+        /// <summary>
+        /// 最优空闲模式
+        /// </summary>
+        BestWaitIdle = 0,
+
+        /// <summary>
+        /// 随机模式
+        /// </summary>
+        Random = 1,
+
+        /// <summary>
+        /// 权重模式
+        /// </summary>
+        Weight = 2,
+
+        /// <summary>
+        /// 轮询模式
+        /// </summary>
+        Polling = 3
+    }
+
     public enum TranslateWay
     {
         /// <summary>

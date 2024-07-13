@@ -6,7 +6,7 @@ namespace Midjourney.API
 {
     public static class ServiceCollectionExtensions
     {
-        public static void AddMidjourneyServices(this IServiceCollection services)
+        public static void AddMidjourneyServices(this IServiceCollection services, ProxyProperties config)
         {
             // 注册所有的处理程序
             services.AddTransient<MessageHandler, ErrorMessageHandler>();
@@ -31,7 +31,24 @@ namespace Midjourney.API
             services.AddSingleton<ITaskStoreService>(new TaskRepository());
 
             // 账号负载均衡服务
-            services.AddSingleton<IRule, RoundRobinRule>();
+            switch (config.AccountChooseRule)
+            {
+                case AccountChooseRule.BestWaitIdle:
+                    services.AddSingleton<IRule, BestWaitIdleRule>();
+                    break;
+                case AccountChooseRule.Random:
+                    services.AddSingleton<IRule, RandomRule>();
+                    break;
+                case AccountChooseRule.Weight:
+                    services.AddSingleton<IRule, WeightRule>();
+                    break;
+                case AccountChooseRule.Polling:
+                    services.AddSingleton<IRule, RoundRobinRule>();
+                    break;
+                default:
+                    services.AddSingleton<IRule, BestWaitIdleRule>();
+                    break;
+            }
 
             // Discord 负载均衡器
             services.AddSingleton<DiscordLoadBalancer>();

@@ -27,6 +27,12 @@ namespace Midjourney.Infrastructure.Services
             _logger = Log.Logger;
         }
 
+        /// <summary>
+        /// 提交 imagine 任务。
+        /// </summary>
+        /// <param name="info"></param>
+        /// <param name="dataUrls"></param>
+        /// <returns></returns>
         public SubmitResultVO SubmitImagine(TaskInfo info, List<DataUrl> dataUrls)
         {
             var instance = _discordLoadBalancer.ChooseInstance();
@@ -92,6 +98,14 @@ namespace Midjourney.Infrastructure.Services
                 await discordInstance.VariationAsync(targetMessageId, index, targetMessageHash, messageFlags, task.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default)));
         }
 
+        /// <summary>
+        /// 提交重新生成任务。
+        /// </summary>
+        /// <param name="task"></param>
+        /// <param name="targetMessageId"></param>
+        /// <param name="targetMessageHash"></param>
+        /// <param name="messageFlags"></param>
+        /// <returns></returns>
         public SubmitResultVO SubmitReroll(TaskInfo task, string targetMessageId, string targetMessageHash, int messageFlags)
         {
             var instanceId = task.GetProperty<string>(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, default);
@@ -104,6 +118,12 @@ namespace Midjourney.Infrastructure.Services
                 await discordInstance.RerollAsync(targetMessageId, targetMessageHash, messageFlags, task.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default)));
         }
 
+        /// <summary>
+        /// 提交Describe任务
+        /// </summary>
+        /// <param name="task"></param>
+        /// <param name="dataUrl"></param>
+        /// <returns></returns>
         public SubmitResultVO SubmitDescribe(TaskInfo task, DataUrl dataUrl)
         {
             var discordInstance = _discordLoadBalancer.ChooseInstance();
@@ -127,6 +147,13 @@ namespace Midjourney.Infrastructure.Services
             });
         }
 
+        /// <summary>
+        /// 提交混合任务
+        /// </summary>
+        /// <param name="task"></param>
+        /// <param name="dataUrls"></param>
+        /// <param name="dimensions"></param>
+        /// <returns></returns>
         public SubmitResultVO SubmitBlend(TaskInfo task, List<DataUrl> dataUrls, BlendDimensions dimensions)
         {
             var discordInstance = _discordLoadBalancer.ChooseInstance();
@@ -161,7 +188,7 @@ namespace Midjourney.Infrastructure.Services
         /// <returns></returns>
         public SubmitResultVO SubmitAction(TaskInfo task, SubmitActionDTO submitAction)
         {
-            var discordInstance = _discordLoadBalancer.ChooseInstance();
+            var discordInstance = _discordLoadBalancer.GetDiscordInstance(task.InstanceId);
             if (discordInstance == null)
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
@@ -220,7 +247,7 @@ namespace Midjourney.Infrastructure.Services
         /// <returns></returns>
         public SubmitResultVO SubmitModal(TaskInfo task, SubmitModalDTO submitAction, DataUrl dataUrl = null)
         {
-            var discordInstance = _discordLoadBalancer.ChooseInstance();
+            var discordInstance = _discordLoadBalancer.GetDiscordInstance(task.InstanceId);
             if (discordInstance == null)
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
@@ -293,7 +320,7 @@ namespace Midjourney.Infrastructure.Services
         /// <returns></returns>
         public async Task<SubmitResultVO> SubmitSeed(TaskInfo task)
         {
-            var discordInstance = _discordLoadBalancer.ChooseInstance();
+            var discordInstance = _discordLoadBalancer.GetDiscordInstance(task.InstanceId);
             if (discordInstance == null)
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");

@@ -147,6 +147,12 @@ namespace Midjourney.API.Controllers
         [HttpGet("probe")]
         public IActionResult GetLogs([FromQuery] int tail = 1000)
         {
+            // 演示模式 100 条
+            if (_isAnonymous)
+            {
+                tail = 100;
+            }
+
             // 项目目录，而不是 AppContext.BaseDirectory
             var logFilePath = Path.Combine(Directory.GetCurrentDirectory(), $"logs/log{DateTime.Now:yyyyMMdd}.txt");
 
@@ -372,6 +378,19 @@ namespace Midjourney.API.Controllers
         public ActionResult<StandardTableResult<TaskInfo>> Tasks([FromBody] StandardTableParam<TaskInfo> request)
         {
             var page = request.Pagination;
+
+            // 演示模式 100 条
+            if (_isAnonymous)
+            {
+                page.PageSize = 10;
+
+                if (page.Current > 10)
+                {
+                    throw new LogicException("演示模式，禁止查看更多数据");
+                }
+            }
+
+
             var param = request.Search;
 
             var query = DbHelper.TaskStore.GetCollection().Query()

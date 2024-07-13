@@ -19,22 +19,83 @@
                 return null;
             }
 
-            var map = instances.GroupBy(i =>
+            return instances.OrderBy(i =>
             {
-                int wait = i.GetRunningFutures().Count - i.Account.CoreSize;
-                return wait >= 0 ? wait : -1;
-            }).ToDictionary(g => g.Key, g => g.ToList());
-
-            // 找到等待数最少的组
-            var minWaitGroup = map.OrderBy(kv => kv.Key).FirstOrDefault().Value;
-            if (minWaitGroup == null || minWaitGroup.Count == 0)
-            {
-                return null;  // 如果最少等待组没有实例，返回 null
-            }
-
-            // 从最少等待组中随机选择一个实例
-            int index = random.Next(minWaitGroup.Count);
-            return minWaitGroup[index];
+                return i.GetQueueTasks().Count + i.GetRunningFutures().Count - i.Account.CoreSize;
+            }).FirstOrDefault();
         }
     }
+
+    /// <summary>
+    /// 轮询选择规则。
+    /// </summary>
+    public class RoundRobinRule : IRule
+    {
+        private int _position = -1;
+
+        /// <summary>
+        /// 根据轮询规则选择一个 Discord 实例。
+        /// </summary>
+        /// <param name="instances">可用的 Discord 实例列表。</param>
+        /// <returns>选择的 Discord 实例。</returns>
+        public IDiscordInstance Choose(List<IDiscordInstance> instances)
+        {
+            if (instances.Count == 0)
+            {
+                return null;
+            }
+
+            int pos = Interlocked.Increment(ref _position);
+            return instances[pos % instances.Count];
+        }
+    }
+
+    /// <summary>
+    /// 随机规则
+    /// </summary>
+    public class RandomRule : IRule
+    {
+        private static readonly Random _random = new Random();
+
+        public IDiscordInstance Choose(List<IDiscordInstance> instances)
+        {
+            if (instances.Count == 0)
+            {
+                return null;
+            }
+
+            int index = _random.Next(instances.Count);
+            return instances[index];
+        }
+    }
+
+    /// <summary>
+    /// 权重规则
+    /// </summary>
+    public class WeightRule : IRule
+    {
+        public IDiscordInstance Choose(List<IDiscordInstance> instances)
+        {
+            if (instances.Count == 0)
+            {
+                return null;
+            }
+
+            int totalWeight = instances.Sum(i => i.Account.Weight);
+            int randomWeight = new Random().Next(totalWeight);
+            int currentWeight = 0;
+
+            foreach (var instance in instances)
+            {
+                currentWeight += instance.Account.Weight;
+                if (randomWeight < currentWeight)
+                {
+                    return instance;
+                }
+            }
+
+            return instances.Last();  // Fallback, should never reach here
+        }
+    }
+
 }
