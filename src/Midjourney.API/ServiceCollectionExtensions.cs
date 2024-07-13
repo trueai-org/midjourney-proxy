@@ -28,7 +28,7 @@ namespace Midjourney.API
             // 内存
             //services.AddSingleton<ITaskStoreService, InMemoryTaskStoreServiceImpl>();
             // LiteDB
-            services.AddSingleton<ITaskStoreService>(new LiteDBRepository("data/mj.db"));
+            services.AddSingleton<ITaskStoreService>(new TaskRepository());
 
             // 账号负载均衡服务
             services.AddSingleton<IRule, RoundRobinRule>();

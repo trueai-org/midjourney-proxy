@@ -1,0 +1,39 @@
+{
+  "type": 2,
+  "guild_id": "$guild_id",
+  "channel_id": "$channel_id",
+  "session_id": "$session_id",
+  "nonce": "$nonce",
+  "application_id": "936929561302675456",
+  "data": {
+    "version": "1237876415790055475",
+    "id": "1000850743479255081",
+    "name": "settings",
+    "type": 1,
+    "options": [],
+    "application_command": {
+      "id": "1000850743479255081",
+      "type": 1,
+      "application_id": "936929561302675456",
+      "version": "1237876415790055475",
+      "name": "settings",
+      "description": "View and adjust your personal settings.",
+      "dm_permission": true,
+      "contexts": [
+        0,
+        1,
+        2
+      ],
+      "integration_types": [
+        0,
+        1
+      ],
+      "global_popularity_rank": 5,
+      "options": [],
+      "description_localized": "View and adjust your personal settings.",
+      "name_localized": "settings"
+    },
+    "attachments": []
+  },
+  "analytics_location": "slash_ui"
+}

@@ -15,8 +15,6 @@ namespace Midjourney.API.Controllers
     /// </summary>
     [ApiController]
     [Route("mj/submit")]
-    [Route("submit")]
-    [AllowAnonymous]
     public class SubmitController : ControllerBase
     {
         private readonly ITranslateService _translateService;
@@ -403,8 +401,8 @@ namespace Midjourney.API.Controllers
         /// <summary>
         /// 创建新的任务对象
         /// </summary>
-        /// <param name="base">基础提交DTO</param>
-        /// <returns>任务对象</returns>
+        /// <param name="baseDTO"></param>
+        /// <returns></returns>
         private TaskInfo NewTask(BaseSubmitDTO baseDTO)
         {
             var task = new TaskInfo

@@ -147,11 +147,11 @@ namespace Midjourney.Infrastructure.Services
             return await PostJsonAndCheckStatusAsync(paramsStr);
         }
 
+
         /// <summary>
         /// 图片 seed 值消息
         /// </summary>
-        /// <param name="jobId"></param>
-        /// <param name="nonce"></param>
+        /// <param name="url"></param>
         /// <returns></returns>
         public async Task<Message> SeedMessagesAsync(string url)
         {
@@ -205,6 +205,63 @@ namespace Midjourney.Infrastructure.Services
 
             obj["data"]["custom_id"] = customId;
 
+            paramsStr = obj.ToString();
+            return await PostJsonAndCheckStatusAsync(paramsStr);
+        }
+
+        /// <summary>
+        /// 执行 info 操作
+        /// </summary>
+        /// <param name="nonce"></param>
+        /// <returns></returns>
+        public async Task<Message> InfoAsync(string nonce)
+        {
+            var paramsStr = ReplaceInteractionParams(_paramsMap["info"], nonce);
+            var obj = JObject.Parse(paramsStr);
+            paramsStr = obj.ToString();
+            return await PostJsonAndCheckStatusAsync(paramsStr);
+        }
+
+        /// <summary>
+        /// 执行 settings button 操作
+        /// </summary>
+        /// <param name="nonce"></param>
+        /// <param name="custom_id"></param>
+        /// <returns></returns>
+        public async Task<Message> SettingButtonAsync(string nonce, string custom_id)
+        {
+            var paramsStr = ReplaceInteractionParams(_paramsMap["settingbutton"], nonce)
+                .Replace("$message_id", _account.SettingsMessageId)
+                .Replace("$custom_id", custom_id);
+            var obj = JObject.Parse(paramsStr);
+            paramsStr = obj.ToString();
+            return await PostJsonAndCheckStatusAsync(paramsStr);
+        }
+
+        /// <summary>
+        /// 执行 settings select 操作
+        /// </summary>
+        /// <param name="nonce"></param>
+        /// <param name="values"></param>
+        /// <returns></returns>
+        public async Task<Message> SettingSelectAsync(string nonce, string values)
+        {
+            var paramsStr = ReplaceInteractionParams(_paramsMap["settingselect"], nonce)
+              .Replace("$message_id", _account.SettingsMessageId)
+              .Replace("$values", values);
+            var obj = JObject.Parse(paramsStr);
+            paramsStr = obj.ToString();
+            return await PostJsonAndCheckStatusAsync(paramsStr);
+        }
+        /// <summary>
+        /// 执行 setting 操作
+        /// </summary>
+        /// <param name="nonce"></param>
+        /// <returns></returns>
+        public async Task<Message> SettingAsync(string nonce)
+        {
+            var paramsStr = ReplaceInteractionParams(_paramsMap["setting"], nonce);
+            var obj = JObject.Parse(paramsStr);
             paramsStr = obj.ToString();
             return await PostJsonAndCheckStatusAsync(paramsStr);
         }

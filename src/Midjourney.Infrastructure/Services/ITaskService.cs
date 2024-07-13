@@ -86,5 +86,27 @@ namespace Midjourney.Infrastructure.Services
         /// <param name="task"></param>
         /// <returns></returns>
         Task<SubmitResultVO> SubmitSeed(TaskInfo task);
+
+        /// <summary>
+        /// 执行 info setting 操作
+        /// </summary>
+        /// <returns></returns>
+        Task InfoSetting(string id);
+
+        /// <summary>
+        /// 修改版本
+        /// </summary>
+        /// <param name="id"></param>
+        /// <param name="version"></param>
+        /// <returns></returns>
+        Task AccountChangeVersion(string id, string version);
+
+        /// <summary>
+        /// 执行操作
+        /// </summary>
+        /// <param name="id"></param>
+        /// <param name="customId"></param>
+        /// <returns></returns>
+        Task AccountAction(string id, string customId);
     }
 }

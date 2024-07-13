@@ -1,4 +1,6 @@
-﻿namespace Midjourney.Infrastructure.Models
+﻿using System.Text.Json.Serialization;
+
+namespace Midjourney.Infrastructure.Models
 {
     /// <summary>
     /// 按钮组件自定义属性。

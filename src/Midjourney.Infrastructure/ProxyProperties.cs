@@ -75,7 +75,7 @@ namespace Midjourney.Infrastructure
     public class DiscordAccountConfig
     {
         /// <summary>
-        /// 服务器ID.
+        /// 服务器ID
         /// </summary>
         public string GuildId { get; set; }
 
@@ -118,7 +118,7 @@ namespace Midjourney.Infrastructure
         /// <summary>
         /// 是否可用.
         /// </summary>
-        public bool Enable { get; set; } = true;
+        public bool Enable { get; set; }
 
         /// <summary>
         /// 并发数.
@@ -144,6 +144,21 @@ namespace Midjourney.Infrastructure
         /// 指定生成速度模式 --fast, --relax, or --turbo parameter at the end.
         /// </summary>
         public GenerationSpeedMode? Mode { get; set; }
+
+        /// <summary>
+        /// 备注
+        /// </summary>
+        public string Remark { get; set; }
+
+        /// <summary>
+        /// 权重
+        /// </summary>
+        public int Weight { get; set; }
+
+        /// <summary>
+        /// Remix 自动提交
+        /// </summary>
+        public bool RemixAutoSubmit { get; set; }
     }
 
     /// <summary>

@@ -4,6 +4,8 @@
 
 代理 Midjourney 的 Discord 频道，实现 API 形式调用 AI 绘图，公益项目，全球所有 AI 模型免费使用。
 
+功能最全、最安全、占用内存最小的 Midjourney Proxy 开源项目~~
+
 ## 主要功能
 
 - [x] 支持 Imagine 指令和相关动作 [V1/V2.../U1/U2.../R]
@@ -19,7 +21,12 @@
 - [x] 支持几乎所有的关联按钮动作和 🎛️ Remix 模式
 - [x] 支持图片变焦，自定义变焦 Zoom 🔍
 - [x] 支持获取图片的 seed 值
-- [x] 支持指定生成速度模式 RELAX | FAST | TURBO 
+- [x] 支持账号指定生成速度模式 RELAX | FAST | TURBO 
+- [x] 支持多账号配置，每个账号可设置对应的任务队列
+- [x] 账号池持久化，动态维护
+- [x] 支持获取账号 /info、/settings 信息
+- [x] 账号 settings 设置
+- [x] 内嵌管理后台页面 <https://github.com/trueai-org/midjourney-proxy-webui>
 
 ## 公益接口（免费）
 

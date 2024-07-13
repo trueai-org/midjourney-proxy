@@ -3,22 +3,21 @@ using Discord.Commands;
 using Discord.Net.Rest;
 using Discord.Net.WebSockets;
 using Discord.WebSocket;
-using IdGen;
 using Midjourney.Infrastructure.Domain;
+using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.Handle;
 using Midjourney.Infrastructure.LoadBalancer;
 using Serilog;
 using System.Net;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 
 namespace Midjourney.Infrastructure
 {
     /// <summary>
     /// 机器人消息监听器。
     /// </summary>
-    public class BotMessageListener
+    public class BotMessageListener : IDisposable
     {
         private readonly string _token;
         private readonly WebProxy _webProxy;
@@ -125,29 +124,6 @@ namespace Midjourney.Infrastructure
             return Task.CompletedTask;
         }
 
-        //private async Task HandleInteractionAsync(SocketInteraction arg)
-        //{
-        //    try
-        //    {
-        //        var interaction = arg as SocketMessageComponent;
-        //        if (interaction == null)
-        //            return;
-
-        //        _logger.Debug($"Interaction received, id: {interaction.Data.CustomId}, nonce: {interaction.Id}");
-
-        //        // 处理自定义指令
-        //        if (interaction.Data.CustomId.StartsWith("MJ::BOOKMARK::"))
-        //        {
-        //            // 自定义处理逻辑
-        //            //await interaction.RespondAsync($"Bookmark received: {interaction.Data.CustomId}");
-        //        }
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        Log.Error(ex, "处理交互事件异常");
-        //    }
-        //}
-
         /// <summary>
         /// 处理接收到的消息
         /// </summary>
@@ -220,10 +196,11 @@ namespace Midjourney.Infrastructure
             }
         }
 
+
         /// <summary>
         /// 处理接收到用户 ws 消息
         /// </summary>
-        /// <param name="msg"></param>
+        /// <param name="raw"></param>
         public void OnMessage(JsonElement raw)
         {
             if (!raw.TryGetProperty("t", out JsonElement messageTypeElement))
@@ -351,8 +328,6 @@ namespace Midjourney.Infrastructure
                 authorName = username.GetString();
             }
 
-
-
             // 交互元数据 id
             var metaId = string.Empty;
             var metaName = string.Empty;
@@ -371,7 +346,10 @@ namespace Midjourney.Infrastructure
                 _logger.Debug($"用户消息, {messageType}, {_discordAccount.GetDisplay()} - {authorName}: {contentStr}, id: {id}, mid: {metaId}");
 
                 // 判断账号是否用量已经用完
-                if (messageType == MessageType.CREATE && data.TryGetProperty("embeds", out var em))
+
+                var isEm = data.TryGetProperty("embeds", out var em);
+
+                if (messageType == MessageType.CREATE && isEm)
                 {
                     // em 是一个 JSON 数组
                     if (em.ValueKind == JsonValueKind.Array)
@@ -400,6 +378,50 @@ namespace Midjourney.Infrastructure
                         }
                     }
                 }
+                else if (messageType == MessageType.UPDATE && isEm)
+                {
+                    if (metaName == "info")
+                    {
+                        // info 指令
+                        if (em.ValueKind == JsonValueKind.Array)
+                        {
+                            foreach (JsonElement item in em.EnumerateArray())
+                            {
+                                if (item.TryGetProperty("title", out var emtitle) && emtitle.GetString().Contains("Your info"))
+                                {
+                                    if (item.TryGetProperty("description", out var description))
+                                    {
+                                        var dic = ParseDiscordData(description.GetString());
+                                        foreach (var d in dic)
+                                        {
+                                            _discordAccount.SetProperty(d.Key, d.Value);
+                                        }
+
+                                        var db = DbHelper.AccountStore;
+                                        db.Update(_discordAccount);
+                                    }
+                                }
+                            }
+                        }
+
+                        return;
+                    }
+                    else if (metaName == "settings" && data.TryGetProperty("components", out var components))
+                    {
+                        // settings 指令
+                        var eventData = data.Deserialize<EventData>();
+                        if (eventData != null && eventData.InteractionMetadata?.Name == "settings" && eventData.Components?.Count > 0)
+                        {
+                            _discordAccount.Components = eventData.Components;
+                            _discordAccount.SettingsMessageId = id;
+
+                            var db = DbHelper.AccountStore;
+                            db.Update(_discordAccount);
+                        }
+
+                        return;
+                    }
+                }
 
                 if (data.TryGetProperty("nonce", out JsonElement noneElement))
                 {
@@ -416,31 +438,7 @@ namespace Midjourney.Infrastructure
                             if (isPrivareChannel)
                             {
                                 // 私信频道
-                                //if (metaName == "show")
-                                //{
-                                //    if (!task.MessageIds.Contains(id))
-                                //    {
-                                //        task.MessageIds.Add(id);
-                                //    }
-                                //}
 
-                                //if (messageType == MessageType.CREATE)
-                                //{
-                                //    // 获取附件对象 attachments 中的第一个对象的 url 属性
-                                //    if (data.TryGetProperty("attachments", out JsonElement attachments) && attachments.ValueKind == JsonValueKind.Array)
-                                //    {
-                                //        var item = attachments.EnumerateArray().FirstOrDefault();
-                                //        if (item.TryGetProperty("url", out JsonElement url))
-                                //        {
-                                //            var imgUrl = url.GetString();
-                                //            if (!string.IsNullOrWhiteSpace(imgUrl))
-                                //            {
-                                //                var hash = _discordHelper.GetMessageHash(imgUrl);
-
-                                //            }
-                                //        }
-                                //    }
-                                //}
                             }
                             else
                             {
@@ -489,6 +487,44 @@ namespace Midjourney.Infrastructure
 
             //    //messageHandler.Handle(_discordInstance, messageType.Value, data);
             //}
+        }
+
+        private static Dictionary<string, string> ParseDiscordData(string input)
+        {
+            var data = new Dictionary<string, string>();
+
+            foreach (var line in input.Split('\n'))
+            {
+                var parts = line.Split(new[] { ':' }, 2);
+                if (parts.Length == 2)
+                {
+                    var key = parts[0].Replace("**", "").Trim();
+                    var value = parts[1].Trim();
+                    data[key] = value;
+                }
+            }
+
+            return data;
+        }
+
+        public void Dispose()
+        {
+            // Unsubscribe from events
+            if (_client != null)
+            {
+                _client.Log -= LogAction;
+                _client.MessageReceived -= HandleCommandAsync;
+                _client.MessageUpdated -= MessageUpdatedAsync;
+
+                // Dispose the Discord client
+                _client.Dispose();
+            }
+
+            // Dispose the command service
+            if (_commands != null)
+            {
+                _commands.Log -= LogAction;
+            }
         }
     }
 }

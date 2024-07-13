@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Options;
+﻿using IdGen;
+using Microsoft.Extensions.Options;
 using Midjourney.Infrastructure.Domain;
 using Midjourney.Infrastructure.LoadBalancer;
 using Serilog;
@@ -18,11 +19,11 @@ namespace Midjourney.API
         private readonly ILogger _logger;
 
         /// <summary>
-        /// 初始化 DiscordAccountInitializer 类的新实例。
+        /// 初始化 DiscordAccountInitializer 类的新实例
         /// </summary>
-        /// <param name="discordLoadBalancer">Discord负载均衡器实例。</param>
-        /// <param name="discordAccountHelper">Discord账号辅助类实例。</param>
-        /// <param name="options">ProxyProperties 配置选项。</param>
+        /// <param name="discordLoadBalancer"></param>
+        /// <param name="discordAccountHelper"></param>
+        /// <param name="options"></param>
         public DiscordAccountInitializer(DiscordLoadBalancer discordLoadBalancer, DiscordAccountHelper discordAccountHelper, IOptions<ProxyProperties> options)
         {
             _discordLoadBalancer = discordLoadBalancer;
@@ -38,6 +39,15 @@ namespace Midjourney.API
         /// <param name="cancellationToken">取消令牌。</param>
         public async Task StartAsync(CancellationToken cancellationToken)
         {
+            await Initialize();
+        }
+
+        /// <summary>
+        /// 初始化所有账号
+        /// </summary>
+        /// <returns></returns>
+        public async Task Initialize(params DiscordAccountConfig[] appends)
+        {
             var proxy = _properties.Proxy;
             if (!string.IsNullOrEmpty(proxy.Host))
             {
@@ -47,76 +57,186 @@ namespace Midjourney.API
                 Environment.SetEnvironmentVariable("https_proxyPort", proxy.Port.ToString());
             }
 
-            var configAccounts = _properties.Accounts;
+            var db = DbHelper.AccountStore;
+            var accounts = db.GetAll();
+
+            // 将启动配置中的 account 添加到数据库
+            var configAccounts = _properties.Accounts.ToList();
             if (!string.IsNullOrEmpty(_properties.Discord.ChannelId))
             {
                 configAccounts.Add(_properties.Discord);
             }
 
-            var instances = _discordLoadBalancer.GetAllInstances();
+            if (appends?.Length > 0)
+            {
+                configAccounts.AddRange(appends);
+            }
+
             foreach (var configAccount in configAccounts)
             {
-                var account = new DiscordAccount
+                var account = accounts.FirstOrDefault(c => c.ChannelId == configAccount.ChannelId);
+                if (account == null)
                 {
-                    GuildId = configAccount.GuildId,
-                    ChannelId = configAccount.ChannelId,
-                    UserToken = configAccount.UserToken,
-                    UserAgent = string.IsNullOrEmpty(configAccount.UserAgent) ? Constants.DEFAULT_DISCORD_USER_AGENT : configAccount.UserAgent,
-                    Enable = configAccount.Enable,
-                    CoreSize = configAccount.CoreSize,
-                    QueueSize = configAccount.QueueSize,
-                    BotToken = configAccount.BotToken,
-                    TimeoutMinutes = configAccount.TimeoutMinutes,
-                    PrivateChannelId = configAccount.PrivateChannelId,
-                    MaxQueueSize = configAccount.MaxQueueSize,
-                    Mode = configAccount.Mode,
-                };
+                    account = new DiscordAccount
+                    {
+                        Id = configAccount.ChannelId,
+                        ChannelId = configAccount.ChannelId,
+
+                        GuildId = configAccount.GuildId,
+                        UserToken = configAccount.UserToken,
+                        UserAgent = string.IsNullOrEmpty(configAccount.UserAgent) ? Constants.DEFAULT_DISCORD_USER_AGENT : configAccount.UserAgent,
+                        Enable = configAccount.Enable,
+                        CoreSize = configAccount.CoreSize,
+                        QueueSize = configAccount.QueueSize,
+                        BotToken = configAccount.BotToken,
+                        TimeoutMinutes = configAccount.TimeoutMinutes,
+                        PrivateChannelId = configAccount.PrivateChannelId,
+                        MaxQueueSize = configAccount.MaxQueueSize,
+                        Mode = configAccount.Mode,
+                        Weight = configAccount.Weight,
+                        Remark = configAccount.Remark
+                    };
+
+                    db.Add(account);
+                    accounts.Add(account);
+                }
+            }
+
+            var instances = _discordLoadBalancer.GetAllInstances();
+            foreach (var account in accounts)
+            {
+                if (!account.Enable)
+                {
+                    continue;
+                }
 
                 try
                 {
-                    var instance = await _discordAccountHelper.CreateDiscordInstance(account);
-                    if (!account.Enable)
+                    var disInstance = _discordLoadBalancer.GetDiscordInstance(account.ChannelId);
+                    if (disInstance == null)
                     {
-                        continue;
+                        disInstance = await _discordAccountHelper.CreateDiscordInstance(account);
+                        instances.Add(disInstance);
+                        _discordLoadBalancer.AddInstance(disInstance);
                     }
-
-                    //// TODO, 暂时不添加验证和监听
-                    //instance.StartWss();
-                    //var lockObject = await AsyncLockUtils.WaitForLockAsync("wss:" + account.ChannelId, TimeSpan.FromSeconds(10));
-                    //if (lockObject.GetProperty<int>("code", 0) != ReturnCode.SUCCESS)
-                    //{
-                    //    throw new ValidationException(lockObject.GetProperty<string>("description"));
-                    //}
-
-                    instances.Add(instance);
-
-                    // TODO 临时方案，后续需要优化
-                    // 先添加到负载均衡器，再启动
-                    _discordLoadBalancer.AddInstance(instance);
                 }
                 catch (Exception ex)
                 {
                     _logger.Error("Account({@0}) init fail, disabled: {@1}", account.GetDisplay(), ex.Message);
+
                     account.Enable = false;
+
+                    db.Update(account);
                 }
             }
 
-            var enableInstanceIds = instances.Where(instance => instance.IsAlive())
-                                             .Select(instance => instance.GetInstanceId())
-                                             .ToHashSet();
+            var enableInstanceIds = instances.Where(instance => instance.IsAlive)
+                .Select(instance => instance.GetInstanceId)
+                .ToHashSet();
 
             _logger.Information("当前可用账号数 [{@0}] - {@1}", enableInstanceIds.Count, string.Join(", ", enableInstanceIds));
-
-            await Task.CompletedTask;
         }
 
         /// <summary>
-        /// 停止服务。
+        /// 更新账号信息
         /// </summary>
-        /// <param name="cancellationToken">取消令牌。</param>
+        /// <param name="account"></param>
+        public void UpdateAccount(DiscordAccount account)
+        {
+            DiscordAccount model = null;
+
+            var disInstance = _discordLoadBalancer.GetDiscordInstance(account.Id);
+            if (disInstance != null)
+            {
+                model = disInstance.Account;
+            }
+
+            if (model == null)
+            {
+                model = DbHelper.AccountStore.Get(account.Id);
+            }
+
+            if (model == null)
+            {
+                throw new LogicException("账号不存在");
+            }
+
+            model.Enable = account.Enable;
+            model.ChannelId = account.ChannelId;
+            model.GuildId = account.GuildId;
+            model.PrivateChannelId = account.PrivateChannelId;
+            model.UserAgent = account.UserAgent;
+            model.RemixAutoSubmit = account.RemixAutoSubmit;
+            model.CoreSize = account.CoreSize;
+            model.QueueSize = account.QueueSize;
+            model.MaxQueueSize = account.MaxQueueSize;
+            model.TimeoutMinutes = account.TimeoutMinutes;
+            model.Weight = account.Weight;
+            model.Remark = account.Remark;
+            model.BotToken = account.BotToken;
+            model.UserToken = account.UserToken;
+            model.Mode = account.Mode;
+
+            DbHelper.AccountStore.Update(model);
+        }
+
+        /// <summary>
+        /// 更新并重新连接账号
+        /// </summary>
+        /// <param name="account"></param>
+        public async Task ReconnectAccount(DiscordAccount account)
+        {
+            try
+            {
+                UpdateAccount(account);
+
+                var disInstance = _discordLoadBalancer.GetDiscordInstance(account.Id);
+                if (disInstance != null)
+                {
+                    disInstance.Dispose();
+                }
+            }
+            catch
+            {
+
+            }
+
+            await Initialize();
+        }
+
+        /// <summary>
+        /// 停止连接并删除账号
+        /// </summary>
+        /// <param name="id"></param>
+        public void DeleteAccount(string id)
+        {
+            try
+            {
+                var disInstance = _discordLoadBalancer.GetDiscordInstance(id);
+                if (disInstance != null)
+                {
+                    disInstance.Dispose();
+                }
+            }
+            catch
+            {
+
+            }
+
+            var model = DbHelper.AccountStore.Get(id);
+            if (model != null)
+            {
+                DbHelper.AccountStore.Delete(id);
+            }
+        }
+
+        /// <summary>
+        /// 停止服务
+        /// </summary>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
         public Task StopAsync(CancellationToken cancellationToken)
         {
-            // 此处可以添加服务停止时的逻辑
             return Task.CompletedTask;
         }
     }

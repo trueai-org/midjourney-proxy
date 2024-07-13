@@ -7,7 +7,10 @@ using System.Net.WebSockets;
 
 namespace Midjourney.Infrastructure
 {
-    public class WebSocketStarter
+    /// <summary>
+    /// wss 启动器
+    /// </summary>
+    public class WebSocketStarter : IDisposable
     {
         private const int CONNECT_RETRY_LIMIT = 5;
 
@@ -63,6 +66,7 @@ namespace Midjourney.Infrastructure
             catch (Exception e)
             {
                 _logger.Error(e, "WebSocket 连接错误");
+
                 OnSocketFailure(WebSocketHandler.CloseCodeException, e.Message);
             }
         }
@@ -81,6 +85,7 @@ namespace Midjourney.Infrastructure
             if (_sessionClosing)
             {
                 _sessionClosing = false;
+                DisableAccount();
                 return;
             }
 
@@ -89,7 +94,6 @@ namespace Midjourney.Infrastructure
             if (!_running)
             {
                 NotifyWssLock(code, reason);
-                return;
             }
 
             _running = false;
@@ -176,7 +180,13 @@ namespace Midjourney.Infrastructure
             var lockObject = AsyncLockUtils.GetLock($"wss:{_account.Id}");
             if (lockObject != null)
             {
+
             }
+
+            _account.DisabledReason = reason;
+
+            // 保存
+            DbHelper.AccountStore.Save(_account);
         }
 
         private void DisableAccount()
@@ -187,6 +197,9 @@ namespace Midjourney.Infrastructure
             }
 
             _account.Enable = false;
+
+            // 保存
+            DbHelper.AccountStore.Save(_account);
         }
 
         private void CloseSocketSessionWhenIsOpen()
@@ -217,9 +230,19 @@ namespace Midjourney.Infrastructure
                 SessionId = sessionId;
                 Sequence = sequence;
                 ResumeGatewayUrl = resumeGatewayUrl;
-
-              
             }
+        }
+
+        public void Dispose()
+        {
+            // Close the WebSocket session if it is open
+            CloseSocketSessionWhenIsOpen();
+
+            // Dispose the WebSocket session
+            _webSocketSession?.Dispose();
+
+            // Dispose the user message listener
+            _userMessageListener?.Dispose();
         }
     }
 }

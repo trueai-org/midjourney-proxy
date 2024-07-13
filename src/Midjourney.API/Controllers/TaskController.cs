@@ -11,9 +11,7 @@ namespace Midjourney.API.Controllers
     /// 控制器用于查询任务信息
     /// </summary>
     [ApiController]
-    [Route("task")]
     [Route("mj/task")]
-    [AllowAnonymous]
     public class TaskController : ControllerBase
     {
         private readonly ITaskStoreService _taskStoreService;
@@ -38,6 +36,26 @@ namespace Midjourney.API.Controllers
         {
             var queueTask = _discordLoadBalancer.GetQueueTasks().FirstOrDefault(t => t.Id == id);
             return queueTask ?? _taskStoreService.Get(id);
+        }
+
+        /// <summary>
+        /// 取消任务并删除
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        [HttpPost("{id}/cancel")]
+        public ActionResult<TaskInfo> Cancel(string id)
+        {
+            var queueTask = _discordLoadBalancer.GetQueueTasks().FirstOrDefault(t => t.Id == id);
+            if (queueTask != null)
+            {
+                // 退出任务 TODO
+            }
+
+            // 删除任务
+            _taskStoreService.Delete(id);
+
+            return Ok();
         }
 
         /// <summary>
@@ -104,6 +122,7 @@ namespace Midjourney.API.Controllers
         /// <param name="conditionDTO">任务查询条件</param>
         /// <returns>符合条件的任务信息</returns>
         [HttpPost("list-by-condition")]
+        [HttpPost("list-by-ids")]
         [SwaggerOperation("根据ID列表查询任务")]
         public ActionResult<List<TaskInfo>> ListByCondition([FromBody] TaskConditionDTO conditionDTO)
         {

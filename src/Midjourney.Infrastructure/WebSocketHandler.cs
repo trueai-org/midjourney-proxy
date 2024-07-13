@@ -344,20 +344,36 @@ namespace Midjourney.Infrastructure
         /// <param name="state">状态对象</param>
         private async void SendHeartbeat(object state)
         {
-            if (!_heartbeatAck)
+            try
             {
-                _logger.Warning("用户未收到心跳 ACK，正在重新连接...");
-                await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "用户 未收到心跳 ACK", CancellationToken.None);
-                _heartbeatTimer.Dispose();
-                await StartAsync(true);
-                return;
+                if (!_heartbeatAck)
+                {
+                    _logger.Warning("用户未收到心跳 ACK，正在重新连接...");
+                    await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "用户 未收到心跳 ACK", CancellationToken.None);
+                    _heartbeatTimer.Dispose();
+                    await StartAsync(true);
+                    return;
+                }
+
+                var heartbeatMessage = new { op = 1, d = _sequence };
+                await SendMessageAsync(heartbeatMessage);
+                _logger.Information("用户已发送 HEARTBEAT 消息。");
+
+                _heartbeatAck = false;
             }
+            catch (Exception ex)
+            {
+                // The WebSocket is in an invalid state ('Closed')
+                if (_webSocket.State == WebSocketState.Closed)
+                {
+                    _logger.Warning("用户 WebSocket 已关闭，无法发送心跳。");
 
-            var heartbeatMessage = new { op = 1, d = _sequence };
-            await SendMessageAsync(heartbeatMessage);
-            _logger.Information("用户已发送 HEARTBEAT 消息。");
+                    // 关闭定时器
+                    _heartbeatTimer.Dispose();
+                }
 
-            _heartbeatAck = false;
+                _logger.Error(ex, "发送心跳异常");
+            }
         }
 
         /// <summary>

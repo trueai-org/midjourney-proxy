@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Midjourney.Infrastructure
 {
-    public static partial class Extensions
+    public static class Extensions
     {
         private static readonly char[] PathSeparator = ['/'];
 
@@ -194,6 +194,26 @@ namespace Midjourney.Infrastructure
         public static IEnumerable<T> WhereIf<T>(this IEnumerable<T> query, bool condition, Func<T, int, bool> predicate)
         {
             return condition ? query.Where(predicate) : query;
+        }
+
+        /// <summary>
+        /// 转为可视化时间
+        /// </summary>
+        /// <param name="timestamp"></param>
+        /// <returns></returns>
+        public static string ToDateTimeString(this long timestamp)
+        {
+            return timestamp > 0 ? DateTimeOffset.FromUnixTimeMilliseconds(timestamp).ToString("yyyy-MM-dd HH:mm:ss") : "";
+        }
+
+        /// <summary>
+        /// String to long time unix
+        /// </summary>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        public static long ToLong(this string value)
+        {
+            return long.TryParse(value, out long result) ? result : 0;
         }
     }
 }

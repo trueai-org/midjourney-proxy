@@ -3,6 +3,8 @@ using Midjourney.Infrastructure.Services;
 using Midjourney.Infrastructure.Util;
 using Serilog;
 using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Net.WebSockets;
 using System.Threading.Tasks;
 
 namespace Midjourney.Infrastructure.LoadBalancer
@@ -27,13 +29,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
         private ConcurrentQueue<(TaskInfo, Func<Task<Message>>)> _queueTasks;
 
-        /// <summary>
-        /// 初始化 DiscordInstanceImpl 类的新实例。
-        /// </summary>
-        /// <param name="account">Discord账号信息</param>
-        /// <param name="service">Discord服务接口</param>
-        /// <param name="taskStoreService">任务存储服务接口</param>
-        /// <param name="notifyService">通知服务接口</param>
         public DiscordInstanceImpl(
             DiscordAccount account,
             IDiscordService service,
@@ -53,6 +48,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
             // 最小 1, 最大 12
             _semaphoreSlimLock = new SemaphoreSlimLock(Math.Max(1, Math.Min(account.CoreSize, 12)));
 
+            // 初始化信号器
             _mre = new ManualResetEvent(false);
 
             // 后台任务
@@ -64,19 +60,19 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// 获取实例ID。
         /// </summary>
         /// <returns>实例ID</returns>
-        public string GetInstanceId() => _account.ChannelId;
+        public string GetInstanceId => _account.ChannelId;
 
         /// <summary>
         /// 获取Discord账号信息。
         /// </summary>
         /// <returns>Discord账号</returns>
-        public DiscordAccount Account() => _account;
+        public DiscordAccount Account => _account;
 
         /// <summary>
-        /// 判断实例是否存活。
+        /// 判断实例是否存活
         /// </summary>
         /// <returns>是否存活</returns>
-        public bool IsAlive() => _account.Enable;
+        public bool IsAlive => _account.Enable;
 
         /// <summary>
         /// 获取正在运行的任务列表。
@@ -89,6 +85,10 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// </summary>
         /// <returns>队列中的任务列表</returns>
         public List<TaskInfo> GetQueueTasks() => new List<TaskInfo>(_queueTasks.Select(c => c.Item1));
+
+        public BotMessageListener BotMessageListener { get; set; }
+
+        public WebSocketStarter WebSocketStarter { get; set; }
 
         /// <summary>
         /// 后台服务执行任务
@@ -210,7 +210,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
             if (_account.MaxQueueSize > 0 && currentWaitNumbers >= _account.MaxQueueSize)
             {
                 return SubmitResultVO.Fail(ReturnCode.FAILURE, "提交失败，队列已满，请稍后重试")
-                    .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, GetInstanceId());
+                    .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, GetInstanceId);
             }
 
             _taskStoreService.Save(info);
@@ -234,13 +234,13 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 if (currentWaitNumbers == 0)
                 {
                     return SubmitResultVO.Of(ReturnCode.SUCCESS, "提交成功", info.Id)
-                        .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, GetInstanceId());
+                        .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, GetInstanceId);
                 }
                 else
                 {
                     return SubmitResultVO.Of(ReturnCode.IN_QUEUE, $"排队中，前面还有{currentWaitNumbers}个任务", info.Id)
                         .SetProperty("numberOfQueues", currentWaitNumbers)
-                        .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, GetInstanceId());
+                        .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, GetInstanceId);
                 }
             }
             catch (Exception e)
@@ -250,7 +250,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 _taskStoreService.Delete(info.Id);
 
                 return SubmitResultVO.Fail(ReturnCode.FAILURE, "提交失败，系统异常")
-                    .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, GetInstanceId());
+                    .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, GetInstanceId);
             }
         }
 
@@ -286,10 +286,20 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                 await AsyncSaveAndNotify(info);
 
+                // 超时处理
+                var timeoutMin = _account.TimeoutMinutes;
+                var sw = new Stopwatch();
+                sw.Start();
+
                 while (info.Status == TaskStatus.SUBMITTED || info.Status == TaskStatus.IN_PROGRESS)
                 {
-                    await Task.Delay(1000);
+                    await Task.Delay(500);
                     await AsyncSaveAndNotify(info);
+
+                    if (sw.ElapsedMilliseconds > timeoutMin * 60 * 1000)
+                    {
+                        throw new TimeoutException($"执行超时 {timeoutMin} 分钟");
+                    }
                 }
 
                 _logger.Debug("[{AccountDisplay}] task finished, id: {TaskId}, status: {TaskStatus}", _account.GetDisplay(), info.Id, info.Status);
@@ -416,6 +426,39 @@ namespace Midjourney.Infrastructure.LoadBalancer
         public Task<Message> ZoomAsync(string messageId, string customId, string prompt, string nonce) =>
             _service.ZoomAsync(messageId, customId, prompt, nonce);
 
+        /// <summary>
+        /// 执行 info 操作
+        /// </summary>
+        /// <param name="nonce"></param>
+        /// <returns></returns>
+        public Task<Message> InfoAsync(string nonce) =>
+            _service.InfoAsync(nonce);
+
+        /// <summary>
+        /// 执行 setting 操作
+        /// </summary>
+        /// <param name="nonce"></param>
+        /// <returns></returns>
+        public Task<Message> SettingAsync(string nonce) =>
+            _service.SettingAsync(nonce);
+
+        /// <summary>
+        /// 执行 settings button 操作
+        /// </summary>
+        /// <param name="nonce"></param>
+        /// <param name="custom_id"></param>
+        /// <returns></returns>
+        public Task<Message> SettingButtonAsync(string nonce, string custom_id) =>
+              _service.SettingButtonAsync(nonce, custom_id);
+
+        /// <summary>
+        /// 执行 settings select 操作
+        /// </summary>
+        /// <param name="nonce"></param>
+        /// <param name="values"></param>
+        /// <returns></returns>
+        public Task<Message> SettingSelectAsync(string nonce, string values) =>
+            _service.SettingSelectAsync(nonce, values);
 
         /// <summary>
         /// 局部重绘
@@ -508,6 +551,77 @@ namespace Midjourney.Infrastructure.LoadBalancer
             }
 
             return FindRunningTask(c => c.MessageId == messageId).FirstOrDefault();
+        }
+
+        /// <summary>
+        /// 释放资源
+        /// </summary>
+        public void Dispose()
+        {
+            try
+            {
+                BotMessageListener?.Dispose();
+                WebSocketStarter?.Dispose();
+
+                // 停止后台任务
+                _mre.Set(); // 解除等待，防止死锁
+
+                // 释放未完成的任务
+                foreach (var runningTask in _runningTasks)
+                {
+                    runningTask.Fail("强制取消"); // 取消任务（假设TaskInfo有Cancel方法）
+                }
+
+                // 清理任务队列
+                while (_queueTasks.TryDequeue(out var taskInfo))
+                {
+                    taskInfo.Item1.Fail("强制取消"); // 取消任务（假设TaskInfo有Cancel方法）
+                }
+
+                // 释放信号量
+                //_semaphoreSlimLock?.Dispose();
+
+                // 释放信号
+                _mre?.Dispose();
+
+                // 释放任务映射
+                foreach (var task in _taskFutureMap.Values)
+                {
+                    if (!task.IsCompleted)
+                    {
+                        try
+                        {
+                            task.Wait(); // 等待任务完成
+                        }
+                        catch
+                        {
+                            // Ignore exceptions from tasks
+                        }
+                    }
+                }
+
+                // 清理日志任务
+                if (_loggingTask != null && !_loggingTask.IsCompleted)
+                {
+                    try
+                    {
+                        _loggingTask.Wait(); // 等待日志任务完成
+                    }
+                    catch
+                    {
+                        // Ignore exceptions from logging task
+                    }
+                }
+
+                // 清理资源
+                _taskFutureMap.Clear();
+                _runningTasks.Clear();
+            }
+            catch
+            {
+
+
+            }
         }
     }
 }

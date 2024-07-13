@@ -1,4 +1,7 @@
-﻿namespace Midjourney.Infrastructure.Services
+﻿using Newtonsoft.Json.Linq;
+using System.Security.Principal;
+
+namespace Midjourney.Infrastructure.Services
 {
     /// <summary>
     /// Discord服务接口，定义了与Discord服务交互的基本方法。
@@ -81,6 +84,36 @@
         /// <param name="nonce"></param>
         /// <returns></returns>
         Task<Message> ZoomAsync(string messageId, string customId, string prompt, string nonce);
+
+        /// <summary>
+        /// 执行 info 操作
+        /// </summary>
+        /// <param name="nonce"></param>
+        /// <returns></returns>
+        Task<Message> InfoAsync(string nonce);
+
+        /// <summary>
+        /// 执行 setting 操作
+        /// </summary>
+        /// <param name="nonce"></param>
+        /// <returns></returns>
+        Task<Message> SettingAsync(string nonce);
+
+        /// <summary>
+        /// 执行 settings button 操作
+        /// </summary>
+        /// <param name="nonce"></param>
+        /// <param name="custom_id"></param>
+        /// <returns></returns>
+        Task<Message> SettingButtonAsync(string nonce, string custom_id);
+
+        /// <summary>
+        /// 执行 settings select 操作
+        /// </summary>
+        /// <param name="nonce"></param>
+        /// <param name="values"></param>
+        /// <returns></returns>
+        Task<Message> SettingSelectAsync(string nonce, string values);
 
         /// <summary>
         /// 局部重绘

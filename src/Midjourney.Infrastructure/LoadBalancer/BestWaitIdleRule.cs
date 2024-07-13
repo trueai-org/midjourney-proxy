@@ -21,7 +21,7 @@
 
             var map = instances.GroupBy(i =>
             {
-                int wait = i.GetRunningFutures().Count - i.Account().CoreSize;
+                int wait = i.GetRunningFutures().Count - i.Account.CoreSize;
                 return wait >= 0 ? wait : -1;
             }).ToDictionary(g => g.Key, g => g.ToList());
 

@@ -1,7 +1,6 @@
 ﻿using LiteDB;
 using Midjourney.Infrastructure.Domain;
 using Swashbuckle.AspNetCore.Annotations;
-using System.Text.Json.Serialization;
 
 namespace Midjourney.Infrastructure
 {
@@ -119,7 +118,36 @@ namespace Midjourney.Infrastructure
         /// <summary>
         /// 按钮
         /// </summary>
-        public List<CustomComponentModel> Buttons { get; set; }
+        public List<CustomComponentModel> Buttons { get; set; } = new List<CustomComponentModel>();
+
+        /// <summary>
+        /// 任务的显示信息。
+        /// </summary>
+        [BsonIgnore]
+        public Dictionary<string, object> Displays
+        {
+            get
+            {
+                var dic = new Dictionary<string, object>();
+
+                // 状态
+                dic["status"] = Status.ToString();
+
+                // 转为可视化时间
+                dic["submitTime"] = SubmitTime?.ToDateTimeString();
+                dic["startTime"] = StartTime?.ToDateTimeString();
+                dic["finishTime"] = FinishTime?.ToDateTimeString();
+
+                // 行为
+                dic["action"] = Action.ToString();
+
+                // discord 实例 ID
+                dic["discordInstanceId"] = Properties.ContainsKey("discordInstanceId") ? Properties["discordInstanceId"] : "";
+
+                return dic;
+            }
+        }
+
 
         /// <summary>
         /// 任务的种子。

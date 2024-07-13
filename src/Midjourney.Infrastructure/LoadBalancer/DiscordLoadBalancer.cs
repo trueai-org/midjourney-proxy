@@ -3,7 +3,7 @@
 namespace Midjourney.Infrastructure.LoadBalancer
 {
     /// <summary>
-    /// Discord负载均衡器。
+    /// Discord 负载均衡器。
     /// </summary>
     public class DiscordLoadBalancer
     {
@@ -30,7 +30,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// 获取存活的实例。
         /// </summary>
         /// <returns>存活的实例列表。</returns>
-        public List<IDiscordInstance> GetAliveInstances() => _instances.Where(instance => instance.IsAlive()).ToList();
+        public List<IDiscordInstance> GetAliveInstances() => _instances.Where(instance => instance.IsAlive).ToList();
 
         /// <summary>
         /// 选择一个实例。
@@ -47,7 +47,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         {
             return string.IsNullOrWhiteSpace(instanceId)
                 ? null
-                : _instances.FirstOrDefault(instance => instance.GetInstanceId() == instanceId);
+                : _instances.FirstOrDefault(instance => instance.GetInstanceId == instanceId);
         }
 
         /// <summary>

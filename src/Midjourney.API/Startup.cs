@@ -2,7 +2,9 @@
 global using Midjourney.Infrastructure.Models;
 
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.OpenApi.Models;
 using Serilog;
+using System.Reflection;
 using System.Text.Json.Serialization;
 
 namespace Midjourney.API
@@ -30,10 +32,10 @@ namespace Midjourney.API
             {
                 // 配置枚举序列化为字符串
                 options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
-
-                // 如果枚举值是 null ，则返回空字符串
-                //options.JsonSerializerOptions.Converters.Add(new NullableEnumConverter<TaskStatus>());
             });
+
+            // 添加授权服务
+            services.AddAuthorization();
 
             // 自定义配置 API 行为选项
             // 配置 api 视图模型验证 400 错误处理，需要在 AddControllers 之后配置
@@ -59,7 +61,58 @@ namespace Midjourney.API
 
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             services.AddEndpointsApiExplorer();
-            services.AddSwaggerGen();
+            services.AddSwaggerGen(c =>
+            {
+                c.SwaggerDoc("v1", new OpenApiInfo { Title = "Midjourney API", Version = "v1" });
+
+                c.AddSecurityDefinition("ApiKey", new OpenApiSecurityScheme
+                {
+                    Description = "在下框中输入请求头中需要添加的授权 Authorization: {Token}",
+                    Name = "Authorization", // 或者 "Mj-Api-Secret" 视具体需求而定
+                    In = ParameterLocation.Header,
+                    Type = SecuritySchemeType.ApiKey,
+                    Scheme = "ApiKeyScheme"
+                });
+
+                c.AddSecurityRequirement(new OpenApiSecurityRequirement
+                {
+                    {
+                        new OpenApiSecurityScheme
+                        {
+                            Reference = new OpenApiReference
+                            {
+                                Type = ReferenceType.SecurityScheme,
+                                Id = "ApiKey"
+                            }
+                        },
+                        new string[] { }
+                    }
+                });
+
+                var xmls = new string[] { "Midjourney.Infrastructure.xml" };
+                foreach (var xmlModel in xmls)
+                {
+                    var baseDirectory = AppContext.BaseDirectory;
+                    if (!File.Exists(Path.Combine(baseDirectory, xmlModel)))
+                    {
+                        baseDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? "";
+                    }
+
+                    var xmlSubPath = Path.Combine(baseDirectory, xmlModel);
+                    if (File.Exists(xmlSubPath))
+                    {
+                        c.IncludeXmlComments(xmlSubPath, true);
+                    }
+                }
+
+                // 当前程序集名称
+                var assemblyMame = Assembly.GetExecutingAssembly().GetName().Name;
+                var xmlPath = Path.Combine(AppContext.BaseDirectory, $"{assemblyMame}.xml");
+                if (File.Exists(xmlPath))
+                {
+                    c.IncludeXmlComments(xmlPath, true);
+                }
+            });
         }
 
         public void Configure(IApplicationBuilder app, IHostEnvironment env)
@@ -72,7 +125,8 @@ namespace Midjourney.API
                 app.UseSwaggerUI();
             }
 
-            app.UseStaticFiles();
+            app.UseDefaultFiles(); // 启用默认文件（index.html）
+            app.UseStaticFiles(); // 配置提供静态文件
 
             app.UseCors(builder =>
             {
@@ -82,7 +136,7 @@ namespace Midjourney.API
             app.UseRouting();
 
             // 使用自定义中间件
-            app.UseMiddleware<SimpleAuthMiddleware>(); 
+            app.UseMiddleware<SimpleAuthMiddleware>();
 
             app.UseAuthorization();
 

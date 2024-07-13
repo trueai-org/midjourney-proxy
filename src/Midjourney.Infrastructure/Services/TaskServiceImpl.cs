@@ -1,7 +1,9 @@
-﻿using Midjourney.Infrastructure.Dto;
+﻿using Microsoft.AspNetCore.Mvc;
+using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.LoadBalancer;
 using Midjourney.Infrastructure.Util;
 using Serilog;
+using System;
 using System.Diagnostics;
 
 namespace Midjourney.Infrastructure.Services
@@ -33,7 +35,7 @@ namespace Midjourney.Infrastructure.Services
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
 
-            info.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, instance.GetInstanceId());
+            info.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, instance.GetInstanceId);
 
             return instance.SubmitTaskAsync(info, async () =>
             {
@@ -69,7 +71,7 @@ namespace Midjourney.Infrastructure.Services
         {
             var instanceId = task.GetProperty<string>(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, default);
             var discordInstance = _discordLoadBalancer.GetDiscordInstance(instanceId);
-            if (discordInstance == null || !discordInstance.IsAlive())
+            if (discordInstance == null || !discordInstance.IsAlive)
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "账号不可用: " + instanceId);
             }
@@ -81,7 +83,7 @@ namespace Midjourney.Infrastructure.Services
         {
             var instanceId = task.GetProperty<string>(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, default);
             var discordInstance = _discordLoadBalancer.GetDiscordInstance(instanceId);
-            if (discordInstance == null || !discordInstance.IsAlive())
+            if (discordInstance == null || !discordInstance.IsAlive)
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "账号不可用: " + instanceId);
             }
@@ -93,7 +95,7 @@ namespace Midjourney.Infrastructure.Services
         {
             var instanceId = task.GetProperty<string>(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, default);
             var discordInstance = _discordLoadBalancer.GetDiscordInstance(instanceId);
-            if (discordInstance == null || !discordInstance.IsAlive())
+            if (discordInstance == null || !discordInstance.IsAlive)
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "账号不可用: " + instanceId);
             }
@@ -108,7 +110,7 @@ namespace Midjourney.Infrastructure.Services
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
-            task.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, discordInstance.GetInstanceId());
+            task.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, discordInstance.GetInstanceId);
             return discordInstance.SubmitTaskAsync(task, async () =>
             {
                 var taskFileName = $"{task.Id}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
@@ -129,7 +131,7 @@ namespace Midjourney.Infrastructure.Services
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
-            task.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, discordInstance.GetInstanceId());
+            task.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, discordInstance.GetInstanceId);
             return discordInstance.SubmitTaskAsync(task, async () =>
             {
                 var finalFileNames = new List<string>();
@@ -160,7 +162,7 @@ namespace Midjourney.Infrastructure.Services
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
-            task.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, discordInstance.GetInstanceId());
+            task.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, discordInstance.GetInstanceId);
 
             var targetTask = _taskStoreService.Get(submitAction.TaskId)!;
             var messageFlags = targetTask.GetProperty<int>(Constants.TASK_PROPERTY_FLAGS, default);
@@ -217,7 +219,7 @@ namespace Midjourney.Infrastructure.Services
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
-            task.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, discordInstance.GetInstanceId());
+            task.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, discordInstance.GetInstanceId);
 
             return discordInstance.SubmitTaskAsync(task, async () =>
             {
@@ -288,7 +290,7 @@ namespace Midjourney.Infrastructure.Services
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
-            var privateChannelId = discordInstance.Account().PrivateChannelId;
+            var privateChannelId = discordInstance.Account.PrivateChannelId;
             if (string.IsNullOrWhiteSpace(privateChannelId))
             {
                 return SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "请配置私聊频道");
@@ -364,6 +366,92 @@ namespace Midjourney.Infrastructure.Services
             }
 
             return SubmitResultVO.Of(ReturnCode.SUCCESS, "成功", task.Seed);
+        }
+
+        /// <summary>
+        /// 执行 info setting 操作
+        /// </summary>
+        /// <returns></returns>
+        public async Task InfoSetting(string id)
+        {
+            var discordInstance = _discordLoadBalancer.GetDiscordInstance(id);
+            if (discordInstance == null)
+            {
+                throw new LogicException("无可用的账号实例");
+            }
+            var accsount = discordInstance.Account;
+
+            var nonce = SnowFlake.NextId();
+            accsount.SetProperty(Constants.TASK_PROPERTY_NONCE, nonce);
+            var res = await discordInstance.InfoAsync(nonce);
+            if (res.Code != ReturnCode.SUCCESS)
+            {
+                throw new LogicException(res.Description);
+            }
+
+            var nonce2 = SnowFlake.NextId();
+            accsount.SetProperty(Constants.TASK_PROPERTY_NONCE, nonce2);
+            var res2 = await discordInstance.SettingAsync(nonce2);
+            if (res2.Code != ReturnCode.SUCCESS)
+            {
+                throw new LogicException(res2.Description);
+            }
+        }
+
+
+        /// <summary>
+        /// 修改版本
+        /// </summary>
+        /// <param name="id"></param>
+        /// <param name="version"></param>
+        /// <returns></returns>
+        public async Task AccountChangeVersion(string id, string version)
+        {
+            var discordInstance = _discordLoadBalancer.GetDiscordInstance(id);
+            if (discordInstance == null)
+            {
+                throw new LogicException("无可用的账号实例");
+            }
+
+            var accsount = discordInstance.Account;
+
+            var nonce = SnowFlake.NextId();
+            accsount.SetProperty(Constants.TASK_PROPERTY_NONCE, nonce);
+            var res = await discordInstance.SettingSelectAsync(nonce, version);
+            if (res.Code != ReturnCode.SUCCESS)
+            {
+                throw new LogicException(res.Description);
+            }
+
+            await InfoSetting(id);
+        }
+
+
+        /// <summary>
+        /// 执行操作
+        /// </summary>
+        /// <param name="id"></param>
+        /// <param name="customId"></param>
+        /// <returns></returns>
+        public async Task AccountAction(string id, string customId)
+        {
+            var discordInstance = _discordLoadBalancer.GetDiscordInstance(id);
+            if (discordInstance == null)
+            {
+                throw new LogicException("无可用的账号实例");
+            }
+
+            var accsount = discordInstance.Account;
+
+            var nonce = SnowFlake.NextId();
+            accsount.SetProperty(Constants.TASK_PROPERTY_NONCE, nonce);
+            var res = await discordInstance.SettingButtonAsync(nonce, customId);
+            if (res.Code != ReturnCode.SUCCESS)
+            {
+                throw new LogicException(res.Description);
+            }
+
+            await InfoSetting(id);
         }
     }
 }
