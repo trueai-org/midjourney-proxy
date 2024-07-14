@@ -133,7 +133,7 @@ docker run --name mjapi -d --restart=always \
       "GuildId": "125652671***", // 服务器 ID
       "ChannelId": "12565267***", // 频道 ID
       "PrivateChannelId": "1256495659***", // MJ 私信频道 ID，用来接受 seed 值
-      "nijiBotChannelId": "1261608644***", // NIJI 私信频道 ID，用来接受 seed 值
+      "NijiBotChannelId": "1261608644***", // NIJI 私信频道 ID，用来接受 seed 值
       "UserToken": "MTI1NjQ5N***", // 用户 token
       "BotToken": "MTI1NjUyODEy***", // 机器人 token
       "UserAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36",
