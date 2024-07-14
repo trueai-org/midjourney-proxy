@@ -114,6 +114,93 @@ docker run --name mjapi -d --restart=always \
  registry.cn-guangzhou.aliyuncs.com/trueai-org/midjourney-proxy
 ```
 
+## 参数配置
+
+- `appsettings.json` 默认配置
+- `appsettings.Production.json` 生产环境配置
+- `/app/data` 数据目录，存放账号、任务等数据
+    - `/app/data/mj.db` 数据库文件
+- `/app/logs` 日志目录
+
+```json
+{
+  "Demo": null, // 网站配置为演示模式
+  "UserToken": "", // 用户绘画令牌 token，可以用来访问绘画接口，可以不用设定
+  "AdminToken": "", // 管理后台令牌 token，可以用来访问绘画接口和管理员账号等功能
+  "mj": {
+    "AccountChooseRule": "BestWaitIdle", // BestWaitIdle | Random | Weight | Polling = 最佳空闲规则 | 随机 | 权重 | 轮询
+    "Discord": { // Discord 配置，默认可以为 null
+      "GuildId": "125652671***", // 服务器 ID
+      "ChannelId": "12565267***", // 频道 ID
+      "PrivateChannelId": "1256495659***", // MJ 私信频道 ID，用来接受 seed 值
+      "nijiBotChannelId": "1261608644***", // NIJI 私信频道 ID，用来接受 seed 值
+      "UserToken": "MTI1NjQ5N***", // 用户 token
+      "BotToken": "MTI1NjUyODEy***", // 机器人 token
+      "UserAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36",
+      "Enable": true, // 是否默认启动
+      "CoreSize": 3, // 并发数
+      "QueueSize": 10, // 队列数
+      "MaxQueueSize": 100, // 最大队列数
+      "TimeoutMinutes": 5, // 任务超时分钟数
+      "Mode": null, // RELAX | FAST | TURBO 指定生成速度模式 --fast, --relax, or --turbo parameter at the end.
+      "Weight": 1 // 权重
+    },
+    "NgDiscord": { // NG Discord 配置，默认可以为 null
+      "Server": "",
+      "Cdn": "",
+      "Wss": "",
+      "ResumeWss": "",
+      "UploadServer": ""
+    },
+    "Proxy": { // 代理配置，默认可以为 null
+      "Host": "",
+      "Port": 10809
+    },
+    "Accounts": [], // 账号池配置
+    "BaiduTranslate": { // 百度翻译配置，默认可以为 null
+      "Appid": "", // your_appid
+      "AppSecret": "" // your_app_secret
+    },
+    "TranslateWay": "NULL", // NULL | GTP | BAIDU, 翻译配置, 默认: NULL
+    "ApiSecret": "", // your_api_secret
+    "NotifyHook": "", // your_notify_hook, 回调配置
+    "NotifyPoolSize": 10
+  },
+  "Serilog": {
+    "MinimumLevel": {
+      "Default": "Information",
+      "Override": {
+        "Default": "Warning",
+        "System": "Warning",
+        "Microsoft": "Warning"
+      }
+    },
+    "WriteTo": [
+      {
+        "Name": "File",
+        "Args": {
+          "path": "logs/log.txt",
+          "rollingInterval": "Day",
+          "fileSizeLimitBytes": null,
+          "rollOnFileSizeLimit": false,
+          "retainedFileCountLimit": 31
+        }
+      },
+      {
+        "Name": "Console"
+      }
+    ]
+  },
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "AllowedHosts": "*"
+}
+```
+
 > 配置使用
 
 启动 docker 后，配置代理为 `http://127.0.0.1:8086/mj` 即可
