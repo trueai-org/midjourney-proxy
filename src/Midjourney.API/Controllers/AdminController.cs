@@ -113,7 +113,7 @@ namespace Midjourney.API.Controllers
                 userid = name,
                 name = name,
                 apiSecret = token,
-                version = "v2.0.0",
+                version = GlobalConfiguration.Version,
                 active = true,
                 imagePrefix = "",
                 avatar = "",

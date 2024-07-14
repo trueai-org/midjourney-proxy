@@ -4,7 +4,7 @@
 
 完全开源，不会存在部分开源或部分闭源，欢迎 PR。
 
-功能最全、最安全、占用内存最小的 Midjourney Proxy 开源项目~~
+功能最全、最安全、占用内存最小（100MB+）的 Midjourney Proxy API ~~
 
 ## 主要功能
 
@@ -36,6 +36,18 @@
 
 - 绘图公益接口地址：<https://ai.googlec.cc/mj-relax>
 - 绘图公益接口密钥：`无需密钥或输入任意值`
+
+## 预览截图
+
+![欢迎](./docs/screenshots/ui1.png)
+
+![账号](./docs/screenshots/ui2.png)
+
+![任务](./docs/screenshots/ui3.png)
+
+![测试](./docs/screenshots/ui4.png)
+
+![日志](./docs/screenshots/ui5.png)
 
 ## 客户端推荐
 

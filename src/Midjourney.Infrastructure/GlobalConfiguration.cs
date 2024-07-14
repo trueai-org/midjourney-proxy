@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Runtime.InteropServices;
 
 namespace Midjourney.Infrastructure
 {
@@ -16,6 +11,11 @@ namespace Midjourney.Infrastructure
         /// 网站配置为演示模式
         /// </summary>
         public static bool? IsDemoMode { get; set; }
+
+        /// <summary>
+        /// 版本号
+        /// </summary>
+        public static string Version { get; set; } = "v2.0.0";
 
         /// <summary>
         /// 判断是否是 Windows 系统
