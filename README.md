@@ -30,9 +30,17 @@
 - [x] zlib-stream 安全压缩传输 <https://discord.com/developers/docs/topics/gateway>
 - [x] 内嵌管理后台页面，支持多语言 <https://github.com/trueai-org/midjourney-proxy-webui>
 
-## 公益接口（免费）
+## 在线预览
 
-公益接口为慢速模式，请合理使用。
+公益接口为慢速模式，接口免费调用，账号池由赞助者提供，请大家合理使用。
+
+- 管理后台：<https://ai.trueai.org>
+- 接口文档：<https://ai.trueai.org/swagger>
+- 公益接口：<https://ai.trueai.org/mj>
+- 接口密钥：`无`
+- 账号密码：`无`
+
+> 其他公益接口
 
 - 绘图公益接口地址：<https://ai.googlec.cc/mj-relax>
 - 绘图公益接口密钥：`无需密钥或输入任意值`
