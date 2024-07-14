@@ -56,21 +56,22 @@ namespace Midjourney.API.Controllers
         [HttpPost("login")]
         public ActionResult Login([FromBody] string token)
         {
-            if (!string.IsNullOrWhiteSpace(_adminToken) && token != _adminToken)
-            {
-                return Ok(new
-                {
-                    code = 0,
-                    description = "登录口令错误",
-                });
-            }
-
+            // 如果匿名登录，并且没有输入 token
             if (_isAnonymous && string.IsNullOrWhiteSpace(token))
             {
                 return Ok(new
                 {
                     code = 1,
                     apiSecret = "",
+                });
+            }
+
+            if (!string.IsNullOrWhiteSpace(_adminToken) && token != _adminToken)
+            {
+                return Ok(new
+                {
+                    code = 0,
+                    description = "登录口令错误",
                 });
             }
 
@@ -314,14 +315,27 @@ namespace Midjourney.API.Controllers
         /// <summary>
         /// 更新账号并重新连接
         /// </summary>
+        /// <param name="id"></param>
         /// <param name="account"></param>
         /// <returns></returns>
         [HttpPut("account-reconnect/{id}")]
-        public async Task<Result> AccountReconnect([FromBody] DiscordAccount account)
+        public async Task<Result> AccountReconnect(string id, [FromBody] DiscordAccount account)
         {
             if (_isAnonymous)
             {
                 return Result.Fail("演示模式，禁止操作");
+            }
+
+            var model = DbHelper.AccountStore.Get(account.Id);
+            if (model == null)
+            {
+                throw new LogicException("账号不存在");
+            }
+
+            // 不可修改频道 ID
+            if (id != account.ChannelId || account.GuildId != model.GuildId || account.ChannelId != model.ChannelId)
+            {
+                return Result.Fail("禁止修改频道 ID 和服务器 ID");
             }
 
             await _discordAccountInitializer.ReconnectAccount(account);

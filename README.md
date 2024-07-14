@@ -89,8 +89,14 @@
 ```bash
 # 阿里云镜像（推荐国内使用）
 docker pull registry.cn-guangzhou.aliyuncs.com/trueai-org/midjourney-proxy
-docker run --name mjproxy -d --restart=always \
- -p 8081:8080 --user root \
+
+ # 公益演示站点启动配置示例
+ docker run --name mjopen -d --restart=always \
+ -e DEMO=true \
+ -p 8086:8080 --user root \
+ -v /root/mjopen/logs:/app/logs:rw \
+ -v /root/mjopen/data:/app/data:rw \
+ -v /root/mjopen/appsettings.Production.json:/app/appsettings.Production.json:ro \
  -e TZ=Asia/Shanghai \
  -v /etc/localtime:/etc/localtime:ro \
  -v /etc/timezone:/etc/timezone:ro \

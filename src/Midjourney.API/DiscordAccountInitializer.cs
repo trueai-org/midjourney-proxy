@@ -162,9 +162,11 @@ namespace Midjourney.API
                 throw new LogicException("账号不存在");
             }
 
+            // 渠道 ID 和 服务器 ID 禁止修改
+            //model.ChannelId = account.ChannelId;
+            //model.GuildId = account.GuildId;
+
             model.Enable = account.Enable;
-            model.ChannelId = account.ChannelId;
-            model.GuildId = account.GuildId;
             model.PrivateChannelId = account.PrivateChannelId;
             model.NijiBotChannelId = account.NijiBotChannelId;
             model.UserAgent = account.UserAgent;
