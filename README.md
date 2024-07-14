@@ -42,15 +42,10 @@
 公益接口为慢速模式，接口免费调用，账号池由赞助者提供，请大家合理使用。
 
 - 管理后台：<https://ai.trueai.org>
-- 接口文档：<https://ai.trueai.org/swagger>
-- 公益接口：<https://ai.trueai.org/mj>
-- 接口密钥：`无`
 - 账号密码：`无`
-
-> 其他公益接口
-
-- 绘图公益接口地址：<https://ai.googlec.cc/mj-relax>
-- 绘图公益接口密钥：`无需密钥或输入任意值`
+- 公益接口：<https://ai.trueai.org/mj>
+- 接口文档：<https://ai.trueai.org/swagger>
+- 接口密钥：`无`
 
 ## 预览截图
 
@@ -69,10 +64,10 @@
 ## 客户端推荐
 
 - **ChatGPT Web Midjourney Proxy**: <https://github.com/Dooy/chatgpt-web-midjourney-proxy> 
-  - 打开网站 <https://vercel.ddaiai.com> -> 设置 -> MJ 绘画接口地址 -> <https://ai.googlec.cc/mj-relax>
+  - 打开网站 <https://vercel.ddaiai.com> -> 设置 -> MJ 绘画接口地址 -> <https://ai.trueai.org>
 
 - **GoAmzAI**: <https://github.com/Licoy/GoAmzAI>
-  -	打开后台 -> 绘画管理 -> 新增 -> MJ 绘画接口地址 -> <https://ai.googlec.cc/mj-relax/mj>
+  -	打开后台 -> 绘画管理 -> 新增 -> MJ 绘画接口地址 -> <https://ai.trueai.org/mj>
 
 ## 配置项
 - mj.accounts: 参考 [账号池配置](./docs/config.md#%E8%B4%A6%E5%8F%B7%E6%B1%A0%E9%85%8D%E7%BD%AE%E5%8F%82%E8%80%83)
@@ -104,18 +99,6 @@ docker pull registry.cn-guangzhou.aliyuncs.com/trueai-org/midjourney-proxy
  -v /etc/timezone:/etc/timezone:ro \
  registry.cn-guangzhou.aliyuncs.com/trueai-org/midjourney-proxy
 
-# 公益站点启动配置示例
-docker pull registry.cn-guangzhou.aliyuncs.com/trueai-org/midjourney-proxy
-docker run --name mjproxy -d --restart=always \
- -p 8081:8080 --user root \
- -v /root/mjproxy/logs:/app/logs:rw \
- -v /root/mjproxy/data:/app/data:rw \
- -v /root/mjproxy/appsettings.Production.json:/app/appsettings.Production.json:ro \
- -e TZ=Asia/Shanghai \
- -v /etc/localtime:/etc/localtime:ro \
- -v /etc/timezone:/etc/timezone:ro \
- registry.cn-guangzhou.aliyuncs.com/trueai-org/midjourney-proxy
-
 # 生产环境启动配置示例
 docker pull registry.cn-guangzhou.aliyuncs.com/trueai-org/midjourney-proxy
 docker run --name mjapi -d --restart=always \
@@ -131,7 +114,7 @@ docker run --name mjapi -d --restart=always \
 
 > 配置使用
 
-启动 docker 后，配置代理为 `http://ip:8081/mj` 即可
+启动 docker 后，配置代理为 `http://127.0.0.1:8086/mj` 即可
 
 ![示例](./docs/screenshots/chrome_EDzoztHa2b.png)
 
