@@ -102,12 +102,11 @@ docker pull registry.cn-guangzhou.aliyuncs.com/trueai-org/midjourney-proxy
  registry.cn-guangzhou.aliyuncs.com/trueai-org/midjourney-proxy
 
 # 生产环境启动配置示例
-docker pull registry.cn-guangzhou.aliyuncs.com/trueai-org/midjourney-proxy
-docker run --name mjapi -d --restart=always \
+docker run --name mjproxy -d --restart=always \
  -p 8088:8080 --user root \
- -v /root/mjapi/logs:/app/logs:rw \
- -v /root/mjapi/data:/app/data:rw \
- -v /root/mjapi/appsettings.Production.json:/app/appsettings.Production.json:ro \
+ -v /root/mjproxy/logs:/app/logs:rw \
+ -v /root/mjproxy/data:/app/data:rw \
+ -v /root/mjproxy/appsettings.Production.json:/app/appsettings.Production.json:ro \
  -e TZ=Asia/Shanghai \
  -v /etc/localtime:/etc/localtime:ro \
  -v /etc/timezone:/etc/timezone:ro \
