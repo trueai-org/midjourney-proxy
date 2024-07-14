@@ -89,8 +89,8 @@
 # 阿里云镜像（推荐国内使用）
 docker pull registry.cn-guangzhou.aliyuncs.com/trueai-org/midjourney-proxy
 
- # 公益演示站点启动配置示例
- docker run --name mjopen -d --restart=always \
+# 公益演示站点启动配置示例
+docker run --name mjopen -d --restart=always \
  -e DEMO=true \
  -p 8086:8080 --user root \
  -v /root/mjopen/logs:/app/logs:rw \
