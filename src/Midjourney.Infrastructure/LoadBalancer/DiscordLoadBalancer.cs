@@ -81,7 +81,17 @@ namespace Midjourney.Infrastructure.LoadBalancer
             return tasks;
         }
 
-        // 添加 Discord 实例
+        /// <summary>
+        /// 添加 Discord 实例
+        /// </summary>
+        /// <param name="instance"></param>
         public void AddInstance(IDiscordInstance instance) => _instances.Add(instance);
+
+
+        /// <summary>
+        /// 移除
+        /// </summary>
+        /// <param name="instance"></param>
+        public void RemoveInstance(IDiscordInstance instance) => _instances.TryTake(out instance);
     }
 }

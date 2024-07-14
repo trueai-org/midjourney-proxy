@@ -24,8 +24,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
         private readonly ConcurrentDictionary<string, Task> _taskFutureMap;
         private readonly SemaphoreSlimLock _semaphoreSlimLock;
 
-        private Task _loggingTask;
-        private ManualResetEvent _mre; // 信号
+        private readonly Task _longTask;
+        private readonly CancellationTokenSource _longToken;
+        private readonly ManualResetEvent _mre; // 信号
 
         private ConcurrentQueue<(TaskInfo, Func<Task<Message>>)> _queueTasks;
 
@@ -52,8 +53,12 @@ namespace Midjourney.Infrastructure.LoadBalancer
             _mre = new ManualResetEvent(false);
 
             // 后台任务
-            _loggingTask = new Task(Running, TaskCreationOptions.LongRunning);
-            _loggingTask.Start();
+            // 后台任务取消 token
+            _longToken = new CancellationTokenSource();
+            _longTask = new Task(Running, _longToken.Token, TaskCreationOptions.LongRunning);
+            _longTask.Start();
+
+
         }
 
         /// <summary>
@@ -97,12 +102,24 @@ namespace Midjourney.Infrastructure.LoadBalancer
         {
             while (true)
             {
+                if (_longToken.Token.IsCancellationRequested)
+                {
+                    // 清理资源（如果需要）
+                    break;
+                }
+
                 // 等待信号通知
                 _mre.WaitOne();
 
                 // 判断是否还有资源可用
                 while (!_semaphoreSlimLock.TryWait(100))
                 {
+                    if (_longToken.Token.IsCancellationRequested)
+                    {
+                        // 清理资源（如果需要）
+                        break;
+                    }
+
                     // 等待
                     Thread.Sleep(100);
                 }
@@ -123,6 +140,12 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 // 允许同时执行 N 个信号量的任务
                 while (true)
                 {
+                    if (_longToken.Token.IsCancellationRequested)
+                    {
+                        // 清理资源（如果需要）
+                        break;
+                    }
+
                     if (_queueTasks.TryPeek(out var info))
                     {
                         // 判断是否还有资源可用
@@ -148,6 +171,12 @@ namespace Midjourney.Infrastructure.LoadBalancer
                         // 队列为空，退出循环
                         break;
                     }
+                }
+
+                if (_longToken.Token.IsCancellationRequested)
+                {
+                    // 清理资源（如果需要）
+                    break;
                 }
 
                 // 重新设置信号
@@ -566,8 +595,26 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 BotMessageListener?.Dispose();
                 WebSocketStarter?.Dispose();
 
+                _mre.Set();
+
+                // 任务取消
+                _longToken.Cancel();
+
                 // 停止后台任务
                 _mre.Set(); // 解除等待，防止死锁
+
+                // 清理后台任务
+                if (_longTask != null && !_longTask.IsCompleted)
+                {
+                    try
+                    {
+                        _longTask.Wait();
+                    }
+                    catch
+                    {
+                        // Ignore exceptions from logging task
+                    }
+                }
 
                 // 释放未完成的任务
                 foreach (var runningTask in _runningTasks)
@@ -600,19 +647,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
                         {
                             // Ignore exceptions from tasks
                         }
-                    }
-                }
-
-                // 清理日志任务
-                if (_loggingTask != null && !_loggingTask.IsCompleted)
-                {
-                    try
-                    {
-                        _loggingTask.Wait(); // 等待日志任务完成
-                    }
-                    catch
-                    {
-                        // Ignore exceptions from logging task
                     }
                 }
 

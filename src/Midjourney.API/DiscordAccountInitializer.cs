@@ -192,11 +192,11 @@ namespace Midjourney.API
         {
             try
             {
-                UpdateAccount(account);
-
                 var disInstance = _discordLoadBalancer.GetDiscordInstance(account.Id);
                 if (disInstance != null)
                 {
+                    _discordLoadBalancer.RemoveInstance(disInstance);
+
                     disInstance.Dispose();
                 }
             }
@@ -204,6 +204,8 @@ namespace Midjourney.API
             {
 
             }
+
+            UpdateAccount(account);
 
             await Initialize();
         }
