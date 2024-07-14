@@ -2,7 +2,6 @@
 using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.LoadBalancer;
 using Midjourney.Infrastructure.Services;
-using Swashbuckle.AspNetCore.Annotations;
 
 namespace Midjourney.API.Controllers
 {
@@ -30,7 +29,6 @@ namespace Midjourney.API.Controllers
         /// <param name="id">任务ID</param>
         /// <returns>任务信息</returns>
         [HttpGet("{id}/fetch")]
-        [SwaggerOperation("指定ID获取任务")]
         public ActionResult<TaskInfo> Fetch(string id)
         {
             var queueTask = _discordLoadBalancer.GetQueueTasks().FirstOrDefault(t => t.Id == id);
@@ -63,7 +61,6 @@ namespace Midjourney.API.Controllers
         /// <param name="id"></param>
         /// <returns></returns>
         [HttpGet("{id}/image-seed")]
-        [SwaggerOperation("获取任务图片的seed（需设置mj或niji的私信ID）")]
         public async Task<ActionResult<SubmitResultVO>> ImageSeed(string id)
         {
             var targetTask = _taskStoreService.Get(id);
@@ -98,31 +95,29 @@ namespace Midjourney.API.Controllers
         /// </summary>
         /// <returns>任务队列中的所有任务</returns>
         [HttpGet("queue")]
-        [SwaggerOperation("查询任务队列")]
         public ActionResult<List<TaskInfo>> Queue()
         {
             return Ok(_discordLoadBalancer.GetQueueTasks().OrderBy(t => t.SubmitTime).ToList());
         }
 
         /// <summary>
-        /// 获取所有任务信息
+        /// 获取最新100条任务信息
         /// </summary>
         /// <returns>所有任务信息</returns>
         [HttpGet("list")]
-        [SwaggerOperation("查询所有任务")]
         public ActionResult<List<TaskInfo>> List()
         {
-            return Ok(_taskStoreService.List().OrderByDescending(t => t.SubmitTime).ToList());
+            var data = DbHelper.TaskStore.GetCollection().Query().OrderByDescending(t => t.SubmitTime).Limit(100).ToList();
+            return Ok(data);
         }
 
         /// <summary>
-        /// 根据条件查询任务信息
+        /// 根据条件查询任务信息/根据ID列表查询任务
         /// </summary>
         /// <param name="conditionDTO">任务查询条件</param>
         /// <returns>符合条件的任务信息</returns>
         [HttpPost("list-by-condition")]
         [HttpPost("list-by-ids")]
-        [SwaggerOperation("根据ID列表查询任务")]
         public ActionResult<List<TaskInfo>> ListByCondition([FromBody] TaskConditionDTO conditionDTO)
         {
             if (conditionDTO.Ids == null || !conditionDTO.Ids.Any())

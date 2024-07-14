@@ -406,7 +406,6 @@ namespace Midjourney.API.Controllers
                 }
             }
 
-
             var param = request.Search;
 
             var query = DbHelper.TaskStore.GetCollection().Query()
@@ -450,6 +449,5 @@ namespace Midjourney.API.Controllers
 
             return Result.Ok();
         }
-
     }
 }
