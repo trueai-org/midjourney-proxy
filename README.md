@@ -28,7 +28,7 @@
 - [x] 账号 settings 设置
 - [x] 支持 niji・journey Bot 和 Midjourney Bot
 - [x] zlib-stream 安全压缩传输 <https://discord.com/developers/docs/topics/gateway>
-- [x] 内嵌管理后台页面 <https://github.com/trueai-org/midjourney-proxy-webui>
+- [x] 内嵌管理后台页面，支持多语言 <https://github.com/trueai-org/midjourney-proxy-webui>
 
 ## 公益接口（免费）
 
