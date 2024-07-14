@@ -1,0 +1,16 @@
+{
+  "type": 2,
+  "guild_id": "$guild_id",
+  "channel_id": "$channel_id",
+  "application_id": "1022952195194359889",
+  "session_id": "$session_id",
+  "nonce": "$nonce",
+  "data": {
+    "version": "1248805223892254775",
+    "id": "1061216934374424697",
+    "name": "blend",
+    "type": 1,
+    "options": [],
+    "attachments": []
+  }
+}

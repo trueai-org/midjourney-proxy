@@ -9,6 +9,7 @@ namespace Midjourney.Infrastructure.Handle
         private const string CONTENT_REGEX = "\\*\\*(.*)\\*\\* - (.*?)<@\\d+> \\((.*?)\\)";
 
 
+
         public ActionSuccessHandler(DiscordLoadBalancer discordLoadBalancer, DiscordHelper discordHelper)
         : base(discordLoadBalancer, discordHelper)
         {
@@ -20,17 +21,24 @@ namespace Midjourney.Infrastructure.Handle
         {
             var content = GetMessageContent(message);
             var parseData = GetParseData(content);
+            var parseActionData = GetActionContent(content);
 
-            if (messageType == MessageType.CREATE && HasImage(message) && parseData != null
+            if (messageType == MessageType.CREATE && HasImage(message)
+                && parseData != null && parseActionData != null
                 && message.Author.IsBot && message.Author.Username.Contains("journey Bot", StringComparison.OrdinalIgnoreCase))
             {
-                FindAndFinishImageTask(instance, TaskAction.ACTION, parseData.Prompt, message);
+                FindAndFinishImageTask(instance, parseActionData.Action, parseData.Prompt, message);
             }
         }
 
         private ContentParseData GetParseData(string content)
         {
             return ConvertUtils.ParseContent(content, CONTENT_REGEX);
+        }
+
+        private ContentActionData GetActionContent(string content)
+        {
+            return ConvertUtils.ParseActionContent(content);
         }
     }
 }

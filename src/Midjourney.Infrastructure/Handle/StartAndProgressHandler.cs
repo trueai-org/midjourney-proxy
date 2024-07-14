@@ -55,7 +55,6 @@ namespace Midjourney.Infrastructure.Handle
                 if (parseData.Status == "Stopped")
                     return;
 
-
                 var task = instance.FindRunningTask(c => c.MessageId == msgId).FirstOrDefault();
                 if (task == null && message is SocketUserMessage umsg && umsg != null && umsg.InteractionMetadata?.Id != null)
                 {

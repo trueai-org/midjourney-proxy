@@ -70,7 +70,8 @@ namespace Midjourney.Infrastructure.Services
                     info.Description = "/imagine " + info.Prompt;
                     _taskStoreService.Save(info);
                 }
-                return await instance.ImagineAsync(info.PromptEn, info.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default));
+                return await instance.ImagineAsync(info.PromptEn,
+                    info.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default), info.BotType);
             });
         }
 
@@ -83,7 +84,8 @@ namespace Midjourney.Infrastructure.Services
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "账号不可用: " + instanceId);
             }
             return discordInstance.SubmitTaskAsync(task, async () =>
-                await discordInstance.UpscaleAsync(targetMessageId, index, targetMessageHash, messageFlags, task.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default)));
+                await discordInstance.UpscaleAsync(targetMessageId, index, targetMessageHash, messageFlags,
+                task.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default), task.BotType));
         }
 
         public SubmitResultVO SubmitVariation(TaskInfo task, string targetMessageId, string targetMessageHash, int index, int messageFlags)
@@ -95,7 +97,8 @@ namespace Midjourney.Infrastructure.Services
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "账号不可用: " + instanceId);
             }
             return discordInstance.SubmitTaskAsync(task, async () =>
-                await discordInstance.VariationAsync(targetMessageId, index, targetMessageHash, messageFlags, task.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default)));
+                await discordInstance.VariationAsync(targetMessageId, index, targetMessageHash, messageFlags,
+                task.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default), task.BotType));
         }
 
         /// <summary>
@@ -115,7 +118,8 @@ namespace Midjourney.Infrastructure.Services
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "账号不可用: " + instanceId);
             }
             return discordInstance.SubmitTaskAsync(task, async () =>
-                await discordInstance.RerollAsync(targetMessageId, targetMessageHash, messageFlags, task.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default)));
+                await discordInstance.RerollAsync(targetMessageId, targetMessageHash, messageFlags,
+                task.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default), task.BotType));
         }
 
         /// <summary>
@@ -143,7 +147,8 @@ namespace Midjourney.Infrastructure.Services
                     return Message.Of(uploadResult.Code, uploadResult.Description);
                 }
                 var finalFileName = uploadResult.Description;
-                return await discordInstance.DescribeAsync(finalFileName, task.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default));
+                return await discordInstance.DescribeAsync(finalFileName, task.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default),
+                    task.BotType);
             });
         }
 
@@ -176,7 +181,8 @@ namespace Midjourney.Infrastructure.Services
                     }
                     finalFileNames.Add(uploadResult.Description);
                 }
-                return await discordInstance.BlendAsync(finalFileNames, dimensions, task.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default));
+                return await discordInstance.BlendAsync(finalFileNames, dimensions,
+                    task.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default), task.BotType);
             });
         }
 
@@ -235,7 +241,8 @@ namespace Midjourney.Infrastructure.Services
             return discordInstance.SubmitTaskAsync(task, async () =>
             {
                 return await discordInstance.ActionAsync(messageId ?? targetTask.MessageId,
-                    submitAction.CustomId, messageFlags, task.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default));
+                    submitAction.CustomId, messageFlags,
+                    task.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default), task.BotType);
             });
         }
 
@@ -265,7 +272,7 @@ namespace Midjourney.Infrastructure.Services
                 var nonce = task.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default);
 
                 // 弹出，再执行变焦
-                var res = await discordInstance.ActionAsync(messageId, customId, messageFlags, nonce);
+                var res = await discordInstance.ActionAsync(messageId, customId, messageFlags, nonce, task.BotType);
                 if (res.Code != ReturnCode.SUCCESS)
                 {
                     return res;
@@ -297,13 +304,13 @@ namespace Midjourney.Infrastructure.Services
                     task.Nonce = nonce;
                     task.SetProperty(Constants.TASK_PROPERTY_NONCE, nonce);
 
-                    return await discordInstance.ZoomAsync(task.MessageId, customId, task.PromptEn, nonce);
+                    return await discordInstance.ZoomAsync(task.MessageId, customId, task.PromptEn, nonce, task.BotType);
                 }
                 // 局部重绘
                 else if (customId.StartsWith("MJ::Inpaint::"))
                 {
                     var ifarmeCustomId = task.GetProperty<string>(Constants.TASK_PROPERTY_IFRAME_MODAL_CREATE_CUSTOM_ID, default);
-                    return await discordInstance.InpaintAsync(ifarmeCustomId, task.PromptEn, submitAction.MaskBase64);
+                    return await discordInstance.InpaintAsync(ifarmeCustomId, task.PromptEn, submitAction.MaskBase64, task.BotType);
                 }
                 else
                 {
@@ -326,8 +333,18 @@ namespace Midjourney.Infrastructure.Services
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
 
-            // TODO: 请配置私聊频道
-            var privateChannelId = discordInstance.Account.PrivateChannelId;
+            // 请配置私聊频道
+            var privateChannelId = string.Empty;
+
+            if (task.BotType == EBotType.MID_JOURNEY)
+            {
+                privateChannelId = discordInstance.Account.PrivateChannelId;
+            }
+            else
+            {
+                privateChannelId = discordInstance.Account.NijiBotChannelId;
+            }
+
             if (string.IsNullOrWhiteSpace(privateChannelId))
             {
                 return SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "请配置私聊频道");
@@ -345,7 +362,7 @@ namespace Midjourney.Infrastructure.Services
 
                 // /show job_id
                 // https://discord.com/api/v9/interactions
-                var res = await discordInstance.SeedAsync(hash, nonce);
+                var res = await discordInstance.SeedAsync(hash, nonce, task.BotType);
                 if (res.Code != ReturnCode.SUCCESS)
                 {
                     return SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, res.Description);
@@ -417,7 +434,7 @@ namespace Midjourney.Infrastructure.Services
                 throw new LogicException("无可用的账号实例");
             }
 
-            var res = await discordInstance.InfoAsync(SnowFlake.NextId(),false);
+            var res = await discordInstance.InfoAsync(SnowFlake.NextId(), EBotType.NIJI_JOURNEY);
             if (res.Code != ReturnCode.SUCCESS)
             {
                 throw new LogicException(res.Description);
@@ -425,7 +442,7 @@ namespace Midjourney.Infrastructure.Services
 
             Thread.Sleep(2000);
 
-            var res0 = await discordInstance.InfoAsync(SnowFlake.NextId(), true);
+            var res0 = await discordInstance.InfoAsync(SnowFlake.NextId(), EBotType.MID_JOURNEY);
             if (res0.Code != ReturnCode.SUCCESS)
             {
                 throw new LogicException(res0.Description);
@@ -433,7 +450,7 @@ namespace Midjourney.Infrastructure.Services
 
             Thread.Sleep(2000);
 
-            var res2 = await discordInstance.SettingAsync(SnowFlake.NextId(), false);
+            var res2 = await discordInstance.SettingAsync(SnowFlake.NextId(), EBotType.NIJI_JOURNEY);
             if (res2.Code != ReturnCode.SUCCESS)
             {
                 throw new LogicException(res2.Description);
@@ -441,7 +458,7 @@ namespace Midjourney.Infrastructure.Services
 
             Thread.Sleep(2000);
 
-            var res3 = await discordInstance.SettingAsync(SnowFlake.NextId(), true);
+            var res3 = await discordInstance.SettingAsync(SnowFlake.NextId(), EBotType.MID_JOURNEY);
             if (res3.Code != ReturnCode.SUCCESS)
             {
                 throw new LogicException(res3.Description);
@@ -485,7 +502,7 @@ namespace Midjourney.Infrastructure.Services
         /// <param name="customId"></param>
         /// <param name="botType"></param>
         /// <returns></returns>
-        public async Task AccountAction(string id, string customId, BotType botType)
+        public async Task AccountAction(string id, string customId, EBotType botType)
         {
             var discordInstance = _discordLoadBalancer.GetDiscordInstance(id);
             if (discordInstance == null)

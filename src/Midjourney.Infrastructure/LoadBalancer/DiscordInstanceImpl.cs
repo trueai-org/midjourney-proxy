@@ -353,7 +353,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <param name="prompt">提示信息</param>
         /// <param name="nonce">随机数</param>
         /// <returns>异步任务</returns>
-        public Task<Message> ImagineAsync(string prompt, string nonce) => _service.ImagineAsync(prompt, nonce);
+        public Task<Message> ImagineAsync(string prompt, string nonce, EBotType botType)
+            => _service.ImagineAsync(prompt, nonce, botType);
 
         /// <summary>
         /// 异步执行放大任务。
@@ -364,7 +365,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <param name="messageFlags">消息标志</param>
         /// <param name="nonce">随机数</param>
         /// <returns>异步任务</returns>
-        public Task<Message> UpscaleAsync(string messageId, int index, string messageHash, int messageFlags, string nonce) => _service.UpscaleAsync(messageId, index, messageHash, messageFlags, nonce);
+        public Task<Message> UpscaleAsync(string messageId, int index, string messageHash, int messageFlags, string nonce, EBotType botType) => _service.UpscaleAsync(messageId, index, messageHash, messageFlags, nonce, botType);
 
         /// <summary>
         /// 异步执行变体任务。
@@ -375,7 +376,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <param name="messageFlags">消息标志</param>
         /// <param name="nonce">随机数</param>
         /// <returns>异步任务</returns>
-        public Task<Message> VariationAsync(string messageId, int index, string messageHash, int messageFlags, string nonce) => _service.VariationAsync(messageId, index, messageHash, messageFlags, nonce);
+        public Task<Message> VariationAsync(string messageId, int index, string messageHash, int messageFlags, string nonce, EBotType botType) => _service.VariationAsync(messageId, index, messageHash, messageFlags, nonce, botType);
 
         /// <summary>
         /// 异步执行重新滚动任务。
@@ -385,7 +386,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <param name="messageFlags">消息标志</param>
         /// <param name="nonce">随机数</param>
         /// <returns>异步任务</returns>
-        public Task<Message> RerollAsync(string messageId, string messageHash, int messageFlags, string nonce) => _service.RerollAsync(messageId, messageHash, messageFlags, nonce);
+        public Task<Message> RerollAsync(string messageId, string messageHash, int messageFlags, string nonce, EBotType botType) => _service.RerollAsync(messageId, messageHash, messageFlags, nonce, botType);
 
         /// <summary>
         /// 执行动作
@@ -395,8 +396,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <param name="messageFlags"></param>
         /// <param name="nonce"></param>
         /// <returns></returns>
-        public Task<Message> ActionAsync(string messageId, string customId, int messageFlags, string nonce) =>
-              _service.ActionAsync(messageId, customId, messageFlags, nonce);
+        public Task<Message> ActionAsync(string messageId, string customId, int messageFlags, string nonce, EBotType botType) =>
+              _service.ActionAsync(messageId, customId, messageFlags, nonce, botType);
 
         /// <summary>
         /// 图片 seed 值
@@ -404,8 +405,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <param name="jobId"></param>
         /// <param name="nonce"></param>
         /// <returns></returns>
-        public Task<Message> SeedAsync(string jobId, string nonce) =>
-            _service.SeedAsync(jobId, nonce);
+        public Task<Message> SeedAsync(string jobId, string nonce, EBotType botType) =>
+            _service.SeedAsync(jobId, nonce, botType);
 
         /// <summary>
         /// 图片 seed 值消息
@@ -424,16 +425,16 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <param name="prompt"></param>
         /// <param name="nonce"></param>
         /// <returns></returns>
-        public Task<Message> ZoomAsync(string messageId, string customId, string prompt, string nonce) =>
-            _service.ZoomAsync(messageId, customId, prompt, nonce);
+        public Task<Message> ZoomAsync(string messageId, string customId, string prompt, string nonce, EBotType botType) =>
+            _service.ZoomAsync(messageId, customId, prompt, nonce, botType);
 
         /// <summary>
         /// 执行 info 操作
         /// </summary>
         /// <param name="nonce"></param>
         /// <returns></returns>
-        public Task<Message> InfoAsync(string nonce, bool isNiji = false) =>
-            _service.InfoAsync(nonce, isNiji);
+        public Task<Message> InfoAsync(string nonce, EBotType botType) =>
+            _service.InfoAsync(nonce, botType);
 
         /// <summary>
         /// 执行 setting 操作
@@ -441,8 +442,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <param name="nonce"></param>
         /// <param name="isNiji"></param>
         /// <returns></returns>
-        public Task<Message> SettingAsync(string nonce, bool isNiji = false) =>
-            _service.SettingAsync(nonce, isNiji);
+        public Task<Message> SettingAsync(string nonce, EBotType botType) =>
+            _service.SettingAsync(nonce, botType);
 
         /// <summary>
         /// 执行 settings button 操作
@@ -450,7 +451,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <param name="nonce"></param>
         /// <param name="custom_id"></param>
         /// <returns></returns>
-        public Task<Message> SettingButtonAsync(string nonce, string custom_id, BotType botType) =>
+        public Task<Message> SettingButtonAsync(string nonce, string custom_id, EBotType botType) =>
               _service.SettingButtonAsync(nonce, custom_id, botType);
 
         /// <summary>
@@ -469,8 +470,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <param name="prompt"></param>
         /// <param name="maskBase64"></param>
         /// <returns></returns>
-        public Task<Message> InpaintAsync(string customId, string prompt, string maskBase64) =>
-            _service.InpaintAsync(customId, prompt, maskBase64);
+        public Task<Message> InpaintAsync(string customId, string prompt, string maskBase64, EBotType botType) =>
+            _service.InpaintAsync(customId, prompt, maskBase64, botType);
 
         /// <summary>
         /// 异步执行描述任务。
@@ -478,7 +479,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <param name="finalFileName">最终文件名</param>
         /// <param name="nonce">随机数</param>
         /// <returns>异步任务</returns>
-        public Task<Message> DescribeAsync(string finalFileName, string nonce) => _service.DescribeAsync(finalFileName, nonce);
+        public Task<Message> DescribeAsync(string finalFileName, string nonce, EBotType botType) => _service.DescribeAsync(finalFileName, nonce, botType);
 
         /// <summary>
         /// 异步执行混合任务。
@@ -487,7 +488,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <param name="dimensions">混合维度</param>
         /// <param name="nonce">随机数</param>
         /// <returns>异步任务</returns>
-        public Task<Message> BlendAsync(List<string> finalFileNames, BlendDimensions dimensions, string nonce) => _service.BlendAsync(finalFileNames, dimensions, nonce);
+        public Task<Message> BlendAsync(List<string> finalFileNames, BlendDimensions dimensions, string nonce, EBotType botType) => _service.BlendAsync(finalFileNames, dimensions, nonce, botType);
 
         /// <summary>
         /// 异步上传文件。

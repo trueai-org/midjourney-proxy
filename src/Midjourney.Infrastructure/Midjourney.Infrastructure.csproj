@@ -43,12 +43,22 @@
 		<Content Remove="Resources\ApiParams\settingniji.json" />
 		<Content Remove="Resources\ApiParams\settingselect.json" />
 		<Content Remove="Resources\ApiParams\infoniji.json" />
+		<Content Remove="Resources\ApiParams\imagineniji.json" />
+		<Content Remove="Resources\ApiParams\blendniji.json" />
+		<Content Remove="Resources\ApiParams\describeniji.json" />
 		<Content Remove="Resources\mime.types" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <None Remove="Resources\ApiParams\seedniji.json" />
+	</ItemGroup>
 
 	<ItemGroup>
+		<EmbeddedResource Include="Resources\ApiParams\blendniji.json" />
+		<EmbeddedResource Include="Resources\ApiParams\describeniji.json" />
+		<EmbeddedResource Include="Resources\ApiParams\imagineniji.json" />
 		<EmbeddedResource Include="Resources\ApiParams\infoniji.json" />
+		<EmbeddedResource Include="Resources\ApiParams\seedniji.json" />
 		<EmbeddedResource Include="Resources\ApiParams\settingniji.json" />
 		<EmbeddedResource Include="Resources\ApiParams\settingselect.json" />
 		<EmbeddedResource Include="Resources\ApiParams\settingbutton.json" />

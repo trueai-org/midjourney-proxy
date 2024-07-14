@@ -2,6 +2,7 @@
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Linq.Expressions;
+using System.Text.RegularExpressions;
 
 namespace Midjourney.Infrastructure
 {
@@ -17,6 +18,20 @@ namespace Midjourney.Infrastructure
         public static string TrimPath(this string path)
         {
             return path?.Trim().Trim('/').Trim('\\').Trim('/').Trim();
+        }
+
+        /// <summary>
+        /// 移除空白字符
+        /// </summary>
+        /// <param name="str"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        public static string RemoveWhitespace(this string str)
+        {
+            if (str == null)
+                throw new ArgumentNullException(nameof(str));
+
+            return Regex.Replace(str, @"\s+", "");
         }
 
         /// <summary>

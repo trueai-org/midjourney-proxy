@@ -1,6 +1,8 @@
-﻿using Midjourney.Infrastructure.Domain;
+﻿using LiteDB;
+using Midjourney.Infrastructure.Domain;
 using Newtonsoft.Json.Linq;
 using Serilog;
+using System;
 using System.Net.Http.Headers;
 using System.Text;
 
@@ -48,22 +50,43 @@ namespace Midjourney.Infrastructure.Services
         /// </summary>
         public string DefaultSessionId { get; set; } = "f1a313a09ce079ce252459dc70231f30";
 
-        public async Task<Message> ImagineAsync(string prompt, string nonce)
+        /// <summary>
+        /// 绘画
+        /// </summary>
+        /// <param name="prompt"></param>
+        /// <param name="nonce"></param>
+        /// <param name="botType"></param>
+        /// <returns></returns>
+        public async Task<Message> ImagineAsync(string prompt, string nonce, EBotType botType)
         {
             prompt = GetPrompt(prompt);
 
-            string paramsStr = ReplaceInteractionParams(_paramsMap["imagine"], nonce);
+            var json = botType == EBotType.MID_JOURNEY ? _paramsMap["imagine"] : _paramsMap["imagineniji"];
+            var paramsStr = ReplaceInteractionParams(json, nonce);
+
             JObject paramsJson = JObject.Parse(paramsStr);
             paramsJson["data"]["options"][0]["value"] = prompt;
+
             return await PostJsonAndCheckStatusAsync(paramsJson.ToString());
         }
 
-        public async Task<Message> UpscaleAsync(string messageId, int index, string messageHash, int messageFlags, string nonce)
+        /// <summary>
+        /// 放大
+        /// </summary>
+        /// <param name="messageId"></param>
+        /// <param name="index"></param>
+        /// <param name="messageHash"></param>
+        /// <param name="messageFlags"></param>
+        /// <param name="nonce"></param>
+        /// <param name="botType"></param>
+        /// <returns></returns>
+        public async Task<Message> UpscaleAsync(string messageId, int index, string messageHash, int messageFlags, string nonce, EBotType botType)
         {
-            string paramsStr = ReplaceInteractionParams(_paramsMap["upscale"], nonce)
+            string paramsStr = ReplaceInteractionParams(_paramsMap["upscale"], nonce, botType)
                 .Replace("$message_id", messageId)
                 .Replace("$index", index.ToString())
                 .Replace("$message_hash", messageHash);
+
             var obj = JObject.Parse(paramsStr);
 
             if (obj.ContainsKey("message_flags"))
@@ -79,9 +102,19 @@ namespace Midjourney.Infrastructure.Services
             return await PostJsonAndCheckStatusAsync(paramsStr);
         }
 
-        public async Task<Message> VariationAsync(string messageId, int index, string messageHash, int messageFlags, string nonce)
+        /// <summary>
+        /// 变化
+        /// </summary>
+        /// <param name="messageId"></param>
+        /// <param name="index"></param>
+        /// <param name="messageHash"></param>
+        /// <param name="messageFlags"></param>
+        /// <param name="nonce"></param>
+        /// <param name="botType"></param>
+        /// <returns></returns>
+        public async Task<Message> VariationAsync(string messageId, int index, string messageHash, int messageFlags, string nonce, EBotType botType)
         {
-            string paramsStr = ReplaceInteractionParams(_paramsMap["variation"], nonce)
+            string paramsStr = ReplaceInteractionParams(_paramsMap["variation"], nonce, botType)
                 .Replace("$message_id", messageId)
                 .Replace("$index", index.ToString())
                 .Replace("$message_hash", messageHash);
@@ -107,10 +140,11 @@ namespace Midjourney.Infrastructure.Services
         /// <param name="customId"></param>
         /// <param name="messageFlags"></param>
         /// <param name="nonce"></param>
+        /// <param name="botType"></param>
         /// <returns></returns>
-        public async Task<Message> ActionAsync(string messageId, string customId, int messageFlags, string nonce)
+        public async Task<Message> ActionAsync(string messageId, string customId, int messageFlags, string nonce, EBotType botType)
         {
-            string paramsStr = ReplaceInteractionParams(_paramsMap["action"], nonce)
+            string paramsStr = ReplaceInteractionParams(_paramsMap["action"], nonce, botType)
                 .Replace("$message_id", messageId);
 
             var obj = JObject.Parse(paramsStr);
@@ -135,12 +169,14 @@ namespace Midjourney.Infrastructure.Services
         /// </summary>
         /// <param name="jobId"></param>
         /// <param name="nonce"></param>
+        /// <param name="botType"></param>
         /// <returns></returns>
-        public async Task<Message> SeedAsync(string jobId, string nonce)
+        public async Task<Message> SeedAsync(string jobId, string nonce, EBotType botType)
         {
-            // TODO: 请配置私聊频道
-            var paramsStr = _paramsMap["seed"]
-              .Replace("$channel_id", _account.PrivateChannelId)
+            // 私聊频道
+            var json = botType == EBotType.NIJI_JOURNEY ? _paramsMap["seedniji"] : _paramsMap["seed"];
+            var paramsStr = json
+              .Replace("$channel_id", botType == EBotType.MID_JOURNEY ? _account.PrivateChannelId : _account.NijiBotChannelId)
               .Replace("$session_id", DefaultSessionId)
               .Replace("$nonce", nonce)
               .Replace("$job_id", jobId);
@@ -149,7 +185,6 @@ namespace Midjourney.Infrastructure.Services
             paramsStr = obj.ToString();
             return await PostJsonAndCheckStatusAsync(paramsStr);
         }
-
 
         /// <summary>
         /// 图片 seed 值消息
@@ -194,13 +229,14 @@ namespace Midjourney.Infrastructure.Services
         /// <param name="customId"></param>
         /// <param name="prompt"></param>
         /// <param name="nonce"></param>
+        /// <param name="botType"></param>
         /// <returns></returns>
-        public async Task<Message> ZoomAsync(string messageId, string customId, string prompt, string nonce)
+        public async Task<Message> ZoomAsync(string messageId, string customId, string prompt, string nonce, EBotType botType)
         {
             customId = customId.Replace("MJ::CustomZoom::", "MJ::OutpaintCustomZoomModal::");
             prompt = GetPrompt(prompt);
 
-            string paramsStr = ReplaceInteractionParams(_paramsMap["zoom"], nonce)
+            string paramsStr = ReplaceInteractionParams(_paramsMap["zoom"], nonce, botType)
                 .Replace("$message_id", messageId)
                 .Replace("$prompt", prompt);
 
@@ -217,11 +253,11 @@ namespace Midjourney.Infrastructure.Services
         /// 执行 info 操作
         /// </summary>
         /// <param name="nonce"></param>
-        /// <param name="isNiji"></param>
+        /// <param name="botType"></param>
         /// <returns></returns>
-        public async Task<Message> InfoAsync(string nonce, bool isNiji = false)
+        public async Task<Message> InfoAsync(string nonce, EBotType botType)
         {
-            var content = isNiji ? _paramsMap["infoniji"] : _paramsMap["info"];
+            var content = botType == EBotType.NIJI_JOURNEY ? _paramsMap["infoniji"] : _paramsMap["info"];
 
             var paramsStr = ReplaceInteractionParams(content, nonce);
             var obj = JObject.Parse(paramsStr);
@@ -236,18 +272,18 @@ namespace Midjourney.Infrastructure.Services
         /// <param name="custom_id"></param>
         /// <param name="botType"></param>
         /// <returns></returns>
-        public async Task<Message> SettingButtonAsync(string nonce, string custom_id, BotType botType)
+        public async Task<Message> SettingButtonAsync(string nonce, string custom_id, EBotType botType)
         {
             var paramsStr = ReplaceInteractionParams(_paramsMap["settingbutton"], nonce)
                 .Replace("$custom_id", custom_id);
 
-            if (botType == BotType.NIJI_JOURNEY)
+            if (botType == EBotType.NIJI_JOURNEY)
             {
                 paramsStr = paramsStr
                     .Replace("$application_id", Constants.NIJI_APPLICATION_ID)
                     .Replace("$message_id", _account.NijiSettingsMessageId);
             }
-            else if (botType == BotType.MID_JOURNEY)
+            else if (botType == EBotType.MID_JOURNEY)
             {
                 paramsStr = paramsStr
                     .Replace("$application_id", Constants.MJ_APPLICATION_ID)
@@ -279,11 +315,11 @@ namespace Midjourney.Infrastructure.Services
         /// 执行 setting 操作
         /// </summary>
         /// <param name="nonce"></param>
-        /// <param name="isNiji"></param>
+        /// <param name="botType"></param>
         /// <returns></returns>
-        public async Task<Message> SettingAsync(string nonce, bool isNiji = false)
+        public async Task<Message> SettingAsync(string nonce, EBotType botType)
         {
-            var content = isNiji ? _paramsMap["settingniji"] : _paramsMap["setting"];
+            var content = botType == EBotType.NIJI_JOURNEY ? _paramsMap["settingniji"] : _paramsMap["setting"];
 
             var paramsStr = ReplaceInteractionParams(content, nonce);
             var obj = JObject.Parse(paramsStr);
@@ -302,6 +338,9 @@ namespace Midjourney.Infrastructure.Services
             {
                 return prompt;
             }
+
+            // 将 2 个空格替换为 1 个空格
+            prompt = prompt.Replace("  ", " ").Replace("  ", " ").Replace("  ", " ").Trim();
 
             if (_account.Mode != null)
             {
@@ -333,8 +372,9 @@ namespace Midjourney.Infrastructure.Services
         /// <param name="customId"></param>
         /// <param name="prompt"></param>
         /// <param name="maskBase64"></param>
+        /// <param name="botType"></param>
         /// <returns></returns>
-        public async Task<Message> InpaintAsync(string customId, string prompt, string maskBase64)
+        public async Task<Message> InpaintAsync(string customId, string prompt, string maskBase64, EBotType botType)
         {
             try
             {
@@ -371,9 +411,18 @@ namespace Midjourney.Infrastructure.Services
             }
         }
 
-        public async Task<Message> RerollAsync(string messageId, string messageHash, int messageFlags, string nonce)
+        /// <summary>
+        /// 重新生成
+        /// </summary>
+        /// <param name="messageId"></param>
+        /// <param name="messageHash"></param>
+        /// <param name="messageFlags"></param>
+        /// <param name="nonce"></param>
+        /// <param name="botType"></param>
+        /// <returns></returns>
+        public async Task<Message> RerollAsync(string messageId, string messageHash, int messageFlags, string nonce, EBotType botType)
         {
-            string paramsStr = ReplaceInteractionParams(_paramsMap["reroll"], nonce)
+            string paramsStr = ReplaceInteractionParams(_paramsMap["reroll"], nonce, botType)
                 .Replace("$message_id", messageId)
                 .Replace("$message_hash", messageHash);
             var obj = JObject.Parse(paramsStr);
@@ -391,18 +440,37 @@ namespace Midjourney.Infrastructure.Services
             return await PostJsonAndCheckStatusAsync(paramsStr);
         }
 
-        public async Task<Message> DescribeAsync(string finalFileName, string nonce)
+        /// <summary>
+        /// 解析描述
+        /// </summary>
+        /// <param name="finalFileName"></param>
+        /// <param name="nonce"></param>
+        /// <param name="botType"></param>
+        /// <returns></returns>
+        public async Task<Message> DescribeAsync(string finalFileName, string nonce, EBotType botType)
         {
             string fileName = finalFileName.Substring(finalFileName.LastIndexOf("/") + 1);
-            string paramsStr = ReplaceInteractionParams(_paramsMap["describe"], nonce)
+
+            var json = botType == EBotType.NIJI_JOURNEY ? _paramsMap["describeniji"] : _paramsMap["describe"];
+            string paramsStr = ReplaceInteractionParams(json, nonce)
                 .Replace("$file_name", fileName)
                 .Replace("$final_file_name", finalFileName);
             return await PostJsonAndCheckStatusAsync(paramsStr);
         }
 
-        public async Task<Message> BlendAsync(List<string> finalFileNames, BlendDimensions dimensions, string nonce)
+        /// <summary>
+        /// 合成
+        /// </summary>
+        /// <param name="finalFileNames"></param>
+        /// <param name="dimensions"></param>
+        /// <param name="nonce"></param>
+        /// <param name="botType"></param>
+        /// <returns></returns>
+        public async Task<Message> BlendAsync(List<string> finalFileNames, BlendDimensions dimensions, string nonce, EBotType botType)
         {
-            string paramsStr = ReplaceInteractionParams(_paramsMap["blend"], nonce);
+            var json = botType == EBotType.NIJI_JOURNEY ? _paramsMap["blendniji"] : _paramsMap["blend"];
+
+            string paramsStr = ReplaceInteractionParams(json, nonce);
             JObject paramsJson = JObject.Parse(paramsStr);
             JArray options = (JArray)paramsJson["data"]["options"];
             JArray attachments = (JArray)paramsJson["data"]["attachments"];
@@ -441,6 +509,23 @@ namespace Midjourney.Infrastructure.Services
                 .Replace("$session_id", DefaultSessionId)
                 .Replace("$nonce", nonce);
         }
+
+        private string ReplaceInteractionParams(string paramsStr, string nonce, EBotType botType)
+        {
+            var str = ReplaceInteractionParams(paramsStr, nonce);
+
+            if (botType == EBotType.NIJI_JOURNEY)
+            {
+                str = str.Replace("$application_id", Constants.NIJI_APPLICATION_ID);
+            }
+            else if (botType == EBotType.MID_JOURNEY)
+            {
+                str = str.Replace("$application_id", Constants.MJ_APPLICATION_ID);
+            }
+
+            return str;
+        }
+
 
         public async Task<Message> UploadAsync(string fileName, DataUrl dataUrl)
         {

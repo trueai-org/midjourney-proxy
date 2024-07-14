@@ -1,0 +1,28 @@
+{
+  "type": 2,
+  "guild_id": "$guild_id",
+  "channel_id": "$channel_id",
+  "application_id": "1022952195194359889",
+  "session_id": "$session_id",
+  "nonce": "$nonce",
+  "data": {
+    "version": "1248805223892254776",
+    "id": "1092683500743831652",
+    "name": "describe",
+    "type": 1,
+    "options": [
+      {
+        "type": 11,
+        "name": "image",
+        "value": 0
+      }
+    ],
+    "attachments": [
+      {
+        "id": "0",
+        "filename": "$file_name",
+        "uploaded_filename": "$final_file_name"
+      }
+    ]
+  }
+}

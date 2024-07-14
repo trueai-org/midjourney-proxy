@@ -1,6 +1,6 @@
 {
   "type": 5,
-  "application_id": "936929561302675456",
+  "application_id": "$application_id",
   "channel_id": "$channel_id",
   "guild_id": "$guild_id",
   "data": {

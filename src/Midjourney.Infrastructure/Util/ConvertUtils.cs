@@ -1,13 +1,20 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Reactive.Joins;
+using System.Text.RegularExpressions;
 
 namespace Midjourney.Infrastructure.Util
 {
     public static class ConvertUtils
     {
-        /**
-         * content正则匹配prompt和进度.
-         */
+
+        /// <summary>
+        /// content正则匹配prompt和进度.
+        /// </summary>
         public const string CONTENT_REGEX = ".*?\\*\\*(.*)\\*\\*.+<@\\d+> \\((.*?)\\)";
+
+        /// <summary>
+        /// 匹配action的正则表达式
+        /// </summary>
+        private const string CONTENT_REGEX_ACTION = @"\*\*(.*?)\*\* - (.*?) by <@(\d+)> \((.*?)\)";
 
         public static ContentParseData ParseContent(string content)
         {
@@ -32,6 +39,84 @@ namespace Midjourney.Infrastructure.Util
             };
             return parseData;
         }
+
+        public static ContentActionData ParseActionContent(string content)
+        {
+            if (string.IsNullOrWhiteSpace(content))
+            {
+                return null;
+            }
+            var match = Regex.Match(content, CONTENT_REGEX_ACTION);
+            if (match.Success)
+            {
+                string description = match.Groups[1].Value;
+                string action = match.Groups[2].Value;
+                string userId = match.Groups[3].Value;
+                string mode = match.Groups[4].Value;
+
+                if (TryMapToTaskAction(action, out var act))
+                {
+                    return new ContentActionData()
+                    {
+                        Prompt = description,
+                        Action = act,
+                        UserId = userId,
+                        Mode = mode
+                    };
+                }
+            }
+            return null;
+        }
+
+        static bool TryMapToTaskAction(string action, out TaskAction taskAction)
+        {
+            // 标准化action字符串
+            action = action.Trim().ToUpper().Split(' ').FirstOrDefault();
+
+            switch (action)
+            {
+                case "IMAGINE":
+                    taskAction = TaskAction.IMAGINE;
+                    break;
+                case "UPSCALE":
+                case "UPSCALED":
+                    taskAction = TaskAction.UPSCALE;
+                    break;
+                case "VARIATION":
+                case "VARIATIONS":
+                    taskAction = TaskAction.VARIATION;
+                    break;
+                case "REROLL":
+                    taskAction = TaskAction.REROLL;
+                    break;
+                case "DESCRIBE":
+                    taskAction = TaskAction.DESCRIBE;
+                    break;
+                case "BLEND":
+                    taskAction = TaskAction.BLEND;
+                    break;
+                case "PAN":
+                    taskAction = TaskAction.PAN;
+                    break;
+                case "OUTPAINT":
+                    taskAction = TaskAction.OUTPAINT;
+                    break;
+                case "INPAINT":
+                    taskAction = TaskAction.INPAINT;
+                    break;
+                case "ZOOM":
+                    taskAction = TaskAction.ZOOM;
+                    break;
+                case "ACTION":
+                    taskAction = TaskAction.ACTION;
+                    break;
+                default:
+                    taskAction = TaskAction.ACTION;
+                    return true;
+            }
+            return true;
+        }
+
 
         public static List<DataUrl> ConvertBase64Array(List<string> base64Array)
         {
@@ -106,7 +191,22 @@ namespace Midjourney.Infrastructure.Util
     public class ContentParseData
     {
         public string Prompt { get; set; }
+
         public string Status { get; set; }
+    }
+
+    public class ContentActionData
+    {
+        public string Prompt { get; set; }
+
+        public TaskAction Action { get; set; } = TaskAction.ACTION;
+
+        public string UserId { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public string Mode { get; set; }
     }
 
     public class TaskChangeParams

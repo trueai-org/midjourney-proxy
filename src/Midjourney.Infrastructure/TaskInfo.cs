@@ -18,7 +18,7 @@ namespace Midjourney.Infrastructure
         /// bot 类型，mj(默认)或niji
         /// MID_JOURNEY | 枚举值: NIJI_JOURNEY
         /// </summary>
-        public BotType BotType { get; set; }
+        public EBotType BotType { get; set; }
 
         /// <summary>
         /// 提交作业的唯一ID。

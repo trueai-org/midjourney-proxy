@@ -3,7 +3,7 @@
     /// <summary>
     /// Bot类型枚举 MID_JOURNEY | 枚举值: NIJI_JOURNEY
     /// </summary>
-    public enum BotType
+    public enum EBotType
     {
         /// <summary>
         /// Midjourney
@@ -174,10 +174,11 @@
         /// </summary>
         INPAINT,
 
-        ///// <summary>
-        ///// 自定义变焦
-        ///// </summary>
-        //ZOOM,
+        /// <summary>
+        /// 自定义变焦
+        /// </summary>
+        ZOOM,
+
         //SHORTEN
     }
 

@@ -247,7 +247,7 @@ namespace Midjourney.API.Controllers
         /// <param name="botType"></param>
         /// <returns></returns>
         [HttpPost("account-action/{id}")]
-        public async Task<Result> AccountAction(string id, [FromQuery] string customId, [FromQuery] BotType botType)
+        public async Task<Result> AccountAction(string id, [FromQuery] string customId, [FromQuery] EBotType botType)
         {
             if (_isAnonymous)
             {

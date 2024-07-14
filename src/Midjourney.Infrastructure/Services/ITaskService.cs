@@ -108,6 +108,6 @@ namespace Midjourney.Infrastructure.Services
         /// <param name="customId"></param>
         /// <param name="botType"></param>
         /// <returns></returns>
-        Task AccountAction(string id, string customId, BotType botType);
+        Task AccountAction(string id, string customId, EBotType botType);
     }
 }

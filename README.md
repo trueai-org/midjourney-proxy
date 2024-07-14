@@ -26,6 +26,7 @@
 - [x] 账号池持久化，动态维护
 - [x] 支持获取账号 /info、/settings 信息
 - [x] 账号 settings 设置
+- [x] 支持 niji・journey Bot 和 Midjourney Bot
 - [x] zlib-stream 安全压缩传输 <https://discord.com/developers/docs/topics/gateway>
 - [x] 内嵌管理后台页面 <https://github.com/trueai-org/midjourney-proxy-webui>
 

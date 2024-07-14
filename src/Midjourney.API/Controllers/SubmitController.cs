@@ -81,7 +81,7 @@ namespace Midjourney.API.Controllers
                 return BadRequest(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "base64格式错误"));
             }
 
-            task.BotType = imagineDTO.BotType;
+            task.BotType = GetBotType(imagineDTO.BotType);
             task.PromptEn = promptEn;
             task.Description = $"/imagine {prompt}";
 
@@ -207,7 +207,7 @@ namespace Midjourney.API.Controllers
 
             var task = NewTask(describeDTO);
 
-            task.BotType = describeDTO.BotType;
+            task.BotType = GetBotType(describeDTO.BotType);
             task.Action = TaskAction.DESCRIBE;
 
             string taskFileName = $"{task.Id}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
@@ -247,7 +247,7 @@ namespace Midjourney.API.Controllers
             }
             var task = NewTask(blendDTO);
 
-            task.BotType = blendDTO.BotType;
+            task.BotType = GetBotType(blendDTO.BotType);
             task.Action = TaskAction.BLEND;
             task.Description = $"/blend {task.Id} {dataUrlList.Count}";
             return Ok(_taskService.SubmitBlend(task, dataUrlList, blendDTO.Dimensions.Value));
@@ -481,6 +481,23 @@ namespace Midjourney.API.Controllers
                 }
             }
             return string.Concat(imageUrls) + text + paramStr;
+        }
+
+        /// <summary>
+        /// 获取机器人类型
+        /// </summary>
+        /// <param name="botType"></param>
+        /// <returns></returns>
+        private EBotType GetBotType(string botType)
+        {
+            return botType switch
+            {
+                "niji" => EBotType.NIJI_JOURNEY,
+                "NIJI_JOURNEY" => EBotType.NIJI_JOURNEY,
+                "mj" => EBotType.MID_JOURNEY,
+                "MID_JOURNEY" => EBotType.MID_JOURNEY,
+                _ => EBotType.MID_JOURNEY
+            };
         }
     }
 }
