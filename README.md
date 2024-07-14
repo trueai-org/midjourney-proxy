@@ -28,7 +28,13 @@
 - [x] 账号 settings 设置
 - [x] 支持 niji・journey Bot 和 Midjourney Bot
 - [x] zlib-stream 安全压缩传输 <https://discord.com/developers/docs/topics/gateway>
-- [x] 内嵌管理后台页面，支持多语言 <https://github.com/trueai-org/midjourney-proxy-webui>
+- [x] 内嵌MJ管理后台页面，支持多语言 <https://github.com/trueai-org/midjourney-proxy-webui>
+- [x] 支持MJ账号的增删改查功能
+- [x] 支持MJ账号的详细信息查询和账号同步操作
+- [x] 支持MJ账号的并发队列设置
+- [x] 支持MJ的账号settings设置
+- [x] 支持MJ的任务查询
+- [x] 提供功能齐全的绘图测试页面
 - [x] 兼容支持市面上主流绘图客户端和 API 调用。
 
 ## 在线预览
