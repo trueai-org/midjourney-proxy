@@ -64,6 +64,8 @@
 
 ![日志](./docs/screenshots/ui5.png)
 
+![接口](./docs/screenshots/uiswagger.png)
+
 ## 客户端推荐
 
 - **ChatGPT Web Midjourney Proxy**: <https://github.com/Dooy/chatgpt-web-midjourney-proxy> 
