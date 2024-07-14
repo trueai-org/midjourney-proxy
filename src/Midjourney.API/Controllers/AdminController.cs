@@ -428,5 +428,28 @@ namespace Midjourney.API.Controllers
 
             return Ok(data);
         }
+
+        /// <summary>
+        /// 删除作业
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        [HttpDelete("task/{id}")]
+        public Result TaskDelete(string id)
+        {
+            if (_isAnonymous)
+            {
+                return Result.Fail("演示模式，禁止操作");
+            }
+
+            var task = DbHelper.TaskStore.Get(id);
+            if (task != null)
+            {
+                DbHelper.TaskStore.Delete(id);
+            }
+
+            return Result.Ok();
+        }
+
     }
 }
