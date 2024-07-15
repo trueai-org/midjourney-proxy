@@ -6,6 +6,8 @@
 		<InvariantGlobalization>false</InvariantGlobalization>
 		<DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
 		<GenerateDocumentationFile>True</GenerateDocumentationFile>
+		<IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+		<SatelliteResourceLanguages>zh</SatelliteResourceLanguages>
 		<DockerfileContext>..\..</DockerfileContext>
 	</PropertyGroup>
 

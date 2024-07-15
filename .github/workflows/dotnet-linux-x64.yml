@@ -1,0 +1,83 @@
+name: Release Linux x64 .NET Application
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write  # 确保有写入发布的权限
+
+jobs:
+  build_and_release:
+    name: 构建并发布 .NET 应用程序
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 检出仓库代码
+        uses: actions/checkout@v3  # 使用最新稳定版本
+
+      - name: 设置 .NET 环境
+        uses: actions/setup-dotnet@v3  # 使用最新稳定版本
+        with:
+          dotnet-version: '8.0.x'  # 确保使用的 .NET 版本与你的项目版本匹配
+
+      - name: 还原 NuGet 包
+        run: dotnet restore src/Midjourney.API
+
+      - name: 列出目录内容 (调试步骤)
+        run: |
+          echo "PublishProfiles 目录内容："
+          ls src/Midjourney.API/Properties/PublishProfiles
+
+      - name: 构建并发布 .NET 应用程序
+        run: dotnet publish src/Midjourney.API -c Release /p:PublishProfile=Client.Publish.SelfContained.linux.x64.pubxml
+
+      - name: 列出发布目录内容 (调试步骤)
+        run: |
+          echo "发布目录内容："
+          ls src/Midjourney.API/bin/Release/net8.0/linux-x64/publish
+
+      - name: 删除 PDB 和部分 XML 文件
+        run: |
+          # 删除目录中的 .pdb 文件（如果存在）
+          # rm -f src/Midjourney.API/bin/Release/net8.0/linux-x64/publish/*.pdb
+          rm -f src/Midjourney.API/bin/Release/net8.0/linux-x64/publish/*.xml
+          rm -f src/Midjourney.API/bin/Release/net8.0/linux-x64/publish/*.bat
+          rm -f src/Midjourney.API/bin/Release/net8.0/linux-x64/publish/WinSW-x64.exe
+          rm -rf src/Midjourney.API/bin/Release/net8.0/linux-x64/publish/wwwroot/driver/
+
+      - name: 条件性删除 PDB 文件
+        run: |
+          # 根据版本标签包含 beta, rc, alpha 的条件来决定是否删除 .pdb 文件
+          if [[ ! "${{ github.event.release.tag_name }}" =~ (beta|rc|alpha) ]]; then
+            echo "Deleting .pdb files..."
+            rm -f src/Midjourney.API/bin/Release/net8.0/linux-x64/publish/*.pdb
+          else
+            echo "Preserving .pdb files for pre-release versions..."
+          fi
+            
+      - name: 创建临时目录并复制发布文件
+        run: |
+          mkdir -p temp_publish
+          cp -r src/Midjourney.API/bin/Release/net8.0/linux-x64/publish/* temp_publish/
+          cp scripts/run_app.sh temp_publish/
+
+      - name: 压缩构建产物为 tar.gz
+        run: |
+          # 将发布目录中的文件压缩为 tar.gz 文件
+          tar -czvf "midjourney-proxy-linux-x64-${{ github.event.release.tag_name }}.tar.gz" -C temp_publish .
+
+      - name: 检查 tar.gz 文件
+        run: |
+          echo "生成的 tar.gz 文件："
+          ls "midjourney-proxy-linux-x64-${{ github.event.release.tag_name }}.tar.gz"
+
+      - name: 上传 tar.gz 文件到 release
+        uses: actions/upload-release-asset@v1  # 使用最新稳定版本
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: "midjourney-proxy-linux-x64-${{ github.event.release.tag_name }}.tar.gz"
+          asset_name: "midjourney-proxy-linux-x64-${{ github.event.release.tag_name }}.tar.gz"
+          asset_content_type: application/gzip

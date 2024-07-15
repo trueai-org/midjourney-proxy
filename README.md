@@ -113,6 +113,35 @@ docker run --name mjproxy -d --restart=always \
  registry.cn-guangzhou.aliyuncs.com/trueai-org/midjourney-proxy
 ```
 
+> Windows 版本
+
+```bash
+a. 通过 https://github.com/trueai-org/midjourney-proxy/releases 下载 windows 最新免安装版，例如：midjourney-proxy-win-x64.zip
+b. 解压并执行 Midjourney.API.exe
+c. 打开网站 http://localhost:8080
+d. 部署到 IIS（可选），在 IIS 添加网站，将文件夹部署到 IIS，配置应用程序池为`无托管代码`，启动网站。
+e. 使用系统自带的 `任务计划程序`（可选），创建基本任务，选择 `.exe` 程序即可，请选择`请勿启动多个实例`，保证只有一个任务执行即可。
+```
+
+> Linux 版本
+
+```bash
+a. 通过 https://github.com/trueai-org/midjourney-proxy/releases 下载 linux 最新免安装版，例如：midjourney-proxy-linux-x64.zip
+b. 解压到当前目录: tar -xzf midjourney-proxy-linux-x64-<VERSION>.tar.gz
+c. 执行: run_app.sh
+c. 启动方式1: sh run_app.sh
+d. 启动方式2: chmod +x run_app.sh && ./run_app.sh
+```
+> macOS 版本
+
+```bash
+a. 通过 https://github.com/trueai-org/midjourney-proxy/releases 下载 macOS 最新免安装版，例如：midjourney-proxy-osx-x64.zip
+b. 解压到当前目录: tar -xzf midjourney-proxy-osx-x64-<VERSION>.tar.gz
+c. 执行: run_app_osx.sh
+c. 启动方式1: sh run_app_osx.sh
+d. 启动方式2: chmod +x run_app_osx.sh && ./run_app_osx.sh
+```
+
 ## 参数配置
 
 - `appsettings.json` 默认配置
@@ -196,7 +225,8 @@ docker run --name mjproxy -d --restart=always \
       "Microsoft.AspNetCore": "Warning"
     }
   },
-  "AllowedHosts": "*"
+  "AllowedHosts": "*",
+  "urls": "http://*:8080" // 默认端口
 }
 ```
 

@@ -1,0 +1,73 @@
+name: Release Windows arm64 .NET Application
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write  # 确保有写入发布的权限
+
+jobs:
+  build_and_release:
+    name: 构建并发布 .NET 应用程序
+    runs-on: windows-latest
+
+    steps:
+      - name: 检出仓库代码
+        uses: actions/checkout@v3  # 使用最新稳定版本
+
+      - name: 设置 .NET 环境
+        uses: actions/setup-dotnet@v3  # 使用最新稳定版本
+        with:
+          dotnet-version: '8.0.x'  # 确保使用的 .NET 版本与你的项目版本匹配
+
+      - name: 还原 NuGet 包
+        run: dotnet restore src/Midjourney.API
+
+      - name: 列出目录内容 (调试步骤)
+        run: |
+          echo "PublishProfiles 目录内容："
+          dir src/Midjourney.API/Properties/PublishProfiles
+
+      - name: 构建并发布 .NET 应用程序
+        run: dotnet publish src/Midjourney.API -c Release /p:PublishProfile=Client.Publish.SelfContained.win.arm64.pubxml
+
+      - name: 列出发布目录内容 (调试步骤)
+        run: |
+          echo "发布目录内容："
+          dir src/Midjourney.API/bin/Release/net8.0/win-arm64/publish
+
+      # - name: 删除 PDB 和部分 XML 文件
+      #   run: |
+      #     # 删除目录中的 .pdb 和部分 .xml 文件（如果存在）
+      #     Remove-Item src/Midjourney.API/bin/Release/net8.0/win-arm64/publish/*.pdb -Force -ErrorAction SilentlyContinue
+
+      - name: 条件性删除 PDB 文件
+        run: |
+          $tagName = "${{ github.event.release.tag_name }}"
+          if (-not ($tagName -match "beta|rc|alpha")) {
+            echo "Deleting .pdb files..."
+            Remove-Item src/Midjourney.API/bin/Release/net8.0/win-arm64/publish/*.pdb -Force -ErrorAction SilentlyContinue
+          } else {
+            echo "Preserving .pdb files for pre-release versions..."
+          }
+          
+      - name: 压缩构建产物
+        run: |
+          # 将发布目录中的文件压缩为 zip 文件
+          Compress-Archive -Path src/Midjourney.API/bin/Release/net8.0/win-arm64/publish/* -DestinationPath "midjourney-proxy-win-arm64-${{ github.event.release.tag_name }}.zip"
+
+      - name: 检查 ZIP 文件
+        run: |
+          echo "生成的 ZIP 文件："
+          dir midjourney-proxy-win-arm64-${{ github.event.release.tag_name }}.zip
+
+      - name: 上传 ZIP 文件到 release
+        uses: actions/upload-release-asset@v1  # 使用最新稳定版本
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: "midjourney-proxy-win-arm64-${{ github.event.release.tag_name }}.zip"
+          asset_name: "midjourney-proxy-win-arm64-${{ github.event.release.tag_name }}.zip"
+          asset_content_type: application/zip
