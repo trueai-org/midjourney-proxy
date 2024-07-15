@@ -100,7 +100,7 @@ namespace Midjourney.Infrastructure
 
             if (code >= 4000)
             {
-                _logger.Warning("用户无法重新连接！帐户已禁用。由 {0}({1}) 关闭。", code, reason);
+                _logger.Warning("用户无法重新连接！账号自动禁用。由 {0}({1}) 关闭。", code, reason);
                 DisableAccount();
             }
             else if (code == 2001)
@@ -157,9 +157,12 @@ namespace Midjourney.Infrastructure
                 }
             }
 
-            _logger.Error("帐户已禁用");
+            if (_webSocketSession == null || _webSocketSession.State != WebSocketState.Open)
+            {
+                _logger.Error("由于无法重新连接，自动禁用账号");
 
-            DisableAccount();
+                DisableAccount();
+            }
         }
 
         public async Task TryStartAsync(bool reconnect)

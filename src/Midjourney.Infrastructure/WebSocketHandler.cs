@@ -1,5 +1,4 @@
 ﻿using Midjourney.Infrastructure.Domain;
-using Midjourney.Infrastructure.Services;
 using Serilog;
 using System.IO.Compression;
 using System.Net;
@@ -50,14 +49,6 @@ namespace Midjourney.Infrastructure
 
         private readonly WebProxy _webProxy;
 
-        /// <summary>
-        /// 初始化 WebSocketHandler 实例
-        /// </summary>
-        /// <param name="account">Discord 账户信息</param>
-        /// <param name="discordHelper">Discord 帮助类</param>
-        /// <param name="userMessageListener">用户消息监听器</param>
-        /// <param name="successCallback">成功回调</param>
-        /// <param name="failureCallback">失败回调</param>
         public WebSocketHandler(DiscordAccount account,
             DiscordHelper discordHelper,
             BotMessageListener userMessageListener,
@@ -78,7 +69,8 @@ namespace Midjourney.Infrastructure
         /// 异步启动 WebSocket 连接
         /// </summary>
         /// <param name="reconnect">是否重连</param>
-        public async Task StartAsync(bool reconnect = false,
+        public async Task StartAsync(
+            bool reconnect = false,
             string sessionId = null,
             object seq = null,
             string resumeGatewayUrl = null)
@@ -266,7 +258,9 @@ namespace Midjourney.Infrastructure
                         else if (result.MessageType == WebSocketMessageType.Close)
                         {
                             await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, string.Empty, cancellationToken);
-                            _logger.Information("用户 WebSocket 连接已关闭。");
+
+                            _logger.Warning("用户 WebSocket 连接已关闭。");
+
                             HandleFailure((int)result.CloseStatus, result.CloseStatusDescription);
                         }
                         else

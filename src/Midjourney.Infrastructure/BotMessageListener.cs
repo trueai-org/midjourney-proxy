@@ -19,7 +19,6 @@ namespace Midjourney.Infrastructure
     /// </summary>
     public class BotMessageListener : IDisposable
     {
-        private readonly string _token;
         private readonly WebProxy _webProxy;
         private readonly DiscordAccount _discordAccount;
         private readonly DiscordHelper _discordHelper;
@@ -28,12 +27,11 @@ namespace Midjourney.Infrastructure
         private DiscordInstanceImpl _discordInstance;
         private IEnumerable<MessageHandler> _messageHandlers;
 
-        public BotMessageListener(string token,
+        public BotMessageListener(
             DiscordAccount discordAccount,
             DiscordHelper discordHelper,
             WebProxy webProxy = null)
         {
-            _token = token;
             _discordAccount = discordAccount;
             _webProxy = webProxy;
             _discordHelper = discordHelper;
@@ -79,7 +77,7 @@ namespace Midjourney.Infrastructure
             _client.Log += LogAction;
             _commands.Log += LogAction;
 
-            await _client.LoginAsync(TokenType.Bot, _token);
+            await _client.LoginAsync(TokenType.Bot, _discordAccount.BotToken);
             await _client.StartAsync();
 
             // Centralize the logic for commands into a separate method.
