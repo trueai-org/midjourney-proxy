@@ -13,7 +13,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "doc", "doc", "{D2283666-695
 		CHANGELOG.md = CHANGELOG.md
 		docs\discord-params.md = docs\discord-params.md
 		README.md = README.md
-		README_en.md = README_en.md
+		README.en.md = README.en.md
 	EndProjectSection
 EndProject
 Global
