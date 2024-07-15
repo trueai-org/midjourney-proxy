@@ -43,6 +43,11 @@ namespace Midjourney.API.Controllers
         [HttpPost("{id}/cancel")]
         public ActionResult<TaskInfo> Cancel(string id)
         {
+            if (GlobalConfiguration.IsDemoMode == true)
+            {
+                return BadRequest(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "演示模式，禁止操作"));
+            }
+
             var queueTask = _discordLoadBalancer.GetQueueTasks().FirstOrDefault(t => t.Id == id);
             if (queueTask != null)
             {
