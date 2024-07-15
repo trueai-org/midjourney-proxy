@@ -1,9 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Midjourney.Infrastructure.Dto;
+﻿using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.LoadBalancer;
 using Midjourney.Infrastructure.Util;
 using Serilog;
-using System;
 using System.Diagnostics;
 
 namespace Midjourney.Infrastructure.Services

@@ -441,6 +441,14 @@ namespace Midjourney.API.Controllers
                 return Result.Fail("演示模式，禁止操作");
             }
 
+            var queueTask = _loadBalancer.GetQueueTasks().FirstOrDefault(t => t.Id == id);
+            if (queueTask != null)
+            {
+                queueTask.Fail("删除任务");
+
+                Thread.Sleep(1000);
+            }
+
             var task = DbHelper.TaskStore.Get(id);
             if (task != null)
             {

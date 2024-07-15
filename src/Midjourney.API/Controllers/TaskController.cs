@@ -51,7 +51,7 @@ namespace Midjourney.API.Controllers
             var queueTask = _discordLoadBalancer.GetQueueTasks().FirstOrDefault(t => t.Id == id);
             if (queueTask != null)
             {
-                // 退出任务 TODO
+                queueTask.Fail("主动取消任务");
             }
 
             return Ok();

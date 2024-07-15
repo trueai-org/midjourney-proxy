@@ -364,24 +364,54 @@ namespace Midjourney.Infrastructure
                     {
                         foreach (JsonElement item in em.EnumerateArray())
                         {
-                            if (item.TryGetProperty("title", out var emtitle) && emtitle.GetString() == "Credits exhausted")
+                            if (item.TryGetProperty("title", out var emtitle))
                             {
-                                // 你的处理逻辑
-                                _logger.Warning($"账号 {_discordAccount.GetDisplay()} 用量已经用完");
-                                _discordAccount.Enable = false;
-
-                                var task = _discordInstance.FindRunningTask(c => c.MessageId == id).FirstOrDefault();
-                                if (task == null && !string.IsNullOrWhiteSpace(metaId))
+                                if (emtitle.GetString() == "Credits exhausted")
                                 {
-                                    task = _discordInstance.FindRunningTask(c => c.InteractionMetadataId == metaId).FirstOrDefault();
-                                }
+                                    // 你的处理逻辑
+                                    _logger.Warning($"账号 {_discordAccount.GetDisplay()} 用量已经用完");
+                                    _discordAccount.Enable = false;
 
-                                if (task != null)
+                                    var task = _discordInstance.FindRunningTask(c => c.MessageId == id).FirstOrDefault();
+                                    if (task == null && !string.IsNullOrWhiteSpace(metaId))
+                                    {
+                                        task = _discordInstance.FindRunningTask(c => c.InteractionMetadataId == metaId).FirstOrDefault();
+                                    }
+
+                                    if (task != null)
+                                    {
+                                        task.Fail("账号用量已经用完");
+                                    }
+
+                                    return;
+                                }
+                                else if (emtitle.GetString() == "Invalid parameter")
                                 {
-                                    task.Fail("账号用量已经用完");
-                                }
+                                    if (data.TryGetProperty("nonce", out JsonElement noneEle))
+                                    {
+                                        var nonce = noneEle.GetString();
+                                        if (!string.IsNullOrWhiteSpace(id) && !string.IsNullOrWhiteSpace(nonce))
+                                        {
+                                            // 设置 none 对应的任务 id
+                                            var task = _discordInstance.GetRunningTaskByNonce(nonce);
+                                            if (task != null)
+                                            {
+                                                if (messageType == MessageType.CREATE)
+                                                {
+                                                    task.MessageId = id;
+                                                    task.Description = item.GetProperty("description").GetString();
 
-                                return;
+                                                    if (!task.MessageIds.Contains(id))
+                                                    {
+                                                        task.MessageIds.Add(id);
+                                                    }
+
+                                                    task.Fail($"无效参数: {task.Description}");
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }

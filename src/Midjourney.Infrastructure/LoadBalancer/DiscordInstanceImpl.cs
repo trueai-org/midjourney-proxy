@@ -323,7 +323,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                 while (info.Status == TaskStatus.SUBMITTED || info.Status == TaskStatus.IN_PROGRESS)
                 {
-                    await Task.Delay(500);
+                    await Task.Delay(100);
                     await AsyncSaveAndNotify(info);
 
                     if (sw.ElapsedMilliseconds > timeoutMin * 60 * 1000)
@@ -346,6 +346,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 _runningTasks.Remove(info);
                 _taskFutureMap.TryRemove(info.Id, out _);
                 _semaphoreSlimLock.Release();
+
+                SaveAndNotify(info);
             }
         }
 
