@@ -36,7 +36,7 @@ namespace Midjourney.API.Controllers
         }
 
         /// <summary>
-        /// 取消任务并删除
+        /// 取消任务
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
@@ -48,9 +48,6 @@ namespace Midjourney.API.Controllers
             {
                 // 退出任务 TODO
             }
-
-            // 删除任务
-            _taskStoreService.Delete(id);
 
             return Ok();
         }
