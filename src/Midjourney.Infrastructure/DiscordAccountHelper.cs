@@ -15,7 +15,6 @@ namespace Midjourney.Infrastructure
     {
         private readonly DiscordHelper _discordHelper;
         private readonly ProxyProperties _properties;
-        private readonly HttpClient _httpClient;
         private readonly ITaskStoreService _taskStoreService;
         private readonly IEnumerable<MessageHandler> _messageHandlers;
         private readonly Dictionary<string, string> _paramsMap;
@@ -33,14 +32,12 @@ namespace Midjourney.Infrastructure
         public DiscordAccountHelper(
             DiscordHelper discordHelper,
             IOptionsMonitor<ProxyProperties> options,
-            HttpClient httpClient,
             ITaskStoreService taskStoreService,
             IEnumerable<MessageHandler> messageHandlers,
             INotifyService notifyService)
         {
             _discordHelper = discordHelper;
             _properties = options.CurrentValue;
-            _httpClient = httpClient;
             _taskStoreService = taskStoreService;
             _notifyService = notifyService;
             _messageHandlers = messageHandlers;
@@ -85,7 +82,7 @@ namespace Midjourney.Infrastructure
                 account.UserAgent = Constants.DEFAULT_DISCORD_USER_AGENT;
             }
 
-            var discordService = new DiscordServiceImpl(account, _httpClient, _discordHelper, _paramsMap);
+            var discordService = new DiscordServiceImpl(account, _discordHelper, _paramsMap);
             var discordInstance = new DiscordInstanceImpl(account, discordService, _taskStoreService, _notifyService);
 
             if (account.Enable)

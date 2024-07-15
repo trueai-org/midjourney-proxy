@@ -13,8 +13,6 @@ namespace Midjourney.Infrastructure.Services
     /// </summary>
     public class DiscordServiceImpl : IDiscordService
     {
-
-
         private readonly DiscordAccount _account;
         private readonly HttpClient _httpClient;
         private readonly DiscordHelper _discordHelper;
@@ -28,13 +26,13 @@ namespace Midjourney.Infrastructure.Services
         /// <summary>
         /// 初始化 DiscordServiceImpl 类的新实例。
         /// </summary>
-        public DiscordServiceImpl(DiscordAccount account,
-            HttpClient httpClient,
+        public DiscordServiceImpl(
+            DiscordAccount account,
             DiscordHelper discordHelper,
             Dictionary<string, string> paramsMap)
         {
             _account = account;
-            _httpClient = httpClient;
+            _httpClient = new HttpClient();
             _paramsMap = paramsMap;
             _discordHelper = discordHelper;
             _logger = Log.Logger;
