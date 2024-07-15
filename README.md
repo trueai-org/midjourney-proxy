@@ -90,6 +90,7 @@
 docker pull registry.cn-guangzhou.aliyuncs.com/trueai-org/midjourney-proxy
 
 # 公益演示站点启动配置示例
+docker stop mjopen && docker rm mjopen
 docker run --name mjopen -d --restart=always \
  -e DEMO=true \
  -p 8086:8080 --user root \
