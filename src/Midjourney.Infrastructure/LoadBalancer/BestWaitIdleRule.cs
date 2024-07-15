@@ -5,8 +5,6 @@
     /// </summary>
     public class BestWaitIdleRule : IRule
     {
-        private static readonly Random random = new Random();
-
         /// <summary>
         /// 根据最少等待空闲规则选择一个 Discord 实例。
         /// </summary>
@@ -19,10 +17,19 @@
                 return null;
             }
 
-            return instances.OrderBy(i =>
+            // 优先选择空闲的实例
+            var model = instances.Where(c => c.Account.CoreSize - c.GetRunningFutures().Count > 0)
+                .OrderByDescending(c => c.Account.CoreSize - c.GetRunningFutures().Count)
+                .FirstOrDefault();
+
+            if (model == null)
             {
-                return i.GetQueueTasks().Count + i.GetRunningFutures().Count - i.Account.CoreSize;
-            }).FirstOrDefault();
+                // 如果没有空闲的实例，则选择 -> (当前队列数 + 执行中的数量) / 核心数, 最小的实例
+                model = instances.OrderBy(c => (double)(c.GetRunningFutures().Count + c.GetQueueTasks().Count) / c.Account.CoreSize)
+                    .FirstOrDefault();
+            }
+
+            return model;
         }
     }
 
