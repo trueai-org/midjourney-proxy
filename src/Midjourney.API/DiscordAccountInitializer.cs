@@ -119,6 +119,11 @@ namespace Midjourney.API
                         disInstance = await _discordAccountHelper.CreateDiscordInstance(account);
                         instances.Add(disInstance);
                         _discordLoadBalancer.AddInstance(disInstance);
+
+                        // TODO 这里应该等待初始化完成，并获取用户信息验证，获取用户成功后设置为可用状态
+
+                        // 多账号启动时，等待一段时间再启动下一个账号
+                        await Task.Delay(1000 * 5);
                     }
                 }
                 catch (Exception ex)
