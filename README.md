@@ -71,14 +71,6 @@
 - **GoAmzAI**: <https://github.com/Licoy/GoAmzAI>
   -	打开后台 -> 绘画管理 -> 新增 -> MJ 绘画接口地址 -> <https://ai.trueai.org/mj>
 
-## 配置项
-- mj.accounts: 参考 [账号池配置](./docs/config.md#%E8%B4%A6%E5%8F%B7%E6%B1%A0%E9%85%8D%E7%BD%AE%E5%8F%82%E8%80%83)
-- mj.task-store.type: 任务存储方式，默认in_memory(内存\重启后丢失)，可选redis
-- mj.task-store.timeout: 任务存储过期时间，过期后删除，默认30天
-- mj.api-secret: 接口密钥，为空不启用鉴权；调用接口时需要加请求头 mj-api-secret
-- mj.translate-way: 中文prompt翻译成英文的方式，可选null(默认)、baidu、gpt
-- 更多配置查看 [配置项](./docs/config.md)
-
 ## 安装与使用
 
 ### 快速启动
