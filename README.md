@@ -231,7 +231,7 @@ d. 启动方式2: chmod +x run_app_osx.sh && ./run_app_osx.sh
 
 ## 机器人 Token（必须配置）
 
-本项目利用 Discord 机器人 Token 连接 wss，可以获取错误信息和完整功能，确保消息的高可用性以及规避风险等问题。
+本项目利用 Discord 机器人 Token 连接 wss，可以获取错误信息和完整功能，确保消息的高可用性等问题。
 
 ```
 1. 创建应用
