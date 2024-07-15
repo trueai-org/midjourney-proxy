@@ -406,7 +406,7 @@ namespace Midjourney.Infrastructure
                                                         task.MessageIds.Add(id);
                                                     }
 
-                                                    task.Fail($"无效参数: {task.Description}");
+                                                    task.Fail($"无效参数");
                                                 }
                                             }
                                         }

@@ -45,7 +45,8 @@ namespace Midjourney.API.Controllers
         {
             if (GlobalConfiguration.IsDemoMode == true)
             {
-                return BadRequest(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "演示模式，禁止操作"));
+                // 直接抛出错误
+                return BadRequest("演示模式，禁止操作");
             }
 
             var queueTask = _discordLoadBalancer.GetQueueTasks().FirstOrDefault(t => t.Id == id);
