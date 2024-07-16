@@ -112,12 +112,6 @@ docker run --name mjapi -d --restart=always \
  registry.cn-guangzhou.aliyuncs.com/trueai-org/midjourney-proxy
 ```
 
-> Configuration Usage
-
-After starting the docker, configure the proxy to `http://127.0.0.1:8086/mj`
-
-![Example](./docs/screenshots/chrome_EDzoztHa2b.png)
-
 ### Bot Token (must be configured)
 
 This project uses the Discord bot token to connect to wss for error information and full functionality.
