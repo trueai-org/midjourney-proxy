@@ -201,213 +201,119 @@ namespace Midjourney.Infrastructure
         /// <param name="raw"></param>
         public void OnMessage(JsonElement raw)
         {
-            if (!raw.TryGetProperty("t", out JsonElement messageTypeElement))
+            try
             {
-                return;
-            }
-
-            var messageType = MessageTypeExtensions.Of(messageTypeElement.GetString());
-            if (messageType == null || messageType == MessageType.DELETE)
-            {
-                return;
-            }
-
-            if (!raw.TryGetProperty("d", out JsonElement data))
-            {
-                return;
-            }
-
-            // 内容
-            var contentStr = string.Empty;
-            if (data.TryGetProperty("content", out JsonElement content))
-            {
-                contentStr = content.GetString();
-            }
-
-            // 私信频道
-            var isPrivareChannel = false;
-            if (data.TryGetProperty("channel_id", out JsonElement channelIdElement))
-            {
-                if (channelIdElement.GetString() == _discordAccount.PrivateChannelId
-                    || channelIdElement.GetString() == _discordAccount.NijiBotChannelId)
-                {
-                    isPrivareChannel = true;
-                }
-
-                if (channelIdElement.GetString() == _discordAccount.ChannelId)
-                {
-                    isPrivareChannel = false;
-                }
-
-                // 都不相同
-                // 如果有渠道 id，但不是当前渠道 id，则忽略
-                if (channelIdElement.GetString() != _discordAccount.ChannelId
-                    && channelIdElement.GetString() != _discordAccount.PrivateChannelId
-                    && channelIdElement.GetString() != _discordAccount.NijiBotChannelId)
+                if (!raw.TryGetProperty("t", out JsonElement messageTypeElement))
                 {
                     return;
                 }
-            }
 
-
-            if (isPrivareChannel)
-            {
-                // 私信频道
-                if (messageType == MessageType.CREATE && data.TryGetProperty("id", out JsonElement subIdElement))
+                var messageType = MessageTypeExtensions.Of(messageTypeElement.GetString());
+                if (messageType == null || messageType == MessageType.DELETE)
                 {
-                    var id = subIdElement.GetString();
+                    return;
+                }
 
-                    // 定义正则表达式模式
-                    // "**girl**\n**Job ID**: 6243686b-7ab1-4174-a9fe-527cca66a829\n**seed** 1259687673"
-                    var pattern = @"\*\*Job ID\*\*:\s*(?<jobId>[a-fA-F0-9-]{36})\s*\*\*seed\*\*\s*(?<seed>\d+)";
+                if (!raw.TryGetProperty("d", out JsonElement data))
+                {
+                    return;
+                }
 
-                    // 创建正则表达式对象
-                    var regex = new Regex(pattern);
+                // 内容
+                var contentStr = string.Empty;
+                if (data.TryGetProperty("content", out JsonElement content))
+                {
+                    contentStr = content.GetString();
+                }
 
-                    // 尝试匹配输入字符串
-                    var match = regex.Match(contentStr);
-
-                    if (match.Success)
+                // 私信频道
+                var isPrivareChannel = false;
+                if (data.TryGetProperty("channel_id", out JsonElement channelIdElement))
+                {
+                    if (channelIdElement.GetString() == _discordAccount.PrivateChannelId
+                        || channelIdElement.GetString() == _discordAccount.NijiBotChannelId)
                     {
-                        // 提取 Job ID 和 seed
-                        var jobId = match.Groups["jobId"].Value;
-                        var seed = match.Groups["seed"].Value;
-
-                        if (!string.IsNullOrWhiteSpace(jobId) && !string.IsNullOrWhiteSpace(seed))
-                        {
-                            var task = _discordInstance.FindRunningTask(c => c.GetProperty<string>(Constants.TASK_PROPERTY_MESSAGE_HASH, default) == jobId).FirstOrDefault();
-                            if (task != null)
-                            {
-                                if (!task.MessageIds.Contains(id))
-                                {
-                                    task.MessageIds.Add(id);
-                                }
-
-                                task.Seed = seed;
-                            }
-                        }
+                        isPrivareChannel = true;
                     }
-                    else
+
+                    if (channelIdElement.GetString() == _discordAccount.ChannelId)
                     {
-                        // 获取附件对象 attachments 中的第一个对象的 url 属性
-                        if (data.TryGetProperty("attachments", out JsonElement attachments) && attachments.ValueKind == JsonValueKind.Array)
-                        {
-                            var item = attachments.EnumerateArray().FirstOrDefault();
-                            if (item.TryGetProperty("url", out JsonElement url))
-                            {
-                                var imgUrl = url.GetString();
-                                if (!string.IsNullOrWhiteSpace(imgUrl))
-                                {
-                                    var hash = _discordHelper.GetMessageHash(imgUrl);
-                                    if (!string.IsNullOrWhiteSpace(hash))
-                                    {
-                                        var task = _discordInstance.FindRunningTask(c => c.GetProperty<string>(Constants.TASK_PROPERTY_MESSAGE_HASH, default) == hash).FirstOrDefault();
-                                        if (task != null)
-                                        {
-                                            if (!task.MessageIds.Contains(id))
-                                            {
-                                                task.MessageIds.Add(id);
-                                            }
-                                            task.SeedMessageId = id;
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                        isPrivareChannel = false;
+                    }
+
+                    // 都不相同
+                    // 如果有渠道 id，但不是当前渠道 id，则忽略
+                    if (channelIdElement.GetString() != _discordAccount.ChannelId
+                        && channelIdElement.GetString() != _discordAccount.PrivateChannelId
+                        && channelIdElement.GetString() != _discordAccount.NijiBotChannelId)
+                    {
+                        return;
                     }
                 }
 
-                return;
-            }
 
-
-            // 作者
-            var authorName = string.Empty;
-            if (data.TryGetProperty("author", out JsonElement author)
-                && author.TryGetProperty("username", out JsonElement username))
-            {
-                authorName = username.GetString();
-            }
-
-            // 应用 ID 即机器人 ID
-            var applicationId = string.Empty;
-            if (data.TryGetProperty("application_id", out JsonElement application))
-            {
-                applicationId = application.GetString();
-            }
-
-            // 交互元数据 id
-            var metaId = string.Empty;
-            var metaName = string.Empty;
-            if (data.TryGetProperty("interaction_metadata", out JsonElement meta) && meta.TryGetProperty("id", out var m))
-            {
-                metaId = m.GetString();
-
-                metaName = meta.TryGetProperty("name", out var n) ? n.GetString() : string.Empty;
-            }
-
-            // 任务 id
-            // 任务 nonce
-            if (data.TryGetProperty("id", out JsonElement idElement))
-            {
-                var id = idElement.GetString();
-                _logger.Debug($"用户消息, {messageType}, {_discordAccount.GetDisplay()} - {authorName}: {contentStr}, id: {id}, mid: {metaId}");
-
-                // 判断账号是否用量已经用完
-
-                var isEm = data.TryGetProperty("embeds", out var em);
-
-                if (messageType == MessageType.CREATE && isEm)
+                if (isPrivareChannel)
                 {
-                    // em 是一个 JSON 数组
-                    if (em.ValueKind == JsonValueKind.Array)
+                    // 私信频道
+                    if (messageType == MessageType.CREATE && data.TryGetProperty("id", out JsonElement subIdElement))
                     {
-                        foreach (JsonElement item in em.EnumerateArray())
+                        var id = subIdElement.GetString();
+
+                        // 定义正则表达式模式
+                        // "**girl**\n**Job ID**: 6243686b-7ab1-4174-a9fe-527cca66a829\n**seed** 1259687673"
+                        var pattern = @"\*\*Job ID\*\*:\s*(?<jobId>[a-fA-F0-9-]{36})\s*\*\*seed\*\*\s*(?<seed>\d+)";
+
+                        // 创建正则表达式对象
+                        var regex = new Regex(pattern);
+
+                        // 尝试匹配输入字符串
+                        var match = regex.Match(contentStr);
+
+                        if (match.Success)
                         {
-                            if (item.TryGetProperty("title", out var emtitle))
+                            // 提取 Job ID 和 seed
+                            var jobId = match.Groups["jobId"].Value;
+                            var seed = match.Groups["seed"].Value;
+
+                            if (!string.IsNullOrWhiteSpace(jobId) && !string.IsNullOrWhiteSpace(seed))
                             {
-                                if (emtitle.GetString() == "Credits exhausted")
+                                var task = _discordInstance.FindRunningTask(c => c.GetProperty<string>(Constants.TASK_PROPERTY_MESSAGE_HASH, default) == jobId).FirstOrDefault();
+                                if (task != null)
                                 {
-                                    // 你的处理逻辑
-                                    _logger.Warning($"账号 {_discordAccount.GetDisplay()} 用量已经用完");
-                                    _discordAccount.Enable = false;
-
-                                    var task = _discordInstance.FindRunningTask(c => c.MessageId == id).FirstOrDefault();
-                                    if (task == null && !string.IsNullOrWhiteSpace(metaId))
+                                    if (!task.MessageIds.Contains(id))
                                     {
-                                        task = _discordInstance.FindRunningTask(c => c.InteractionMetadataId == metaId).FirstOrDefault();
+                                        task.MessageIds.Add(id);
                                     }
 
-                                    if (task != null)
-                                    {
-                                        task.Fail("账号用量已经用完");
-                                    }
-
-                                    return;
+                                    task.Seed = seed;
                                 }
-                                else if (emtitle.GetString() == "Invalid parameter")
+                            }
+                        }
+                        else
+                        {
+                            // 获取附件对象 attachments 中的第一个对象的 url 属性
+                            if (data.TryGetProperty("attachments", out JsonElement attachments) && attachments.ValueKind == JsonValueKind.Array)
+                            {
+                                var item = attachments.EnumerateArray().FirstOrDefault();
+
+                                if (item.ValueKind != JsonValueKind.Null
+                                    && item.TryGetProperty("url", out JsonElement url)
+                                    && url.ValueKind != JsonValueKind.Null)
                                 {
-                                    if (data.TryGetProperty("nonce", out JsonElement noneEle))
+                                    var imgUrl = url.GetString();
+                                    if (!string.IsNullOrWhiteSpace(imgUrl))
                                     {
-                                        var nonce = noneEle.GetString();
-                                        if (!string.IsNullOrWhiteSpace(id) && !string.IsNullOrWhiteSpace(nonce))
+                                        var hash = _discordHelper.GetMessageHash(imgUrl);
+                                        if (!string.IsNullOrWhiteSpace(hash))
                                         {
-                                            // 设置 none 对应的任务 id
-                                            var task = _discordInstance.GetRunningTaskByNonce(nonce);
+                                            var task = _discordInstance.FindRunningTask(c => c.GetProperty<string>(Constants.TASK_PROPERTY_MESSAGE_HASH, default) == hash).FirstOrDefault();
                                             if (task != null)
                                             {
-                                                if (messageType == MessageType.CREATE)
+                                                if (!task.MessageIds.Contains(id))
                                                 {
-                                                    task.MessageId = id;
-                                                    task.Description = item.GetProperty("description").GetString();
-
-                                                    if (!task.MessageIds.Contains(id))
-                                                    {
-                                                        task.MessageIds.Add(id);
-                                                    }
-
-                                                    task.Fail($"无效参数");
+                                                    task.MessageIds.Add(id);
                                                 }
+                                                task.SeedMessageId = id;
                                             }
                                         }
                                     }
@@ -415,139 +321,243 @@ namespace Midjourney.Infrastructure
                             }
                         }
                     }
+
+                    return;
                 }
-                else if (messageType == MessageType.UPDATE && isEm)
+
+
+                // 作者
+                var authorName = string.Empty;
+                if (data.TryGetProperty("author", out JsonElement author)
+                    && author.TryGetProperty("username", out JsonElement username))
                 {
-                    if (metaName == "info")
+                    authorName = username.GetString();
+                }
+
+                // 应用 ID 即机器人 ID
+                var applicationId = string.Empty;
+                if (data.TryGetProperty("application_id", out JsonElement application))
+                {
+                    applicationId = application.GetString();
+                }
+
+                // 交互元数据 id
+                var metaId = string.Empty;
+                var metaName = string.Empty;
+                if (data.TryGetProperty("interaction_metadata", out JsonElement meta) && meta.TryGetProperty("id", out var m))
+                {
+                    metaId = m.GetString();
+
+                    metaName = meta.TryGetProperty("name", out var n) ? n.GetString() : string.Empty;
+                }
+
+                // 任务 id
+                // 任务 nonce
+                if (data.TryGetProperty("id", out JsonElement idElement))
+                {
+                    var id = idElement.GetString();
+                    _logger.Debug($"用户消息, {messageType}, {_discordAccount.GetDisplay()} - {authorName}: {contentStr}, id: {id}, mid: {metaId}");
+
+                    // 判断账号是否用量已经用完
+
+                    var isEm = data.TryGetProperty("embeds", out var em);
+
+                    if (messageType == MessageType.CREATE && isEm)
                     {
-                        // info 指令
+                        // em 是一个 JSON 数组
                         if (em.ValueKind == JsonValueKind.Array)
                         {
                             foreach (JsonElement item in em.EnumerateArray())
                             {
-                                if (item.TryGetProperty("title", out var emtitle) && emtitle.GetString().Contains("Your info"))
+                                if (item.TryGetProperty("title", out var emtitle))
                                 {
-                                    if (item.TryGetProperty("description", out var description))
+                                    if (emtitle.GetString() == "Credits exhausted")
                                     {
-                                        var dic = ParseDiscordData(description.GetString());
-                                        foreach (var d in dic)
+                                        // 你的处理逻辑
+                                        _logger.Warning($"账号 {_discordAccount.GetDisplay()} 用量已经用完");
+                                        _discordAccount.Enable = false;
+
+                                        var task = _discordInstance.FindRunningTask(c => c.MessageId == id).FirstOrDefault();
+                                        if (task == null && !string.IsNullOrWhiteSpace(metaId))
                                         {
-                                            if (d.Key == "Job Mode")
+                                            task = _discordInstance.FindRunningTask(c => c.InteractionMetadataId == metaId).FirstOrDefault();
+                                        }
+
+                                        if (task != null)
+                                        {
+                                            task.Fail("账号用量已经用完");
+                                        }
+
+                                        return;
+                                    }
+                                    else if (emtitle.GetString() == "Invalid parameter")
+                                    {
+                                        if (data.TryGetProperty("nonce", out JsonElement noneEle))
+                                        {
+                                            var nonce = noneEle.GetString();
+                                            if (!string.IsNullOrWhiteSpace(id) && !string.IsNullOrWhiteSpace(nonce))
                                             {
-                                                if (applicationId == Constants.NIJI_APPLICATION_ID)
+                                                // 设置 none 对应的任务 id
+                                                var task = _discordInstance.GetRunningTaskByNonce(nonce);
+                                                if (task != null)
                                                 {
-                                                    _discordAccount.SetProperty($"Niji {d.Key}", d.Value);
+                                                    if (messageType == MessageType.CREATE)
+                                                    {
+                                                        task.MessageId = id;
+                                                        task.Description = item.GetProperty("description").GetString();
+
+                                                        if (!task.MessageIds.Contains(id))
+                                                        {
+                                                            task.MessageIds.Add(id);
+                                                        }
+
+                                                        task.Fail($"无效参数");
+                                                    }
                                                 }
-                                                else if (applicationId == Constants.MJ_APPLICATION_ID)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    else if (messageType == MessageType.UPDATE && isEm)
+                    {
+                        if (metaName == "info")
+                        {
+                            // info 指令
+                            if (em.ValueKind == JsonValueKind.Array)
+                            {
+                                foreach (JsonElement item in em.EnumerateArray())
+                                {
+                                    if (item.TryGetProperty("title", out var emtitle) && emtitle.GetString().Contains("Your info"))
+                                    {
+                                        if (item.TryGetProperty("description", out var description))
+                                        {
+                                            var dic = ParseDiscordData(description.GetString());
+                                            foreach (var d in dic)
+                                            {
+                                                if (d.Key == "Job Mode")
+                                                {
+                                                    if (applicationId == Constants.NIJI_APPLICATION_ID)
+                                                    {
+                                                        _discordAccount.SetProperty($"Niji {d.Key}", d.Value);
+                                                    }
+                                                    else if (applicationId == Constants.MJ_APPLICATION_ID)
+                                                    {
+                                                        _discordAccount.SetProperty(d.Key, d.Value);
+                                                    }
+                                                }
+                                                else
                                                 {
                                                     _discordAccount.SetProperty(d.Key, d.Value);
                                                 }
                                             }
-                                            else
-                                            {
-                                                _discordAccount.SetProperty(d.Key, d.Value);
-                                            }
+
+                                            var db = DbHelper.AccountStore;
+                                            db.Update(_discordAccount);
                                         }
-
-                                        var db = DbHelper.AccountStore;
-                                        db.Update(_discordAccount);
                                     }
                                 }
                             }
+
+                            return;
                         }
-
-                        return;
-                    }
-                    else if (metaName == "settings" && data.TryGetProperty("components", out var components))
-                    {
-                        // settings 指令
-                        var eventData = data.Deserialize<EventData>();
-                        if (eventData != null && eventData.InteractionMetadata?.Name == "settings" && eventData.Components?.Count > 0)
+                        else if (metaName == "settings" && data.TryGetProperty("components", out var components))
                         {
-                            if (applicationId == Constants.NIJI_APPLICATION_ID)
+                            // settings 指令
+                            var eventData = data.Deserialize<EventData>();
+                            if (eventData != null && eventData.InteractionMetadata?.Name == "settings" && eventData.Components?.Count > 0)
                             {
-                                _discordAccount.NijiComponents = eventData.Components;
-                                _discordAccount.NijiSettingsMessageId = id;
-
-                                DbHelper.AccountStore.Update(_discordAccount);
-                            }
-                            else if (applicationId == Constants.MJ_APPLICATION_ID)
-                            {
-                                _discordAccount.Components = eventData.Components;
-                                _discordAccount.SettingsMessageId = id;
-
-                                DbHelper.AccountStore.Update(_discordAccount);
-                            }
-                        }
-
-                        return;
-                    }
-                }
-
-                if (data.TryGetProperty("nonce", out JsonElement noneElement))
-                {
-                    var nonce = noneElement.GetString();
-
-                    _logger.Debug($"用户消息, {messageType}, id: {id}, nonce: {nonce}");
-
-                    if (!string.IsNullOrWhiteSpace(id) && !string.IsNullOrWhiteSpace(nonce))
-                    {
-                        // 设置 none 对应的任务 id
-                        var task = _discordInstance.GetRunningTaskByNonce(nonce);
-                        if (task != null)
-                        {
-                            if (isPrivareChannel)
-                            {
-                                // 私信频道
-
-                            }
-                            else
-                            {
-                                // 绘画频道
-
-                                // MJ 交互成功后
-                                if (messageType == MessageType.INTERACTION_SUCCESS)
+                                if (applicationId == Constants.NIJI_APPLICATION_ID)
                                 {
-                                    task.InteractionMetadataId = id;
+                                    _discordAccount.NijiComponents = eventData.Components;
+                                    _discordAccount.NijiSettingsMessageId = id;
+
+                                    DbHelper.AccountStore.Update(_discordAccount);
                                 }
-                                // MJ 局部重绘完成后
-                                else if (messageType == MessageType.INTERACTION_IFRAME_MODAL_CREATE
-                                    && data.TryGetProperty("custom_id", out var custom_id))
+                                else if (applicationId == Constants.MJ_APPLICATION_ID)
                                 {
-                                    task.SetProperty(Constants.TASK_PROPERTY_IFRAME_MODAL_CREATE_CUSTOM_ID, custom_id.GetString());
-                                    task.MessageId = id;
+                                    _discordAccount.Components = eventData.Components;
+                                    _discordAccount.SettingsMessageId = id;
 
-                                    if (!task.MessageIds.Contains(id))
-                                    {
-                                        task.MessageIds.Add(id);
-                                    }
+                                    DbHelper.AccountStore.Update(_discordAccount);
+                                }
+                            }
+
+                            return;
+                        }
+                    }
+
+                    if (data.TryGetProperty("nonce", out JsonElement noneElement))
+                    {
+                        var nonce = noneElement.GetString();
+
+                        _logger.Debug($"用户消息, {messageType}, id: {id}, nonce: {nonce}");
+
+                        if (!string.IsNullOrWhiteSpace(id) && !string.IsNullOrWhiteSpace(nonce))
+                        {
+                            // 设置 none 对应的任务 id
+                            var task = _discordInstance.GetRunningTaskByNonce(nonce);
+                            if (task != null)
+                            {
+                                if (isPrivareChannel)
+                                {
+                                    // 私信频道
+
                                 }
                                 else
                                 {
-                                    task.MessageId = id;
+                                    // 绘画频道
 
-                                    if (!task.MessageIds.Contains(id))
+                                    // MJ 交互成功后
+                                    if (messageType == MessageType.INTERACTION_SUCCESS)
                                     {
-                                        task.MessageIds.Add(id);
+                                        task.InteractionMetadataId = id;
+                                    }
+                                    // MJ 局部重绘完成后
+                                    else if (messageType == MessageType.INTERACTION_IFRAME_MODAL_CREATE
+                                        && data.TryGetProperty("custom_id", out var custom_id))
+                                    {
+                                        task.SetProperty(Constants.TASK_PROPERTY_IFRAME_MODAL_CREATE_CUSTOM_ID, custom_id.GetString());
+                                        task.MessageId = id;
+
+                                        if (!task.MessageIds.Contains(id))
+                                        {
+                                            task.MessageIds.Add(id);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        task.MessageId = id;
+
+                                        if (!task.MessageIds.Contains(id))
+                                        {
+                                            task.MessageIds.Add(id);
+                                        }
                                     }
                                 }
                             }
                         }
                     }
                 }
+
+                //Thread.Sleep(50);
+
+                //foreach (var messageHandler in _messageHandlers.OrderBy(h => h.Order()))
+                //{
+                //    if (data.TryGetProperty(Constants.MJ_MESSAGE_HANDLED, out JsonElement handled) && handled.GetBoolean())
+                //    {
+                //        return;
+                //    }
+
+                //    //messageHandler.Handle(_discordInstance, messageType.Value, data);
+                //}
             }
-
-            //Thread.Sleep(50);
-
-            //foreach (var messageHandler in _messageHandlers.OrderBy(h => h.Order()))
-            //{
-            //    if (data.TryGetProperty(Constants.MJ_MESSAGE_HANDLED, out JsonElement handled) && handled.GetBoolean())
-            //    {
-            //        return;
-            //    }
-
-            //    //messageHandler.Handle(_discordInstance, messageType.Value, data);
-            //}
+            catch (Exception ex)
+            {
+                Log.Error(ex, "处理用户消息异常 {@0}", raw.ToString());
+            }
         }
 
         private static Dictionary<string, string> ParseDiscordData(string input)
