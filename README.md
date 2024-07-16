@@ -223,12 +223,6 @@ d. 启动方式2: chmod +x run_app_osx.sh && ./run_app_osx.sh
 }
 ```
 
-> 配置使用
-
-启动 docker 后，配置代理为 `http://127.0.0.1:8086/mj` 即可
-
-![示例](./docs/screenshots/chrome_EDzoztHa2b.png)
-
 ## 机器人 Token（必须配置）
 
 本项目利用 Discord 机器人 Token 连接 wss，可以获取错误信息和完整功能，确保消息的高可用性等问题。
