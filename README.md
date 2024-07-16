@@ -257,7 +257,7 @@ https://discord.com/oauth2/authorize?client_id=xxx&permissions=8&scope=bot
 ## 支持与赞助
 
 - 如果觉得这个项目对您有所帮助，请帮忙点个 Star⭐
-- 您也可以提供暂时不用的绘画公益账号，支持此项目的发展😀
+- 您也可以提供暂时不用的绘画公益账号（慢速模式即可），支持此项目的发展😀
 
 ## 友情链接
 
