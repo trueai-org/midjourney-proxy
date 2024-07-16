@@ -1,5 +1,10 @@
-﻿using Midjourney.Infrastructure.Domain;
+﻿using Discord;
+using Discord.Net.WebSockets;
+using Discord.WebSocket;
+using Midjourney.Infrastructure.Domain;
+using Newtonsoft.Json;
 using Serilog;
+using System.Collections.Concurrent;
 using System.IO.Compression;
 using System.Net;
 using System.Net.WebSockets;
@@ -14,6 +19,11 @@ namespace Midjourney.Infrastructure
     /// </summary>
     public class WebSocketHandler
     {
+        private int _lastSeq;
+        private Task _heartbeatTask, _guildDownloadTask;
+        private int _unavailableGuildCount;
+        private long _lastGuildAvailableTime, _lastMessageTime;
+
         public const int CloseCodeReconnect = 2001;
         public const int CloseCodeInvalidate = 1009;
         public const int CloseCodeException = 1011;
@@ -48,6 +58,16 @@ namespace Midjourney.Infrastructure
         private CancellationTokenSource _cancellationTokenSource;
 
         private readonly WebProxy _webProxy;
+        protected readonly SemaphoreSlim _stateLock;
+
+        public ConnectionState ConnectionState { get; private set; }
+
+        public int Latency { get; protected set; }
+
+        private CancellationTokenSource _connectCancelToken;
+        public LoginState LoginState { get; private set; }
+
+        private readonly ConcurrentQueue<long> _heartbeatTimes = new ConcurrentQueue<long>();
 
         public WebSocketHandler(DiscordAccount account,
             DiscordHelper discordHelper,
@@ -63,7 +83,11 @@ namespace Midjourney.Infrastructure
             _successCallback = successCallback;
             _failureCallback = failureCallback;
             _logger = Log.Logger;
+
+            _stateLock = new SemaphoreSlim(1, 1);
         }
+
+        IWebSocketClient WebSocketClient { get; set; }
 
         /// <summary>
         /// 异步启动 WebSocket 连接
@@ -75,6 +99,60 @@ namespace Midjourney.Infrastructure
             object seq = null,
             string resumeGatewayUrl = null)
         {
+            //var wss = DefaultWebSocketProvider.Create(_webProxy);
+
+            //WebSocketClient = wss();
+
+            //WebSocketClient.SetHeader("User-Agent", _account.UserAgent);
+            //WebSocketClient.SetHeader("Accept-Encoding", "gzip, deflate, br");
+            //WebSocketClient.SetHeader("Accept-Language", "zh-CN,zh;q=0.9");
+            //WebSocketClient.SetHeader("Cache-Control", "no-cache");
+            //WebSocketClient.SetHeader("Pragma", "no-cache");
+            //WebSocketClient.SetHeader("Sec-WebSocket-Extensions", "permessage-deflate; client_max_window_bits");
+
+            //WebSocketClient.BinaryMessage += async (data, index, count) =>
+            //{
+            //    using (var decompressed = new MemoryStream())
+            //    {
+            //        if (data[0] == 0x78)
+            //        {
+            //            //Strip the zlib header
+            //            _compressed.Write(data, index + 2, count - 2);
+            //            _compressed.SetLength(count - 2);
+            //        }
+            //        else
+            //        {
+            //            _compressed.Write(data, index, count);
+            //            _compressed.SetLength(count);
+            //        }
+
+            //        //Reset positions so we don't run out of memory
+            //        _compressed.Position = 0;
+            //        _decompressor.CopyTo(decompressed);
+            //        _compressed.Position = 0;
+            //        decompressed.Position = 0;
+
+            //        string messageContent;
+            //        using (var reader = new StreamReader(decompressed, Encoding.UTF8))
+            //        {
+            //            messageContent = await reader.ReadToEndAsync();
+            //        }
+
+            //        HandleMessage(messageContent);
+            //    }
+            //};
+            //WebSocketClient.TextMessage += async text =>
+            //{
+            //    HandleMessage(text);
+
+            //    await Task.CompletedTask;
+            //};
+            //WebSocketClient.Closed += async ex =>
+            //{
+            //    await DisconnectAsync().ConfigureAwait(false);
+            //};
+
+
             _webSocket = new ClientWebSocket();
 
             if (_webProxy != null)
@@ -190,7 +268,7 @@ namespace Midjourney.Infrastructure
         /// <param name="message">要发送的消息对象</param>
         private async Task SendMessageAsync(object message)
         {
-            var messageJson = JsonSerializer.Serialize(message);
+            var messageJson = System.Text.Json.JsonSerializer.Serialize(message);
             var messageBytes = Encoding.UTF8.GetBytes(messageJson);
             await _webSocket.SendAsync(new ArraySegment<byte>(messageBytes), WebSocketMessageType.Text, true, CancellationToken.None);
         }
@@ -277,6 +355,222 @@ namespace Midjourney.Infrastructure
             }
         }
 
+        public async Task DisconnectAsync(Exception ex = null)
+        {
+            await _stateLock.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                await DisconnectInternalAsync(ex).ConfigureAwait(false);
+            }
+            finally { _stateLock.Release(); }
+        }
+
+        //private async Task ProcessMessageAsync(GatewayOpCode opCode, int? seq, string type, object payload)
+        //{
+        //    if (seq != null)
+        //        _lastSeq = seq.Value;
+        //    _lastMessageTime = Environment.TickCount;
+
+        //    try
+        //    {
+        //        switch (opCode)
+        //        {
+        //            case GatewayOpCode.Hello:
+        //                {
+        //                    var data = (payload as JToken).ToObject<HelloEvent>(_serializer);
+        //                    _heartbeatTask = RunHeartbeatAsync(data.HeartbeatInterval, _connection.CancelToken);
+        //                }
+        //                break;
+        //            case GatewayOpCode.Heartbeat:
+        //                {
+        //                    Log.Debug("Received Heartbeat");
+
+        //                    await ApiClient.SendHeartbeatAsync(_lastSeq).ConfigureAwait(false);
+        //                }
+        //                break;
+        //            case GatewayOpCode.HeartbeatAck:
+        //                {
+        //                    Log.Debug("Received HeartbeatAck");
+
+        //                    if (_heartbeatTimes.TryDequeue(out long time))
+        //                    {
+        //                        int latency = (int)(Environment.TickCount - time);
+        //                        int before = Latency;
+        //                        Latency = latency;
+
+        //                        await TimedInvokeAsync(_latencyUpdatedEvent, nameof(LatencyUpdated), before, latency).ConfigureAwait(false);
+        //                    }
+        //                }
+        //                break;
+        //            case GatewayOpCode.InvalidSession:
+        //                {
+        //                    Log.Debug("Received InvalidSession");
+        //                    Log.Warning("Failed to resume previous session");
+
+        //                    _sessionId = null;
+        //                    _lastSeq = 0;
+        //                    ApiClient.ResumeGatewayUrl = null;
+
+        //                    if (_shardedClient != null)
+        //                    {
+        //                        await _shardedClient.AcquireIdentifyLockAsync(ShardId, _connection.CancelToken).ConfigureAwait(false);
+        //                        try
+        //                        {
+        //                            await ApiClient.SendIdentifyAsync(shardID: ShardId, totalShards: TotalShards, gatewayIntents: _gatewayIntents, presence: BuildCurrentStatus()).ConfigureAwait(false);
+        //                        }
+        //                        finally
+        //                        {
+        //                            _shardedClient.ReleaseIdentifyLock();
+        //                        }
+        //                    }
+        //                    else
+        //                        await ApiClient.SendIdentifyAsync(shardID: ShardId, totalShards: TotalShards, gatewayIntents: _gatewayIntents, presence: BuildCurrentStatus()).ConfigureAwait(false);
+        //                }
+        //                break;
+        //            case GatewayOpCode.Reconnect:
+        //                {
+        //                    Log.Debug("Received Reconnect");
+
+        //                    _connection.Error(new GatewayReconnectException("Server requested a reconnect"));
+        //                }
+        //                break;
+        //            case GatewayOpCode.Dispatch:
+        //                {
+        //                }
+        //                break;
+        //            default:
+        //                Log.Warning($"Unknown OpCode ({opCode})");
+        //                break;
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Log.Error(ex, $"Error handling {opCode}{(type != null ? $" ({type})" : "")}");
+        //    }
+        //}
+
+        //private async Task RunHeartbeatAsync(int intervalMillis, CancellationToken cancelToken)
+        //{
+        //    int delayInterval = (int)(intervalMillis * 0.9);
+
+        //    try
+        //    {
+        //        while (!cancelToken.IsCancellationRequested)
+        //        {
+        //            int now = Environment.TickCount;
+
+        //            //Did server respond to our last heartbeat, or are we still receiving messages (long load?)
+        //            if (_heartbeatTimes.Count != 0 && (now - _lastMessageTime) > intervalMillis)
+        //            {
+        //                if (ConnectionState == ConnectionState.Connected && (_guildDownloadTask?.IsCompleted ?? true))
+        //                {
+        //                    _connection.Error(new GatewayReconnectException("Server missed last heartbeat"));
+        //                    return;
+        //                }
+        //            }
+
+        //            _heartbeatTimes.Enqueue(now);
+        //            try
+        //            {
+        //                await ApiClient.SendHeartbeatAsync(_lastSeq).ConfigureAwait(false);
+        //            }
+        //            catch (Exception ex)
+        //            {
+        //                Log.Warning(ex, "Heartbeat Errored");
+        //            }
+
+        //            int delay = Math.Max(0, delayInterval - Latency);
+        //            await Task.Delay(delay, cancelToken).ConfigureAwait(false);
+        //        }
+        //        Log.Debug("Heartbeat Stopped");
+        //    }
+        //    catch (OperationCanceledException)
+        //    {
+        //        Log.Debug("Heartbeat Stopped");
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Log.Error(ex, "Heartbeat Errored");
+        //    }
+        //}
+
+        ///// <exception cref="InvalidOperationException">The client must be logged in before connecting.</exception>
+        ///// <exception cref="NotSupportedException">This client is not configured with WebSocket support.</exception>
+        //internal async Task ConnectInternalAsync()
+        //{
+        //    if (LoginState != LoginState.LoggedIn)
+        //        throw new InvalidOperationException("The client must be logged in before connecting.");
+        //    if (WebSocketClient == null)
+        //        throw new NotSupportedException("This client is not configured with WebSocket support.");
+
+        //    //RequestQueue.ClearGatewayBuckets();
+
+        //    //Re-create streams to reset the zlib state
+        //    _compressed?.Dispose();
+        //    _decompressor?.Dispose();
+        //    _compressed = new MemoryStream();
+        //    _decompressor = new DeflateStream(_compressed, CompressionMode.Decompress);
+
+        //    ConnectionState = ConnectionState.Connecting;
+        //    try
+        //    {
+        //        _connectCancelToken?.Dispose();
+        //        _connectCancelToken = new CancellationTokenSource();
+        //        if (WebSocketClient != null)
+        //            WebSocketClient.SetCancelToken(_connectCancelToken.Token);
+
+        //        string gatewayUrl;
+        //        if (_resumeGatewayUrl == null)
+        //        {
+        //            if (!_isExplicitUrl && _gatewayUrl == null)
+        //            {
+        //                var gatewayResponse = await GetBotGatewayAsync().ConfigureAwait(false);
+        //                _gatewayUrl = FormatGatewayUrl(gatewayResponse.Url);
+        //            }
+
+        //            gatewayUrl = _gatewayUrl;
+        //        }
+        //        else
+        //        {
+        //            gatewayUrl = _resumeGatewayUrl;
+        //        }
+
+
+        //        await WebSocketClient.ConnectAsync(gatewayUrl).ConfigureAwait(false);
+
+        //        ConnectionState = ConnectionState.Connected;
+        //    }
+        //    catch
+        //    {
+        //        await DisconnectInternalAsync().ConfigureAwait(false);
+        //        throw;
+        //    }
+        //}
+
+        /// <exception cref="NotSupportedException">This client is not configured with WebSocket support.</exception>
+        internal async Task DisconnectInternalAsync(Exception ex = null)
+        {
+            if (WebSocketClient == null)
+                throw new NotSupportedException("This client is not configured with WebSocket support.");
+
+            if (ConnectionState == ConnectionState.Disconnected)
+                return;
+            ConnectionState = ConnectionState.Disconnecting;
+
+            if (ex is GatewayReconnectException)
+                await WebSocketClient.DisconnectAsync(4000).ConfigureAwait(false);
+            else
+                await WebSocketClient.DisconnectAsync().ConfigureAwait(false);
+
+            try
+            {
+                _connectCancelToken?.Cancel(false);
+            }
+            catch { }
+
+            ConnectionState = ConnectionState.Disconnected;
+        }
+
         /// <summary>
         /// 处理接收到的 WebSocket 消息
         /// </summary>
@@ -293,6 +587,15 @@ namespace Midjourney.Infrastructure
                     _logger.Information("用户收到 Hello 消息");
                     HandleHello(data);
                     DoResumeOrIdentify();
+                    break;
+
+                case 1: // Heartbeat
+                    {
+                        _logger.Information("用户收到 Received Heartbeat");
+                        var heartbeatMessage = new { op = 1, d = _sequence };
+                        SendMessageAsync(heartbeatMessage).ConfigureAwait(false).GetAwaiter();
+                        _logger.Information("用户发送 Received Heartbeat");
+                    }
                     break;
 
                 case 11: // Heartbeat ACK
@@ -461,7 +764,7 @@ namespace Midjourney.Infrastructure
                 token = _account.UserToken
             };
 
-            return JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(authData));
+            return System.Text.Json.JsonSerializer.Deserialize<JsonElement>(System.Text.Json.JsonSerializer.Serialize(authData));
         }
 
         /// <summary>
@@ -482,5 +785,56 @@ namespace Midjourney.Infrastructure
         {
             _successCallback?.Invoke(_sessionId, _sequence, _resumeGatewayUrl);
         }
+    }
+
+    internal class SocketFrame
+    {
+        [JsonProperty("op")]
+        public int Operation { get; set; }
+
+        [JsonProperty("t", NullValueHandling = NullValueHandling.Ignore)]
+        public string Type { get; set; }
+
+        [JsonProperty("s", NullValueHandling = NullValueHandling.Ignore)]
+        public int? Sequence { get; set; }
+
+        [JsonProperty("d")]
+        public object Payload { get; set; }
+    }
+
+    internal enum GatewayOpCode : byte
+    {
+        /// <summary> C←S - Used to send most events. </summary>
+        Dispatch = 0,
+        /// <summary> C↔S - Used to keep the connection alive and measure latency. </summary>
+        Heartbeat = 1,
+        /// <summary> C→S - Used to associate a connection with a token and specify configuration. </summary>
+        Identify = 2,
+        /// <summary> C→S - Used to update client's status and current game id. </summary>
+        PresenceUpdate = 3,
+        /// <summary> C→S - Used to join a particular voice channel. </summary>
+        VoiceStateUpdate = 4,
+        /// <summary> C→S - Used to ensure the guild's voice server is alive. </summary>
+        VoiceServerPing = 5,
+        /// <summary> C→S - Used to resume a connection after a redirect occurs. </summary>
+        Resume = 6,
+        /// <summary> C←S - Used to notify a client that they must reconnect to another gateway. </summary>
+        Reconnect = 7,
+        /// <summary> C→S - Used to request members that were withheld by large_threshold </summary>
+        RequestGuildMembers = 8,
+        /// <summary> C←S - Used to notify the client that their session has expired and cannot be resumed. </summary>
+        InvalidSession = 9,
+        /// <summary> C←S - Used to provide information to the client immediately on connection. </summary>
+        Hello = 10,
+        /// <summary> C←S - Used to reply to a client's heartbeat. </summary>
+        HeartbeatAck = 11,
+        /// <summary> C→S - Used to request presence updates from particular guilds. </summary>
+        GuildSync = 12
+    }
+
+    internal class HelloEvent
+    {
+        [JsonProperty("heartbeat_interval")]
+        public int HeartbeatInterval { get; set; }
     }
 }
