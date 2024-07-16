@@ -579,48 +579,55 @@ namespace Midjourney.Infrastructure
         {
             //_logger.Debug("用户收到消息: {0}", message);
 
-            var data = JsonDocument.Parse(message).RootElement;
-            var opCode = data.GetProperty("op").GetInt32();
-            switch (opCode)
+            try
             {
-                case 10: // Hello
-                    _logger.Information("用户收到 Hello 消息");
-                    HandleHello(data);
-                    DoResumeOrIdentify();
-                    break;
+                var data = JsonDocument.Parse(message).RootElement;
+                var opCode = data.GetProperty("op").GetInt32();
+                switch (opCode)
+                {
+                    case 10: // Hello
+                        _logger.Information("用户收到 Hello 消息 {@0}", _account.ChannelId);
+                        HandleHello(data);
+                        DoResumeOrIdentify();
+                        break;
 
-                case 1: // Heartbeat
-                    {
-                        _logger.Information("用户收到 Received Heartbeat");
-                        var heartbeatMessage = new { op = 1, d = _sequence };
-                        SendMessageAsync(heartbeatMessage).ConfigureAwait(false).GetAwaiter();
-                        _logger.Information("用户发送 Received Heartbeat");
-                    }
-                    break;
+                    case 1: // Heartbeat
+                        {
+                            _logger.Information("用户收到 Received Heartbeat {@0}", _account.ChannelId);
+                            var heartbeatMessage = new { op = 1, d = _sequence };
+                            SendMessageAsync(heartbeatMessage).ConfigureAwait(false).GetAwaiter();
+                            _logger.Information("用户发送 Received Heartbeat {@0}", _account.ChannelId);
+                        }
+                        break;
 
-                case 11: // Heartbeat ACK
-                    _logger.Information("用户收到 Heartbeat ACK");
-                    _heartbeatAck = true;
-                    break;
+                    case 11: // Heartbeat ACK
+                        _logger.Information("用户收到 Heartbeat ACK {@0}", _account.ChannelId);
+                        _heartbeatAck = true;
+                        break;
 
-                case 0: // Dispatch
-                    _logger.Information("用户收到 Dispatch 消息");
-                    HandleDispatch(data);
-                    break;
+                    case 0: // Dispatch
+                        _logger.Information("用户收到 Dispatch 消息 {@0}", _account.ChannelId);
+                        HandleDispatch(data);
+                        break;
 
-                case 9: // Invalid Session
-                    _logger.Information("用户收到 Invalid Session 消息");
-                    HandleFailure(CloseCodeInvalidate, "会话无效");
-                    break;
+                    case 9: // Invalid Session
+                        _logger.Information("用户收到 Invalid Session 消息 {@0}", _account.ChannelId);
+                        HandleFailure(CloseCodeInvalidate, "会话无效");
+                        break;
 
-                case 7: // Reconnect
-                    _logger.Information("用户收到 Reconnect 消息");
-                    HandleFailure(CloseCodeReconnect, "服务器请求重连");
-                    break;
+                    case 7: // Reconnect
+                        _logger.Information("用户收到 Reconnect 消息 {@0}", _account.ChannelId);
+                        HandleFailure(CloseCodeReconnect, "服务器请求重连");
+                        break;
 
-                default:
-                    _logger.Information("用户收到未知操作码: {0}", opCode);
-                    break;
+                    default:
+                        _logger.Information("用户收到未知操作码 {@0}, {@1}", opCode, _account.ChannelId);
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "处理接收到的 WebSocket 消息失败 {@0}", _account.ChannelId);
             }
         }
 
@@ -645,7 +652,7 @@ namespace Midjourney.Infrastructure
             {
                 if (!_heartbeatAck)
                 {
-                    _logger.Warning("用户未收到心跳 ACK，正在重新连接...");
+                    _logger.Warning("用户未收到心跳 ACK，正在重新连接... {@0}", _account.ChannelId);
                     await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "用户 未收到心跳 ACK", CancellationToken.None);
                     _heartbeatTimer.Dispose();
                     await StartAsync(true);
@@ -654,7 +661,7 @@ namespace Midjourney.Infrastructure
 
                 var heartbeatMessage = new { op = 1, d = _sequence };
                 await SendMessageAsync(heartbeatMessage);
-                _logger.Information("用户已发送 HEARTBEAT 消息。");
+                _logger.Information("用户已发送 HEARTBEAT 消息 {@0}", _account.ChannelId);
 
                 _heartbeatAck = false;
             }
@@ -663,13 +670,13 @@ namespace Midjourney.Infrastructure
                 // The WebSocket is in an invalid state ('Closed')
                 if (_webSocket.State == WebSocketState.Closed)
                 {
-                    _logger.Warning("用户 WebSocket 已关闭，无法发送心跳。");
+                    _logger.Warning("用户 WebSocket 已关闭，无法发送心跳 {@0}", _account.ChannelId);
 
                     // 关闭定时器
                     _heartbeatTimer.Dispose();
                 }
 
-                _logger.Error(ex, "发送心跳异常");
+                _logger.Error(ex, "发送心跳异常, ChannelId: {@0}", _account.ChannelId);
             }
         }
 

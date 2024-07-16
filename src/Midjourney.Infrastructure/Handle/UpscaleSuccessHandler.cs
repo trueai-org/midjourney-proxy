@@ -1,7 +1,6 @@
 ﻿using Discord.WebSocket;
 using Midjourney.Infrastructure.LoadBalancer;
 using Midjourney.Infrastructure.Util;
-using System;
 using System.Text.RegularExpressions;
 
 namespace Midjourney.Infrastructure.Handle
@@ -48,14 +47,11 @@ namespace Midjourney.Infrastructure.Handle
             }
 
             // 如果依然找不到任务，可能是 NIJI 任务
-            if (task == null)
+            var botType = GetBotType(message);
+            if (task == null && botType == EBotType.NIJI_JOURNEY)
             {
-                var botType = GetBotType(message);
-                if (botType != null)
-                {
-                    task = instance.FindRunningTask(c => c.BotType == botType && (c.PromptEn.RemoveWhitespace().EndsWith(finalPrompt.RemoveWhitespace()) || finalPrompt.RemoveWhitespace().StartsWith(c.PromptEn.RemoveWhitespace())))
-                        .OrderBy(c => c.StartTime).FirstOrDefault();
-                }
+                task = instance.FindRunningTask(c => c.BotType == botType && (c.PromptEn.RemoveWhitespace().EndsWith(finalPrompt.RemoveWhitespace()) || finalPrompt.RemoveWhitespace().StartsWith(c.PromptEn.RemoveWhitespace())))
+                    .OrderBy(c => c.StartTime).FirstOrDefault();
             }
 
             if (task == null)

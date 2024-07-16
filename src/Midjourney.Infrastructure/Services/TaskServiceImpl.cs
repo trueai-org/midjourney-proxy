@@ -432,29 +432,34 @@ namespace Midjourney.Infrastructure.Services
                 throw new LogicException("无可用的账号实例");
             }
 
-            var res = await discordInstance.InfoAsync(SnowFlake.NextId(), EBotType.NIJI_JOURNEY);
-            if (res.Code != ReturnCode.SUCCESS)
+            // 只有配置 NIJI 才请求     
+            if (!string.IsNullOrWhiteSpace(discordInstance.Account.NijiBotChannelId))
             {
-                throw new LogicException(res.Description);
+                var res = await discordInstance.InfoAsync(SnowFlake.NextId(), EBotType.NIJI_JOURNEY);
+                if (res.Code != ReturnCode.SUCCESS)
+                {
+                    throw new LogicException(res.Description);
+                }
+                Thread.Sleep(2000);
             }
-
-            Thread.Sleep(2000);
-
+            
             var res0 = await discordInstance.InfoAsync(SnowFlake.NextId(), EBotType.MID_JOURNEY);
             if (res0.Code != ReturnCode.SUCCESS)
             {
                 throw new LogicException(res0.Description);
             }
-
             Thread.Sleep(2000);
 
-            var res2 = await discordInstance.SettingAsync(SnowFlake.NextId(), EBotType.NIJI_JOURNEY);
-            if (res2.Code != ReturnCode.SUCCESS)
+            // 只有配置 NIJI 才请求            
+            if (!string.IsNullOrWhiteSpace(discordInstance.Account.NijiBotChannelId))
             {
-                throw new LogicException(res2.Description);
+                var res2 = await discordInstance.SettingAsync(SnowFlake.NextId(), EBotType.NIJI_JOURNEY);
+                if (res2.Code != ReturnCode.SUCCESS)
+                {
+                    throw new LogicException(res2.Description);
+                }
+                Thread.Sleep(2000);
             }
-
-            Thread.Sleep(2000);
 
             var res3 = await discordInstance.SettingAsync(SnowFlake.NextId(), EBotType.MID_JOURNEY);
             if (res3.Code != ReturnCode.SUCCESS)
