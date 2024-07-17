@@ -159,19 +159,31 @@ namespace Midjourney.Infrastructure
                     return;
                 }
 
+                //// 重新连接
+                //if (reconnect
+                //    && WebSocket.State == WebSocketState.Open
+                //    && !string.IsNullOrWhiteSpace(_sessionId)
+                //    && _sequence.HasValue)
+                //{
+                //    await ResumeSessionAsync();
+
+                //    _receiveTokenSource?.Cancel();
+                //    _receiveTask?.Wait();
+                //    _receiveTokenSource = new CancellationTokenSource();
+
+                //    _heartbeatAck = true;
+                //    _heartbeatTask = RunHeartbeatAsync((int)_heartbeatInterval, _receiveTokenSource.Token);
+
+                //    // 重连成功，清空
+                //    _sessionId = null;
+                //    _sequence = null;
+
+                //    _logger.Information("用户 WebSocket 连接已重新建立 {@0}", _account.ChannelId);
+                //}
+                //else
+                //{
+
                 CloseSocketSessionWhenIsOpen();
-
-                if (WebSocket != null && WebSocket.State != WebSocketState.Closed)
-                {
-                    try
-                    {
-                        WebSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "重新连接", CancellationToken.None).Wait();
-                    }
-                    catch
-                    {
-
-                    }
-                }
 
                 WebSocket = new ClientWebSocket();
 
@@ -190,29 +202,17 @@ namespace Midjourney.Infrastructure
                 var gatewayUrl = GetGatewayServer(reconnect ? _resumeGatewayUrl : null) + "/?encoding=json&v=9&compress=zlib-stream";
                 await WebSocket.ConnectAsync(new Uri(gatewayUrl), CancellationToken.None);
 
-                // 延时 1s
-                await Task.Delay(1000);
-
-                // 重新连接
-                if (reconnect && !string.IsNullOrWhiteSpace(_sessionId) && _sequence.HasValue)
-                {
-                    await ResumeSessionAsync();
-
-                    _heartbeatAck = true;
-                    _heartbeatTask = RunHeartbeatAsync((int)_heartbeatInterval, _receiveTokenSource.Token);
-                }
-                else
-                {
-                    await SendIdentifyMessageAsync();
-                }
+                await SendIdentifyMessageAsync();
 
                 _receiveTokenSource?.Cancel();
                 _receiveTask?.Wait();
-                _receiveTokenSource = new CancellationTokenSource();
 
+                _receiveTokenSource = new CancellationTokenSource();
                 _receiveTask = ReceiveMessagesAsync(_receiveTokenSource.Token);
 
                 _logger.Information("用户 WebSocket 连接已建立 {@0}", _account.ChannelId);
+
+                //}
             }
             catch (Exception ex)
             {
@@ -660,8 +660,6 @@ namespace Midjourney.Infrastructure
         {
             _logger.Error("用户 WebSocket 连接失败, 代码 {0}: {1}, {2}", code, reason, _account.ChannelId);
 
-            CloseSocketSessionWhenIsOpen();
-
             if (!Running)
             {
                 NotifyWss(code, reason);
@@ -672,19 +670,16 @@ namespace Midjourney.Infrastructure
             if (code >= 4000)
             {
                 _logger.Warning("用户无法重新连接！账号自动禁用。由 {0}({1}) 关闭。", code, reason);
-
                 DisableAccount();
             }
             else if (code == 2001)
             {
                 _logger.Warning("用户由 {0}({1}) 关闭。尝试重新连接...", code, reason);
-
                 TryReconnect();
             }
             else
             {
                 _logger.Warning("用户由 {0}({1}) 关闭。尝试新连接...", code, reason);
-
                 TryNewConnect();
             }
         }
@@ -696,25 +691,6 @@ namespace Midjourney.Infrastructure
         {
             try
             {
-                if (_heartbeatTask != null && _heartbeatTask.IsCompleted)
-                {
-                    _heartbeatTask.Dispose();
-                    _heartbeatTask = null;
-                }
-                _receiveTokenSource?.Cancel();
-
-                if (WebSocket.State != WebSocketState.Closed)
-                {
-                    try
-                    {
-                        WebSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "重新连接", CancellationToken.None).Wait();
-                    }
-                    catch
-                    {
-
-                    }
-                }
-
                 StartAsync(true).Wait();
             }
             catch (Exception e)
@@ -785,14 +761,43 @@ namespace Midjourney.Infrastructure
         {
             try
             {
-                if (WebSocket != null && WebSocket.State == WebSocketState.Open)
+                if (_heartbeatTask != null && _heartbeatTask.IsCompleted)
                 {
-                    WebSocket.Abort();
-                    WebSocket.Dispose();
+                    _heartbeatTask?.Dispose();
+                    _heartbeatTask = null;
+                }
+
+                _receiveTokenSource?.Cancel();
+
+                try
+                {
+                    if (WebSocket != null && WebSocket.State == WebSocketState.Open)
+                    {
+                        WebSocket.Abort();
+                        WebSocket.Dispose();
+                    }
+
+                }
+                catch
+                {
+                    // do
+                }
+
+                if (WebSocket != null && WebSocket.State != WebSocketState.Closed)
+                {
+                    try
+                    {
+                        WebSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "强制关闭", CancellationToken.None).Wait();
+                    }
+                    catch
+                    {
+                        // do
+                    }
                 }
             }
             catch
             {
+                // do
             }
         }
 
