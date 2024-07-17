@@ -313,8 +313,25 @@ namespace Midjourney.Infrastructure
                         {
                             do
                             {
-                                result = await WebSocket.ReceiveAsync(new ArraySegment<byte>(buffer), cancellationToken);
-                                ms.Write(buffer, 0, result.Count);
+                                //result = await WebSocket.ReceiveAsync(new ArraySegment<byte>(buffer), cancellationToken);
+                                //ms.Write(buffer, 0, result.Count);
+
+                                // 使用Task.WhenAny等待ReceiveAsync或取消任务
+                                var receiveTask = WebSocket.ReceiveAsync(new ArraySegment<byte>(buffer), cancellationToken);
+                                var completedTask = await Task.WhenAny(receiveTask, Task.Delay(-1, cancellationToken));
+
+                                if (completedTask == receiveTask)
+                                {
+                                    result = receiveTask.Result;
+                                    ms.Write(buffer, 0, result.Count);
+                                }
+                                else
+                                {
+                                    // 任务已取消
+                                    _logger.Information("接收消息任务已取消 {@0}", _account.ChannelId);
+                                    return;
+                                }
+
                             } while (!result.EndOfMessage && !cancellationToken.IsCancellationRequested);
 
                             ms.Seek(0, SeekOrigin.Begin);
@@ -349,6 +366,11 @@ namespace Midjourney.Infrastructure
                         }
                     }
                 }
+            }
+            catch (OperationCanceledException)
+            {
+                // 任务被取消
+                _logger.Information("接收消息任务被取消 {@0}", _account.ChannelId);
             }
             catch (Exception ex)
             {
@@ -785,7 +807,9 @@ namespace Midjourney.Infrastructure
                 try
                 {
                     LogInfo("等待取消消息处理");
-                    _receiveTask?.Wait();
+                    _receiveTask?.Wait(1000);
+                    _receiveTask?.Dispose();
+
                 }
                 catch
                 {
@@ -839,8 +863,15 @@ namespace Midjourney.Infrastructure
             {
                 // do
             }
+            finally
+            {
+                WebSocket = null;
+                _receiveTokenSource = null;
+                _receiveTask = null;
+                _heartbeatTask = null;
+            }
 
-            Thread.Sleep(5000);
+            Thread.Sleep(1000);
         }
 
         /// <summary>
