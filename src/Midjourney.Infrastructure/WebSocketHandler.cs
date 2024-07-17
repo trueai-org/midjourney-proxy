@@ -1,8 +1,6 @@
 ﻿using Discord;
 using Discord.Net.WebSockets;
-using Discord.WebSocket;
 using Midjourney.Infrastructure.Domain;
-using Newtonsoft.Json;
 using Serilog;
 using System.Collections.Concurrent;
 using System.IO.Compression;
@@ -19,10 +17,8 @@ namespace Midjourney.Infrastructure
     /// </summary>
     public class WebSocketHandler
     {
-        private int _lastSeq;
-        private Task _heartbeatTask, _guildDownloadTask;
-        private int _unavailableGuildCount;
-        private long _lastGuildAvailableTime, _lastMessageTime;
+        private Task _heartbeatTask;
+        private long _lastMessageTime;
 
         public const int CloseCodeReconnect = 2001;
         public const int CloseCodeInvalidate = 1009;
@@ -44,9 +40,11 @@ namespace Midjourney.Infrastructure
 
         // 存储 zlib 解压流
         private MemoryStream _compressed;
+
         private DeflateStream _decompressor;
 
         public delegate void SuccessCallback(string sessionId, object sequence, string resumeGatewayUrl);
+
         public delegate void FailureCallback(int code, string reason);
 
         private readonly SuccessCallback _successCallback;
@@ -81,7 +79,7 @@ namespace Midjourney.Infrastructure
             _stateLock = new SemaphoreSlim(1, 1);
         }
 
-        IWebSocketClient WebSocketClient { get; set; }
+        private IWebSocketClient WebSocketClient { get; set; }
 
         /// <summary>
         /// 异步启动 WebSocket 连接
@@ -355,11 +353,6 @@ namespace Midjourney.Infrastructure
             _heartbeatTask = RunHeartbeatAsync((int)_heartbeatInterval, _cancellationTokenSource.Token);
         }
 
-        /// <summary>
-        /// 运行心跳任务
-        /// </summary>
-        /// <param name="intervalMillis">心跳间隔时间</param>
-        /// <param name="cancelToken">取消令牌</param>
         private async Task RunHeartbeatAsync(int intervalMillis, CancellationToken cancelToken)
         {
             int delayInterval = (int)(intervalMillis * 0.9);
@@ -371,10 +364,9 @@ namespace Midjourney.Infrastructure
                 {
                     int now = Environment.TickCount;
 
-                    // 检查服务器是否响应了上次的心跳，或我们仍在接收消息（长时间加载？）
                     if (_heartbeatTimes.Count != 0 && (now - _lastMessageTime) > intervalMillis)
                     {
-                        if (ConnectionState == ConnectionState.Connected && (_guildDownloadTask?.IsCompleted ?? true))
+                        if (ConnectionState == ConnectionState.Connected)
                         {
                             HandleFailure(CloseCodeReconnect, "服务器未响应上次的心跳");
                             return;
@@ -406,9 +398,6 @@ namespace Midjourney.Infrastructure
             }
         }
 
-        /// <summary>
-        /// 发送心跳消息
-        /// </summary>
         private async Task SendHeartbeatAsync()
         {
             if (!_heartbeatAck)
@@ -425,12 +414,15 @@ namespace Midjourney.Infrastructure
             _heartbeatAck = false;
         }
 
-        /// <summary>
-        /// 重新连接 WebSocket
-        /// </summary>
         private async Task ReconnectAsync()
         {
-            _heartbeatTask?.Dispose();
+            if (_heartbeatTask != null && _heartbeatTask.IsCompleted)
+            {
+                _heartbeatTask.Dispose();
+                _heartbeatTask = null;
+            }
+            _cancellationTokenSource?.Cancel();
+
             if (_webSocket.State != WebSocketState.Closed)
             {
                 await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "用户未收到心跳 ACK", CancellationToken.None);
@@ -438,14 +430,10 @@ namespace Midjourney.Infrastructure
             await StartAsync(true);
         }
 
-        /// <summary>
-        /// 处理消息
-        /// </summary>
         private async Task ProcessMessageAsync(GatewayOpCode opCode, int? seq, string type, JsonElement payload)
         {
             if (seq != null)
-            { 
-                _lastSeq = seq.Value;
+            {
                 _sequence = seq.Value;
             }
 
@@ -463,6 +451,7 @@ namespace Midjourney.Infrastructure
                             _heartbeatTask = RunHeartbeatAsync((int)_heartbeatInterval, _cancellationTokenSource.Token);
                         }
                         break;
+
                     case GatewayOpCode.Heartbeat:
                         {
                             _logger.Information("Received Heartbeat {@0}", _account.ChannelId);
@@ -470,6 +459,7 @@ namespace Midjourney.Infrastructure
                             await SendHeartbeatAsync();
                         }
                         break;
+
                     case GatewayOpCode.HeartbeatAck:
                         {
                             _logger.Information("Received HeartbeatAck {@0}", _account.ChannelId);
@@ -481,37 +471,38 @@ namespace Midjourney.Infrastructure
                                 Latency = latency;
 
                                 _heartbeatAck = true;
-
-                                // Notify latency update
-                                // await TimedInvokeAsync(_latencyUpdatedEvent, nameof(LatencyUpdated), before, latency).ConfigureAwait(false);
                             }
                         }
                         break;
+
                     case GatewayOpCode.InvalidSession:
                         {
                             _logger.Warning("Received InvalidSession {@0}", _account.ChannelId);
                             _logger.Warning("Failed to resume previous session {@0}", _account.ChannelId);
 
                             _sessionId = null;
-                            _lastSeq = 0;
                             _sequence = 0;
                             _resumeGatewayUrl = null;
 
                             await SendIdentifyMessageAsync();
                         }
                         break;
+
                     case GatewayOpCode.Reconnect:
                         {
                             _logger.Warning("Received Reconnect {@0}", _account.ChannelId);
                             HandleFailure(CloseCodeReconnect, "Server requested a reconnect");
+                            await ReconnectAsync();
                         }
                         break;
+
                     case GatewayOpCode.Dispatch:
                         {
                             _logger.Information("Received Dispatch {@0}", _account.ChannelId);
                             HandleDispatch(payload);
                         }
                         break;
+
                     default:
                         _logger.Warning("Unknown OpCode ({@0}) {@1}", opCode, _account.ChannelId);
                         break;
@@ -544,8 +535,6 @@ namespace Midjourney.Infrastructure
         /// <param name="data">消息数据</param>
         private void HandleDispatch(JsonElement data)
         {
-            //_sequence = data.TryGetProperty("s", out var seq) ? (object)seq.GetInt64() : null;
-
             if (data.TryGetProperty("t", out var t) && t.GetString() == "READY")
             {
                 _sessionId = data.GetProperty("d").GetProperty("session_id").GetString();
@@ -625,7 +614,7 @@ namespace Midjourney.Infrastructure
         /// <param name="reason">失败原因</param>
         private void HandleFailure(int code, string reason)
         {
-            _logger.Error("用户 WebSocket 连接失败，代码 {0}：{1}", code, reason);
+            _logger.Error("用户 WebSocket 连接失败, 代码 {0}: {1}, {2}", code, reason, _account.ChannelId);
             _failureCallback?.Invoke(code, reason);
         }
 
@@ -642,28 +631,40 @@ namespace Midjourney.Infrastructure
     {
         /// <summary> C←S - Used to send most events. </summary>
         Dispatch = 0,
+
         /// <summary> C↔S - Used to keep the connection alive and measure latency. </summary>
         Heartbeat = 1,
+
         /// <summary> C→S - Used to associate a connection with a token and specify configuration. </summary>
         Identify = 2,
+
         /// <summary> C→S - Used to update client's status and current game id. </summary>
         PresenceUpdate = 3,
+
         /// <summary> C→S - Used to join a particular voice channel. </summary>
         VoiceStateUpdate = 4,
+
         /// <summary> C→S - Used to ensure the guild's voice server is alive. </summary>
         VoiceServerPing = 5,
+
         /// <summary> C→S - Used to resume a connection after a redirect occurs. </summary>
         Resume = 6,
+
         /// <summary> C←S - Used to notify a client that they must reconnect to another gateway. </summary>
         Reconnect = 7,
+
         /// <summary> C→S - Used to request members that were withheld by large_threshold </summary>
         RequestGuildMembers = 8,
+
         /// <summary> C←S - Used to notify the client that their session has expired and cannot be resumed. </summary>
         InvalidSession = 9,
+
         /// <summary> C←S - Used to provide information to the client immediately on connection. </summary>
         Hello = 10,
+
         /// <summary> C←S - Used to reply to a client's heartbeat. </summary>
         HeartbeatAck = 11,
+
         /// <summary> C→S - Used to request presence updates from particular guilds. </summary>
         GuildSync = 12
     }
