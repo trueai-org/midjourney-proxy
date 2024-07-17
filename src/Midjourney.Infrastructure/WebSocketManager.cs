@@ -116,7 +116,8 @@ namespace Midjourney.Infrastructure
         /// </summary>
         public bool Running { get; private set; }
 
-        public WebSocketManager(DiscordAccount account,
+        public WebSocketManager(
+            DiscordAccount account,
             DiscordHelper discordHelper,
             BotMessageListener userMessageListener,
             WebProxy webProxy,
