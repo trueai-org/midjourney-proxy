@@ -351,10 +351,10 @@ namespace Midjourney.Infrastructure.Services
                         prompt += " --relax";
                         break;
                     case GenerationSpeedMode.FAST:
-                        prompt += " --relax";
+                        prompt += " --fast";
                         break;
                     case GenerationSpeedMode.TURBO:
-                        prompt += " --relax";
+                        prompt += " --turbo";
                         break;
                     default:
                         break;
