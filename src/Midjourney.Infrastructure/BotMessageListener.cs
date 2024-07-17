@@ -292,28 +292,32 @@ namespace Midjourney.Infrastructure
                         else
                         {
                             // 获取附件对象 attachments 中的第一个对象的 url 属性
+                            // seed 消息处理
                             if (data.TryGetProperty("attachments", out JsonElement attachments) && attachments.ValueKind == JsonValueKind.Array)
                             {
-                                var item = attachments.EnumerateArray().FirstOrDefault();
-
-                                if (item.ValueKind != JsonValueKind.Null
-                                    && item.TryGetProperty("url", out JsonElement url)
-                                    && url.ValueKind != JsonValueKind.Null)
+                                if (attachments.EnumerateArray().Count() > 0)
                                 {
-                                    var imgUrl = url.GetString();
-                                    if (!string.IsNullOrWhiteSpace(imgUrl))
+                                    var item = attachments.EnumerateArray().First();
+
+                                    if (item.ValueKind != JsonValueKind.Null
+                                        && item.TryGetProperty("url", out JsonElement url)
+                                        && url.ValueKind != JsonValueKind.Null)
                                     {
-                                        var hash = _discordHelper.GetMessageHash(imgUrl);
-                                        if (!string.IsNullOrWhiteSpace(hash))
+                                        var imgUrl = url.GetString();
+                                        if (!string.IsNullOrWhiteSpace(imgUrl))
                                         {
-                                            var task = _discordInstance.FindRunningTask(c => c.GetProperty<string>(Constants.TASK_PROPERTY_MESSAGE_HASH, default) == hash).FirstOrDefault();
-                                            if (task != null)
+                                            var hash = _discordHelper.GetMessageHash(imgUrl);
+                                            if (!string.IsNullOrWhiteSpace(hash))
                                             {
-                                                if (!task.MessageIds.Contains(id))
+                                                var task = _discordInstance.FindRunningTask(c => c.GetProperty<string>(Constants.TASK_PROPERTY_MESSAGE_HASH, default) == hash).FirstOrDefault();
+                                                if (task != null)
                                                 {
-                                                    task.MessageIds.Add(id);
+                                                    if (!task.MessageIds.Contains(id))
+                                                    {
+                                                        task.MessageIds.Add(id);
+                                                    }
+                                                    task.SeedMessageId = id;
                                                 }
-                                                task.SeedMessageId = id;
                                             }
                                         }
                                     }
