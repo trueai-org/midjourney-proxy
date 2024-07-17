@@ -51,6 +51,9 @@
 
 	<ItemGroup>
 	  <None Remove="Resources\ApiParams\seedniji.json" />
+	  <None Remove="WebSocketHandler.json" />
+	  <None Remove="WebSocketHandler.txt" />
+	  <None Remove="WebSocketStarter.json" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -83,6 +86,6 @@
 	  </None>
 	</ItemGroup>
 
-	<ProjectExtensions><VisualStudio><UserProperties resources_4apiparams_4info_1json__JsonSchema="https://raw.githubusercontent.com/DannyBen/bashly/master/schemas/strings.json" /></VisualStudio></ProjectExtensions>
+	<ProjectExtensions><VisualStudio><UserProperties resources_4apiparams_4info_1json__JsonSchema="https://raw.githubusercontent.com/DannyBen/bashly/master/schemas/strings.json" websocketstarter_1json__JsonSchema="https://alec016.github.io/Custom-Machinery/Json%20Schema/src/main/resources/schemas/custom_machinery_machine.json" /></VisualStudio></ProjectExtensions>
 	
 </Project>

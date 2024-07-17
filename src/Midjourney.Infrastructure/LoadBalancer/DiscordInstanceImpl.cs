@@ -93,7 +93,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
         public BotMessageListener BotMessageListener { get; set; }
 
-        public WebSocketStarter WebSocketStarter { get; set; }
+        public WebSocketManager WebSocketStarter { get; set; }
 
         /// <summary>
         /// 后台服务执行任务

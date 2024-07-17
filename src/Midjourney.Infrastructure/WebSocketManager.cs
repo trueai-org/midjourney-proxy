@@ -1,6 +1,8 @@
 ﻿using Discord;
-using Discord.Net.WebSockets;
 using Midjourney.Infrastructure.Domain;
+using Midjourney.Infrastructure.LoadBalancer;
+using Midjourney.Infrastructure.Services;
+using Midjourney.Infrastructure.Util;
 using Serilog;
 using System.Collections.Concurrent;
 using System.IO.Compression;
@@ -13,10 +15,11 @@ using UAParser;
 namespace Midjourney.Infrastructure
 {
     /// <summary>
-    /// 处理与 Discord WebSocket 连接的类
+    /// 处理与 Discord WebSocket 连接的类，并提供启动和消息监听功能
     /// </summary>
-    public class WebSocketHandler
+    public class WebSocketManager : IDisposable
     {
+        private const int CONNECT_RETRY_LIMIT = 5;
         private Task _heartbeatTask;
         private long _lastMessageTime;
 
@@ -29,153 +32,111 @@ namespace Midjourney.Infrastructure
         private readonly BotMessageListener _userMessageListener;
 
         private readonly ILogger _logger;
+        private readonly WebProxy _webProxy;
+        private readonly DiscordServiceImpl _discordService;
+        private readonly DiscordInstanceImpl _discordInstanceImpl;
 
-        private ClientWebSocket _webSocket;
-        private Timer _heartbeatTimer;
+        private ClientWebSocket _webSocketSession = null;
         private bool _heartbeatAck = true;
         private long _heartbeatInterval = 41250;
         private string _sessionId;
         private object _sequence;
         private string _resumeGatewayUrl;
+        private bool _running = false;
 
-        // 存储 zlib 解压流
         private MemoryStream _compressed;
-
         private DeflateStream _decompressor;
-
-        public delegate void SuccessCallback(string sessionId, object sequence, string resumeGatewayUrl);
-
-        public delegate void FailureCallback(int code, string reason);
-
-        private readonly SuccessCallback _successCallback;
-        private readonly FailureCallback _failureCallback;
 
         private Task _receiveTask;
         private CancellationTokenSource _cancellationTokenSource;
-
-        private readonly WebProxy _webProxy;
-        protected readonly SemaphoreSlim _stateLock;
+        private readonly ConcurrentQueue<long> _heartbeatTimes = new ConcurrentQueue<long>();
 
         public ConnectionState ConnectionState { get; private set; }
         public int Latency { get; protected set; }
 
-        private readonly ConcurrentQueue<long> _heartbeatTimes = new ConcurrentQueue<long>();
-
-        public WebSocketHandler(DiscordAccount account,
+        public WebSocketManager(DiscordAccount account,
             DiscordHelper discordHelper,
             BotMessageListener userMessageListener,
             WebProxy webProxy,
-            SuccessCallback successCallback,
-            FailureCallback failureCallback)
+            DiscordServiceImpl discordService,
+            DiscordInstanceImpl discordInstanceImpl)
         {
             _account = account;
             _userMessageListener = userMessageListener;
             _discordHelper = discordHelper;
             _webProxy = webProxy;
-            _successCallback = successCallback;
-            _failureCallback = failureCallback;
+            _discordService = discordService;
             _logger = Log.Logger;
-
-            _stateLock = new SemaphoreSlim(1, 1);
+            _discordInstanceImpl = discordInstanceImpl;
         }
-
-        private IWebSocketClient WebSocketClient { get; set; }
 
         /// <summary>
         /// 异步启动 WebSocket 连接
         /// </summary>
-        /// <param name="reconnect">是否重连</param>
-        public async Task StartAsync(
-            bool reconnect = false,
-            string sessionId = null,
-            object seq = null,
-            string resumeGatewayUrl = null)
+        public async Task StartAsync()
         {
-            _webSocket = new ClientWebSocket();
+            await StartAsync(false);
+        }
 
-            if (_webProxy != null)
-            {
-                _webSocket.Options.Proxy = _webProxy;
-            }
-
-            _webSocket.Options.SetRequestHeader("User-Agent", _account.UserAgent);
-            _webSocket.Options.SetRequestHeader("Accept-Encoding", "gzip, deflate, br");
-            _webSocket.Options.SetRequestHeader("Accept-Language", "zh-CN,zh;q=0.9");
-            _webSocket.Options.SetRequestHeader("Cache-Control", "no-cache");
-            _webSocket.Options.SetRequestHeader("Pragma", "no-cache");
-            _webSocket.Options.SetRequestHeader("Sec-WebSocket-Extensions", "permessage-deflate; client_max_window_bits");
-
+        private async Task StartAsync(bool reconnect)
+        {
             try
             {
-                string gatewayUrl;
-                if (reconnect)
+                _webSocketSession = new ClientWebSocket();
+
+                if (_webProxy != null)
                 {
-                    gatewayUrl = GetGatewayServer(resumeGatewayUrl) + "/?encoding=json&v=9&compress=zlib-stream";
-                }
-                else
-                {
-                    gatewayUrl = GetGatewayServer() + "/?encoding=json&v=9&compress=zlib-stream";
+                    _webSocketSession.Options.Proxy = _webProxy;
                 }
 
-                await _webSocket.ConnectAsync(new Uri(gatewayUrl), CancellationToken.None);
+                _webSocketSession.Options.SetRequestHeader("User-Agent", _account.UserAgent);
+                _webSocketSession.Options.SetRequestHeader("Accept-Encoding", "gzip, deflate, br");
+                _webSocketSession.Options.SetRequestHeader("Accept-Language", "zh-CN,zh;q=0.9");
+                _webSocketSession.Options.SetRequestHeader("Cache-Control", "no-cache");
+                _webSocketSession.Options.SetRequestHeader("Pragma", "no-cache");
+                _webSocketSession.Options.SetRequestHeader("Sec-WebSocket-Extensions", "permessage-deflate; client_max_window_bits");
+
+                var gatewayUrl = GetGatewayServer(reconnect ? _resumeGatewayUrl : null) + "/?encoding=json&v=9&compress=zlib-stream";
+                await _webSocketSession.ConnectAsync(new Uri(gatewayUrl), CancellationToken.None);
 
                 // 延时 1s
                 await Task.Delay(1000);
 
                 _logger.Information("用户 WebSocket 连接已建立。");
 
-                if (reconnect)
+                if (reconnect && !string.IsNullOrWhiteSpace(_sessionId))
                 {
-                    await ResumeSessionAsync(sessionId, seq);
+                    await ResumeSessionAsync(_sessionId, _sequence);
                 }
                 else
                 {
                     await SendIdentifyMessageAsync();
                 }
 
-                if (_receiveTask != null)
-                {
-                    _cancellationTokenSource.Cancel();
-                    await _receiveTask;
-                }
-
+                _cancellationTokenSource?.Cancel();
                 _cancellationTokenSource = new CancellationTokenSource();
                 _receiveTask = ReceiveMessagesAsync(_cancellationTokenSource.Token);
             }
             catch (Exception ex)
             {
                 _logger.Error(ex, "用户 WebSocket 连接错误。");
-
                 HandleFailure(CloseCodeException, "用户 WebSocket 连接错误");
             }
         }
 
-        public ClientWebSocket ClientWebSocket => _webSocket;
-
         private string GetGatewayServer(string resumeGatewayUrl = null)
         {
-            if (!string.IsNullOrWhiteSpace(resumeGatewayUrl))
-            {
-                return string.IsNullOrWhiteSpace(_resumeGatewayUrl) ? resumeGatewayUrl : _resumeGatewayUrl;
-            }
-            return _discordHelper.GetWss();
+            return !string.IsNullOrWhiteSpace(resumeGatewayUrl) ? resumeGatewayUrl : _discordHelper.GetWss();
         }
 
-        /// <summary>
-        /// 发送识别消息以进行身份验证
-        /// </summary>
         private async Task SendIdentifyMessageAsync()
         {
             var authData = CreateAuthData();
             var identifyMessage = new { op = 2, d = authData };
-
             await SendMessageAsync(identifyMessage);
             _logger.Information("用户 已发送 IDENTIFY 消息。");
         }
 
-        /// <summary>
-        /// 恢复之前的 WebSocket 会话
-        /// </summary>
         private async Task ResumeSessionAsync(string sessionId = null, object seq = null)
         {
             var resumeMessage = new
@@ -190,30 +151,25 @@ namespace Midjourney.Infrastructure
             };
 
             await SendMessageAsync(resumeMessage);
-
             _logger.Information("用户 已发送 RESUME 消息。");
         }
 
-        /// <summary>
-        /// 发送消息到 WebSocket
-        /// </summary>
-        /// <param name="message">要发送的消息对象</param>
         private async Task SendMessageAsync(object message)
         {
-            if (_webSocket.State != WebSocketState.Open)
+            if (_webSocketSession.State != WebSocketState.Open)
             {
                 _logger.Warning("用户 WebSocket 已关闭，无法发送消息 {@0}", _account.ChannelId);
                 return;
             }
 
-            var messageJson = System.Text.Json.JsonSerializer.Serialize(message);
+            var messageJson = JsonSerializer.Serialize(message);
             var messageBytes = Encoding.UTF8.GetBytes(messageJson);
-            await _webSocket.SendAsync(new ArraySegment<byte>(messageBytes), WebSocketMessageType.Text, true, CancellationToken.None);
+            await _webSocketSession.SendAsync(new ArraySegment<byte>(messageBytes), WebSocketMessageType.Text, true, CancellationToken.None);
         }
 
         private async Task ReceiveMessagesAsync(CancellationToken cancellationToken)
         {
-            while (_webSocket.State == WebSocketState.Open && !cancellationToken.IsCancellationRequested)
+            while (_webSocketSession.State == WebSocketState.Open && !cancellationToken.IsCancellationRequested)
             {
                 WebSocketReceiveResult result;
                 var buffer = new byte[1024 * 4];
@@ -224,7 +180,7 @@ namespace Midjourney.Infrastructure
                     {
                         do
                         {
-                            result = await _webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), cancellationToken);
+                            result = await _webSocketSession.ReceiveAsync(new ArraySegment<byte>(buffer), cancellationToken);
                             ms.Write(buffer, 0, result.Count);
                         } while (!result.EndOfMessage && !cancellationToken.IsCancellationRequested);
 
@@ -232,39 +188,7 @@ namespace Midjourney.Infrastructure
                         if (result.MessageType == WebSocketMessageType.Binary)
                         {
                             buffer = ms.ToArray();
-
-                            using (var decompressed = new MemoryStream())
-                            {
-                                if (_compressed == null)
-                                    _compressed = new MemoryStream();
-                                if (_decompressor == null)
-                                    _decompressor = new DeflateStream(_compressed, CompressionMode.Decompress);
-
-                                if (buffer[0] == 0x78)
-                                {
-                                    // 去掉 zlib 头部
-                                    _compressed.Write(buffer, 2, (int)ms.Length - 2);
-                                    _compressed.SetLength(ms.Length - 2);
-                                }
-                                else
-                                {
-                                    _compressed.Write(buffer, 0, (int)ms.Length);
-                                    _compressed.SetLength(ms.Length);
-                                }
-
-                                _compressed.Position = 0;
-                                _decompressor.CopyTo(decompressed);
-                                _compressed.Position = 0;
-                                decompressed.Position = 0;
-
-                                string messageContent;
-                                using (var reader = new StreamReader(decompressed, Encoding.UTF8))
-                                {
-                                    messageContent = await reader.ReadToEndAsync();
-                                }
-
-                                HandleMessage(messageContent);
-                            }
+                            await HandleBinaryMessageAsync(buffer);
                         }
                         else if (result.MessageType == WebSocketMessageType.Text)
                         {
@@ -273,10 +197,8 @@ namespace Midjourney.Infrastructure
                         }
                         else if (result.MessageType == WebSocketMessageType.Close)
                         {
-                            await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, string.Empty, cancellationToken);
-
+                            await _webSocketSession.CloseAsync(WebSocketCloseStatus.NormalClosure, string.Empty, cancellationToken);
                             _logger.Warning("用户 WebSocket 连接已关闭。");
-
                             HandleFailure((int)result.CloseStatus, result.CloseStatusDescription);
                         }
                         else
@@ -293,35 +215,39 @@ namespace Midjourney.Infrastructure
             }
         }
 
-        public async Task DisconnectAsync(Exception ex = null)
+        private async Task HandleBinaryMessageAsync(byte[] buffer)
         {
-            await _stateLock.WaitAsync().ConfigureAwait(false);
-            try
+            using (var decompressed = new MemoryStream())
             {
-                await DisconnectInternalAsync(ex).ConfigureAwait(false);
+                if (_compressed == null)
+                    _compressed = new MemoryStream();
+                if (_decompressor == null)
+                    _decompressor = new DeflateStream(_compressed, CompressionMode.Decompress);
+
+                if (buffer[0] == 0x78)
+                {
+                    _compressed.Write(buffer, 2, buffer.Length - 2);
+                    _compressed.SetLength(buffer.Length - 2);
+                }
+                else
+                {
+                    _compressed.Write(buffer, 0, buffer.Length);
+                    _compressed.SetLength(buffer.Length);
+                }
+
+                _compressed.Position = 0;
+                await _decompressor.CopyToAsync(decompressed);
+                _compressed.Position = 0;
+                decompressed.Position = 0;
+
+                using (var reader = new StreamReader(decompressed, Encoding.UTF8))
+                {
+                    var messageContent = await reader.ReadToEndAsync();
+                    HandleMessage(messageContent);
+                }
             }
-            finally { _stateLock.Release(); }
         }
 
-        internal async Task DisconnectInternalAsync(Exception ex = null)
-        {
-            if (ConnectionState == ConnectionState.Disconnected)
-                return;
-            ConnectionState = ConnectionState.Disconnecting;
-
-            try
-            {
-                await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "用户关闭连接", CancellationToken.None);
-            }
-            catch { }
-
-            ConnectionState = ConnectionState.Disconnected;
-        }
-
-        /// <summary>
-        /// 处理接收到的 WebSocket 消息
-        /// </summary>
-        /// <param name="message">接收到的消息内容</param>
         private void HandleMessage(string message)
         {
             try
@@ -331,26 +257,12 @@ namespace Midjourney.Infrastructure
                 var seq = data.TryGetProperty("s", out var seqElement) && seqElement.ValueKind == JsonValueKind.Number ? (int?)seqElement.GetInt32() : null;
                 var type = data.TryGetProperty("t", out var typeElement) ? typeElement.GetString() : null;
 
-                //var payload = data.TryGetProperty("d", out var payloadElement) ? payloadElement : default;
-
                 ProcessMessageAsync((GatewayOpCode)opCode, seq, type, data).Wait();
             }
             catch (Exception ex)
             {
                 _logger.Error(ex, "处理接收到的 WebSocket 消息失败 {@0}", _account.ChannelId);
             }
-        }
-
-        /// <summary>
-        /// 处理 Hello 消息，启动心跳定时器
-        /// </summary>
-        /// <param name="data">消息数据</param>
-        private void HandleHello(JsonElement data)
-        {
-            _heartbeatInterval = data.GetProperty("d").GetProperty("heartbeat_interval").GetInt64();
-            _heartbeatAck = true;
-
-            _heartbeatTask = RunHeartbeatAsync((int)_heartbeatInterval, _cancellationTokenSource.Token);
         }
 
         private async Task RunHeartbeatAsync(int intervalMillis, CancellationToken cancelToken)
@@ -423,9 +335,9 @@ namespace Midjourney.Infrastructure
             }
             _cancellationTokenSource?.Cancel();
 
-            if (_webSocket.State != WebSocketState.Closed)
+            if (_webSocketSession.State != WebSocketState.Closed)
             {
-                await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "用户未收到心跳 ACK", CancellationToken.None);
+                await _webSocketSession.CloseAsync(WebSocketCloseStatus.NormalClosure, "用户未收到心跳 ACK", CancellationToken.None);
             }
             await StartAsync(true);
         }
@@ -455,7 +367,6 @@ namespace Midjourney.Infrastructure
                     case GatewayOpCode.Heartbeat:
                         {
                             _logger.Information("Received Heartbeat {@0}", _account.ChannelId);
-
                             await SendHeartbeatAsync();
                         }
                         break;
@@ -467,9 +378,7 @@ namespace Midjourney.Infrastructure
                             if (_heartbeatTimes.TryDequeue(out long time))
                             {
                                 int latency = (int)(Environment.TickCount - time);
-                                int before = Latency;
                                 Latency = latency;
-
                                 _heartbeatAck = true;
                             }
                         }
@@ -492,7 +401,6 @@ namespace Midjourney.Infrastructure
                         {
                             _logger.Warning("Received Reconnect {@0}", _account.ChannelId);
                             HandleFailure(CloseCodeReconnect, "Server requested a reconnect");
-                            await ReconnectAsync();
                         }
                         break;
 
@@ -514,37 +422,17 @@ namespace Midjourney.Infrastructure
             }
         }
 
-        /// <summary>
-        /// 执行恢复或识别
-        /// </summary>
-        private void DoResumeOrIdentify()
-        {
-            if (string.IsNullOrWhiteSpace(_sessionId))
-            {
-                SendIdentifyMessageAsync().Wait();
-            }
-            else
-            {
-                ResumeSessionAsync().Wait();
-            }
-        }
-
-        /// <summary>
-        /// 处理 Dispatch 消息
-        /// </summary>
-        /// <param name="data">消息数据</param>
         private void HandleDispatch(JsonElement data)
         {
             if (data.TryGetProperty("t", out var t) && t.GetString() == "READY")
             {
                 _sessionId = data.GetProperty("d").GetProperty("session_id").GetString();
                 _resumeGatewayUrl = data.GetProperty("d").GetProperty("resume_gateway_url").GetString() + "/?encoding=json&v=9&compress=zlib-stream";
-
-                OnSuccess();
+                OnSocketSuccess();
             }
             else if (data.TryGetProperty("t", out var resumed) && resumed.GetString() == "RESUMED")
             {
-                OnSuccess();
+                OnSocketSuccess();
             }
             else
             {
@@ -552,10 +440,6 @@ namespace Midjourney.Infrastructure
             }
         }
 
-        /// <summary>
-        /// 创建身份验证数据
-        /// </summary>
-        /// <returns>身份验证数据的 JsonElement</returns>
         private JsonElement CreateAuthData()
         {
             var uaParser = Parser.GetDefault();
@@ -604,68 +488,166 @@ namespace Midjourney.Infrastructure
                 token = _account.UserToken
             };
 
-            return System.Text.Json.JsonSerializer.Deserialize<JsonElement>(System.Text.Json.JsonSerializer.Serialize(authData));
+            return JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(authData));
         }
 
-        /// <summary>
-        /// 处理 WebSocket 连接失败
-        /// </summary>
-        /// <param name="code">失败代码</param>
-        /// <param name="reason">失败原因</param>
         private void HandleFailure(int code, string reason)
         {
             _logger.Error("用户 WebSocket 连接失败, 代码 {0}: {1}, {2}", code, reason, _account.ChannelId);
-            _failureCallback?.Invoke(code, reason);
+
+            CloseSocketSessionWhenIsOpen();
+
+            if (!_running)
+            {
+                NotifyWssLock(code, reason);
+            }
+
+            _running = false;
+
+            if (code >= 4000)
+            {
+                _logger.Warning("用户无法重新连接！账号自动禁用。由 {0}({1}) 关闭。", code, reason);
+                DisableAccount();
+            }
+            else if (code == 2001)
+            {
+                _logger.Warning("用户由 {0}({1}) 关闭。尝试重新连接...", code, reason);
+                TryReconnect();
+            }
+            else
+            {
+                _logger.Warning("用户由 {0}({1}) 关闭。尝试新连接...", code, reason);
+                TryNewConnect();
+            }
         }
 
-        /// <summary>
-        /// 处理 WebSocket 连接成功
-        /// </summary>
-        private void OnSuccess()
+        private void TryReconnect()
         {
-            _successCallback?.Invoke(_sessionId, _sequence, _resumeGatewayUrl);
+            try
+            {
+                TryStartAsync(true).Wait();
+            }
+            catch (Exception e)
+            {
+                if (e is TimeoutException)
+                {
+                    CloseSocketSessionWhenIsOpen();
+                }
+                _logger.Warning("用户重新连接失败: {0}，尝试新连接...", e.Message);
+
+                Thread.Sleep(1000);
+
+                TryNewConnect();
+            }
+        }
+
+        private void TryNewConnect()
+        {
+            for (int i = 1; i <= CONNECT_RETRY_LIMIT; i++)
+            {
+                try
+                {
+                    TryStartAsync(false).Wait();
+                    return;
+                }
+                catch (Exception e)
+                {
+                    if (e is TimeoutException)
+                    {
+                        CloseSocketSessionWhenIsOpen();
+                    }
+
+                    _logger.Warning("用户新连接失败 ({0}): {1}", i, e.Message);
+
+                    Thread.Sleep(5000);
+                }
+            }
+
+            if (_webSocketSession == null || _webSocketSession.State != WebSocketState.Open)
+            {
+                _logger.Error("由于无法重新连接，自动禁用账号");
+                DisableAccount();
+            }
+        }
+
+        public async Task TryStartAsync(bool reconnect)
+        {
+            await StartAsync(reconnect);
+
+            var lockObject = await AsyncLockUtils.WaitForLockAsync($"wss:{_account.Id}", TimeSpan.FromSeconds(20));
+            if (lockObject != null)
+            {
+                _logger.Information("{0} 成功。", reconnect ? "重新连接" : "新连接");
+                return;
+            }
+
+            throw new Exception("获取锁超时");
+        }
+
+        private void NotifyWssLock(int code, string reason)
+        {
+            _account.DisabledReason = reason;
+
+            // 保存
+            DbHelper.AccountStore.Save(_account);
+        }
+
+        private void DisableAccount()
+        {
+            // 保存
+            _account.Enable = false;
+
+            DbHelper.AccountStore.Save(_account);
+
+            _discordInstanceImpl?.Dispose();
+        }
+
+        private void CloseSocketSessionWhenIsOpen()
+        {
+            try
+            {
+                if (_webSocketSession != null && _webSocketSession.State == WebSocketState.Open)
+                {
+                    _webSocketSession.Abort();
+                    _webSocketSession.Dispose();
+                }
+            }
+            catch (Exception)
+            {
+                // do nothing
+            }
+        }
+
+        public void Dispose()
+        {
+            CloseSocketSessionWhenIsOpen();
+            _webSocketSession?.Dispose();
+            _userMessageListener?.Dispose();
+        }
+
+        private void OnSocketSuccess()
+        {
+            _running = true;
+            _discordService.DefaultSessionId = _sessionId;
+
+            NotifyWssLock(ReturnCode.SUCCESS, "");
         }
     }
 
     internal enum GatewayOpCode : byte
     {
-        /// <summary> C←S - Used to send most events. </summary>
         Dispatch = 0,
-
-        /// <summary> C↔S - Used to keep the connection alive and measure latency. </summary>
         Heartbeat = 1,
-
-        /// <summary> C→S - Used to associate a connection with a token and specify configuration. </summary>
         Identify = 2,
-
-        /// <summary> C→S - Used to update client's status and current game id. </summary>
         PresenceUpdate = 3,
-
-        /// <summary> C→S - Used to join a particular voice channel. </summary>
         VoiceStateUpdate = 4,
-
-        /// <summary> C→S - Used to ensure the guild's voice server is alive. </summary>
         VoiceServerPing = 5,
-
-        /// <summary> C→S - Used to resume a connection after a redirect occurs. </summary>
         Resume = 6,
-
-        /// <summary> C←S - Used to notify a client that they must reconnect to another gateway. </summary>
         Reconnect = 7,
-
-        /// <summary> C→S - Used to request members that were withheld by large_threshold </summary>
         RequestGuildMembers = 8,
-
-        /// <summary> C←S - Used to notify the client that their session has expired and cannot be resumed. </summary>
         InvalidSession = 9,
-
-        /// <summary> C←S - Used to provide information to the client immediately on connection. </summary>
         Hello = 10,
-
-        /// <summary> C←S - Used to reply to a client's heartbeat. </summary>
         HeartbeatAck = 11,
-
-        /// <summary> C→S - Used to request presence updates from particular guilds. </summary>
         GuildSync = 12
     }
 }
