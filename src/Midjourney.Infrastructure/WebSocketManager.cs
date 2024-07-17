@@ -201,13 +201,6 @@ namespace Midjourney.Infrastructure
                 _receiveTask = ReceiveMessagesAsync(_receiveTokenSource.Token);
 
                 _logger.Information("用户 WebSocket 连接已建立 {@0}", _account.ChannelId);
-
-                Task.Run(() =>
-                {
-                    Thread.Sleep(60 * 1000);
-                    TryReconnect();
-                });
-
             }
             catch (Exception ex)
             {
