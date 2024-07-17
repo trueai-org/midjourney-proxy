@@ -60,7 +60,7 @@ namespace Midjourney.Infrastructure
 
                 // 读取消息权限 GatewayIntents.MessageContent
                 // GatewayIntents.AllUnprivileged & ~(GatewayIntents.GuildScheduledEvents | GatewayIntents.GuildInvites) | GatewayIntents.MessageContent
-                GatewayIntents = GatewayIntents.AllUnprivileged | GatewayIntents.MessageContent
+                GatewayIntents = GatewayIntents.AllUnprivileged & ~(GatewayIntents.GuildScheduledEvents | GatewayIntents.GuildInvites) | GatewayIntents.MessageContent
             });
 
             _commands = new CommandService(new CommandServiceConfig

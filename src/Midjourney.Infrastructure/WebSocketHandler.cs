@@ -44,11 +44,9 @@ namespace Midjourney.Infrastructure
 
         // 存储 zlib 解压流
         private MemoryStream _compressed;
-
         private DeflateStream _decompressor;
 
         public delegate void SuccessCallback(string sessionId, object sequence, string resumeGatewayUrl);
-
         public delegate void FailureCallback(int code, string reason);
 
         private readonly SuccessCallback _successCallback;
@@ -61,11 +59,7 @@ namespace Midjourney.Infrastructure
         protected readonly SemaphoreSlim _stateLock;
 
         public ConnectionState ConnectionState { get; private set; }
-
         public int Latency { get; protected set; }
-
-        private CancellationTokenSource _connectCancelToken;
-        public LoginState LoginState { get; private set; }
 
         private readonly ConcurrentQueue<long> _heartbeatTimes = new ConcurrentQueue<long>();
 
@@ -135,6 +129,10 @@ namespace Midjourney.Infrastructure
                 if (reconnect)
                 {
                     await ResumeSessionAsync(sessionId, seq);
+                }
+                else
+                {
+                    await SendIdentifyMessageAsync();
                 }
 
                 if (_receiveTask != null)
@@ -322,7 +320,6 @@ namespace Midjourney.Infrastructure
             ConnectionState = ConnectionState.Disconnected;
         }
 
-
         /// <summary>
         /// 处理接收到的 WebSocket 消息
         /// </summary>
@@ -333,54 +330,12 @@ namespace Midjourney.Infrastructure
             {
                 var data = JsonDocument.Parse(message).RootElement;
                 var opCode = data.GetProperty("op").GetInt32();
+                var seq = data.TryGetProperty("s", out var seqElement) && seqElement.ValueKind == JsonValueKind.Number ? (int?)seqElement.GetInt32() : null;
+                var type = data.TryGetProperty("t", out var typeElement) ? typeElement.GetString() : null;
 
+                //var payload = data.TryGetProperty("d", out var payloadElement) ? payloadElement : default;
 
-                if (data.TryGetProperty("s", out var s) && s.ValueKind == JsonValueKind.Number)
-                {
-                    _sequence = s.GetInt64();
-                }
-
-                switch (opCode)
-                {
-                    case 10: // Hello
-                        _logger.Information("用户收到 Hello 消息 {@0}", _account.ChannelId);
-                        HandleHello(data);
-                        DoResumeOrIdentify();
-                        break;
-
-                    case 1: // Heartbeat
-                        {
-                            _logger.Information("用户收到 Received Heartbeat {@0}", _account.ChannelId);
-                            var heartbeatMessage = new { op = 1, d = _sequence };
-                            SendMessageAsync(heartbeatMessage).ConfigureAwait(false).GetAwaiter();
-                            _logger.Information("用户发送 Received Heartbeat {@0}", _account.ChannelId);
-                        }
-                        break;
-
-                    case 11: // Heartbeat ACK
-                        _logger.Information("用户收到 Heartbeat ACK {@0}", _account.ChannelId);
-                        _heartbeatAck = true;
-                        break;
-
-                    case 0: // Dispatch
-                        _logger.Information("用户收到 Dispatch 消息 {@0}", _account.ChannelId);
-                        HandleDispatch(data);
-                        break;
-
-                    case 9: // Invalid Session
-                        _logger.Information("用户收到 Invalid Session 消息 {@0}", _account.ChannelId);
-                        HandleFailure(CloseCodeInvalidate, "会话无效");
-                        break;
-
-                    case 7: // Reconnect
-                        _logger.Information("用户收到 Reconnect 消息 {@0}", _account.ChannelId);
-                        HandleFailure(CloseCodeReconnect, "服务器请求重连");
-                        break;
-
-                    default:
-                        _logger.Information("用户收到未知操作码 {@0}, {@1}", opCode, _account.ChannelId);
-                        break;
-                }
+                ProcessMessageAsync((GatewayOpCode)opCode, seq, type, data).Wait();
             }
             catch (Exception ex)
             {
@@ -411,7 +366,7 @@ namespace Midjourney.Infrastructure
 
             try
             {
-                _logger.Information("Heartbeat Started");
+                _logger.Information("Heartbeat Started {@0}", _account.ChannelId);
                 while (!cancelToken.IsCancellationRequested)
                 {
                     int now = Environment.TickCount;
@@ -421,7 +376,6 @@ namespace Midjourney.Infrastructure
                     {
                         if (ConnectionState == ConnectionState.Connected && (_guildDownloadTask?.IsCompleted ?? true))
                         {
-                            _logger.Warning("服务器未响应上次的心跳");
                             HandleFailure(CloseCodeReconnect, "服务器未响应上次的心跳");
                             return;
                         }
@@ -434,21 +388,21 @@ namespace Midjourney.Infrastructure
                     }
                     catch (Exception ex)
                     {
-                        _logger.Warning("Heartbeat Errored", ex);
+                        _logger.Warning(ex, "Heartbeat Errored {@0}", _account.ChannelId);
                     }
 
                     int delay = Math.Max(0, delayInterval - Latency);
                     await Task.Delay(delay, cancelToken).ConfigureAwait(false);
                 }
-                _logger.Information("Heartbeat Stopped");
+                _logger.Information("Heartbeat Stopped {@0}", _account.ChannelId);
             }
             catch (OperationCanceledException)
             {
-                _logger.Information("Heartbeat Stopped");
+                _logger.Information("Heartbeat Stopped {@0}", _account.ChannelId);
             }
             catch (Exception ex)
             {
-                _logger.Information("Heartbeat Errored", ex);
+                _logger.Error(ex, "Heartbeat Errored {@0}", _account.ChannelId);
             }
         }
 
@@ -471,18 +425,102 @@ namespace Midjourney.Infrastructure
             _heartbeatAck = false;
         }
 
-
         /// <summary>
         /// 重新连接 WebSocket
         /// </summary>
         private async Task ReconnectAsync()
         {
-            _heartbeatTimer?.Dispose();
+            _heartbeatTask?.Dispose();
             if (_webSocket.State != WebSocketState.Closed)
             {
                 await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "用户未收到心跳 ACK", CancellationToken.None);
             }
             await StartAsync(true);
+        }
+
+        /// <summary>
+        /// 处理消息
+        /// </summary>
+        private async Task ProcessMessageAsync(GatewayOpCode opCode, int? seq, string type, JsonElement payload)
+        {
+            if (seq != null)
+            { 
+                _lastSeq = seq.Value;
+                _sequence = seq.Value;
+            }
+
+            _lastMessageTime = Environment.TickCount;
+
+            try
+            {
+                switch (opCode)
+                {
+                    case GatewayOpCode.Hello:
+                        {
+                            _logger.Information("Received Hello {@0}", _account.ChannelId);
+                            _heartbeatInterval = payload.GetProperty("d").GetProperty("heartbeat_interval").GetInt64();
+                            _heartbeatAck = true;
+                            _heartbeatTask = RunHeartbeatAsync((int)_heartbeatInterval, _cancellationTokenSource.Token);
+                        }
+                        break;
+                    case GatewayOpCode.Heartbeat:
+                        {
+                            _logger.Information("Received Heartbeat {@0}", _account.ChannelId);
+
+                            await SendHeartbeatAsync();
+                        }
+                        break;
+                    case GatewayOpCode.HeartbeatAck:
+                        {
+                            _logger.Information("Received HeartbeatAck {@0}", _account.ChannelId);
+
+                            if (_heartbeatTimes.TryDequeue(out long time))
+                            {
+                                int latency = (int)(Environment.TickCount - time);
+                                int before = Latency;
+                                Latency = latency;
+
+                                _heartbeatAck = true;
+
+                                // Notify latency update
+                                // await TimedInvokeAsync(_latencyUpdatedEvent, nameof(LatencyUpdated), before, latency).ConfigureAwait(false);
+                            }
+                        }
+                        break;
+                    case GatewayOpCode.InvalidSession:
+                        {
+                            _logger.Warning("Received InvalidSession {@0}", _account.ChannelId);
+                            _logger.Warning("Failed to resume previous session {@0}", _account.ChannelId);
+
+                            _sessionId = null;
+                            _lastSeq = 0;
+                            _sequence = 0;
+                            _resumeGatewayUrl = null;
+
+                            await SendIdentifyMessageAsync();
+                        }
+                        break;
+                    case GatewayOpCode.Reconnect:
+                        {
+                            _logger.Warning("Received Reconnect {@0}", _account.ChannelId);
+                            HandleFailure(CloseCodeReconnect, "Server requested a reconnect");
+                        }
+                        break;
+                    case GatewayOpCode.Dispatch:
+                        {
+                            _logger.Information("Received Dispatch {@0}", _account.ChannelId);
+                            HandleDispatch(payload);
+                        }
+                        break;
+                    default:
+                        _logger.Warning("Unknown OpCode ({@0}) {@1}", opCode, _account.ChannelId);
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, $"Error handling {opCode}{(type != null ? $" ({type})" : "")}, {_account.ChannelId}");
+            }
         }
 
         /// <summary>
@@ -598,5 +636,35 @@ namespace Midjourney.Infrastructure
         {
             _successCallback?.Invoke(_sessionId, _sequence, _resumeGatewayUrl);
         }
+    }
+
+    internal enum GatewayOpCode : byte
+    {
+        /// <summary> C←S - Used to send most events. </summary>
+        Dispatch = 0,
+        /// <summary> C↔S - Used to keep the connection alive and measure latency. </summary>
+        Heartbeat = 1,
+        /// <summary> C→S - Used to associate a connection with a token and specify configuration. </summary>
+        Identify = 2,
+        /// <summary> C→S - Used to update client's status and current game id. </summary>
+        PresenceUpdate = 3,
+        /// <summary> C→S - Used to join a particular voice channel. </summary>
+        VoiceStateUpdate = 4,
+        /// <summary> C→S - Used to ensure the guild's voice server is alive. </summary>
+        VoiceServerPing = 5,
+        /// <summary> C→S - Used to resume a connection after a redirect occurs. </summary>
+        Resume = 6,
+        /// <summary> C←S - Used to notify a client that they must reconnect to another gateway. </summary>
+        Reconnect = 7,
+        /// <summary> C→S - Used to request members that were withheld by large_threshold </summary>
+        RequestGuildMembers = 8,
+        /// <summary> C←S - Used to notify the client that their session has expired and cannot be resumed. </summary>
+        InvalidSession = 9,
+        /// <summary> C←S - Used to provide information to the client immediately on connection. </summary>
+        Hello = 10,
+        /// <summary> C←S - Used to reply to a client's heartbeat. </summary>
+        HeartbeatAck = 11,
+        /// <summary> C→S - Used to request presence updates from particular guilds. </summary>
+        GuildSync = 12
     }
 }
