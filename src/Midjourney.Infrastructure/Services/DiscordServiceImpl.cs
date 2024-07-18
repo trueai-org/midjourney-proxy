@@ -378,10 +378,10 @@ namespace Midjourney.Infrastructure.Services
             {
                 prompt = GetPrompt(prompt);
 
-                customId = customId.Replace("MJ::iframe::", "");
+                customId = customId?.Replace("MJ::iframe::", "");
 
                 // mask.replace(/^data:.+?;base64,/, ''),
-                maskBase64 = maskBase64.Replace("data:image/png;base64,", "");
+                maskBase64 = maskBase64?.Replace("data:image/png;base64,", "");
 
                 var obj = new
                 {

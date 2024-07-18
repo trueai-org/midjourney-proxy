@@ -305,7 +305,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 {
                     info.Fail(result.Description);
                     SaveAndNotify(info);
-                    _logger.Debug("[{AccountDisplay}] task finished, id: {TaskId}, status: {TaskStatus}", _account.GetDisplay(), info.Id, info.Status);
+                    _logger.Debug("[{@0}] task finished, id: {@1}, status: {@2}", _account.GetDisplay(), info.Id, info.Status);
                     return;
                 }
 
