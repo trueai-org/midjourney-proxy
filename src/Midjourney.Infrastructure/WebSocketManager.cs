@@ -529,10 +529,6 @@ namespace Midjourney.Infrastructure
                             _logger.Information("Received Hello {@0}", _account.ChannelId);
                             _heartbeatInterval = payload.GetProperty("d").GetProperty("heartbeat_interval").GetInt64();
 
-                            _heartbeatAck = true;
-                            _heartbeatTimes.Clear();
-                            _latency = 0;
-
                             // 尝试释放之前的心跳任务
                             if (_heartbeatTask != null && !_heartbeatTask.IsCompleted)
                             {
@@ -550,9 +546,14 @@ namespace Midjourney.Infrastructure
                                 _heartbeatTask = null;
                             }
 
-                            _heartbeatTask = RunHeartbeatAsync((int)_heartbeatInterval, _receiveTokenSource.Token);
-
+                            // 先发送身份验证消息
                             await DoResumeOrIdentify();
+
+                            // 再处理心跳
+                            _heartbeatAck = true;
+                            _heartbeatTimes.Clear();
+                            _latency = 0;
+                            _heartbeatTask = RunHeartbeatAsync((int)_heartbeatInterval, _receiveTokenSource.Token);
                         }
                         break;
 
@@ -910,7 +911,7 @@ namespace Midjourney.Infrastructure
             }
 
             // 延迟以确保所有资源正确释放
-            Thread.Sleep(1000); 
+            Thread.Sleep(1000);
         }
 
         /// <summary>
