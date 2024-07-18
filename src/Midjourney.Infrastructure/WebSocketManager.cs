@@ -862,7 +862,14 @@ namespace Midjourney.Infrastructure
                         // 强制关闭
                         if (WebSocket != null && WebSocket.State != WebSocketState.Closed)
                         {
-                            Task.Run(() => WebSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "强制关闭", CancellationToken.None)).Wait(4000);
+                            var closeTask = Task.Run(() => WebSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "强制关闭", CancellationToken.None));
+                            if (!closeTask.Wait(4000))
+                            {
+                                _logger.Warning("WebSocket 关闭操作超时 {@0}", _account.ChannelId);
+
+                                // 如果关闭操作超时，则强制中止连接
+                                WebSocket?.Abort();
+                            }
                         }
                     }
                 }
@@ -901,6 +908,9 @@ namespace Midjourney.Infrastructure
 
                 LogInfo("WebSocket 资源已释放");
             }
+
+            // 延迟以确保所有资源正确释放
+            Thread.Sleep(1000); 
         }
 
         /// <summary>
