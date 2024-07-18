@@ -862,7 +862,7 @@ namespace Midjourney.Infrastructure
                         // 强制关闭
                         if (WebSocket != null && WebSocket.State != WebSocketState.Closed)
                         {
-                            Task.Run(() => WebSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "强制关闭", CancellationToken.None)).Wait();
+                            Task.Run(() => WebSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "强制关闭", CancellationToken.None)).Wait(4000);
                         }
                     }
                 }
