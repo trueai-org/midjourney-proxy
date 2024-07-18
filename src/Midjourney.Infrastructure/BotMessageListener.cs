@@ -441,6 +441,8 @@ namespace Midjourney.Infrastructure
                                                         }
 
                                                         task.Fail($"违规的提示词");
+
+                                                        _logger.Warning($"违规的提示词, {emtitle.GetString()}, {item.GetProperty("description").GetString()}, {_discordAccount.ChannelId}");
                                                     }
                                                 }
                                             }
@@ -470,7 +472,7 @@ namespace Midjourney.Infrastructure
                                                                 task.MessageIds.Add(id);
                                                             }
 
-                                                            Log.Warning($"未知消息: {title}, {item.GetProperty("description").GetString()}, {_discordAccount.ChannelId}");
+                                                            _logger.Warning($"未知消息: {title}, {item.GetProperty("description").GetString()}, {_discordAccount.ChannelId}");
                                                         }
                                                     }
                                                 }
