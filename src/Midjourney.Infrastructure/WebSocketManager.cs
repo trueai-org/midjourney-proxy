@@ -109,7 +109,7 @@ namespace Midjourney.Infrastructure
         /// <summary>
         /// wss 延迟
         /// </summary>
-        public int Latency { get; private set; }
+        public int _latency { get; private set; }
 
         /// <summary>
         /// wss 是否运行中
@@ -159,7 +159,7 @@ namespace Midjourney.Infrastructure
                     return;
                 }
 
-                // 强制关闭
+                // 关闭现有连接并取消相关任务
                 CloseSocket();
 
                 // 重置 token
@@ -188,15 +188,15 @@ namespace Midjourney.Infrastructure
                     // 恢复
                     await WebSocket.ConnectAsync(new Uri(gatewayUrl), CancellationToken.None);
 
-                    await ResumeSessionAsync();
-
-                    // 清空
-                    _sessionId = null;
-                    _sequence = null;
+                    //// 尝试恢复会话
+                    //await ResumeSessionAsync();
                 }
                 else
                 {
                     await WebSocket.ConnectAsync(new Uri(gatewayUrl), CancellationToken.None);
+
+                    //// 新连接，发送身份验证消息
+                    //await SendIdentifyMessageAsync();
                 }
 
                 _receiveTask = ReceiveMessagesAsync(_receiveTokenSource.Token);
@@ -474,7 +474,7 @@ namespace Midjourney.Infrastructure
                         _logger.Warning(ex, "Heartbeat Errored {@0}", _account.ChannelId);
                     }
 
-                    int delay = Math.Max(0, delayInterval - Latency);
+                    int delay = Math.Max(0, delayInterval - _latency);
                     await Task.Delay(delay, cancelToken).ConfigureAwait(false);
                 }
 
@@ -498,7 +498,7 @@ namespace Midjourney.Infrastructure
         {
             if (!_heartbeatAck)
             {
-                _logger.Warning("用户未收到心跳 ACK，正在重新连接... {@0}", _account.ChannelId);
+                _logger.Warning("用户未收到心跳 ACK，正在尝试重连... {@0}", _account.ChannelId);
                 TryReconnect();
                 return;
             }
@@ -528,7 +528,28 @@ namespace Midjourney.Infrastructure
                         {
                             _logger.Information("Received Hello {@0}", _account.ChannelId);
                             _heartbeatInterval = payload.GetProperty("d").GetProperty("heartbeat_interval").GetInt64();
+
                             _heartbeatAck = true;
+                            _heartbeatTimes.Clear();
+                            _latency = 0;
+
+                            // 尝试释放之前的心跳任务
+                            if (_heartbeatTask != null && !_heartbeatTask.IsCompleted)
+                            {
+                                try
+                                {
+                                    _receiveTokenSource?.Cancel();
+
+                                    await _heartbeatTask;
+                                }
+                                catch (Exception ex)
+                                {
+                                    _logger.Error(ex, "心跳任务取消失败");
+                                }
+
+                                _heartbeatTask = null;
+                            }
+
                             _heartbeatTask = RunHeartbeatAsync((int)_heartbeatInterval, _receiveTokenSource.Token);
 
                             await DoResumeOrIdentify();
@@ -553,8 +574,7 @@ namespace Midjourney.Infrastructure
 
                             if (_heartbeatTimes.TryDequeue(out long time))
                             {
-                                Latency = (int)(Environment.TickCount - time);
-
+                                _latency = (int)(Environment.TickCount - time);
                                 _heartbeatAck = true;
                             }
                         }
@@ -796,32 +816,35 @@ namespace Midjourney.Infrastructure
             {
                 try
                 {
-                    LogInfo("强制取消消息令牌");
-                    _receiveTokenSource?.Cancel();
-                    _receiveTokenSource?.Dispose();
-                }
-                catch
-                {
-                }
-
-                try
-                {
-                    LogInfo("等待取消消息处理");
-                    _receiveTask?.Wait(1000);
-                    _receiveTask?.Dispose();
-
-                }
-                catch
-                {
-                }
-
-                try
-                {
-                    LogInfo("强制取消心跳");
-
-                    // 取消心跳
-                    if (_heartbeatTask != null && _heartbeatTask.IsCompleted)
+                    if (_receiveTokenSource != null)
                     {
+                        LogInfo("强制取消消息 token");
+                        _receiveTokenSource?.Cancel();
+                        _receiveTokenSource?.Dispose();
+                    }
+                }
+                catch
+                {
+                }
+
+                try
+                {
+                    if (_receiveTask != null)
+                    {
+                        LogInfo("等待取消消息 task");
+                        _receiveTask?.Wait(1000);
+                        _receiveTask?.Dispose();
+                    }
+                }
+                catch
+                {
+                }
+
+                try
+                {
+                    if (_heartbeatTask != null)
+                    {
+                        LogInfo("强制取消心跳 task");
                         _heartbeatTask?.Wait(1000);
                         _heartbeatTask?.Dispose();
                     }
@@ -832,12 +855,15 @@ namespace Midjourney.Infrastructure
 
                 try
                 {
-                    LogInfo("强制关闭 close");
-
-                    // 强制关闭
-                    if (WebSocket != null && WebSocket.State != WebSocketState.Closed)
+                    if (WebSocket != null)
                     {
-                        Task.Run(() => WebSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "强制关闭", CancellationToken.None)).Wait();
+                        LogInfo("强制关闭 wss close");
+
+                        // 强制关闭
+                        if (WebSocket != null && WebSocket.State != WebSocketState.Closed)
+                        {
+                            Task.Run(() => WebSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "强制关闭", CancellationToken.None)).Wait();
+                        }
                     }
                 }
                 catch
@@ -847,12 +873,15 @@ namespace Midjourney.Infrastructure
                 // 强制关闭
                 try
                 {
-                    LogInfo("强制关闭 open");
-
-                    if (WebSocket != null && (WebSocket.State == WebSocketState.Open || WebSocket.State == WebSocketState.CloseReceived))
+                    if (WebSocket != null)
                     {
-                        WebSocket.Abort();
-                        WebSocket.Dispose();
+                        LogInfo("强制关闭 wss open");
+
+                        if (WebSocket != null && (WebSocket.State == WebSocketState.Open || WebSocket.State == WebSocketState.CloseReceived))
+                        {
+                            WebSocket.Abort();
+                            WebSocket.Dispose();
+                        }
                     }
                 }
                 catch
@@ -869,6 +898,8 @@ namespace Midjourney.Infrastructure
                 _receiveTokenSource = null;
                 _receiveTask = null;
                 _heartbeatTask = null;
+
+                LogInfo("WebSocket 资源已释放");
             }
 
             Thread.Sleep(1000);
