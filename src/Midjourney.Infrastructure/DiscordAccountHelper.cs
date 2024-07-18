@@ -25,7 +25,6 @@ namespace Midjourney.Infrastructure
         /// </summary>
         /// <param name="discordHelper"></param>
         /// <param name="options"></param>
-        /// <param name="httpClient"></param>
         /// <param name="taskStoreService"></param>
         /// <param name="messageHandlers"></param>
         /// <param name="notifyService"></param>
