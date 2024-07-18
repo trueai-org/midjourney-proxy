@@ -1,52 +1,54 @@
 # Midjourney Proxy
 
-Proxy Midjourney's Discord channel to implement API-based AI drawing calls. This is a public welfare project offering free drawing API usage.
+[中文](README.md) | **English**
 
-Fully open-source with no partial open-source or closed-source components. Contributions are welcome.
+Proxy for Midjourney's Discord channels, enabling API-based AI drawing calls, a public benefit project offering free use of drawing APIs.
 
-The most comprehensive, secure, and memory-efficient (100MB+) Midjourney Proxy API ~~
+Fully open-source without any partially open or closed source components, pull requests are welcome.
 
-### Main Features
+The most feature-rich, secure, and memory-efficient (100MB+) Midjourney Proxy API~~
 
-- [x] Supports Imagine command and related actions [V1/V2.../U1/U2.../R]
-- [x] Supports adding images in base64 format as a base for Imagine
-- [x] Supports Blend (image mixing), Describe (image to text) commands
-- [x] Real-time task progress
-- [x] Chinese prompt translation, requires Baidu translation configuration
-- [x] Prompt sensitive word pre-detection with support for adjustments
-- [x] user-token connects to wss for error information and complete functionality
+## Key Features
+
+- [x] Supports Imagine commands and related actions [V1/V2.../U1/U2.../R]
+- [x] Supports adding images in base64 format during Imagine calls
+- [x] Supports Blend (image mixing) and Describe (image-to-text) commands
+- [x] Real-time progress tracking of tasks
+- [x] Chinese prompt translation, requires Baidu Translate configuration
+- [x] Pre-check for sensitive words in prompts, with support for adjustments
+- [x] User-token connection via wss, enabling retrieval of error messages and full functionality
 - [x] Supports Shorten (prompt analysis) command
-- [x] Supports focus movement: Pan ⬅️➡⬆️⬇️
-- [x] Supports partial redrawing: Vary (Region) 🖌
-- [x] Supports almost all associated button actions and 🎛️ Remix mode
-- [x] Supports image zoom, custom zoom Zoom 🔍
-- [x] Retrieve image seed value
-- [x] Supports account-specific speed modes RELAX | FAST | TURBO
-- [x] Multi-account configuration, each account can set its own task queue, supports account selection modes BestWaitIdle | Random | Weight | Polling
-- [x] Persistent account pool with dynamic maintenance
-- [x] Retrieve account /info, /settings information
-- [x] Account settings
+- [x] Supports movement focus: Pan ⬅️➡⬆️⬇️
+- [x] Supports local redraw: Vary (Region) 🖌
+- [x] Supports almost all related button actions and 🎛️ Remix mode
+- [x] Image zoom customization: Zoom 🔍
+- [x] Retrieval of image seed values
+- [x] Speed mode settings per account: RELAX | FAST | TURBO
+- [x] Multi-account configuration, each with its task queue, supports account selection modes: BestWaitIdle | Random | Weight | Polling
+- [x] Persistent account pool, dynamically maintained
+- [x] Access to account /info, /settings
+- [x] Account settings adjustments
 - [x] Supports niji・journey Bot and Midjourney Bot
-- [x] Secure zlib-stream transmission <https://discord.com/developers/docs/topics/gateway>
-- [x] Embedded MJ management backend page, supports multiple languages <https://github.com/trueai-org/midjourney-proxy-webui>
-- [x] Supports CRUD operations on MJ accounts
-- [x] Detailed account information queries and account synchronization operations
-- [x] Account concurrency queue settings
-- [x] MJ task queries
-- [x] Comprehensive drawing test page
-- [x] Compatible with mainstream drawing clients and API calls.
+- [x] zlib-stream for secure transmission <https://discord.com/developers/docs/topics/gateway>
+- [x] Embedded MJ management webpage, multi-language support <https://github.com/trueai-org/midjourney-proxy-webui>
+- [x] MJ account management functionalities: add, delete, modify, and sync
+- [x] Concurrent queue settings for MJ accounts
+- [x] MJ account settings configuration
+- [x] MJ task query support
+- [x] Comprehensive drawing test page available
+- [x] Compatible with mainstream drawing clients and API calls in the market.
 
-### Online Preview
+## Online Preview
 
-The public welfare interface operates in slow mode, free for calling. The account pool is provided by sponsors, please use it reasonably.
+Public interface is in slow mode, free to use, supported by sponsor-provided account pools, please use responsibly.
 
-- Management Backend: <https://ai.trueai.org>
-- Username/Password: `None`
-- Public Interface: <https://ai.trueai.org/mj>
-- API Documentation: <https://ai.trueai.org/swagger>
-- API Key: `None`
+- Admin panel: <https://ai.trueai.org>
+- Username & password: `none`
+- Public interface: <https://ai.trueai.org/mj>
+- API documentation: <https://ai.trueai.org/swagger>
+- API key: `none`
 
-### Preview Screenshots
+## Preview Screenshots
 
 ![Welcome](./docs/screenshots/ui1.png)
 
@@ -60,34 +62,36 @@ The public welfare interface operates in slow mode, free for calling. The accoun
 
 ![API](./docs/screenshots/uiswagger.png)
 
-### Recommended Clients
+## Recommended Clients
 
-- **ChatGPT Web Midjourney Proxy**: <https://github.com/Dooy/chatgpt-web-midjourney-proxy>
-  - Open the website <https://vercel.ddaiai.com> -> Settings -> MJ drawing interface address -> <https://ai.trueai.org>
+- **ChatGPT Web Midjourney Proxy**: <https://github.com/Dooy/chatgpt-web-midjourney-proxy> 
+  - Visit <https://vercel.ddaiai.com> -> Settings -> MJ Drawing Interface URL -> <https://ai.trueai.org>
 
 - **GoAmzAI**: <https://github.com/Licoy/GoAmzAI>
-  - Open the backend -> Drawing Management -> Add -> MJ drawing interface address -> <https://ai.trueai.org/mj>
+  - Open backend -> Drawing Management -> Add -> MJ Drawing Interface URL -> <https://ai.trueai.org/mj>
 
-### Configuration Options
+## Installation and Usage
 
-- mj.accounts: Refer to [Account Pool Configuration](./docs/config.md#%E8%B4%A6%E5%8F%B7%E6%B1%A0%E9%85%8D%E7%BD%AE%E5%8F%82%E8%80%83)
-- mj.task-store.type: Task storage method, default is in_memory (lost after restart), optional redis
-- mj.task-store.timeout: Task storage expiration time, tasks are deleted after expiration, default is 30 days
-- mj.api-secret: API secret, does not enable authentication if empty; add request header mj-api-secret when calling the API
-- mj.translate-way: Method to translate Chinese prompts to English, options are null (default), baidu, gpt
-- More configurations see [Configuration Items](./docs/config.md)
+### Quick Start
 
-### Installation and Usage
-
-#### Quick Start
-
-> Docker Version
+> Docker version
 
 ```bash
-# Alibaba Cloud Mirror (recommended for domestic use)
+# Aliyun image (recommended for use in China)
 docker pull registry.cn-guangzhou.aliyuncs.com/trueai-org/midjourney-proxy
 
-# Example of starting a public welfare demonstration site
+# Public demo site startup configuration example
+
+# 1. Download and rename configuration file (example configuration)
+wget -O /root/mjopen/appsettings.Production.json https://raw.githubusercontent.com/trueai-org/midjourney-proxy/main/src/Midjourney.API/appsettings.json
+
+# Or use curl to download and rename configuration file (example configuration)
+curl -o /root/mjopen/appsettings.Production.json https://raw.githubusercontent.com/trueai-org/midjourney-proxy/main/src/Midjourney.API/appsettings.json
+
+# 2. Stop and remove old Docker containers
+docker stop mjopen && docker rm mjopen
+
+# 3. Start a new Docker container
 docker run --name mjopen -d --restart=always \
  -e DEMO=true \
  -p 8086:8080 --user root \
@@ -99,57 +103,175 @@ docker run --name mjopen -d --restart=always \
  -v /etc/timezone:/etc/timezone:ro \
  registry.cn-guangzhou.aliyuncs.com/trueai-org/midjourney-proxy
 
-# Example of starting a production environment
-docker pull registry.cn-guangzhou.aliyuncs.com/trueai-org/midjourney-proxy
-docker run --name mjapi -d --restart=always \
- -p 8082:8080 --user root \
- -v /root/mjapi/logs:/app/logs:rw \
- -v /root/mjapi/data:/app/data:rw \
- -v /root/mjapi/appsettings.Production.json:/app/appsettings.Production.json:ro \
+# Production environment startup configuration example
+docker run --name mjproxy -d --restart=always \
+ -p 8088:8080 --user root \
+ -v /root/mjproxy/logs:/app/logs:rw \
+ -v /root/mjproxy/data:/app/data:rw \
+ -v /root/mjproxy/appsettings.Production.json:/app/appsettings.Production.json:ro \
  -e TZ=Asia/Shanghai \
  -v /etc/localtime:/etc/localtime:ro \
  -v /etc/timezone:/etc/timezone:ro \
  registry.cn-guangzhou.aliyuncs.com/trueai-org/midjourney-proxy
 ```
 
-### Bot Token (must be configured)
+> Windows version
 
-This project uses the Discord bot token to connect to wss for error information and full functionality.
+```bash
+a. Download the latest no-install version for Windows from https://github.com/trueai-org/midjourney-proxy/releases, e.g., midjourney-proxy-win-x64.zip
+b. Unzip and run Midjourney.API.exe
+c. Open http://localhost:8080
+d. Optional: Deploy to IIS, add the site to IIS, deploy the folder to IIS, configure the application pool to `No Managed Code`, and start the site.
+e. Optional: Use the built-in `Task Scheduler` to create a basic task, select the `.exe` program, and ensure `Do not start multiple instances` is selected to keep only one task running.
+```
+
+> Linux version
+
+```bash
+a. Download the latest no-install version for Linux from https://github.com/trueai-org/midjourney-proxy/releases, e.g., midjourney-proxy-linux-x64.zip
+b. Extract to the current directory: tar -xzf midjourney-proxy-linux-x64-<VERSION>.tar.gz
+c. Execute: run_app.sh
+c. Startup method 1: sh run_app.sh
+d. Startup method 2: chmod +x run_app.sh && ./run_app.sh
+```
+
+> macOS version
+
+```bash
+a. Download the latest no-install version for macOS from https://github.com/trueai-org/midjourney-proxy/releases, e.g., midjourney-proxy-osx-x64.zip
+b. Extract to the current directory: tar -xzf midjourney-proxy-osx-x64-<VERSION>.tar.gz
+c. Execute: run_app_osx.sh
+c. Startup method 1: sh run_app_osx.sh
+d. Startup method 2: chmod +x run_app_osx.sh && ./run_app_osx.sh
+```
+
+## Configuration Parameters
+
+- `appsettings.json` default configuration
+- `appsettings.Production.json` production environment configuration
+- `/app/data` data directory, stores accounts, tasks, etc.
+    - `/app/data/mj.db` database file
+- `/app/logs` log directory
+
+```json
+{
+  "Demo": null, // Set the website to demo mode
+  "UserToken": "", // User drawing token, can access drawing interface, optional
+  "AdminToken": "", // Admin backend token, can access drawing interface and admin accounts
+  "mj": {
+    "AccountChooseRule": "BestWaitIdle", // BestWaitIdle | Random | Weight | Polling = Best wait idle rule | Random | Weight | Polling
+    "Discord": { // Discord settings, default can be null
+      "GuildId": "125652671***", // Server ID
+      "ChannelId": "12565267***", // Channel ID
+      "PrivateChannelId": "1256495659***", // MJ private channel ID, for receiving seed values
+      "NijiBotChannelId": "1261608644***", // NIJI private channel ID, for receiving seed values
+      "UserToken": "MTI1NjQ5N***", // User token
+      "BotToken": "MTI1NjUyODEy***", // Bot token
+      "UserAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36",
+      "Enable": true, // Whether to enable by default
+      "CoreSize": 3, // Concurrent number
+      "QueueSize": 10, // Queue size
+      "MaxQueueSize": 100, // Maximum queue size
+      "
+
+TimeoutMinutes": 5, // Task timeout in minutes
+      "Mode": null, // RELAX | FAST | TURBO specify generation speed mode --fast, --relax, or --turbo parameter at the end.
+      "Weight": 1 // Weight
+    },
+    "NgDiscord": { // NG Discord settings, default can be null
+      "Server": "",
+      "Cdn": "",
+      "Wss": "",
+      "ResumeWss": "",
+      "UploadServer": ""
+    },
+    "Proxy": { // Proxy settings, default can be null
+      "Host": "",
+      "Port": 10809
+    },
+    "Accounts": [], // Account pool configuration
+    "BaiduTranslate": { // Baidu Translate settings, default can be null
+      "Appid": "", // your_appid
+      "AppSecret": "" // your_app_secret
+    },
+    "TranslateWay": "NULL", // NULL | GTP | BAIDU, Translation settings, default: NULL
+    "ApiSecret": "", // your_api_secret
+    "NotifyHook": "", // your_notify_hook, callback settings
+    "NotifyPoolSize": 10
+  },
+  "Serilog": {
+    "MinimumLevel": {
+      "Default": "Information",
+      "Override": {
+        "Default": "Warning",
+        "System": "Warning",
+        "Microsoft": "Warning"
+      }
+    },
+    "WriteTo": [
+      {
+        "Name": "File",
+        "Args": {
+          "path": "logs/log.txt",
+          "rollingInterval": "Day",
+          "fileSizeLimitBytes": null,
+          "rollOnFileSizeLimit": false,
+          "retainedFileCountLimit": 31
+        }
+      },
+      {
+        "Name": "Console"
+      }
+    ]
+  },
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "AllowedHosts": "*",
+  "urls": "http://*:8080" // default port
+}
+```
+
+## Bot Token (Required)
+
+This project uses a Discord bot token to connect via wss, retrieving error messages and full functionality, ensuring high availability of messages.
 
 ```
 1. Create an application
 https://discord.com/developers/applications
 
-2. Set application permissions (ensure read content permissions, refer to the screenshot)
+2. Set application permissions (ensure read content permission, refer to screenshot)
 [Bot] Settings -> Enable all
 
-3. Add application to channel server (refer to the screenshot)
+3. Add application to channel server (refer to screenshot)
 
-client_id can be found on the application details page, it's the APPLICATION ID
+client_id can be found on the application details page, it is the APPLICATION ID
 
 https://discord.com/oauth2/authorize?client_id=xxx&permissions=8&scope=bot
 
-4. Copy or reset the Bot Token to the configuration file
+4. Copy or reset Bot Token to configuration file
 ```
 
-Set application permissions (ensure read content permissions, refer to the screenshot)
+Set application permissions (ensure read content permission, refer to screenshot)
 
-![Set Application Permissions](./docs/screenshots/gjODn5Nplq.png)
+![Set application permissions](./docs/screenshots/gjODn5Nplq.png)
 
-Add application to channel server (refer to the screenshot)
+Add application to channel server (refer to screenshot)
 
-![Add Application to Channel Server](./docs/screenshots/ItiWgaWIaX.png)
+![Add application to channel server](./docs/screenshots/ItiWgaWIaX.png)
 
-### Related Documentation
+## Related Documentation
+1. [API Documentation](./docs/api.md)
 
-1. [API Interface Description](./docs/api.md)
-
-### Support and Sponsorship
+## Support and Sponsorship
 
 - If you find this project helpful, please give it a Star⭐
-- You can also provide temporarily unused drawing public accounts to support this project's development😀
+- You can also provide temporarily idle drawing accounts for public benefit (sponsor slow mode) to support the development of this project😀
 
-### Links
+## Friendly Links
 
 - https://github.com/dolfies/discord.py-self
 - https://github.com/bao-io/midjourney-sdk
@@ -161,17 +283,17 @@ Add application to channel server (refer to the screenshot)
 - https://github.com/yokonsan/midjourney-api
 - https://github.com/imagineapi/imagineapi
 
-### Common Links
-
-- Open AI: <https://openai.com>
-- Discord: <https://discord.com>
+## Useful Links
+- Open AI official website: <https://openai.com>
+- Discord official website: <https://discord.com>
 - Discord Developer Platform: <https://discord.com/developers/applications>
-- Wenxin Yiyan: <https://cloud.baidu.com/product/wenxinworkshop>
-- Xinghuo Model: <https://xinghuo.xfyun.cn/>
-- Api2d: <https://api2d.com/>
-- OpenAI-SB: <https://www.openai-sb.com>
-- Baota: <https://bt.cn>
-- Alibaba Cloud: <https://aliyun.com>
-- Tencent Cloud: <https://cloud.tencent.com/>
-- SMS Bao: <http://www.smsbao.com/>
-- OneAPI Project: <https://github.com/songquanpeng/one-api>
+- Wenxin Yiyang official website: <https://cloud.baidu.com/product/wenxinworkshop>
+- Xinghuo Model official website: <https://xinghuo.xfyun.cn/>
+- Api2d official website: <https://api2d.com/>
+- OpenAI-SB official website: <https://www.openai-sb.com>
+- Baota official website: <https://bt.cn>
+- Alibaba Cloud official website: <https://aliyun.com>
+- Tencent Cloud official website: <https://cloud.tencent.com/>
+- SMS Bao official website: <http://www.smsbao.com/>
+- OneAPI project: <https://github.com/songquanpeng/one-api>
+```
