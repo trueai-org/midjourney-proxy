@@ -831,7 +831,7 @@ namespace Midjourney.Infrastructure
                 {
                     if (_receiveTask != null)
                     {
-                        LogInfo("等待取消消息 task");
+                        LogInfo("强制释放消息 task");
                         _receiveTask?.Wait(1000);
                         _receiveTask?.Dispose();
                     }
@@ -844,7 +844,7 @@ namespace Midjourney.Infrastructure
                 {
                     if (_heartbeatTask != null)
                     {
-                        LogInfo("强制取消心跳 task");
+                        LogInfo("强制释放心跳 task");
                         _heartbeatTask?.Wait(1000);
                         _heartbeatTask?.Dispose();
                     }
@@ -901,8 +901,6 @@ namespace Midjourney.Infrastructure
 
                 LogInfo("WebSocket 资源已释放");
             }
-
-            Thread.Sleep(1000);
         }
 
         /// <summary>
