@@ -144,6 +144,11 @@ namespace Midjourney.Infrastructure.Domain
         public int QueueCount { get; set; }
 
         /// <summary>
+        /// wss 是否运行中
+        /// </summary>
+        public bool Running { get; set; }
+
+        /// <summary>
         /// Mj 按钮
         /// </summary>
         [BsonIgnore]

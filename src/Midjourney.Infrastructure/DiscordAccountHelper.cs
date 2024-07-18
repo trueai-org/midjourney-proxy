@@ -111,7 +111,7 @@ namespace Midjourney.Infrastructure
 
                 // 跟踪 wss 连接
                 discordInstance.BotMessageListener = messageListener;
-                discordInstance.WebSocketStarter = webSocket;
+                discordInstance.WebSocketManager = webSocket;
             }
 
             return discordInstance;

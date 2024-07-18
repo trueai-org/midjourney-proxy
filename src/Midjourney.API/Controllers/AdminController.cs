@@ -374,6 +374,7 @@ namespace Midjourney.API.Controllers
 
                 item.RunningCount = inc?.GetRunningFutures().Count ?? 0;
                 item.QueueCount = inc?.GetQueueTasks().Count ?? 0;
+                item.Running = inc?.IsAlive ?? false;
 
                 if (_isAnonymous)
                 {
