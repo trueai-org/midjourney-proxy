@@ -372,14 +372,13 @@ namespace Midjourney.Infrastructure
                         {
                             foreach (JsonElement item in em.EnumerateArray())
                             {
-                                if (item.TryGetProperty("title", out var emtitle))
+                                if (item.TryGetProperty("title", out var emTitle))
                                 {
                                     // 判断账号是否用量已经用完
-                                    if (emtitle.GetString() == "Credits exhausted")
+                                    if (emTitle.GetString() == "Credits exhausted")
                                     {
                                         // 你的处理逻辑
-                                        _logger.Warning($"账号 {_discordAccount.GetDisplay()} 用量已经用完");
-                                        _discordAccount.Enable = false;
+                                        _logger.Warning($"账号 {_discordAccount.GetDisplay()} 用量已经用完，自动禁用账号");
 
                                         var task = _discordInstance.FindRunningTask(c => c.MessageId == id).FirstOrDefault();
                                         if (task == null && !string.IsNullOrWhiteSpace(metaId))
@@ -392,10 +391,31 @@ namespace Midjourney.Infrastructure
                                             task.Fail("账号用量已经用完");
                                         }
 
+                                        // 5s 后禁用账号
+                                        Task.Run(() =>
+                                        {
+                                            try
+                                            {
+                                                Thread.Sleep(5 * 1000);
+
+                                                // 保存
+                                                _discordAccount.Enable = false;
+                                                _discordAccount.DisabledReason = "账号用量已经用完";
+
+                                                DbHelper.AccountStore.Save(_discordAccount);
+
+                                                _discordInstance?.Dispose();
+                                            }
+                                            catch (Exception ex)
+                                            {
+                                                Log.Error(ex, "账号用量已经用完, 禁用账号异常 {@0}", _discordAccount.ChannelId);
+                                            }
+                                        });
+
                                         return;
                                     }
                                     // 无效参数
-                                    else if (emtitle.GetString() == "Invalid parameter")
+                                    else if (emTitle.GetString() == "Invalid parameter")
                                     {
                                         if (data.TryGetProperty("nonce", out JsonElement noneEle))
                                         {
@@ -422,8 +442,8 @@ namespace Midjourney.Infrastructure
                                             }
                                         }
                                     }
-                                    // 违规词
-                                    else if (emtitle.GetString().Contains("Banned Prompt Detected"))
+                                    // 违规的提示词
+                                    else if (emTitle.GetString() == "Banned prompt detected")
                                     {
                                         if (data.TryGetProperty("nonce", out JsonElement noneEle))
                                         {
@@ -437,7 +457,7 @@ namespace Midjourney.Infrastructure
                                                     if (messageType == MessageType.CREATE)
                                                     {
                                                         task.MessageId = id;
-                                                        task.Description = $"{emtitle.GetString()}, {item.GetProperty("description").GetString()}";
+                                                        task.Description = $"{emTitle.GetString()}, {item.GetProperty("description").GetString()}";
 
                                                         if (!task.MessageIds.Contains(id))
                                                         {
@@ -445,15 +465,13 @@ namespace Midjourney.Infrastructure
                                                         }
 
                                                         task.Fail($"违规的提示词");
-
-                                                        _logger.Warning($"违规的提示词, {emtitle.GetString()}, {item.GetProperty("description").GetString()}, {_discordAccount.ChannelId}");
                                                     }
                                                 }
                                             }
                                         }
                                     }
                                     // 执行中的任务已满（一般超过 3 个时）
-                                    else if (emtitle.GetString() == "Job queued")
+                                    else if (emTitle.GetString() == "Job queued")
                                     {
                                         if (data.TryGetProperty("nonce", out JsonElement noneEle))
                                         {
@@ -467,7 +485,7 @@ namespace Midjourney.Infrastructure
                                                     if (messageType == MessageType.CREATE)
                                                     {
                                                         task.MessageId = id;
-                                                        task.Description = $"{emtitle.GetString()}, {item.GetProperty("description").GetString()}";
+                                                        task.Description = $"{emTitle.GetString()}, {item.GetProperty("description").GetString()}";
 
                                                         if (!task.MessageIds.Contains(id))
                                                         {
@@ -481,7 +499,7 @@ namespace Midjourney.Infrastructure
                                     // 未知消息
                                     else
                                     {
-                                        var title = emtitle.GetString();
+                                        var title = emTitle.GetString();
                                         if (!string.IsNullOrWhiteSpace(title))
                                         {
                                             if (data.TryGetProperty("nonce", out JsonElement noneEle))

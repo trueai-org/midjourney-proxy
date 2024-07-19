@@ -782,21 +782,29 @@ namespace Midjourney.Infrastructure
             {
                 _logger.Error("由于无法重新连接，自动禁用账号");
 
-                DisableAccount();
+                DisableAccount("由于无法重新连接，自动禁用账号");
             }
         }
 
         /// <summary>
         /// 停止并禁用账号
         /// </summary>
-        private void DisableAccount()
+        public void DisableAccount(string msg)
         {
-            // 保存
-            _account.Enable = false;
+            try
+            {
+                // 保存
+                _account.Enable = false;
+                _account.DisabledReason = msg;
 
-            DbHelper.AccountStore.Save(_account);
+                DbHelper.AccountStore.Save(_account);
 
-            _discordInstance?.Dispose();
+                _discordInstance?.Dispose();
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "禁用账号失败 {@0}", _account.ChannelId);
+            }
         }
 
         /// <summary>
