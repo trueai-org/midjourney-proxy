@@ -57,8 +57,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
             _longToken = new CancellationTokenSource();
             _longTask = new Task(Running, _longToken.Token, TaskCreationOptions.LongRunning);
             _longTask.Start();
-
-
         }
 
         /// <summary>

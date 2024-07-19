@@ -151,7 +151,7 @@ namespace Midjourney.API
         {
             DiscordAccount model = null;
 
-            var disInstance = _discordLoadBalancer.GetDiscordInstance(account.Id);
+            var disInstance = _discordLoadBalancer.GetDiscordInstance(account.ChannelId);
             if (disInstance != null)
             {
                 model = disInstance.Account;
@@ -197,7 +197,7 @@ namespace Midjourney.API
         {
             try
             {
-                var disInstance = _discordLoadBalancer.GetDiscordInstance(account.Id);
+                var disInstance = _discordLoadBalancer.GetDiscordInstance(account.ChannelId);
                 if (disInstance != null)
                 {
                     _discordLoadBalancer.RemoveInstance(disInstance);

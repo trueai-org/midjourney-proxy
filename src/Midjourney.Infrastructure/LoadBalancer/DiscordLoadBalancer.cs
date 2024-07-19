@@ -8,7 +8,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
     public class DiscordLoadBalancer
     {
         private readonly IRule _rule;
-        private readonly ConcurrentBag<IDiscordInstance> _instances;
+        private readonly HashSet<IDiscordInstance> _instances;
 
         /// <summary>
         /// 初始化 DiscordLoadBalancer 类的新实例。
@@ -17,7 +17,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         public DiscordLoadBalancer(IRule rule)
         {
             _rule = rule;
-            _instances = new ConcurrentBag<IDiscordInstance>();
+            _instances = new HashSet<IDiscordInstance>();
         }
 
         /// <summary>
@@ -92,6 +92,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// 移除
         /// </summary>
         /// <param name="instance"></param>
-        public void RemoveInstance(IDiscordInstance instance) => _instances.TryTake(out instance);
+        public void RemoveInstance(IDiscordInstance instance) => _instances.Remove(instance);
     }
 }
