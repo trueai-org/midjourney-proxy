@@ -135,7 +135,7 @@ namespace Midjourney.Infrastructure
                 if (msg == null)
                     return;
 
-                _logger.Debug($"BOT Received, {msg.Type}, id: {msg.Id}, rid: {msg.Reference?.MessageId.Value}, {msg.Content}");
+                _logger.Debug($"BOT Received, {msg.Type}, id: {msg.Id}, rid: {msg.Reference?.MessageId.Value}, mid: {msg?.InteractionMetadata?.Id}, {msg.Content}");
 
                 if (!string.IsNullOrWhiteSpace(msg.Content)
                     && msg.Author.IsBot)
@@ -203,6 +203,8 @@ namespace Midjourney.Infrastructure
         {
             try
             {
+                _logger.Debug("用户收到消息 {@0}", raw.ToString());
+
                 if (!raw.TryGetProperty("t", out JsonElement messageTypeElement))
                 {
                     return;
@@ -392,6 +394,7 @@ namespace Midjourney.Infrastructure
 
                                         return;
                                     }
+                                    // 无效参数
                                     else if (emtitle.GetString() == "Invalid parameter")
                                     {
                                         if (data.TryGetProperty("nonce", out JsonElement noneEle))
@@ -419,6 +422,7 @@ namespace Midjourney.Infrastructure
                                             }
                                         }
                                     }
+                                    // 违规词
                                     else if (emtitle.GetString().Contains("Banned Prompt Detected"))
                                     {
                                         if (data.TryGetProperty("nonce", out JsonElement noneEle))
@@ -448,6 +452,33 @@ namespace Midjourney.Infrastructure
                                             }
                                         }
                                     }
+                                    // 执行中的任务已满（一般超过 3 个时）
+                                    else if (emtitle.GetString() == "Job queued")
+                                    {
+                                        if (data.TryGetProperty("nonce", out JsonElement noneEle))
+                                        {
+                                            var nonce = noneEle.GetString();
+                                            if (!string.IsNullOrWhiteSpace(id) && !string.IsNullOrWhiteSpace(nonce))
+                                            {
+                                                // 设置 none 对应的任务 id
+                                                var task = _discordInstance.GetRunningTaskByNonce(nonce);
+                                                if (task != null)
+                                                {
+                                                    if (messageType == MessageType.CREATE)
+                                                    {
+                                                        task.MessageId = id;
+                                                        task.Description = $"{emtitle.GetString()}, {item.GetProperty("description").GetString()}";
+
+                                                        if (!task.MessageIds.Contains(id))
+                                                        {
+                                                            task.MessageIds.Add(id);
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    // 未知消息
                                     else
                                     {
                                         var title = emtitle.GetString();

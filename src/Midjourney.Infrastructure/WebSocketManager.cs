@@ -920,8 +920,9 @@ namespace Midjourney.Infrastructure
                 LogInfo("WebSocket 资源已释放");
             }
 
-            // 延迟以确保所有资源正确释放
-            Thread.Sleep(1000);
+            // 暂时不需要延迟
+            //// 延迟以确保所有资源正确释放
+            //Thread.Sleep(1000);
         }
 
         /// <summary>
