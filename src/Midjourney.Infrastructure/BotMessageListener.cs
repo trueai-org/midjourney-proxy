@@ -375,7 +375,46 @@ namespace Midjourney.Infrastructure
                                 if (item.TryGetProperty("title", out var emTitle))
                                 {
                                     // 判断账号是否用量已经用完
-                                    if (emTitle.GetString() == "Credits exhausted")
+                                    var title = emTitle.GetString();
+
+                                    // 16711680 error, 65280 success, 16776960 warning
+                                    var color = item.TryGetProperty("color", out var colorEle) ? colorEle.GetInt32() : 0;
+
+                                    // 无效参数、违规的提示词、无效提示词
+                                    var errorTitles = new[] { "Invalid prompt", "Invalid parameter", "Banned prompt detected" };
+
+                                    // 跳过的 title
+                                    var continueTitles = new[] { "Job queued", "Credits exhausted", "Action needed to continue", "Pending mod message" };
+
+                                    if (!continueTitles.Contains(title) && (errorTitles.Contains(title) || color == 16711680 || title.Contains("Invalid")))
+                                    {
+                                        if (data.TryGetProperty("nonce", out JsonElement noneEle))
+                                        {
+                                            var nonce = noneEle.GetString();
+                                            if (!string.IsNullOrWhiteSpace(id) && !string.IsNullOrWhiteSpace(nonce))
+                                            {
+                                                // 设置 none 对应的任务 id
+                                                var task = _discordInstance.GetRunningTaskByNonce(nonce);
+                                                if (task != null)
+                                                {
+                                                    if (messageType == MessageType.CREATE)
+                                                    {
+                                                        task.MessageId = id;
+                                                        task.Description = $"{title}, {item.GetProperty("description").GetString()}";
+
+                                                        if (!task.MessageIds.Contains(id))
+                                                        {
+                                                            task.MessageIds.Add(id);
+                                                        }
+
+                                                        task.Fail(title);
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    // 用量用完了
+                                    else if (title == "Credits exhausted")
                                     {
                                         // 你的处理逻辑
                                         _logger.Warning($"账号 {_discordAccount.GetDisplay()} 用量已经用完，自动禁用账号");
@@ -414,64 +453,8 @@ namespace Midjourney.Infrastructure
 
                                         return;
                                     }
-                                    // 无效参数
-                                    else if (emTitle.GetString() == "Invalid parameter")
-                                    {
-                                        if (data.TryGetProperty("nonce", out JsonElement noneEle))
-                                        {
-                                            var nonce = noneEle.GetString();
-                                            if (!string.IsNullOrWhiteSpace(id) && !string.IsNullOrWhiteSpace(nonce))
-                                            {
-                                                // 设置 none 对应的任务 id
-                                                var task = _discordInstance.GetRunningTaskByNonce(nonce);
-                                                if (task != null)
-                                                {
-                                                    if (messageType == MessageType.CREATE)
-                                                    {
-                                                        task.MessageId = id;
-                                                        task.Description = item.GetProperty("description").GetString();
-
-                                                        if (!task.MessageIds.Contains(id))
-                                                        {
-                                                            task.MessageIds.Add(id);
-                                                        }
-
-                                                        task.Fail($"无效参数");
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                    // 违规的提示词
-                                    else if (emTitle.GetString() == "Banned prompt detected")
-                                    {
-                                        if (data.TryGetProperty("nonce", out JsonElement noneEle))
-                                        {
-                                            var nonce = noneEle.GetString();
-                                            if (!string.IsNullOrWhiteSpace(id) && !string.IsNullOrWhiteSpace(nonce))
-                                            {
-                                                // 设置 none 对应的任务 id
-                                                var task = _discordInstance.GetRunningTaskByNonce(nonce);
-                                                if (task != null)
-                                                {
-                                                    if (messageType == MessageType.CREATE)
-                                                    {
-                                                        task.MessageId = id;
-                                                        task.Description = $"{emTitle.GetString()}, {item.GetProperty("description").GetString()}";
-
-                                                        if (!task.MessageIds.Contains(id))
-                                                        {
-                                                            task.MessageIds.Add(id);
-                                                        }
-
-                                                        task.Fail($"违规的提示词");
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
                                     // 执行中的任务已满（一般超过 3 个时）
-                                    else if (emTitle.GetString() == "Job queued")
+                                    else if (title == "Job queued")
                                     {
                                         if (data.TryGetProperty("nonce", out JsonElement noneEle))
                                         {
@@ -499,30 +482,26 @@ namespace Midjourney.Infrastructure
                                     // 未知消息
                                     else
                                     {
-                                        var title = emTitle.GetString();
-                                        if (!string.IsNullOrWhiteSpace(title))
+                                        if (data.TryGetProperty("nonce", out JsonElement noneEle))
                                         {
-                                            if (data.TryGetProperty("nonce", out JsonElement noneEle))
+                                            var nonce = noneEle.GetString();
+                                            if (!string.IsNullOrWhiteSpace(id) && !string.IsNullOrWhiteSpace(nonce))
                                             {
-                                                var nonce = noneEle.GetString();
-                                                if (!string.IsNullOrWhiteSpace(id) && !string.IsNullOrWhiteSpace(nonce))
+                                                // 设置 none 对应的任务 id
+                                                var task = _discordInstance.GetRunningTaskByNonce(nonce);
+                                                if (task != null)
                                                 {
-                                                    // 设置 none 对应的任务 id
-                                                    var task = _discordInstance.GetRunningTaskByNonce(nonce);
-                                                    if (task != null)
+                                                    if (messageType == MessageType.CREATE)
                                                     {
-                                                        if (messageType == MessageType.CREATE)
+                                                        task.MessageId = id;
+                                                        task.Description = $"{title}, {item.GetProperty("description").GetString()}";
+
+                                                        if (!task.MessageIds.Contains(id))
                                                         {
-                                                            task.MessageId = id;
-                                                            task.Description = $"{title}, {item.GetProperty("description").GetString()}";
-
-                                                            if (!task.MessageIds.Contains(id))
-                                                            {
-                                                                task.MessageIds.Add(id);
-                                                            }
-
-                                                            _logger.Warning($"未知消息: {title}, {item.GetProperty("description").GetString()}, {_discordAccount.ChannelId}");
+                                                            task.MessageIds.Add(id);
                                                         }
+
+                                                        _logger.Warning($"未知消息: {title}, {item.GetProperty("description").GetString()}, {_discordAccount.ChannelId}");
                                                     }
                                                 }
                                             }
