@@ -1,8 +1,6 @@
-﻿using LiteDB;
-using Midjourney.Infrastructure.Domain;
+﻿using Midjourney.Infrastructure.Domain;
 using Newtonsoft.Json.Linq;
 using Serilog;
-using System;
 using System.Net.Http.Headers;
 using System.Text;
 
@@ -32,7 +30,12 @@ namespace Midjourney.Infrastructure.Services
             Dictionary<string, string> paramsMap)
         {
             _account = account;
-            _httpClient = new HttpClient();
+
+            _httpClient = new HttpClient()
+            {
+                Timeout = TimeSpan.FromMinutes(10)
+            };
+
             _paramsMap = paramsMap;
             _discordHelper = discordHelper;
             _logger = Log.Logger;
@@ -212,10 +215,14 @@ namespace Midjourney.Infrastructure.Services
                 {
                     return Message.Success();
                 }
+
+                _logger.Warning("Seed Http 请求执行失败 {@0}, {@1}, {@2}", url, response.StatusCode, response.Content);
+
                 return Message.Of((int)response.StatusCode, "请求失败");
             }
             catch (HttpRequestException e)
             {
+                _logger.Error(e, "Seed Http 请求执行异常 {@0}", url);
                 return ConvertHttpRequestException(e);
             }
         }
@@ -552,7 +559,9 @@ namespace Midjourney.Infrastructure.Services
                 }
                 string uploadUrl = array[0]["upload_url"].ToString();
                 string uploadFilename = array[0]["upload_filename"].ToString();
+
                 await PutFileAsync(uploadUrl, dataUrl);
+
                 return Message.Success(uploadFilename);
             }
             catch (Exception e)
@@ -623,10 +632,15 @@ namespace Midjourney.Infrastructure.Services
                 {
                     return Message.Success();
                 }
+
+                _logger.Warning("Http 请求执行失败 {@0}, {@1}, {@2}", paramsStr, response.StatusCode, response.Content);
+
                 return Message.Of((int)response.StatusCode, paramsStr.Substring(0, Math.Min(paramsStr.Length, 100)));
             }
             catch (HttpRequestException e)
             {
+                _logger.Error(e, "Http 请求执行异常 {@0}", paramsStr);
+
                 return ConvertHttpRequestException(e);
             }
         }
