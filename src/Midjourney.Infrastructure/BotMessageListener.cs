@@ -384,7 +384,7 @@ namespace Midjourney.Infrastructure
                                     var errorTitles = new[] { "Invalid prompt", "Invalid parameter", "Banned prompt detected" };
 
                                     // 跳过的 title
-                                    var continueTitles = new[] { "Job queued", "Credits exhausted", "Action needed to continue", "Pending mod message" };
+                                    var continueTitles = new[] { "Job queued", "Credits exhausted", "Action needed to continue", "Pending mod message", "Blocked" };
 
                                     if (!continueTitles.Contains(title) && (errorTitles.Contains(title) || color == 16711680 || title.Contains("Invalid")))
                                     {
@@ -417,7 +417,7 @@ namespace Midjourney.Infrastructure
                                     else if (title == "Credits exhausted")
                                     {
                                         // 你的处理逻辑
-                                        _logger.Warning($"账号 {_discordAccount.GetDisplay()} 用量已经用完，自动禁用账号");
+                                        _logger.Warning($"账号 {_discordAccount.GetDisplay()} 用量已经用完, 自动禁用账号");
 
                                         var task = _discordInstance.FindRunningTask(c => c.MessageId == id).FirstOrDefault();
                                         if (task == null && !string.IsNullOrWhiteSpace(metaId))
@@ -448,6 +448,46 @@ namespace Midjourney.Infrastructure
                                             catch (Exception ex)
                                             {
                                                 Log.Error(ex, "账号用量已经用完, 禁用账号异常 {@0}", _discordAccount.ChannelId);
+                                            }
+                                        });
+
+                                        return;
+                                    }
+                                    // 临时禁止
+                                    else if (title == "Pending mod message" || title == "Blocked")
+                                    {
+                                        // 你的处理逻辑
+                                        _logger.Warning($"账号 {_discordAccount.GetDisplay()} {title}, 自动禁用账号");
+
+                                        var task = _discordInstance.FindRunningTask(c => c.MessageId == id).FirstOrDefault();
+                                        if (task == null && !string.IsNullOrWhiteSpace(metaId))
+                                        {
+                                            task = _discordInstance.FindRunningTask(c => c.InteractionMetadataId == metaId).FirstOrDefault();
+                                        }
+
+                                        if (task != null)
+                                        {
+                                            task.Fail(title);
+                                        }
+
+                                        // 5s 后禁用账号
+                                        Task.Run(() =>
+                                        {
+                                            try
+                                            {
+                                                Thread.Sleep(5 * 1000);
+
+                                                // 保存
+                                                _discordAccount.Enable = false;
+                                                _discordAccount.DisabledReason = title;
+
+                                                DbHelper.AccountStore.Save(_discordAccount);
+
+                                                _discordInstance?.Dispose();
+                                            }
+                                            catch (Exception ex)
+                                            {
+                                                Log.Error(ex, "{@0}, 禁用账号异常 {@1}", title, _discordAccount.ChannelId);
                                             }
                                         });
 
