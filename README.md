@@ -257,6 +257,8 @@ https://discord.com/oauth2/authorize?client_id=xxx&permissions=8&scope=bot
 
 ![设置应用权限](./docs/screenshots/gjODn5Nplq.png)
 
+![设置应用权限](./docs/screenshots/35114014.png)
+
 添加应用到频道服务器（参考截图）
 
 ![添加应用到频道服务器](./docs/screenshots/ItiWgaWIaX.png)
