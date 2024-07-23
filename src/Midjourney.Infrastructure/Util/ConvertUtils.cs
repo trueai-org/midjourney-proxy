@@ -1,20 +1,20 @@
-﻿using System.Reactive.Joins;
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 
 namespace Midjourney.Infrastructure.Util
 {
     public static class ConvertUtils
     {
-
         /// <summary>
         /// content正则匹配prompt和进度.
         /// </summary>
         public const string CONTENT_REGEX = ".*?\\*\\*(.*)\\*\\*.+<@\\d+> \\((.*?)\\)";
 
         /// <summary>
-        /// 匹配action的正则表达式
+        /// 匹配 action 的正则表达式
+        /// 1. 匹配 action
+        /// 2. 匹配 blend
         /// </summary>
-        private const string CONTENT_REGEX_ACTION = @"\*\*(.*?)\*\* - (.*?) by <@(\d+)> \((.*?)\)";
+        private const string CONTENT_REGEX_ACTION = @"\*\*(.*?)\*\* - (.*?)<@(\d+)> \((.*?)\)";
 
         public static ContentParseData ParseContent(string content)
         {
@@ -68,7 +68,7 @@ namespace Midjourney.Infrastructure.Util
             return null;
         }
 
-        static bool TryMapToTaskAction(string action, out TaskAction taskAction)
+        private static bool TryMapToTaskAction(string action, out TaskAction taskAction)
         {
             // 标准化action字符串
             action = action.Trim().ToUpper().Split(' ').FirstOrDefault();
@@ -78,45 +78,55 @@ namespace Midjourney.Infrastructure.Util
                 case "IMAGINE":
                     taskAction = TaskAction.IMAGINE;
                     break;
+
                 case "UPSCALE":
                 case "UPSCALED":
                     taskAction = TaskAction.UPSCALE;
                     break;
+
                 case "VARIATION":
                 case "VARIATIONS":
                     taskAction = TaskAction.VARIATION;
                     break;
+
                 case "REROLL":
                     taskAction = TaskAction.REROLL;
                     break;
+
                 case "DESCRIBE":
                     taskAction = TaskAction.DESCRIBE;
                     break;
+
                 case "BLEND":
                     taskAction = TaskAction.BLEND;
                     break;
+
                 case "PAN":
                     taskAction = TaskAction.PAN;
                     break;
+
                 case "OUTPAINT":
                     taskAction = TaskAction.OUTPAINT;
                     break;
+
                 case "INPAINT":
                     taskAction = TaskAction.INPAINT;
                     break;
+
                 case "ZOOM":
                     taskAction = TaskAction.ZOOM;
                     break;
+
                 case "ACTION":
                     taskAction = TaskAction.ACTION;
                     break;
+
                 default:
                     taskAction = TaskAction.ACTION;
                     return true;
             }
             return true;
         }
-
 
         public static List<DataUrl> ConvertBase64Array(List<string> base64Array)
         {
@@ -204,7 +214,7 @@ namespace Midjourney.Infrastructure.Util
         public string UserId { get; set; }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public string Mode { get; set; }
     }
