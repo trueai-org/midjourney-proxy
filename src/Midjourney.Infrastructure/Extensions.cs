@@ -34,7 +34,12 @@ namespace Midjourney.Infrastructure
             // 移除 <url> , 例如: <https://www.baidu.com> a cute girl -> acutegirl
             // 移除 url, 例如: https://www.baiud.com a cute girl -> acutegirl
             // 移除空白字符, 例如: a cute girl -> acutegirl
-            return Regex.Replace(str, @"<[^>]*>|https?://\S+|\s+", "");
+
+            // 修复 -> v6.0 问题
+            // Interactiveinstallations,textlayout,interestingshapes,children.--ar1:1--v6.0--iw2
+            // Interactiveinstallations,textlayout,interestingshapes,children.--ar1: 1--v6--iw2
+
+            return Regex.Replace(str, @"<[^>]*>|https?://\S+|\s+", "").Replace(".00", "").Replace(".0", "");
         }
 
         /// <summary>
