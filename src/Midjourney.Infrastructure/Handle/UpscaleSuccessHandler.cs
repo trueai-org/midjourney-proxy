@@ -51,7 +51,7 @@ namespace Midjourney.Infrastructure.Handle
             var botType = GetBotType(message);
             if (task == null )
             {
-                task = instance.FindRunningTask(c => c.BotType == botType && (c.PromptEn.RemoveWhitespace().EndsWith(finalPrompt.RemoveWhitespace()) || finalPrompt.RemoveWhitespace().StartsWith(c.PromptEn.RemoveWhitespace())))
+                task = instance.FindRunningTask(c => c.BotType == botType && (c.PromptEn.FormatPrompt().EndsWith(finalPrompt.FormatPrompt()) || finalPrompt.FormatPrompt().StartsWith(c.PromptEn.FormatPrompt())))
                     .OrderBy(c => c.StartTime).FirstOrDefault();
             }
 
