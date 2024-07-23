@@ -21,7 +21,7 @@ namespace Midjourney.Infrastructure
         }
 
         /// <summary>
-        /// 移除空白字符
+        /// 移除空白字符、url 等，只保留参数的 prompt
         /// </summary>
         /// <param name="str"></param>
         /// <returns></returns>
@@ -31,7 +31,10 @@ namespace Midjourney.Infrastructure
             if (str == null)
                 throw new ArgumentNullException(nameof(str));
 
-            return Regex.Replace(str, @"\s+", "");
+            // 移除 <url> , 例如: <https://www.baidu.com> a cute girl -> acutegirl
+            // 移除 url, 例如: https://www.baiud.com a cute girl -> acutegirl
+            // 移除空白字符, 例如: a cute girl -> acutegirl
+            return Regex.Replace(str, @"<[^>]*>|https?://\S+|\s+", "");
         }
 
         /// <summary>
@@ -39,7 +42,6 @@ namespace Midjourney.Infrastructure
         /// 例如：由 E:\_backups\p00\3e4 -> _backups/p00/3e4
         /// </summary>
         /// <param name="path"></param>
-        /// <param name="removePrefix">移除的前缀</param>
         /// <returns></returns>
         public static string ToUrlPath(this string path)
         {
