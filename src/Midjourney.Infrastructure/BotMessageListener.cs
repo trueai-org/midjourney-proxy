@@ -382,19 +382,19 @@ namespace Midjourney.Infrastructure
 
                                     // 无效参数、违规的提示词、无效提示词
                                     var errorTitles = new[] {
-                                        "Invalid prompt",
-                                        "Invalid parameter",
-                                        "Banned prompt detected"
+                                        "Invalid prompt", // 无效提示词
+                                        "Invalid parameter", // 无效参数
+                                        "Banned prompt detected" // 违规提示词
                                     };
 
                                     // 跳过的 title
                                     var continueTitles = new[] {
-                                        "Job queued",
-                                        "Credits exhausted",
+                                        "Job queued", // 执行中的队列已满
+                                        "Credits exhausted", // 余额不足
                                         "Action needed to continue",
-                                        "Pending mod message",
-                                        "Blocked",
-                                        "Plan Cancelled"
+                                        "Pending mod message", // 警告
+                                        "Blocked", // 警告
+                                        "Plan Cancelled" // 取消计划
                                     };
 
                                     if (!continueTitles.Contains(title) && (errorTitles.Contains(title) || color == 16711680 || title.Contains("Invalid")))
