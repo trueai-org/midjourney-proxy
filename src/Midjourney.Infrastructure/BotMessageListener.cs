@@ -384,7 +384,8 @@ namespace Midjourney.Infrastructure
                                     var errorTitles = new[] {
                                         "Invalid prompt", // 无效提示词
                                         "Invalid parameter", // 无效参数
-                                        "Banned prompt detected" // 违规提示词
+                                        "Banned prompt detected", // 违规提示词
+                                        "Invalid link" // 无效链接
                                     };
 
                                     // 跳过的 title
