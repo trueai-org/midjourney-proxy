@@ -394,7 +394,8 @@ namespace Midjourney.Infrastructure
                                         "Action needed to continue",
                                         "Pending mod message", // 警告
                                         "Blocked", // 警告
-                                        "Plan Cancelled" // 取消计划
+                                        "Plan Cancelled", // 取消计划
+                                        "Subscription required" // 订阅过期
                                     };
 
                                     if (!continueTitles.Contains(title) && (errorTitles.Contains(title) || color == 16711680 || title.Contains("Invalid")))
@@ -464,8 +465,11 @@ namespace Midjourney.Infrastructure
 
                                         return;
                                     }
-                                    // 临时禁止
-                                    else if (title == "Pending mod message" || title == "Blocked" || title == "Plan Cancelled")
+                                    // 临时禁止/订阅取消/订阅过期
+                                    else if (title == "Pending mod message"
+                                        || title == "Blocked"
+                                        || title == "Plan Cancelled"
+                                        || title == "Subscription required")
                                     {
                                         // 你的处理逻辑
                                         _logger.Warning($"账号 {_discordAccount.GetDisplay()} {title}, 自动禁用账号");
