@@ -381,10 +381,21 @@ namespace Midjourney.Infrastructure
                                     var color = item.TryGetProperty("color", out var colorEle) ? colorEle.GetInt32() : 0;
 
                                     // 无效参数、违规的提示词、无效提示词
-                                    var errorTitles = new[] { "Invalid prompt", "Invalid parameter", "Banned prompt detected" };
+                                    var errorTitles = new[] {
+                                        "Invalid prompt",
+                                        "Invalid parameter",
+                                        "Banned prompt detected"
+                                    };
 
                                     // 跳过的 title
-                                    var continueTitles = new[] { "Job queued", "Credits exhausted", "Action needed to continue", "Pending mod message", "Blocked" };
+                                    var continueTitles = new[] {
+                                        "Job queued",
+                                        "Credits exhausted",
+                                        "Action needed to continue",
+                                        "Pending mod message",
+                                        "Blocked",
+                                        "Plan Cancelled"
+                                    };
 
                                     if (!continueTitles.Contains(title) && (errorTitles.Contains(title) || color == 16711680 || title.Contains("Invalid")))
                                     {
@@ -454,7 +465,7 @@ namespace Midjourney.Infrastructure
                                         return;
                                     }
                                     // 临时禁止
-                                    else if (title == "Pending mod message" || title == "Blocked")
+                                    else if (title == "Pending mod message" || title == "Blocked" || title == "Plan Cancelled")
                                     {
                                         // 你的处理逻辑
                                         _logger.Warning($"账号 {_discordAccount.GetDisplay()} {title}, 自动禁用账号");
