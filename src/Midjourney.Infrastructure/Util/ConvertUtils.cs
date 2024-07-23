@@ -5,7 +5,7 @@ namespace Midjourney.Infrastructure.Util
     public static class ConvertUtils
     {
         /// <summary>
-        /// content正则匹配prompt和进度.
+        /// content 正则匹配 prompt 和进度.
         /// </summary>
         public const string CONTENT_REGEX = ".*?\\*\\*(.*)\\*\\*.+<@\\d+> \\((.*?)\\)";
 

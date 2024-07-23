@@ -17,6 +17,7 @@ namespace Midjourney.API
             services.AddTransient<MessageHandler, VariationSuccessHandler>();
             services.AddTransient<MessageHandler, DescribeSuccessHandler>();
             services.AddTransient<MessageHandler, ActionSuccessHandler>();
+            services.AddTransient<MessageHandler, BlendSuccessHandler>();
 
             // 通知服务
             services.AddSingleton<INotifyService, NotifyServiceImpl>();
