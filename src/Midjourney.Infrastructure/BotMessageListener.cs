@@ -136,7 +136,7 @@ namespace Midjourney.Infrastructure
                 if (msg == null)
                     return;
 
-                _logger.Debug($"BOT Received, {msg.Type}, id: {msg.Id}, rid: {msg.Reference?.MessageId.Value}, mid: {msg?.InteractionMetadata?.Id}, {msg.Content}");
+                _logger.Information($"BOT Received, {msg.Type}, id: {msg.Id}, rid: {msg.Reference?.MessageId.Value}, mid: {msg?.InteractionMetadata?.Id}, {msg.Content}");
 
                 if (!string.IsNullOrWhiteSpace(msg.Content)
                     && msg.Author.IsBot)
@@ -170,7 +170,7 @@ namespace Midjourney.Infrastructure
                 if (msg == null)
                     return;
 
-                _logger.Debug($"BOT Updated, {msg.Type}, id: {msg.Id}, rid: {msg.Reference?.MessageId.Value}, {msg.Content}");
+                _logger.Information($"BOT Updated, {msg.Type}, id: {msg.Id}, rid: {msg.Reference?.MessageId.Value}, {msg.Content}");
 
                 if (!string.IsNullOrWhiteSpace(msg.Content)
                     && msg.Content.Contains("%")
