@@ -1,7 +1,9 @@
 ﻿using Midjourney.Infrastructure.Domain;
 using Newtonsoft.Json.Linq;
 using Serilog;
+using System.IO;
 using System.Net.Http.Headers;
+using System.Reflection.Metadata;
 using System.Text;
 
 namespace Midjourney.Infrastructure.Services
@@ -253,6 +255,29 @@ namespace Midjourney.Infrastructure.Services
             return await PostJsonAndCheckStatusAsync(paramsStr);
         }
 
+        /// <summary>
+        /// Remix 操作
+        /// </summary>
+        /// <param name="action"></param>
+        /// <param name="messageId"></param>
+        /// <param name="modal"></param>
+        /// <param name="customId"></param>
+        /// <param name="prompt"></param>
+        /// <param name="nonce"></param>
+        /// <param name="botType"></param>
+        /// <returns></returns>
+        public async Task<Message> RemixAsync(TaskAction action, string messageId, string modal, string customId, string prompt, string nonce, EBotType botType)
+        {
+            prompt = GetPrompt(prompt);
+
+            string paramsStr = ReplaceInteractionParams(_paramsMap["remix"], nonce, botType)
+                .Replace("$message_id", messageId)
+                .Replace("$prompt", prompt)
+                .Replace("$custom_id", customId)
+                .Replace("$modal", modal);
+
+            return await PostJsonAndCheckStatusAsync(paramsStr);
+        }
 
         /// <summary>
         /// 执行 info 操作

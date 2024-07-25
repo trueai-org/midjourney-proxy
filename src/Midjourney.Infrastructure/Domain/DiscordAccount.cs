@@ -166,6 +166,12 @@ namespace Midjourney.Infrastructure.Domain
             }).Where(c => c != null && !string.IsNullOrWhiteSpace(c.CustomId)).ToList();
 
         /// <summary>
+        /// MJ 是否开启 remix mode
+        /// </summary>
+        [BsonIgnore]
+        public bool MjRemixOn => Buttons.Any(x => x.Label == "Remix mode" && x.Style == 3);
+
+        /// <summary>
         /// Niji 按钮
         /// </summary>
         [BsonIgnore]
@@ -181,6 +187,13 @@ namespace Midjourney.Infrastructure.Domain
                     Type = (int?)c.Type ?? 0,
                 };
             }).Where(c => c != null && !string.IsNullOrWhiteSpace(c.CustomId)).ToList();
+
+        /// <summary>
+        /// Niji 是否开启 remix mode
+        /// </summary>
+        [BsonIgnore]
+        public bool NijiRemixOn => NijiButtons.Any(x => x.Label == "Remix mode" && x.Style == 3);
+
 
         /// <summary>
         /// Mj 下拉框

@@ -213,6 +213,18 @@ namespace Midjourney.Infrastructure.Services
             task.Prompt = targetTask.Prompt;
             task.PromptEn = targetTask.PromptEn;
 
+            // 并且未开启 remix 自动提交
+            var remix = false;
+            if (!discordInstance.Account.RemixAutoSubmit)
+            {
+                // 并且已开启 remix 模式
+                if ((task.BotType == EBotType.MID_JOURNEY && discordInstance.Account.MjRemixOn)
+                    || (task.BotType == EBotType.NIJI_JOURNEY && discordInstance.Account.NijiRemixOn))
+                {
+                    remix = true;
+                }
+            }
+
             // 如果是 Modal 作业，则直接返回
             if (submitAction.CustomId.StartsWith("MJ::CustomZoom::")
                 || submitAction.CustomId.StartsWith("MJ::Inpaint::"))
@@ -233,7 +245,26 @@ namespace Midjourney.Infrastructure.Services
                 // 状态码为 21
                 return SubmitResultVO.Of(ReturnCode.EXISTED, "Waiting for window confirm", task.Id)
                     .SetProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, task.PromptEn)
-                    .SetProperty(Constants.TASK_PROPERTY_REMIX, true);
+                    .SetProperty(Constants.TASK_PROPERTY_REMIX, remix);
+            }
+            // REMIX 处理
+            else if (task.Action == TaskAction.PAN || task.Action == TaskAction.VARIATION || task.Action == TaskAction.REROLL)
+            {
+                // 并且未开启 remix 自动提交
+                if (remix)
+                {
+                    // 如果是 REMIX 任务，则设置任务状态为 modal
+                    task.Status = TaskStatus.MODAL;
+                    task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_ID, targetTask.MessageId);
+                    task.SetProperty(Constants.TASK_PROPERTY_FLAGS, messageFlags);
+
+                    _taskStoreService.Save(task);
+
+                    // 状态码为 21
+                    return SubmitResultVO.Of(ReturnCode.EXISTED, "Waiting for window confirm", task.Id)
+                        .SetProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, task.PromptEn)
+                        .SetProperty(Constants.TASK_PROPERTY_REMIX, remix);
+                }
             }
 
             return discordInstance.SubmitTaskAsync(task, async () =>
@@ -269,31 +300,32 @@ namespace Midjourney.Infrastructure.Services
                 var customId = task.GetProperty<string>(Constants.TASK_PROPERTY_CUSTOM_ID, default);
                 var nonce = task.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default);
 
-                // 弹出，再执行变焦
+                // 弹出，再执行确认
+                // 先交互
                 var res = await discordInstance.ActionAsync(messageId, customId, messageFlags, nonce, task.BotType);
                 if (res.Code != ReturnCode.SUCCESS)
                 {
                     return res;
                 }
 
-                // 等待获取 messageId
+                // 等待获取 messageId 和交互消息 id
                 // 等待最大超时 5min
                 var sw = new Stopwatch();
                 sw.Start();
-
                 do
                 {
-                    Thread.Sleep(500);
+                    Thread.Sleep(250);
                     task = discordInstance.GetRunningTask(task.Id);
 
-                    if (string.IsNullOrWhiteSpace(task.MessageId))
+                    if (string.IsNullOrWhiteSpace(task.MessageId) || string.IsNullOrWhiteSpace(task.InteractionMetadataId))
                     {
                         if (sw.ElapsedMilliseconds > 300000)
                         {
                             return Message.Of(ReturnCode.NOT_FOUND, "超时，未找到消息 ID");
                         }
                     }
-                } while (string.IsNullOrWhiteSpace(task.MessageId));
+
+                } while (string.IsNullOrWhiteSpace(task.MessageId) || string.IsNullOrWhiteSpace(task.InteractionMetadataId));
 
                 // 自定义变焦
                 if (customId.StartsWith("MJ::CustomZoom::"))
@@ -309,6 +341,120 @@ namespace Midjourney.Infrastructure.Services
                 {
                     var ifarmeCustomId = task.GetProperty<string>(Constants.TASK_PROPERTY_IFRAME_MODAL_CREATE_CUSTOM_ID, default);
                     return await discordInstance.InpaintAsync(ifarmeCustomId, task.PromptEn, submitAction.MaskBase64, task.BotType);
+                }
+                // Remix mode
+                else if (task.Action == TaskAction.VARIATION || task.Action == TaskAction.REROLL || task.Action == TaskAction.PAN)
+                {
+                    nonce = SnowFlake.NextId();
+                    task.Nonce = nonce;
+                    task.SetProperty(Constants.TASK_PROPERTY_NONCE, nonce);
+
+                    var action = task.Action;
+
+                    TaskInfo parentTask = null;
+                    if (!string.IsNullOrWhiteSpace(task.ParentId))
+                    {
+                        parentTask = _taskStoreService.Get(task.ParentId);
+                        if (parentTask == null)
+                        {
+                            return Message.Of(ReturnCode.NOT_FOUND, "未找到父级任务");
+                        }
+                    }
+
+                    var prevCustomId = parentTask?.GetProperty<string>(Constants.TASK_PROPERTY_REMIX_CUSTOM_ID, default);
+                    var prevModal = parentTask?.GetProperty<string>(Constants.TASK_PROPERTY_REMIX_MODAL, default);
+
+                    var modal = "MJ::RemixModal::new_prompt";
+                    if (action == TaskAction.REROLL)
+                    {
+                        // 如果是首次提交，则使用交互 messageId
+                        if (string.IsNullOrWhiteSpace(prevCustomId))
+                        {
+                            // MJ::ImagineModal::1265485889606516808
+                            customId = $"MJ::ImagineModal::{messageId}";
+                            modal = "MJ::ImagineModal::new_prompt";
+                        }
+                        else
+                        {
+                            modal = prevModal;
+
+                            if (prevModal.Contains("::PanModal"))
+                            {
+                                // 如果是 pan, pan 是根据放大图片的 CUSTOM_ID 进行重绘处理
+                                var cus = parentTask?.GetProperty<string>(Constants.TASK_PROPERTY_REMIX_U_CUSTOM_ID, default);
+                                if (string.IsNullOrWhiteSpace(cus))
+                                {
+                                    return Message.Of(ReturnCode.VALIDATION_ERROR, "未找到目标图片的 U 操作");
+                                }
+
+                                // MJ::JOB::upsample::3::10f78893-eddb-468f-a0fb-55643a94e3b4
+                                var arr = cus.Split("::");
+                                var hash = arr[4];
+                                var i = arr[3];
+
+                                var prevArr = prevCustomId.Split("::");
+                                var convertedString = $"MJ::PanModal::{prevArr[2]}::{hash}::{i}";
+                                customId = convertedString;
+
+                                // 在进行 U 时，记录目标图片的 U 的 customId
+                                task.SetProperty(Constants.TASK_PROPERTY_REMIX_U_CUSTOM_ID, parentTask?.GetProperty<string>(Constants.TASK_PROPERTY_REMIX_U_CUSTOM_ID, default));
+                            }
+                            else
+                            {
+                                customId = prevCustomId;
+                            }
+
+                            task.SetProperty(Constants.TASK_PROPERTY_REMIX_CUSTOM_ID, customId);
+                            task.SetProperty(Constants.TASK_PROPERTY_REMIX_MODAL, modal);
+                        }
+                    }
+                    else if (action == TaskAction.VARIATION)
+                    {
+                        var suffix = "0";
+
+                        // 低变化
+                        if (customId.Contains("low_variation"))
+                        {
+                            suffix = "0";
+                        }
+                        // 如果是高变化或 niji bot
+                        else if (customId.Contains("high_variation") || task.BotType == EBotType.NIJI_JOURNEY)
+                        {
+                            suffix = "1";
+                        }
+
+                        var parts = customId.Split("::");
+                        var convertedString = $"MJ::RemixModal::{parts[4]}::{parts[3]}::{suffix}";
+                        customId = convertedString;
+
+                        task.SetProperty(Constants.TASK_PROPERTY_REMIX_CUSTOM_ID, customId);
+                        task.SetProperty(Constants.TASK_PROPERTY_REMIX_MODAL, modal);
+                    }
+                    else if (action == TaskAction.PAN)
+                    {
+                        modal = "MJ::PanModal::prompt";
+
+                        // MJ::JOB::pan_left::1::f58e98cb-e76b-4ffa-9ed2-74f0c3fefa5c::SOLO
+                        // to
+                        // MJ::PanModal::left::f58e98cb-e76b-4ffa-9ed2-74f0c3fefa5c::1
+
+                        var parts = customId.Split("::");
+                        var convertedString = $"MJ::PanModal::{parts[2].Split('_')[1]}::{parts[4]}::{parts[3]}";
+                        customId = convertedString;
+
+                        task.SetProperty(Constants.TASK_PROPERTY_REMIX_CUSTOM_ID, customId);
+                        task.SetProperty(Constants.TASK_PROPERTY_REMIX_MODAL, modal);
+
+                        // 在进行 U 时，记录目标图片的 U 的 customId
+                        task.SetProperty(Constants.TASK_PROPERTY_REMIX_U_CUSTOM_ID, parentTask?.GetProperty<string>(Constants.TASK_PROPERTY_REMIX_U_CUSTOM_ID, default));
+                    }
+                    else
+                    {
+                        return Message.Failure("未知操作");
+                    }
+
+                    return await discordInstance.RemixAsync(task.Action.Value, task.MessageId, modal,
+                        customId, task.PromptEn, nonce, task.BotType);
                 }
                 else
                 {
@@ -442,7 +588,7 @@ namespace Midjourney.Infrastructure.Services
                 }
                 Thread.Sleep(2000);
             }
-            
+
             var res0 = await discordInstance.InfoAsync(SnowFlake.NextId(), EBotType.MID_JOURNEY);
             if (res0.Code != ReturnCode.SUCCESS)
             {

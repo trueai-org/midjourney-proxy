@@ -1,0 +1,24 @@
+{
+  "type": 5,
+  "guild_id": "$guild_id",
+  "channel_id": "$channel_id",
+  "session_id": "$session_id",
+  "nonce": "$nonce",
+  "application_id": "$application_id",
+  "data": {
+    "id": "$message_id",
+    "custom_id": "$custom_id",
+    "components": [
+      {
+        "type": 1,
+        "components": [
+          {
+            "type": 4,
+            "custom_id": "$modal",
+            "value": "$prompt"
+          }
+        ]
+      }
+    ]
+  }
+}

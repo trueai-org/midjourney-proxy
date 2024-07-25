@@ -83,6 +83,18 @@
         Task<Message> ZoomAsync(string messageId, string customId, string prompt, string nonce, EBotType botType);
 
         /// <summary>
+        /// Remix 操作
+        /// </summary>
+        /// <param name="action"></param>
+        /// <param name="messageId"></param>
+        /// <param name="customId"></param>
+        /// <param name="prompt"></param>
+        /// <param name="nonce"></param>
+        /// <param name="botType"></param>
+        /// <returns></returns>
+        Task<Message> RemixAsync(TaskAction action, string messageId, string modal, string customId, string prompt, string nonce, EBotType botType);
+
+        /// <summary>
         /// 执行 info 操作
         /// </summary>
         /// <param name="nonce"></param>

@@ -445,7 +445,12 @@ namespace Midjourney.Infrastructure
         /// <returns></returns>
         private async Task RunHeartbeatAsync(int intervalMillis, CancellationToken cancelToken)
         {
-            int delayInterval = (int)(intervalMillis * 0.9);
+            // 生成 0.9 到 1.0 之间的随机数
+            var r = new Random();
+            var v = 1 - r.NextDouble() / 10;
+            var delayInterval = (int)(intervalMillis * v);
+
+            //int delayInterval = (int)(intervalMillis * 0.9);
 
             try
             {

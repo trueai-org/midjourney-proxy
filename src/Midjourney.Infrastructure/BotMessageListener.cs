@@ -385,7 +385,8 @@ namespace Midjourney.Infrastructure
                                         "Invalid prompt", // 无效提示词
                                         "Invalid parameter", // 无效参数
                                         "Banned prompt detected", // 违规提示词
-                                        "Invalid link" // 无效链接
+                                        "Invalid link", // 无效链接
+                                        "Request cancelled due to output filters"
                                     };
 
                                     // 跳过的 title

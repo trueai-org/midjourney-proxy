@@ -155,6 +155,7 @@ namespace Midjourney.API.Controllers
 
             task.Action = changeDTO.Action;
             task.BotType = targetTask.BotType;
+            task.ParentId = targetTask.Id;
             task.Prompt = targetTask.Prompt;
             task.PromptEn = targetTask.PromptEn;
 
@@ -280,6 +281,7 @@ namespace Midjourney.API.Controllers
 
             var task = NewTask(actionDTO);
             task.InstanceId = targetTask.InstanceId;
+            task.ParentId = targetTask.Id;
             task.BotType = targetTask.BotType;
 
             // 识别 mj action
@@ -289,6 +291,9 @@ namespace Midjourney.API.Controllers
             if (actionDTO.CustomId.StartsWith("MJ::JOB::upsample::"))
             {
                 task.Action = TaskAction.UPSCALE;
+
+                // 在进行 U 时，记录目标图片的 U 的 customId
+                task.SetProperty(Constants.TASK_PROPERTY_REMIX_U_CUSTOM_ID, actionDTO.CustomId);
             }
             // 微调
             // MJ::JOB::variation::2::898416ec-7c18-4762-bf03-8e428fee1860

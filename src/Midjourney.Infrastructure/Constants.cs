@@ -34,7 +34,7 @@
         public const string TASK_PROPERTY_FINAL_PROMPT = "finalPrompt";
 
         /// <summary>
-        /// TODO
+        /// 是否为重制 remix 模式
         /// </summary>
         public const string TASK_PROPERTY_REMIX = "remix";
 
@@ -87,6 +87,23 @@
         /// 局部重绘弹窗 custom_id
         /// </summary>
         public const string TASK_PROPERTY_IFRAME_MODAL_CREATE_CUSTOM_ID = "iframe_modal_custom_id";
+
+
+        /// <summary>
+        /// remix 模式下的自定义ID
+        /// </summary>
+        public const string TASK_PROPERTY_REMIX_CUSTOM_ID = "remix_custom_id";
+
+        /// <summary>
+        /// remix 模式下的弹窗
+        /// </summary>
+
+        public const string TASK_PROPERTY_REMIX_MODAL = "remix_modal";
+
+        /// <summary>
+        /// remix 模式下 U 图 custom_id
+        /// </summary>
+        public const string TASK_PROPERTY_REMIX_U_CUSTOM_ID = "remix_u_custom_id";
 
         // 任务扩展属性 end
 

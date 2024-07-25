@@ -47,11 +47,12 @@
 		<Content Remove="Resources\ApiParams\blendniji.json" />
 		<Content Remove="Resources\ApiParams\describeniji.json" />
 		<Content Remove="Resources\ApiParams\seedniji.json" />
+		<Content Remove="Resources\ApiParams\remix.json" />
 		<Content Remove="Resources\mime.types" />
 	</ItemGroup>
 
-
 	<ItemGroup>
+		<EmbeddedResource Include="Resources\ApiParams\remix.json" />
 		<EmbeddedResource Include="Resources\ApiParams\blendniji.json" />
 		<EmbeddedResource Include="Resources\ApiParams\describeniji.json" />
 		<EmbeddedResource Include="Resources\ApiParams\imagineniji.json" />

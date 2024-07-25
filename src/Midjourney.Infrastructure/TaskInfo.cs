@@ -15,6 +15,11 @@ namespace Midjourney.Infrastructure
         }
 
         /// <summary>
+        /// 父级 ID
+        /// </summary>
+        public string ParentId { get; set; }
+
+        /// <summary>
         /// bot 类型，mj(默认)或niji
         /// MID_JOURNEY | 枚举值: NIJI_JOURNEY
         /// </summary>

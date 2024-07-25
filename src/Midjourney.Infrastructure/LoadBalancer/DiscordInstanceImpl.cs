@@ -458,6 +458,20 @@ namespace Midjourney.Infrastructure.LoadBalancer
             _service.ZoomAsync(messageId, customId, prompt, nonce, botType);
 
         /// <summary>
+        /// Remix 操作
+        /// </summary>
+        /// <param name="action"></param>
+        /// <param name="messageId"></param>
+        /// <param name="modal"></param>
+        /// <param name="customId"></param>
+        /// <param name="prompt"></param>
+        /// <param name="nonce"></param>
+        /// <param name="botType"></param>
+        /// <returns></returns>
+        public Task<Message> RemixAsync(TaskAction action, string messageId, string modal, string customId, string prompt, string nonce, EBotType botType)
+            => _service.RemixAsync(action, messageId, modal, customId, prompt, nonce, botType);
+
+        /// <summary>
         /// 执行 info 操作
         /// </summary>
         /// <param name="nonce"></param>

@@ -268,11 +268,12 @@ https://discord.com/oauth2/authorize?client_id=xxx&permissions=8&scope=bot
 
 ## 路线图
 
+- [x] 任务增加 ParentId 记录等
+- [x] Remix mode 支持
+- [ ] Remix 自动提交
 - [ ] 优化指令和状态进度显示
 - [ ] 优化任务和队列满时的提醒
 - [ ] 优化共享账号的并发队列可能出现的问题
-- [ ] 增加 ParentId 记录等
-- [ ] Remix 优化与自动提交
 - [ ] 内置词库管理，批量修改
 - [ ] API 支持指定实例绘图
 - [ ] API 支持过滤指定速度的账号绘图
