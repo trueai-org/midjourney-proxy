@@ -117,6 +117,30 @@ docker run --name mjproxy -d --restart=always \
  -v /etc/localtime:/etc/localtime:ro \
  -v /etc/timezone:/etc/timezone:ro \
  registry.cn-guangzhou.aliyuncs.com/trueai-org/midjourney-proxy
+
+# GitHub 镜像
+docker pull ghcr.io/trueai-org/midjourney-proxy
+docker run --name mjproxy -d --restart=always \
+ -p 8088:8080 --user root \
+ -v /root/mjproxy/logs:/app/logs:rw \
+ -v /root/mjproxy/data:/app/data:rw \
+ -v /root/mjproxy/appsettings.Production.json:/app/appsettings.Production.json:ro \
+ -e TZ=Asia/Shanghai \
+ -v /etc/localtime:/etc/localtime:ro \
+ -v /etc/timezone:/etc/timezone:ro \
+ ghcr.io/trueai-org/midjourney-proxy
+
+# DockerHub 镜像
+docker pull trueaiorg/midjourney-proxy
+docker run --name mjproxy -d --restart=always \
+ -p 8088:8080 --user root \
+ -v /root/mjproxy/logs:/app/logs:rw \
+ -v /root/mjproxy/data:/app/data:rw \
+ -v /root/mjproxy/appsettings.Production.json:/app/appsettings.Production.json:ro \
+ -e TZ=Asia/Shanghai \
+ -v /etc/localtime:/etc/localtime:ro \
+ -v /etc/timezone:/etc/timezone:ro \
+ trueaiorg/midjourney-proxy
 ```
 
 > Windows 版本
@@ -269,6 +293,7 @@ https://discord.com/oauth2/authorize?client_id=xxx&permissions=8&scope=bot
 
 ## 路线图
 
+- [ ] 其他指令 PicReader、 BOOKMARK、Picread 等
 - [ ] 优化指令和状态进度显示
 - [ ] 优化任务和队列满时的提醒
 - [ ] 优化共享账号的并发队列可能出现的问题
@@ -288,7 +313,7 @@ https://discord.com/oauth2/authorize?client_id=xxx&permissions=8&scope=bot
 - [ ] 支付接入支持、支持微信、支付宝，支持绘图定价策略等
 - [ ] 增加公告功能
 - [ ] 账号增加咸鱼模式/放松模式，避免高频作业（此模式下不可创建新的绘图，仍可以执行其他命令，可以配置为多个时间段或定时等策略）
-- [ ] 待定：增加强制休眠模式，或定时休眠模式
+- [ ] 增加强制休眠模式，或定时休眠模式
 
 ## 支持与赞助
 

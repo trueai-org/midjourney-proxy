@@ -213,17 +213,7 @@ namespace Midjourney.Infrastructure.Services
             task.Prompt = targetTask.Prompt;
             task.PromptEn = targetTask.PromptEn;
 
-            // 并且未开启 remix 自动提交
-            var remix = false;
-            if (!discordInstance.Account.RemixAutoSubmit)
-            {
-                // 并且已开启 remix 模式
-                if ((task.BotType == EBotType.MID_JOURNEY && discordInstance.Account.MjRemixOn)
-                    || (task.BotType == EBotType.NIJI_JOURNEY && discordInstance.Account.NijiRemixOn))
-                {
-                    remix = true;
-                }
-            }
+
 
             // 如果是 Modal 作业，则直接返回
             if (submitAction.CustomId.StartsWith("MJ::CustomZoom::")
@@ -243,28 +233,16 @@ namespace Midjourney.Infrastructure.Services
                 _taskStoreService.Save(task);
 
                 // 状态码为 21
+                // 重绘、自定义变焦始终 remix 为true
                 return SubmitResultVO.Of(ReturnCode.EXISTED, "Waiting for window confirm", task.Id)
                     .SetProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, task.PromptEn)
-                    .SetProperty(Constants.TASK_PROPERTY_REMIX, remix);
+                    .SetProperty(Constants.TASK_PROPERTY_REMIX, true);
             }
             // REMIX 处理
             else if (task.Action == TaskAction.PAN || task.Action == TaskAction.VARIATION || task.Action == TaskAction.REROLL)
             {
                 task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_ID, targetTask.MessageId);
                 task.SetProperty(Constants.TASK_PROPERTY_FLAGS, messageFlags);
-
-                // 并且未开启 remix 自动提交
-                if (remix)
-                {
-                    // 如果是 REMIX 任务，则设置任务状态为 modal
-                    task.Status = TaskStatus.MODAL;
-                    _taskStoreService.Save(task);
-
-                    // 状态码为 21
-                    return SubmitResultVO.Of(ReturnCode.EXISTED, "Waiting for window confirm", task.Id)
-                        .SetProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, task.PromptEn)
-                        .SetProperty(Constants.TASK_PROPERTY_REMIX, remix);
-                }
 
                 // 如果开启了 remix 自动提交
                 if (discordInstance.Account.RemixAutoSubmit)
@@ -282,6 +260,23 @@ namespace Midjourney.Infrastructure.Services
                             Prompt = targetTask.PromptEn,
                             State = submitAction.State
                         });
+                    }
+                }
+                else
+                {
+                    // 未开启 remix 自动提交
+                    // 并且已开启 remix 模式
+                    if ((task.BotType == EBotType.MID_JOURNEY && discordInstance.Account.MjRemixOn)
+                        || (task.BotType == EBotType.NIJI_JOURNEY && discordInstance.Account.NijiRemixOn))
+                    {
+                        // 如果是 REMIX 任务，则设置任务状态为 modal
+                        task.Status = TaskStatus.MODAL;
+                        _taskStoreService.Save(task);
+
+                        // 状态码为 21
+                        return SubmitResultVO.Of(ReturnCode.EXISTED, "Waiting for window confirm", task.Id)
+                            .SetProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, task.PromptEn)
+                            .SetProperty(Constants.TASK_PROPERTY_REMIX, true);
                     }
                 }
             }
