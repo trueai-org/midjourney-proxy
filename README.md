@@ -260,8 +260,6 @@ https://discord.com/oauth2/authorize?client_id=xxx&permissions=8&scope=bot
 
 ![设置应用权限](./docs/screenshots/gjODn5Nplq.png)
 
-![设置应用权限](./docs/screenshots/35114014.png)
-
 添加应用到频道服务器（参考截图）
 
 ![添加应用到频道服务器](./docs/screenshots/ItiWgaWIaX.png)
@@ -296,29 +294,3 @@ https://discord.com/oauth2/authorize?client_id=xxx&permissions=8&scope=bot
 
 - 如果觉得这个项目对您有所帮助，请帮忙点个 Star⭐
 - 您也可以提供暂时空闲的绘画公益账号（赞助 1 个慢速队列），支持此项目的发展😀
-
-## 友情链接
-
-- https://github.com/dolfies/discord.py-self
-- https://github.com/bao-io/midjourney-sdk
-- https://github.com/webman-php/midjourney-proxy
-- https://github.com/novicezk/midjourney-proxy
-- https://github.com/litter-coder/midjourney-proxy-plus
-- https://github.com/Dooy/chatgpt-web-midjourney-proxy
-- https://github.com/erictik/midjourney-api
-- https://github.com/yokonsan/midjourney-api
-- https://github.com/imagineapi/imagineapi
-
-## 常用链接
-- Open AI官网: <https://openai.com>
-- Discord官网: <https://discord.com>
-- Discord开放平台: <https://discord.com/developers/applications>
-- 文心一言官网: <https://cloud.baidu.com/product/wenxinworkshop>
-- 星火模型官网: <https://xinghuo.xfyun.cn/>
-- Api2d官网: <https://api2d.com/>
-- OpenAI-SB官网: <https://www.openai-sb.com>
-- 宝塔官网: <https://bt.cn>
-- 阿里云官网: <https://aliyun.com>
-- 腾讯云官网: <https://cloud.tencent.com/>
-- 短信宝官网: <http://www.smsbao.com/>
-- OneAPI项目: <https://github.com/songquanpeng/one-api>
