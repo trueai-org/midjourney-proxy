@@ -3,6 +3,7 @@ using Discord.Commands;
 using Discord.Net.Rest;
 using Discord.Net.WebSockets;
 using Discord.WebSocket;
+using IdGen;
 using Midjourney.Infrastructure.Domain;
 using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.Handle;
@@ -228,6 +229,122 @@ namespace Midjourney.Infrastructure
                     contentStr = content.GetString();
                 }
 
+                // 作者
+                var authorName = string.Empty;
+                var authId = string.Empty;
+                if (data.TryGetProperty("author", out JsonElement author)
+                    && author.TryGetProperty("username", out JsonElement username)
+                    && author.TryGetProperty("id", out JsonElement uid))
+                {
+                    authorName = username.GetString();
+                    authId = uid.GetString();
+                }
+
+                // 应用 ID 即机器人 ID
+                var applicationId = string.Empty;
+                if (data.TryGetProperty("application_id", out JsonElement application))
+                {
+                    applicationId = application.GetString();
+                }
+
+                // 交互元数据 id
+                var metaId = string.Empty;
+                var metaName = string.Empty;
+                if (data.TryGetProperty("interaction_metadata", out JsonElement meta) && meta.TryGetProperty("id", out var m))
+                {
+                    metaId = m.GetString();
+
+                    metaName = meta.TryGetProperty("name", out var n) ? n.GetString() : string.Empty;
+                }
+
+                // 处理 remix 开关
+                if (metaName == "prefer remix" && !string.IsNullOrWhiteSpace(contentStr))
+                {
+                    // MJ
+                    if (authId == Constants.MJ_APPLICATION_ID)
+                    {
+                        if (contentStr.StartsWith("Remix mode turned off"))
+                        {
+                            foreach (var item in _discordAccount.Components)
+                            {
+                                foreach (var sub in item.Components)
+                                {
+                                    if (sub.Label == "Remix mode")
+                                    {
+                                        sub.Style = 2;
+                                    }
+                                }
+                            }
+                        }
+                        else if (contentStr.StartsWith("Remix mode turned on"))
+                        {
+                            foreach (var item in _discordAccount.Components)
+                            {
+                                foreach (var sub in item.Components)
+                                {
+                                    if (sub.Label == "Remix mode")
+                                    {
+                                        sub.Style = 3;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    // NIJI
+                    else if (authId == Constants.NIJI_APPLICATION_ID)
+                    {
+                        if (contentStr.StartsWith("Remix mode turned off"))
+                        {
+                            foreach (var item in _discordAccount.NijiComponents)
+                            {
+                                foreach (var sub in item.Components)
+                                {
+                                    if (sub.Label == "Remix mode")
+                                    {
+                                        sub.Style = 2;
+                                    }
+                                }
+                            }
+                        }
+                        else if (contentStr.StartsWith("Remix mode turned on"))
+                        {
+                            foreach (var item in _discordAccount.NijiComponents)
+                            {
+                                foreach (var sub in item.Components)
+                                {
+                                    if (sub.Label == "Remix mode")
+                                    {
+                                        sub.Style = 3;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    DbHelper.AccountStore.Save(_discordAccount);
+
+                    return;
+                }
+                // 同步 settings 和 remix
+                else if (metaName == "settings")
+                {
+                    // settings 指令
+                    var eventData = data.Deserialize<EventData>();
+                    if (eventData != null && eventData.InteractionMetadata?.Name == "settings" && eventData.Components?.Count > 0)
+                    {
+                        if (applicationId == Constants.NIJI_APPLICATION_ID)
+                        {
+                            _discordAccount.NijiComponents = eventData.Components;
+                            DbHelper.AccountStore.Update(_discordAccount);
+                        }
+                        else if (applicationId == Constants.MJ_APPLICATION_ID)
+                        {
+                            _discordAccount.Components = eventData.Components;
+                            DbHelper.AccountStore.Update(_discordAccount);
+                        }
+                    }
+                }
+
                 // 私信频道
                 var isPrivareChannel = false;
                 if (data.TryGetProperty("channel_id", out JsonElement channelIdElement))
@@ -331,31 +448,6 @@ namespace Midjourney.Infrastructure
                     return;
                 }
 
-
-                // 作者
-                var authorName = string.Empty;
-                if (data.TryGetProperty("author", out JsonElement author)
-                    && author.TryGetProperty("username", out JsonElement username))
-                {
-                    authorName = username.GetString();
-                }
-
-                // 应用 ID 即机器人 ID
-                var applicationId = string.Empty;
-                if (data.TryGetProperty("application_id", out JsonElement application))
-                {
-                    applicationId = application.GetString();
-                }
-
-                // 交互元数据 id
-                var metaId = string.Empty;
-                var metaName = string.Empty;
-                if (data.TryGetProperty("interaction_metadata", out JsonElement meta) && meta.TryGetProperty("id", out var m))
-                {
-                    metaId = m.GetString();
-
-                    metaName = meta.TryGetProperty("name", out var n) ? n.GetString() : string.Empty;
-                }
 
                 // 任务 id
                 // 任务 nonce

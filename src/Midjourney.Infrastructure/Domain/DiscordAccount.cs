@@ -194,7 +194,6 @@ namespace Midjourney.Infrastructure.Domain
         [BsonIgnore]
         public bool NijiRemixOn => NijiButtons.Any(x => x.Label == "Remix mode" && x.Style == 3);
 
-
         /// <summary>
         /// Mj 下拉框
         /// </summary>
