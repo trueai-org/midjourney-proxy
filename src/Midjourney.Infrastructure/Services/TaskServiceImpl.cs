@@ -250,20 +250,39 @@ namespace Midjourney.Infrastructure.Services
             // REMIX 处理
             else if (task.Action == TaskAction.PAN || task.Action == TaskAction.VARIATION || task.Action == TaskAction.REROLL)
             {
+                task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_ID, targetTask.MessageId);
+                task.SetProperty(Constants.TASK_PROPERTY_FLAGS, messageFlags);
+
                 // 并且未开启 remix 自动提交
                 if (remix)
                 {
                     // 如果是 REMIX 任务，则设置任务状态为 modal
                     task.Status = TaskStatus.MODAL;
-                    task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_ID, targetTask.MessageId);
-                    task.SetProperty(Constants.TASK_PROPERTY_FLAGS, messageFlags);
-
                     _taskStoreService.Save(task);
 
                     // 状态码为 21
                     return SubmitResultVO.Of(ReturnCode.EXISTED, "Waiting for window confirm", task.Id)
                         .SetProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, task.PromptEn)
                         .SetProperty(Constants.TASK_PROPERTY_REMIX, remix);
+                }
+
+                // 如果开启了 remix 自动提交
+                if (discordInstance.Account.RemixAutoSubmit)
+                {
+                    // 并且已开启 remix 模式
+                    if ((task.BotType == EBotType.MID_JOURNEY && discordInstance.Account.MjRemixOn)
+                        || (task.BotType == EBotType.NIJI_JOURNEY && discordInstance.Account.NijiRemixOn))
+                    {
+                        _taskStoreService.Save(task);
+
+                        return SubmitModal(task, new SubmitModalDTO()
+                        {
+                            TaskId = task.Id,
+                            NotifyHook = submitAction.NotifyHook,
+                            Prompt = targetTask.PromptEn,
+                            State = submitAction.State
+                        });
+                    }
                 }
             }
 
@@ -280,6 +299,7 @@ namespace Midjourney.Infrastructure.Services
         /// </summary>
         /// <param name="task"></param>
         /// <param name="submitAction"></param>
+        /// <param name="dataUrl"></param>
         /// <returns></returns>
         public SubmitResultVO SubmitModal(TaskInfo task, SubmitModalDTO submitAction, DataUrl dataUrl = null)
         {
@@ -294,14 +314,12 @@ namespace Midjourney.Infrastructure.Services
 
             return discordInstance.SubmitTaskAsync(task, async () =>
             {
+                var customId = task.GetProperty<string>(Constants.TASK_PROPERTY_CUSTOM_ID, default);
                 var messageFlags = task.GetProperty<int>(Constants.TASK_PROPERTY_FLAGS, default);
                 var messageId = task.GetProperty<string>(Constants.TASK_PROPERTY_MESSAGE_ID, default);
-
-                var customId = task.GetProperty<string>(Constants.TASK_PROPERTY_CUSTOM_ID, default);
                 var nonce = task.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default);
 
-                // 弹出，再执行确认
-                // 先交互
+                // 弹窗确认
                 var res = await discordInstance.ActionAsync(messageId, customId, messageFlags, nonce, task.BotType);
                 if (res.Code != ReturnCode.SUCCESS)
                 {
