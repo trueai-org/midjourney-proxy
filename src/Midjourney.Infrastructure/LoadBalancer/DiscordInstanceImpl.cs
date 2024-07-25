@@ -154,8 +154,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
                             {
                                 _taskFutureMap[info.Item1.Id] = ExecuteTaskAsync(info.Item1, info.Item2);
 
-                                // 等待
-                                Thread.Sleep(10);
+                                // 任务提交间隔 1.2s
+                                Thread.Sleep(1200);
                             }
                         }
                         else
