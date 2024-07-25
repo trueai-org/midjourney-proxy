@@ -444,14 +444,14 @@ namespace Midjourney.Infrastructure.Services
                         // 如果全局开启了高变化，则高变化
                         if (task.BotType == EBotType.MID_JOURNEY)
                         {
-                            if (discordInstance.Account.Buttons.Any(x => x.Label == "High Variation Mode" && x.Type == 3))
+                            if (discordInstance.Account.Buttons.Any(x => x.Label == "High Variation Mode" && x.Style == 3))
                             {
                                 suffix = "1";
                             }
                         }
                         else
                         {
-                            if (discordInstance.Account.NijiButtons.Any(x => x.Label == "High Variation Mode" && x.Type == 3))
+                            if (discordInstance.Account.NijiButtons.Any(x => x.Label == "High Variation Mode" && x.Style == 3))
                             {
                                 suffix = "1";
                             }
