@@ -20,7 +20,7 @@
 - [x] 支持 Shorten(prompt分析) 指令
 - [x] 支持焦点移动：Pan ⬅️➡⬆️⬇️
 - [x] 支持局部重绘：Vary (Region) 🖌
-- [x] 支持几乎所有的关联按钮动作和 🎛️ Remix 模式
+- [x] 支持几乎所有的关联按钮动作和 
 - [x] 支持图片变焦，自定义变焦 Zoom 🔍
 - [x] 支持获取图片的 seed 值
 - [x] 支持账号指定生成速度模式 RELAX | FAST | TURBO 
@@ -38,6 +38,9 @@
 - [x] 支持MJ的任务查询
 - [x] 提供功能齐全的绘图测试页面
 - [x] 兼容支持市面上主流绘图客户端和 API 调用。
+- [x] 任务增加 ParentId 记录等
+- [x] 🎛️ Remix 模式支持
+- [ ] 🎛️ Remix 模式自动提交
 
 ## 在线预览
 
@@ -268,8 +271,6 @@ https://discord.com/oauth2/authorize?client_id=xxx&permissions=8&scope=bot
 
 ## 路线图
 
-- [x] 任务增加 ParentId 记录等
-- [x] Remix mode 支持
 - [ ] Remix 自动提交
 - [ ] 优化指令和状态进度显示
 - [ ] 优化任务和队列满时的提醒
