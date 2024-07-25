@@ -167,14 +167,17 @@ function delete_config_file() {
 
 # 从指定版本导出配置文件
 function export_config_file() {
+    list_installed_versions
     read -p "Enter the version to export configuration from (e.g., v2.3.7): " VERSION
     if [ -d "$VERSION" ]; then
         read -p "Enter the name for the exported configuration file: " EXPORT_NAME
+        # 删除用户输入的名字中的 `.json` 后缀
+        EXPORT_NAME="${EXPORT_NAME%.json}"
         # 检查新名称是否为空或已存在
-        if [ -z "$EXPORT_NAME" ] || [ -e "$CONFIG_DIR/$EXPORT_NAME" ]; then
+        if [ -z "$EXPORT_NAME" ] || [ -e "$CONFIG_DIR/$EXPORT_NAME.json" ]; then
             echo -e "${RED}Invalid new name or file already exists.${NC}"
         else
-            cp "$VERSION/appsettings.json" "$CONFIG_DIR/$EXPORT_NAME"
+            cp "$VERSION/appsettings.json" "$CONFIG_DIR/$EXPORT_NAME.json"
             echo -e "${GREEN}Configuration file exported as: $EXPORT_NAME${NC}"
         fi
     else
