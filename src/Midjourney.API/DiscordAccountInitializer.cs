@@ -1,7 +1,7 @@
-﻿using IdGen;
-using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Options;
 using Midjourney.Infrastructure.Domain;
 using Midjourney.Infrastructure.LoadBalancer;
+using Midjourney.Infrastructure.Services;
 using Serilog;
 
 using ILogger = Serilog.ILogger;
@@ -13,22 +13,23 @@ namespace Midjourney.API
     /// </summary>
     public class DiscordAccountInitializer : IHostedService
     {
+        private readonly ITaskService _taskService;
         private readonly DiscordLoadBalancer _discordLoadBalancer;
         private readonly DiscordAccountHelper _discordAccountHelper;
         private readonly ProxyProperties _properties;
         private readonly ILogger _logger;
 
-        /// <summary>
-        /// 初始化 DiscordAccountInitializer 类的新实例
-        /// </summary>
-        /// <param name="discordLoadBalancer"></param>
-        /// <param name="discordAccountHelper"></param>
-        /// <param name="options"></param>
-        public DiscordAccountInitializer(DiscordLoadBalancer discordLoadBalancer, DiscordAccountHelper discordAccountHelper, IOptions<ProxyProperties> options)
+
+        public DiscordAccountInitializer(
+            DiscordLoadBalancer discordLoadBalancer,
+            DiscordAccountHelper discordAccountHelper,
+            IOptions<ProxyProperties> options,
+            ITaskService taskService)
         {
             _discordLoadBalancer = discordLoadBalancer;
             _discordAccountHelper = discordAccountHelper;
             _properties = options.Value;
+            _taskService = taskService;
 
             _logger = Log.Logger;
         }
@@ -121,9 +122,11 @@ namespace Midjourney.API
                         _discordLoadBalancer.AddInstance(disInstance);
 
                         // TODO 这里应该等待初始化完成，并获取用户信息验证，获取用户成功后设置为可用状态
-
                         // 多账号启动时，等待一段时间再启动下一个账号
                         await Task.Delay(1000 * 5);
+
+                        // 启动后执行 info setting 操作
+                        await _taskService.InfoSetting(account.ChannelId);
                     }
                 }
                 catch (Exception ex)

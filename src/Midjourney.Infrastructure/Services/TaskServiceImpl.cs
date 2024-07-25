@@ -620,7 +620,7 @@ namespace Midjourney.Infrastructure.Services
                 {
                     throw new LogicException(res.Description);
                 }
-                Thread.Sleep(2000);
+                Thread.Sleep(2500);
             }
 
             var res0 = await discordInstance.InfoAsync(SnowFlake.NextId(), EBotType.MID_JOURNEY);
@@ -628,7 +628,7 @@ namespace Midjourney.Infrastructure.Services
             {
                 throw new LogicException(res0.Description);
             }
-            Thread.Sleep(2000);
+            Thread.Sleep(2500);
 
             // 只有配置 NIJI 才请求            
             if (!string.IsNullOrWhiteSpace(discordInstance.Account.NijiBotChannelId))
@@ -638,7 +638,7 @@ namespace Midjourney.Infrastructure.Services
                 {
                     throw new LogicException(res2.Description);
                 }
-                Thread.Sleep(2000);
+                Thread.Sleep(2500);
             }
 
             var res3 = await discordInstance.SettingAsync(SnowFlake.NextId(), EBotType.MID_JOURNEY);
