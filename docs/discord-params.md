@@ -81,3 +81,29 @@ websocket.onmessage = function(event) {
   - **解决方案**: 确保发送的 `session_id` 是在建立 WebSocket 连接时接收的那个。如果 `session_id` 错误，该事件不会被正确触发。
 
 通过以上步骤和示例代码，您应该能够有效地捕获并处理 `INTERACTION_IFRAME_MODAL_CREATE` 事件。这需要确保您正确管理和使用 `session_id`，以保证数据的一致性和事件的正确触发。
+
+## 友情链接
+
+- https://github.com/dolfies/discord.py-self
+- https://github.com/bao-io/midjourney-sdk
+- https://github.com/webman-php/midjourney-proxy
+- https://github.com/novicezk/midjourney-proxy
+- https://github.com/litter-coder/midjourney-proxy-plus
+- https://github.com/Dooy/chatgpt-web-midjourney-proxy
+- https://github.com/erictik/midjourney-api
+- https://github.com/yokonsan/midjourney-api
+- https://github.com/imagineapi/imagineapi
+
+## 常用链接
+- Open AI官网: <https://openai.com>
+- Discord官网: <https://discord.com>
+- Discord开放平台: <https://discord.com/developers/applications>
+- 文心一言官网: <https://cloud.baidu.com/product/wenxinworkshop>
+- 星火模型官网: <https://xinghuo.xfyun.cn/>
+- Api2d官网: <https://api2d.com/>
+- OpenAI-SB官网: <https://www.openai-sb.com>
+- 宝塔官网: <https://bt.cn>
+- 阿里云官网: <https://aliyun.com>
+- 腾讯云官网: <https://cloud.tencent.com/>
+- 短信宝官网: <http://www.smsbao.com/>
+- OneAPI项目: <https://github.com/songquanpeng/one-api>
