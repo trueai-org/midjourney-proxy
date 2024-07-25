@@ -10,15 +10,38 @@ NC='\033[0m' # No Color
 # 配置文件存放目录
 CONFIG_DIR="config_files"
 
+# 检查包管理器类型
+if command -v apt-get &> /dev/null; then
+    PKG_MANAGER="apt-get"
+elif command -v yum &> /dev/null; then
+    PKG_MANAGER="yum"
+elif command -v dnf &> /dev/null; then
+    PKG_MANAGER="dnf"
+else
+    echo -e "${RED}No supported package manager found (apt-get, yum, dnf).${NC}"
+    exit 1
+fi
+
 # 检查是否安装了 curl 和 jq
 if ! command -v curl &> /dev/null; then
     echo -e "${YELLOW}curl is required but not installed. Installing curl...${NC}"
-    sudo apt-get update && sudo apt-get install curl -y
+    sudo $PKG_MANAGER update && sudo $PKG_MANAGER install curl -y
 fi
 
 if ! command -v jq &> /dev/null; then
     echo -e "${YELLOW}jq is required but not installed. Installing jq...${NC}"
-    sudo apt-get update && sudo apt-get install jq -y
+    sudo $PKG_MANAGER update && sudo $PKG_MANAGER install jq -y
+fi
+
+# 检查 curl 和 jq 是否成功安装
+if ! command -v curl &> /dev/null; then
+    echo -e "${RED}Failed to install curl. Please install it manually.${NC}"
+    exit 1
+fi
+
+if ! command -v jq &> /dev/null; then
+    echo -e "${RED}Failed to install jq. Please install it manually.${NC}"
+    exit 1
 fi
 
 # 下载文件函数，包含镜像重试逻辑
