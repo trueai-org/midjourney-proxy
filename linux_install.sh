@@ -21,22 +21,7 @@ if ! command -v jq &> /dev/null; then
     sudo apt-get update && sudo apt-get install jq -y
 fi
 
-# 检查 CPU 架构
-ARCH=$(uname -m)
-if [ "$ARCH" == "x86_64" ]; then
-    ARCH="x64"
-elif [[ "$ARCH" == "aarch64" || "$ARCH" == "arm64" ]]; then
-    ARCH="arm64"
-else
-    echo -e "${RED}Unsupported architecture: $ARCH${NC}"
-    exit 1
-fi
-
-# GitHub API URL for latest release
-API_URL="https://api.github.com/repos/trueai-org/midjourney-proxy/releases/latest"
-
-
-# 使用 curl 下载文件
+# 下载文件函数，包含镜像重试逻辑
 function download_file() {
     local url=$1
     local output=$2
@@ -54,6 +39,20 @@ function download_file() {
         fi
     fi
 }
+
+# 检查 CPU 架构
+ARCH=$(uname -m)
+if [ "$ARCH" == "x86_64" ]; then
+    ARCH="x64"
+elif [[ "$ARCH" == "aarch64" || "$ARCH" == "arm64" ]]; then
+    ARCH="arm64"
+else
+    echo -e "${RED}Unsupported architecture: $ARCH${NC}"
+    exit 1
+fi
+
+# GitHub API URL for latest release
+API_URL="https://api.github.com/repos/trueai-org/midjourney-proxy/releases/latest"
 
 # 获取最新版本的下载链接
 function get_latest_version_info() {
@@ -86,7 +85,6 @@ function get_latest_version_info() {
         exit 1
     fi
 }
-
 
 # 初始化配置文件存放目录
 function init_config_dir() {
@@ -134,8 +132,13 @@ function rename_config_file() {
         selected_file=$(get_config_file_by_number $num)
         if [ -n "$selected_file" ]; then
             read -p "Enter the new configuration file name: " NEW_NAME
-            mv "$CONFIG_DIR/$selected_file" "$CONFIG_DIR/$NEW_NAME"
-            echo -e "${GREEN}Configuration file renamed to: $NEW_NAME${NC}"
+            # 检查新名称是否为空或已存在
+            if [ -z "$NEW_NAME" ] || [ -e "$CONFIG_DIR/$NEW_NAME" ]; then
+                echo -e "${RED}Invalid new name or file already exists.${NC}"
+            else
+                mv "$CONFIG_DIR/$selected_file" "$CONFIG_DIR/$NEW_NAME"
+                echo -e "${GREEN}Configuration file renamed to: $NEW_NAME${NC}"
+            fi
         else
             echo -e "${RED}Invalid selection.${NC}"
         fi
@@ -148,7 +151,8 @@ function delete_config_file() {
         read -p "Select configuration file to delete by number: " num
         selected_file=$(get_config_file_by_number $num)
         if [ -n "$selected_file" ];then
-            read -p "Are you sure you want to delete $selected_file? (y/n): " CONFIRM
+            read -p "Are you sure you want to delete $selected_file? [y/N]: " CONFIRM
+            CONFIRM=$(echo "$CONFIRM" | tr '[:upper:]' '[:lower:]')
             if [ "$CONFIRM" == "y" ]; then
                 rm "$CONFIG_DIR/$selected_file"
                 echo -e "${GREEN}Configuration file deleted: $selected_file${NC}"
@@ -166,19 +170,25 @@ function export_config_file() {
     read -p "Enter the version to export configuration from (e.g., v2.3.7): " VERSION
     if [ -d "$VERSION" ]; then
         read -p "Enter the name for the exported configuration file: " EXPORT_NAME
-        cp "$VERSION/appsettings.json" "$CONFIG_DIR/$EXPORT_NAME"
-        echo -e "${GREEN}Configuration file exported as: $EXPORT_NAME${NC}"
+        # 检查新名称是否为空或已存在
+        if [ -z "$EXPORT_NAME" ] || [ -e "$CONFIG_DIR/$EXPORT_NAME" ]; then
+            echo -e "${RED}Invalid new name or file already exists.${NC}"
+        else
+            cp "$VERSION/appsettings.json" "$CONFIG_DIR/$EXPORT_NAME"
+            echo -e "${GREEN}Configuration file exported as: $EXPORT_NAME${NC}"
+        fi
     else
         echo -e "${RED}Version directory not found: $VERSION${NC}"
     fi
 }
 
-# 注意：此函数用于在安装版本后应用配置文件
+# 提示应用配置文件
 function prompt_apply_config() {
     echo -e "${GREEN}Installation completed for version $1.${NC}"
     if list_config_files; then
-        read -p "Do you want to apply a configuration file now? (y/n): " APPLY_CONFIG
-        if [ "$APPLY_CONFIG" == "y" ];then
+        read -p "Do you want to apply a configuration file now? [y/N]: " APPLY_CONFIG
+        APPLY_CONFIG=$(echo "$APPLY_CONFIG" | tr '[:upper:]' '[:lower:]')
+        if [ "$APPLY_CONFIG" == "y" ]; then
             list_config_files
             read -p "Select configuration file to apply by number: " num
             selected_file=$(get_config_file_by_number $num)
@@ -249,11 +259,15 @@ function check_latest_version() {
 # 删除指定版本
 function delete_version() {
     read -p "Enter the version you want to delete (e.g., v2.3.7): " VERSION
-    if [ -d "$VERSION" ]; then
-        rm -rf "$VERSION"
-        echo -e "${GREEN}Version $VERSION deleted.${NC}"
+    if [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        if [ -d "$VERSION" ]; then
+            rm -rf "$VERSION"
+            echo -e "${GREEN}Version $VERSION deleted.${NC}"
+        else
+            echo -e "${RED}Version $VERSION is not installed.${NC}"
+        fi
     else
-        echo -e "${RED}Version $VERSION is not installed.${NC}"
+        echo -e "${RED}Invalid version format.${NC}"
     fi
 }
 
@@ -274,8 +288,16 @@ function import_config_from_existing() {
     read -p "Select a version to import configuration from (by number): " num
     if (( num > 0 && num <= ${#INSTALLED_VERSIONS[@]} )); then
         selected_version="${INSTALLED_VERSIONS[$((num-1))]}"
-        cp "$selected_version/appsettings.json" "$1/appsettings.json"
-        echo -e "${GREEN}Configuration from $selected_version imported to version $1.${NC}"
+        if [ -d "$selected_version" ]; then
+            if [ -n "$(ls -A "$selected_version")" ]; then
+                cp "$selected_version/appsettings.json" "$1/appsettings.json"
+                echo -e "${GREEN}Configuration from $selected_version imported to version $1.${NC}"
+            else
+                echo -e "${RED}Empty directory selected, no configuration imported.${NC}" 
+            fi
+        else
+            echo -e "${RED}Directory not found, no configuration imported.${NC}"
+        fi
     else
         echo -e "${RED}Invalid selection. No configuration imported.${NC}"
     fi
@@ -301,8 +323,12 @@ function install_version() {
     # 记录当前目录
     ORIGINAL_DIR=$(pwd)
 
-    # 创建临时目录
+    # 检查临时目录是否创建成功
     TEMP_DIR=$(mktemp -d)
+    if [ ! -d "$TEMP_DIR" ]; then
+        echo -e "${RED}Failed to create temporary directory. Installation aborted.${NC}"
+        return 1
+    fi
     cd $TEMP_DIR
 
     # 下载指定版本的 tar 文件
@@ -315,12 +341,9 @@ function install_version() {
     EXTRACTED_DIR=$(tar -tzf "midjourney-proxy-linux-${ARCH}-$VERSION.tar.gz" | head -1 | cut -f1 -d "/")
 
     if [ "$EXTRACTED_DIR" == "." ]; then
-        cd /
         mv "$TEMP_DIR" "$ORIGINAL_DIR/${VERSION}"
         cd $ORIGINAL_DIR
-    fi
-
-    if [ -d "$EXTRACTED_DIR" ]; then
+    elif [ -d "$EXTRACTED_DIR" ]; then
         # 移动解压目录到目标位置
         mv "$EXTRACTED_DIR" "$ORIGINAL_DIR/${VERSION}"
         cd $ORIGINAL_DIR
@@ -334,7 +357,8 @@ function install_version() {
 
     # 新增：提示用户选择是否从现有版本导入配置文件
     echo -e "${GREEN}Installation completed for version $VERSION.${NC}"
-    read -p "Do you want to import configuration from an existing version? (y/n): " IMPORT_CONFIG
+    read -p "Do you want to import configuration from an existing version? [y/N]: " IMPORT_CONFIG
+    IMPORT_CONFIG=$(echo "$IMPORT_CONFIG" | tr '[:upper:]' '[:lower:]')
     if [ "$IMPORT_CONFIG" == "y" ]; then
         import_config_from_existing "$VERSION"
     else
@@ -344,11 +368,11 @@ function install_version() {
     return 0
 }
 
-# 获取最新版本信息
-get_latest_version_info
-
 # 初始化配置目录
 init_config_dir
+
+# 获取最新版本信息
+get_latest_version_info
 
 until [ "$OPTION" == "5" ]; do
     echo
