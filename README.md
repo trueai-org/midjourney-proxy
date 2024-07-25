@@ -117,6 +117,30 @@ docker run --name mjproxy -d --restart=always \
  -v /etc/localtime:/etc/localtime:ro \
  -v /etc/timezone:/etc/timezone:ro \
  registry.cn-guangzhou.aliyuncs.com/trueai-org/midjourney-proxy
+
+# GitHub 镜像
+docker pull ghcr.io/trueai-org/midjourney-proxy
+docker run --name mjproxy -d --restart=always \
+ -p 8088:8080 --user root \
+ -v /root/mjproxy/logs:/app/logs:rw \
+ -v /root/mjproxy/data:/app/data:rw \
+ -v /root/mjproxy/appsettings.Production.json:/app/appsettings.Production.json:ro \
+ -e TZ=Asia/Shanghai \
+ -v /etc/localtime:/etc/localtime:ro \
+ -v /etc/timezone:/etc/timezone:ro \
+ ghcr.io/trueai-org/midjourney-proxy
+
+# DockerHub 镜像
+docker pull trueaiorg/midjourney-proxy
+docker run --name mjproxy -d --restart=always \
+ -p 8088:8080 --user root \
+ -v /root/mjproxy/logs:/app/logs:rw \
+ -v /root/mjproxy/data:/app/data:rw \
+ -v /root/mjproxy/appsettings.Production.json:/app/appsettings.Production.json:ro \
+ -e TZ=Asia/Shanghai \
+ -v /etc/localtime:/etc/localtime:ro \
+ -v /etc/timezone:/etc/timezone:ro \
+ trueaiorg/midjourney-proxy
 ```
 
 > Windows 版本
