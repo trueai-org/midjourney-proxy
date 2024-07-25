@@ -96,7 +96,7 @@ curl -o /root/mjopen/appsettings.Production.json https://raw.githubusercontent.c
 docker stop mjopen && docker rm mjopen
 
 # 3.启动新的 Docker 容器
-docker run -m 512m --name mjopen -d --restart=always \
+docker run -m 1g --name mjopen -d --restart=always \
  -e DEMO=true \
  -p 8086:8080 --user root \
  -v /root/mjopen/logs:/app/logs:rw \
