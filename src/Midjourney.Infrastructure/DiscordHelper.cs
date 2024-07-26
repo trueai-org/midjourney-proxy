@@ -74,12 +74,12 @@ namespace Midjourney.Infrastructure
         /// <returns></returns>
         public string GetCustomCdn()
         {
-            if (string.IsNullOrWhiteSpace(_properties.NgDiscord.Cdn))
+            if (string.IsNullOrWhiteSpace(_properties.NgDiscord.CustomCdn))
             {
                 return string.Empty;
             }
 
-            string cdnUrl = _properties.NgDiscord.Cdn;
+            string cdnUrl = _properties.NgDiscord.CustomCdn;
             return cdnUrl.EndsWith("/") ? cdnUrl.Substring(0, cdnUrl.Length - 1) : cdnUrl;
         }
 

@@ -154,10 +154,10 @@ namespace Midjourney.Infrastructure.Handle
                 task.State = "";
             }
 
-            var cdn = discordHelper.GetCustomCdn();
+            var customCdn = discordHelper.GetCustomCdn();
             var toLocal = discordHelper.GetSaveToLocal();
 
-            task.Success(cdn, toLocal);
+            task.Success(customCdn, toLocal);
         }
 
         protected bool HasImage(SocketMessage message)

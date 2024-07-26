@@ -188,7 +188,7 @@ namespace Midjourney.Infrastructure
         /// <summary>
         /// 任务成功。
         /// </summary>
-        public void Success(string cdn, bool downloadToLocal)
+        public void Success(string customCdn, bool downloadToLocal)
         {
             try
             {
@@ -224,7 +224,7 @@ namespace Midjourney.Infrastructure
                                 }
 
                                 // 替换 url
-                                ImageUrl = $"{cdn?.Trim()?.Trim('/')}/{localPath}{uri?.Query}";
+                                ImageUrl = $"{customCdn?.Trim()?.Trim('/')}/{localPath}{uri?.Query}";
                                 IsSaveToLocal = true;
                             }
                         }
