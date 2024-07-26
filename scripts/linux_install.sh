@@ -477,6 +477,13 @@ function install_version() {
 # 启动程序版本
 function start_program_version() {
     list_installed_versions
+    
+    # 检查是否有版本安装，如果没有则中断操作
+    if [ ${#INSTALLED_VERSIONS[@]} -eq 0 ]; then
+        echo -e "${RED}No versions installed. Please install a version first.${NC}"
+        return
+    fi
+
     read -p "Select a version to start (e.g., v2.3.7): " VERSION
     if [ -d "$VERSION" ]; then
         if [ -f "$VERSION/run_app.sh" ]; then
