@@ -63,6 +63,58 @@ function download_file() {
     fi
 }
 
+compare_and_merge_json() {
+    local json1="$1"
+    local json2="$2"
+    local temp_file=$(mktemp)
+
+    # 检查文件是否存在
+    if [ ! -f "$json1" ] || [ ! -f "$json2" ]; then
+        echo -e "${RED}One or both of the files do not exist.${NC}"
+        return 1
+    fi
+
+    # 检查JSON格式是否正确
+    if ! jq empty "$json1" > /dev/null 2>&1; then
+        echo -e "${RED}First file is not a valid JSON${NC}"
+        return 1
+    fi
+
+    if ! jq empty "$json2" > /dev/null 2>&1; then
+        echo -e "${RED}Second file is not a valid JSON${NC}"
+        return 1
+    fi
+
+    # 输出两者不同的项
+    echo -e "${BLUE}Differences between the JSON files:${NC}"
+    diff <(jq -S . "$json1") <(jq -S . "$json2")
+
+    # 将相同项文件2覆盖文件1，并保存到临时文件中
+    jq -s '.[0] * .[1]' "$json1" "$json2" > "$temp_file"
+
+    # 获取文件的JSON结构
+    local structure1=$(jq -S . "$json1" | jq '.. | objects | keys | select(length > 0) | unique' | jq -sc add | jq -S .)
+    local structure2=$(jq -S . "$json2" | jq '.. | objects | keys | select(length > 0) | unique' | jq -sc add | jq -S .)
+
+    # 计算缺失和新增的项
+    local added_keys=$(jq -n --argfile a <(echo "$structure1") --argfile b <(echo "$structure2") \
+        '($b - $a) // empty')
+
+    # 让用户逐一输入新增项的值并保存
+    if [ ! -z "$added_keys" ]; then
+        echo -e "${YELLOW}Please input values for the following added keys:${NC}"
+        for key in $(echo "$added_keys" | jq -r '.[]'); do
+            read -p "Value for key \"$key\": " value
+            temp_file=$(jq --arg key "$key" --arg value "$value" \
+                'setpath([($key | split(".")[])]; $value)' "$temp_file")
+        done
+    fi
+
+    # 保存合并后的文件
+    echo "$temp_file" | jq . > "$json1"
+    echo -e "${GREEN}File1 has been updated and saved.${NC}"
+}
+
 # 检查 CPU 架构
 ARCH=$(uname -m)
 if [ "$ARCH" == "x86_64" ]; then
@@ -219,8 +271,17 @@ function prompt_apply_config() {
             read -p "Select configuration file to apply by number: " num
             selected_file=$(get_config_file_by_number $num)
             if [ -n "$selected_file" ]; then
-                cp "$CONFIG_DIR/$selected_file" "$1/appsettings.json"
-                echo -e "${GREEN}Configuration file $selected_file applied to version $1.${NC}"
+                if [ -e "$1/appsettings.json" ]; then
+                    read -p "Target version already has an appsettings.json. Do you want to merge? (y/N): " MERGE_CONFIRM
+                    if [[ "$MERGE_CONFIRM" =~ ^[yY]$ ]]; then
+                        compare_and_merge_json "$1/appsettings.json" "$CONFIG_DIR/$selected_file"
+                    else
+                        echo -e "${YELLOW}Configuration not merged.${NC}"
+                    fi
+                else
+                    cp "$CONFIG_DIR/$selected_file" "$1/appsettings.json"
+                    echo -e "${GREEN}Configuration file $selected_file applied to version $1.${NC}"
+                fi
             else
                 echo -e "${RED}Invalid selection. No configuration file applied.${NC}"
             fi
@@ -231,6 +292,7 @@ function prompt_apply_config() {
         echo -e "${YELLOW}No configuration files found. You can manually modify the configuration at $1/appsettings.json${NC}"
     fi
 }
+
 
 # 将配置文件应用到指定版本
 function apply_config_to_version() {
@@ -297,7 +359,7 @@ function delete_version() {
     fi
 }
 
-# 新增函数：导入现有版本配置
+# 从保存的配置中导入版本配置
 function import_config_from_existing() {
     if [ ${#INSTALLED_VERSIONS[@]} -eq 0 ]; then
         echo -e "${RED}No installed versions available to import configuration.${NC}"
@@ -315,11 +377,20 @@ function import_config_from_existing() {
     if (( num > 0 && num <= ${#INSTALLED_VERSIONS[@]} )); then
         selected_version="${INSTALLED_VERSIONS[$((num-1))]}"
         if [ -d "$selected_version" ]; then
-            if [ -n "$(ls -A "$selected_version")" ]; then
-                cp "$selected_version/appsettings.json" "$1/appsettings.json"
-                echo -e "${GREEN}Configuration from $selected_version imported to version $1.${NC}"
+            if [ -e "$selected_version/appsettings.json" ]; then
+                if [ -e "$1/appsettings.json" ]; then
+                    read -p "Target version already has an appsettings.json. Do you want to merge? (y/N): " MERGE_CONFIRM
+                    if [[ "$MERGE_CONFIRM" =~ ^[yY]$ ]]; then
+                        compare_and_merge_json "$1/appsettings.json" "$selected_version/appsettings.json"
+                    else
+                        echo -e "${YELLOW}Configuration not merged.${NC}"
+                    fi
+                else
+                    cp "$selected_version/appsettings.json" "$1/appsettings.json"
+                    echo -e "${GREEN}Configuration from $selected_version imported to version $1.${NC}"
+                fi
             else
-                echo -e "${RED}Empty directory selected, no configuration imported.${NC}" 
+                echo -e "${RED}No appsettings.json in the selected version directory.${NC}"
             fi
         else
             echo -e "${RED}Directory not found, no configuration imported.${NC}"
@@ -328,6 +399,7 @@ function import_config_from_existing() {
         echo -e "${RED}Invalid selection. No configuration imported.${NC}"
     fi
 }
+
 
 # 安装指定版本
 function install_version() {
