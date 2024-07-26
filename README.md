@@ -100,6 +100,7 @@ docker run -m 1g --name mjopen -d --restart=always \
  -p 8086:8080 --user root \
  -v /root/mjopen/logs:/app/logs:rw \
  -v /root/mjopen/data:/app/data:rw \
+ -v /root/mjopen/attachments:/app/wwwroot/attachments:rw \
  -v /root/mjopen/appsettings.Production.json:/app/appsettings.Production.json:ro \
  -e TZ=Asia/Shanghai \
  -v /etc/localtime:/etc/localtime:ro \
@@ -111,6 +112,7 @@ docker run --name mjproxy -d --restart=always \
  -p 8088:8080 --user root \
  -v /root/mjproxy/logs:/app/logs:rw \
  -v /root/mjproxy/data:/app/data:rw \
+ -v /root/mjopen/attachments:/app/wwwroot/attachments:rw \
  -v /root/mjproxy/appsettings.Production.json:/app/appsettings.Production.json:ro \
  -e TZ=Asia/Shanghai \
  -v /etc/localtime:/etc/localtime:ro \
@@ -123,6 +125,7 @@ docker run --name mjproxy -d --restart=always \
  -p 8088:8080 --user root \
  -v /root/mjproxy/logs:/app/logs:rw \
  -v /root/mjproxy/data:/app/data:rw \
+ -v /root/mjopen/attachments:/app/wwwroot/attachments:rw \
  -v /root/mjproxy/appsettings.Production.json:/app/appsettings.Production.json:ro \
  -e TZ=Asia/Shanghai \
  -v /etc/localtime:/etc/localtime:ro \
@@ -135,6 +138,7 @@ docker run --name mjproxy -d --restart=always \
  -p 8088:8080 --user root \
  -v /root/mjproxy/logs:/app/logs:rw \
  -v /root/mjproxy/data:/app/data:rw \
+ -v /root/mjopen/attachments:/app/wwwroot/attachments:rw \
  -v /root/mjproxy/appsettings.Production.json:/app/appsettings.Production.json:ro \
  -e TZ=Asia/Shanghai \
  -v /etc/localtime:/etc/localtime:ro \
@@ -217,7 +221,8 @@ curl -o linux_install.sh https://raw.githubusercontent.com/trueai-org/midjourney
       "Cdn": "",
       "Wss": "",
       "ResumeWss": "",
-      "UploadServer": ""
+      "UploadServer": "",
+      "SaveToLocal": true // 是否开启图片保存到本地，如果开启则使用本地部署的地址，也可以同时配置 CDN 地址
     },
     "Proxy": { // 代理配置，默认可以为 null
       "Host": "",

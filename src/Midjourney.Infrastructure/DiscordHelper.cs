@@ -69,6 +69,30 @@ namespace Midjourney.Infrastructure
         }
 
         /// <summary>
+        /// 获取自定义 CDN URL
+        /// </summary>
+        /// <returns></returns>
+        public string GetCustomCdn()
+        {
+            if (string.IsNullOrWhiteSpace(_properties.NgDiscord.Cdn))
+            {
+                return string.Empty;
+            }
+
+            string cdnUrl = _properties.NgDiscord.Cdn;
+            return cdnUrl.EndsWith("/") ? cdnUrl.Substring(0, cdnUrl.Length - 1) : cdnUrl;
+        }
+
+        /// <summary>
+        /// 获取是否保存到本地。
+        /// </summary>
+        /// <returns></returns>
+        public bool GetSaveToLocal()
+        {
+            return _properties.NgDiscord.SaveToLocal == true;
+        }
+
+        /// <summary>
         /// 获取 Discord WebSocket URL。
         /// </summary>
         /// <returns>Discord WebSocket URL。</returns>

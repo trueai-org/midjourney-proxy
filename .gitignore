@@ -365,3 +365,4 @@ FodyWeavers.xsd
 *appsettings.Development.json
 *appsettings.Production.json
 *.db
+attachments
