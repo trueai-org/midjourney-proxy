@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using Midjourney.Infrastructure.Domain;
+using System.Text.Json.Serialization;
 
 namespace Midjourney.Infrastructure.Dto
 {
@@ -35,7 +36,7 @@ namespace Midjourney.Infrastructure.Dto
     /// <summary>
     /// 事件数据。
     /// </summary>
-    public class EventData
+    public class EventData : DomainObject
     {
         /// <summary>
         /// Webhook ID。
@@ -77,7 +78,7 @@ namespace Midjourney.Infrastructure.Dto
         /// 提及的用户列表。
         /// </summary>
         [JsonPropertyName("mentions")]
-        public List<string> Mentions { get; set; }
+        public List<User> Mentions { get; set; } = new List<User>();
 
         /// <summary>
         /// 提及的角色列表。
@@ -119,7 +120,7 @@ namespace Midjourney.Infrastructure.Dto
         /// 嵌入对象列表。
         /// </summary>
         [JsonPropertyName("embeds")]
-        public List<string> Embeds { get; set; }
+        public List<dynamic> Embeds { get; set; } = new List<dynamic>();
 
         /// <summary>
         /// 编辑时间戳。
@@ -155,13 +156,19 @@ namespace Midjourney.Infrastructure.Dto
         /// 附件列表。
         /// </summary>
         [JsonPropertyName("attachments")]
-        public List<string> Attachments { get; set; }
+        public List<Attachment> Attachments { get; set; } = new List<Attachment>();
 
         /// <summary>
         /// 应用 ID。
         /// </summary>
         [JsonPropertyName("application_id")]
         public string ApplicationId { get; set; }
+
+        /// <summary>
+        /// 服务器ID。
+        /// </summary>
+        [JsonPropertyName("guild_id")]
+        public string GuildId { get; set; }
     }
 
     /// <summary>
@@ -199,6 +206,7 @@ namespace Midjourney.Infrastructure.Dto
         [JsonPropertyName("authorizing_integration_owners")]
         public Dictionary<string, string> AuthorizingIntegrationOwners { get; set; }
     }
+
 
     /// <summary>
     /// 交互信息。
@@ -420,5 +428,71 @@ namespace Midjourney.Infrastructure.Dto
         /// </summary>
         [JsonPropertyName("name")]
         public string Name { get; set; }
+    }
+
+    /// <summary>
+    /// 附件信息。
+    /// </summary>
+    public class Attachment
+    {
+        /// <summary>
+        /// 宽度。
+        /// </summary>
+        [JsonPropertyName("width")]
+        public int Width { get; set; }
+
+        /// <summary>
+        /// URL。
+        /// </summary>
+        [JsonPropertyName("url")]
+        public string Url { get; set; }
+
+        /// <summary>
+        /// 大小。
+        /// </summary>
+        [JsonPropertyName("size")]
+        public long Size { get; set; }
+
+        /// <summary>
+        /// 代理URL。
+        /// </summary>
+        [JsonPropertyName("proxy_url")]
+        public string ProxyUrl { get; set; }
+
+        /// <summary>
+        /// 占位版本。
+        /// </summary>
+        [JsonPropertyName("placeholder_version")]
+        public int PlaceholderVersion { get; set; }
+
+        /// <summary>
+        /// 占位符。
+        /// </summary>
+        [JsonPropertyName("placeholder")]
+        public string Placeholder { get; set; }
+
+        /// <summary>
+        /// ID。
+        /// </summary>
+        [JsonPropertyName("id")]
+        public string Id { get; set; }
+
+        /// <summary>
+        /// 高度。
+        /// </summary>
+        [JsonPropertyName("height")]
+        public int Height { get; set; }
+
+        /// <summary>
+        /// 文件名。
+        /// </summary>
+        [JsonPropertyName("filename")]
+        public string Filename { get; set; }
+
+        /// <summary>
+        /// 内容类型。
+        /// </summary>
+        [JsonPropertyName("content_type")]
+        public string ContentType { get; set; }
     }
 }

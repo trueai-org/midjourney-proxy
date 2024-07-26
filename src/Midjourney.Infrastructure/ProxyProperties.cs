@@ -255,5 +255,15 @@
         /// https://discord-attachments-uploads-prd.storage.googleapis.com 反代.
         /// </summary>
         public string UploadServer { get; set; }
+
+        /// <summary>
+        /// 自动下载图片并保存到本地
+        /// </summary>
+        public bool? SaveToLocal { get; set; }
+
+        /// <summary>
+        /// 自定义 CDN 加速地址
+        /// </summary>
+        public string CustomCdn { get; set; }
     }
 }

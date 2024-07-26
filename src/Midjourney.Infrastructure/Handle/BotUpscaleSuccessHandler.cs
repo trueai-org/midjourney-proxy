@@ -1,18 +1,17 @@
 ﻿using Discord.WebSocket;
 using Midjourney.Infrastructure.LoadBalancer;
 using Midjourney.Infrastructure.Util;
-using System;
 using System.Text.RegularExpressions;
 
 namespace Midjourney.Infrastructure.Handle
 {
-    public class UpscaleSuccessHandler : MessageHandler
+    public class BotUpscaleSuccessHandler : BotMessageHandler
     {
         private const string CONTENT_REGEX_1 = "\\*\\*(.*)\\*\\* - Upscaled \\(.*?\\) by <@\\d+> \\((.*?)\\)";
         private const string CONTENT_REGEX_2 = "\\*\\*(.*)\\*\\* - Upscaled by <@\\d+> \\((.*?)\\)";
         private const string CONTENT_REGEX_U = "\\*\\*(.*)\\*\\* - Image #(\\d) <@\\d+>";
 
-        public UpscaleSuccessHandler(DiscordLoadBalancer discordLoadBalancer, DiscordHelper discordHelper)
+        public BotUpscaleSuccessHandler(DiscordLoadBalancer discordLoadBalancer, DiscordHelper discordHelper)
             : base(discordLoadBalancer, discordHelper)
         {
         }
@@ -67,7 +66,7 @@ namespace Midjourney.Infrastructure.Handle
                 }
             }
 
-            if (task == null)
+            if (task == null || task.Status == TaskStatus.SUCCESS)
             {
                 return;
             }

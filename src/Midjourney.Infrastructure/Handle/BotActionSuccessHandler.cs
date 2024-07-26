@@ -4,11 +4,11 @@ using Midjourney.Infrastructure.Util;
 
 namespace Midjourney.Infrastructure.Handle
 {
-    public class ActionSuccessHandler : MessageHandler
+    public class BotActionSuccessHandler : BotMessageHandler
     {
         private const string CONTENT_REGEX = "\\*\\*(.*)\\*\\* - (.*?)<@\\d+> \\((.*?)\\)";
 
-        public ActionSuccessHandler(DiscordLoadBalancer discordLoadBalancer, DiscordHelper discordHelper)
+        public BotActionSuccessHandler(DiscordLoadBalancer discordLoadBalancer, DiscordHelper discordHelper)
         : base(discordLoadBalancer, discordHelper)
         {
         }

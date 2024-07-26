@@ -4,12 +4,15 @@ using Midjourney.Infrastructure.LoadBalancer;
 
 namespace Midjourney.Infrastructure.Handle
 {
-    public abstract class MessageHandler
+    /// <summary>
+    /// 机器人消息事件处理器
+    /// </summary>
+    public abstract class BotMessageHandler
     {
         protected DiscordLoadBalancer discordLoadBalancer;
         protected DiscordHelper discordHelper;
 
-        public MessageHandler(DiscordLoadBalancer discordLoadBalancer, DiscordHelper discordHelper)
+        public BotMessageHandler(DiscordLoadBalancer discordLoadBalancer, DiscordHelper discordHelper)
         {
             this.discordLoadBalancer = discordLoadBalancer;
             this.discordHelper = discordHelper;
@@ -95,7 +98,7 @@ namespace Midjourney.Infrastructure.Handle
                 }
             }
 
-            if (task == null)
+            if (task == null || task.Status == TaskStatus.SUCCESS)
             {
                 return;
             }
@@ -151,7 +154,10 @@ namespace Midjourney.Infrastructure.Handle
                 task.State = "";
             }
 
-            task.Success();
+            var customCdn = discordHelper.GetCustomCdn();
+            var toLocal = discordHelper.GetSaveToLocal();
+
+            task.Success(customCdn, toLocal);
         }
 
         protected bool HasImage(SocketMessage message)

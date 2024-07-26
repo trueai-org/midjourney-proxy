@@ -1,21 +1,21 @@
-﻿using Discord.WebSocket;
+﻿using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.LoadBalancer;
 using Midjourney.Infrastructure.Util;
 
 namespace Midjourney.Infrastructure.Handle
 {
-    public class ImagineSuccessHandler : MessageHandler
+    public class UserImagineSuccessHandler : UserMessageHandler
     {
         private const string CONTENT_REGEX = "\\*\\*(.*)\\*\\* - <@\\d+> \\((.*?)\\)";
 
-        public ImagineSuccessHandler(DiscordLoadBalancer discordLoadBalancer, DiscordHelper discordHelper)
+        public UserImagineSuccessHandler(DiscordLoadBalancer discordLoadBalancer, DiscordHelper discordHelper)
             : base(discordLoadBalancer, discordHelper)
         {
         }
 
         public override int Order() => 101;
 
-        public override void Handle(IDiscordInstance instance, MessageType messageType, SocketMessage message)
+        public override void Handle(IDiscordInstance instance, MessageType messageType, EventData message)
         {
             var content = GetMessageContent(message);
             var parseData = ConvertUtils.ParseContent(content, CONTENT_REGEX);

@@ -20,7 +20,7 @@
 - [x] 支持 Shorten(prompt分析) 指令
 - [x] 支持焦点移动：Pan ⬅️➡⬆️⬇️
 - [x] 支持局部重绘：Vary (Region) 🖌
-- [x] 支持几乎所有的关联按钮动作和 🎛️ Remix 模式
+- [x] 支持几乎所有的关联按钮动作
 - [x] 支持图片变焦，自定义变焦 Zoom 🔍
 - [x] 支持获取图片的 seed 值
 - [x] 支持账号指定生成速度模式 RELAX | FAST | TURBO 
@@ -39,8 +39,8 @@
 - [x] 提供功能齐全的绘图测试页面
 - [x] 兼容支持市面上主流绘图客户端和 API 调用
 - [x] 任务增加父级任务信息等
-- [x] 🎛️ Remix 模式支持
-- [x] 🎛️ Remix 模式自动提交
+- [x] 🎛️ Remix 模式和 Remix 模式自动提交
+- [x] 内置图片保存到本地、内置 CDN 加速
 
 ## 在线预览
 
@@ -101,6 +101,8 @@ docker run -m 1g --name mjopen -d --restart=always \
  -p 8086:8080 --user root \
  -v /root/mjopen/logs:/app/logs:rw \
  -v /root/mjopen/data:/app/data:rw \
+ -v /root/mjopen/attachments:/app/wwwroot/attachments:rw \
+ -v /root/mjopen/ephemeral-attachments:/app/wwwroot/ephemeral-attachments:rw \
  -v /root/mjopen/appsettings.Production.json:/app/appsettings.Production.json:ro \
  -e TZ=Asia/Shanghai \
  -v /etc/localtime:/etc/localtime:ro \
@@ -112,6 +114,8 @@ docker run --name mjproxy -d --restart=always \
  -p 8088:8080 --user root \
  -v /root/mjproxy/logs:/app/logs:rw \
  -v /root/mjproxy/data:/app/data:rw \
+ -v /root/mjopen/attachments:/app/wwwroot/attachments:rw \
+ -v /root/mjopen/ephemeral-attachments:/app/wwwroot/ephemeral-attachments:rw \
  -v /root/mjproxy/appsettings.Production.json:/app/appsettings.Production.json:ro \
  -e TZ=Asia/Shanghai \
  -v /etc/localtime:/etc/localtime:ro \
@@ -124,6 +128,8 @@ docker run --name mjproxy -d --restart=always \
  -p 8088:8080 --user root \
  -v /root/mjproxy/logs:/app/logs:rw \
  -v /root/mjproxy/data:/app/data:rw \
+ -v /root/mjopen/attachments:/app/wwwroot/attachments:rw \
+ -v /root/mjopen/ephemeral-attachments:/app/wwwroot/ephemeral-attachments:rw \
  -v /root/mjproxy/appsettings.Production.json:/app/appsettings.Production.json:ro \
  -e TZ=Asia/Shanghai \
  -v /etc/localtime:/etc/localtime:ro \
@@ -136,6 +142,8 @@ docker run --name mjproxy -d --restart=always \
  -p 8088:8080 --user root \
  -v /root/mjproxy/logs:/app/logs:rw \
  -v /root/mjproxy/data:/app/data:rw \
+ -v /root/mjopen/attachments:/app/wwwroot/attachments:rw \
+ -v /root/mjopen/ephemeral-attachments:/app/wwwroot/ephemeral-attachments:rw \
  -v /root/mjproxy/appsettings.Production.json:/app/appsettings.Production.json:ro \
  -e TZ=Asia/Shanghai \
  -v /etc/localtime:/etc/localtime:ro \
@@ -187,6 +195,9 @@ curl -o linux_install.sh https://raw.githubusercontent.com/trueai-org/midjourney
 - `appsettings.json` 默认配置
 - `appsettings.Production.json` 生产环境配置
 - `/app/data` 数据目录，存放账号、任务等数据
+    - `/app/wwwroot` 静态文件目录
+    - `/app/wwwroot/attachments` 绘图文件目录
+    - `/app/wwwroot/ephemeral-attachments` describe 生成图片目录
     - `/app/data/mj.db` 数据库文件
 - `/app/logs` 日志目录
 
@@ -218,7 +229,9 @@ curl -o linux_install.sh https://raw.githubusercontent.com/trueai-org/midjourney
       "Cdn": "",
       "Wss": "",
       "ResumeWss": "",
-      "UploadServer": ""
+      "UploadServer": "",
+      "SaveToLocal": true, // 是否开启图片保存到本地，如果开启则使用本地部署的地址，也可以同时配置 CDN 地址
+      "CustomCdn": "" // 如果不填写，并且开启了保存到本地，则默认为根目录，建议填写自己的域名地址
     },
     "Proxy": { // 代理配置，默认可以为 null
       "Host": "",
@@ -314,7 +327,6 @@ https://discord.com/oauth2/authorize?client_id=xxx&permissions=8&scope=bot
 - [ ] 增加统计面板、绘图统计、访客统计
 - [ ] 内置用户体系、可注册可管理、限流、最大次数等
 - [ ] 内置 IP 限流、全局限流、账号限流、黑名单、白名单、账号限速
-- [ ] 内置保存到本地、内置 CDN 加速
 - [ ] GPT 翻译接入
 - [ ] 最终提示词增加翻译中文显示支持
 - [ ] 账号支持单独的代理
