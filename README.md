@@ -172,6 +172,16 @@ c. 启动方式1: sh run_app_osx.sh
 d. 启动方式2: chmod +x run_app_osx.sh && ./run_app_osx.sh
 ```
 
+> Linux 一键安装脚本（❤感谢 https://github.com/dbccccccc）
+
+```bash
+# 方式1
+wget -N --no-check-certificate https://raw.githubusercontent.com/trueai-org/midjourney-proxy/main/scripts/linux_install.sh && chmod +x linux_install.sh && bash linux_install.sh
+
+# 方式2
+curl -o- https://raw.githubusercontent.com/trueai-org/midjourney-proxy/main/scripts/linux_install.sh | bash
+```
+
 ## 参数配置
 
 - `appsettings.json` 默认配置
