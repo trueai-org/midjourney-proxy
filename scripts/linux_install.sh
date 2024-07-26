@@ -368,7 +368,7 @@ compare_and_merge_json() {
     echo -e "${GREEN}File1 has been updated and saved.${NC}"
 }
 
-# 新增函数：导入现有版本配置
+# 导入现有版本配置
 function import_config_from_existing() {
     if [ ${#INSTALLED_VERSIONS[@]} -eq 0 ]; then
         echo -e "${RED}No installed versions available to import configuration.${NC}"
@@ -492,14 +492,143 @@ function start_program_version() {
     fi
 }
 
+# 检查正在运行的版本函数
+function check_running_version() {
+    RUNNING_VERSION=""
+    for version_dir in v*; do
+        if [ -d "$version_dir" ]; then
+            pid=$(pgrep -f "$version_dir/run_app.sh")
+            if [ ! -z "$pid" ]; then
+                RUNNING_VERSION=$version_dir
+                echo -e "${GREEN}Running version: $RUNNING_VERSION (PID: $pid)${NC}"
+                return
+            fi
+        fi
+    done
+    echo -e "${RED}No version is currently running.${NC}"
+}
+
+# 停止运行的版本
+function stop_running_version() {
+    if [ -z "$RUNNING_VERSION" ]; then
+        echo -e "${RED}No version is currently running.${NC}"
+        return
+    fi
+
+    pid=$(pgrep -f "$RUNNING_VERSION/run_app.sh")
+    if [ ! -z "$pid" ]; then
+        kill $pid
+        echo -e "${GREEN}Stopped running version: $RUNNING_VERSION (PID: $pid)${NC}"
+    else
+        echo -e "${RED}Failed to find the running process for version: $RUNNING_VERSION${NC}"
+    fi
+}
+
+# 检查是否安装最新版本
+function is_latest_version_installed() {
+    for version_dir in v*; do
+        if [ "$version_dir" == "$LATEST_VERSION" ]; then
+            return 0  # 已安装
+        fi
+    done
+    return 1  # 未安装
+}
+
+# 找到本地最新版本
+function find_local_latest_version() {
+    local latest_version="0.0.0"
+    for version_dir in v*; do
+        version=$(echo $version_dir | sed 's/^v//')
+        if dpkg --compare-versions "$version" "gt" "$latest_version"; then
+            latest_version=$version
+        fi
+    done
+    echo "v$latest_version"
+}
+
+# 删除版本并安装新版本
+function delete_version_and_install() {
+    VERSION=$1
+    if [ -d "$VERSION" ]; then
+        rm -rf "$VERSION"
+        echo -e "${GREEN}Deleted version $VERSION.${NC}"
+    fi
+    install_version $VERSION
+}
+
+# 从一个版本复制配置到另一个版本
+function copy_config_from_version() {
+    SOURCE_VERSION=$1
+    TARGET_VERSION=$2
+    if [ -e "$SOURCE_VERSION/appsettings.json" ]; then
+        cp "$SOURCE_VERSION/appsettings.json" "$TARGET_VERSION/appsettings.json"
+        echo -e "${GREEN}Configuration copied from $SOURCE_VERSION to $TARGET_VERSION.${NC}"
+    else
+        echo -e "${RED}No configuration file found in $SOURCE_VERSION.${NC}"
+    fi
+}
+
+# 安装或更新到最新版本
+function install_or_update_latest_version() {
+    if is_latest_version_installed; then
+        echo -e "${GREEN}The latest version ($LATEST_VERSION) is already installed.${NC}"
+        read -p "Do you want to reinstall it? All data will be lost. (y/N): " REINSTALL_CONFIRM
+        if [[ "$REINSTALL_CONFIRM" =~ ^[yY]$ ]]; then
+            delete_version_and_install $LATEST_VERSION
+            prompt_apply_config $LATEST_VERSION
+        else
+            echo -e "${YELLOW}Reinstall cancelled.${NC}"
+        fi
+    else
+        # 检查本地安装的版本
+        local_latest_version=$(find_local_latest_version)
+        if [ "$local_latest_version" != "v0.0.0" ]; then
+            echo -e "${YELLOW}Local latest version found: $local_latest_version.${NC}"
+            read -p "Do you want to perform a one-click update? (y/N): " ONE_CLICK_UPDATE
+            if [[ "$ONE_CLICK_UPDATE" =~ ^[yY]$ ]]; then
+                stop_running_version
+                install_version $LATEST_VERSION
+                import_config_from_existing "$LATEST_VERSION"
+                start_program_version "$LATEST_VERSION"
+            else
+                echo -e "${BLUE}How do you want to configure the new version?${NC}"
+                echo -e "1. Import configuration from local latest version ($local_latest_version)"
+                echo -e "2. Select a different version to import configuration from"
+                echo -e "3. Skip configuration for now"
+                read -p "Choose an option (1/2/3): " CONFIG_OPTION
+                install_version $LATEST_VERSION
+                case $CONFIG_OPTION in
+                    1)
+                        copy_config_from_version "$local_latest_version" "$LATEST_VERSION"
+                        ;;
+                    2)
+                        import_config_from_existing "$LATEST_VERSION"
+                        ;;
+                    3)
+                        prompt_apply_config "$LATEST_VERSION"
+                        ;;
+                    *)
+                        echo -e "${RED}Invalid option, no configuration applied.${NC}"
+                        ;;
+                esac
+            fi
+        else
+            install_version $LATEST_VERSION
+            prompt_apply_config $LATEST_VERSION
+        fi
+    fi
+}
+
+
 # 初始化配置目录
 init_config_dir
 
 # 获取最新版本信息
 get_latest_version_info
 
-until [ "$OPTION" == "6" ]; do
+until [ "$OPTION" == "7" ]; do
     echo
+    check_running_version  # 调用检查正在运行的版本函数
     list_installed_versions
     check_latest_version
     echo "Menu:"
@@ -508,12 +637,13 @@ until [ "$OPTION" == "6" ]; do
     echo -e "3. ${GREEN}Delete a specific version${NC}"
     echo -e "4. ${GREEN}Manage configuration files${NC}"
     echo -e "5. ${GREEN}Start a specific version${NC}"
-    echo -e "6. ${GREEN}Exit${NC}"
-    read -p "Choose an option (1/2/3/4/5/6): " OPTION
+    echo -e "6. ${GREEN}Stop running version${NC}"  # 新增加的选项
+    echo -e "7. ${GREEN}Exit${NC}"  # 更新退出选项的编号
+    read -p "Choose an option (1/2/3/4/5/6/7): " OPTION
 
     case $OPTION in
         1)
-            install_version $LATEST_VERSION
+            install_or_update_latest_version
             ;;
         2)
             read -p "Enter the version you want to install (e.g., v2.3.7): " VERSION
@@ -561,7 +691,9 @@ until [ "$OPTION" == "6" ]; do
         5)
             start_program_version
             ;;
-        6)
+        6)  stop_running_version
+            ;;
+        7)
             echo -e "${GREEN}Exiting.${NC}"
             ;;
         *)
