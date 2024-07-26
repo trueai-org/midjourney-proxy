@@ -59,7 +59,10 @@ namespace Midjourney.Infrastructure
             prompt = Regex.Replace(prompt, regex, "<link>");
 
             // 替换多余的 <<link>> 为 <link>
-            return prompt.Replace("<<link>>", "<link>");
+            // 针对 " -- " discord 会返回为空
+            return prompt.Replace("<<link>>", "<link>")
+                .Replace(" -- ", " ")
+                .Replace("  ", " ");
         }
 
         /// <summary>
