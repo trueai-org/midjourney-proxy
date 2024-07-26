@@ -519,7 +519,8 @@ namespace Midjourney.Infrastructure
                                             }
                                         }
                                     }
-                                    // 用量用完了
+                                    // fast 用量已经使用完了
+                                    // TODO 可以改为慢速模式
                                     else if (title == "Credits exhausted")
                                     {
                                         // 你的处理逻辑

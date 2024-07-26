@@ -327,7 +327,8 @@ namespace Midjourney.Infrastructure.Services
                 sw.Start();
                 do
                 {
-                    Thread.Sleep(250);
+                    // 等待 1.2s
+                    Thread.Sleep(1200);
                     task = discordInstance.GetRunningTask(task.Id);
 
                     if (string.IsNullOrWhiteSpace(task.MessageId) || string.IsNullOrWhiteSpace(task.InteractionMetadataId))
@@ -425,17 +426,6 @@ namespace Midjourney.Infrastructure.Services
                     {
                         var suffix = "0";
 
-                        // 低变化
-                        if (customId.Contains("low_variation"))
-                        {
-                            suffix = "0";
-                        }
-                        // 如果是高变化或 niji bot
-                        else if (customId.Contains("high_variation"))
-                        {
-                            suffix = "1";
-                        }
-
                         // 如果全局开启了高变化，则高变化
                         if (task.BotType == EBotType.MID_JOURNEY)
                         {
@@ -450,6 +440,17 @@ namespace Midjourney.Infrastructure.Services
                             {
                                 suffix = "1";
                             }
+                        }
+
+                        // 低变化
+                        if (customId.Contains("low_variation"))
+                        {
+                            suffix = "0";
+                        }
+                        // 如果是高变化或 niji bot
+                        else if (customId.Contains("high_variation"))
+                        {
+                            suffix = "1";
                         }
 
                         var parts = customId.Split("::");
