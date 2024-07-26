@@ -37,6 +37,9 @@ The most feature-rich, secure, and memory-efficient (100MB+) Midjourney Proxy AP
 - [x] MJ task query support
 - [x] Comprehensive drawing test page available
 - [x] Compatible with mainstream drawing clients and API calls in the market.
+- [x] Tasks can include parent task information
+- [x] 🎛️ Remix mode supported
+- [x] Auto-submit in 🎛️ Remix mode
 
 ## Online Preview
 
@@ -113,6 +116,30 @@ docker run --name mjproxy -d --restart=always \
  -v /etc/localtime:/etc/localtime:ro \
  -v /etc/timezone:/etc/timezone:ro \
  registry.cn-guangzhou.aliyuncs.com/trueai-org/midjourney-proxy
+
+# GitHub mirror
+docker pull ghcr.io/trueai-org/midjourney-proxy
+docker run --name mjproxy -d --restart=always \
+ -p 8088:8080 --user root \
+ -v /root/mjproxy/logs:/app/logs:rw \
+ -v /root/mjproxy/data:/app/data:rw \
+ -v /root/mjproxy/appsettings.Production.json:/app/appsettings.Production.json:ro \
+ -e TZ=Asia/Shanghai \
+ -v /etc/localtime:/etc/localtime:ro \
+ -v /etc/timezone:/etc/timezone:ro \
+ ghcr.io/trueai-org/midjourney-proxy
+
+# DockerHub mirror
+docker pull trueaiorg/midjourney-proxy
+docker run --name mjproxy -d --restart=always \
+ -p 8088:8080 --user root \
+ -v /root/mjproxy/logs:/app/logs:rw \
+ -v /root/mjproxy/data:/app/data:rw \
+ -v /root/mjproxy/appsettings.Production.json:/app/appsettings.Production.json:ro \
+ -e TZ=Asia/Shanghai \
+ -v /etc/localtime:/etc/localtime:ro \
+ -v /etc/timezone:/etc/timezone:ro \
+ trueaiorg/midjourney-proxy
 ```
 
 > Windows version
@@ -145,6 +172,16 @@ c. Startup method 1: sh run_app_osx.sh
 d. Startup method 2: chmod +x run_app_osx.sh && ./run_app_osx.sh
 ```
 
+> Installation Script for Linux（❤Thanks to [@dbccccccc](https://github.com/dbccccccc)）
+
+```bash
+# Method 1
+wget -N --no-check-certificate https://raw.githubusercontent.com/trueai-org/midjourney-proxy/main/scripts/linux_install.sh && chmod +x linux_install.sh && bash linux_install.sh
+
+# Method 2
+curl -o linux_install.sh https://raw.githubusercontent.com/trueai-org/midjourney-proxy/main/scripts/linux_install.sh && chmod +x linux_install.sh && bash linux_install.sh
+```
+
 ## Configuration Parameters
 
 - `appsettings.json` default configuration
@@ -172,9 +209,7 @@ d. Startup method 2: chmod +x run_app_osx.sh && ./run_app_osx.sh
       "CoreSize": 3, // Concurrent number
       "QueueSize": 10, // Queue size
       "MaxQueueSize": 100, // Maximum queue size
-      "
-
-TimeoutMinutes": 5, // Task timeout in minutes
+      "TimeoutMinutes": 5, // Task timeout in minutes
       "Mode": null, // RELAX | FAST | TURBO specify generation speed mode --fast, --relax, or --turbo parameter at the end.
       "Weight": 1 // Weight
     },
@@ -266,34 +301,31 @@ Add application to channel server (refer to screenshot)
 ## Related Documentation
 1. [API Documentation](./docs/api.md)
 
+## Roadmap
+
+- [ ] Additional commands like PicReader, BOOKMARK, Picread, etc.
+- [ ] Optimize command and status progress display
+- [ ] Improve notifications when tasks and queues are full
+- [ ] Enhance concurrency queue management for shared accounts
+- [ ] Built-in dictionary management with bulk modification
+- [ ] API support for specifying instance drawings
+- [ ] API support for filtering accounts by speed for drawings
+- [ ] Integration with official drawing API support
+- [ ] Add statistics panel for drawing stats and visitor stats
+- [ ] Built-in user system with registration and management, rate limiting, maximum usage counts, etc.
+- [ ] Built-in IP rate limiting, global rate limiting, account rate limiting, blacklists, whitelists, and account speed limits
+- [ ] Built-in local saving, with CDN acceleration
+- [ ] GPT translation integration
+- [ ] Add support for Chinese display in final prompt translations
+- [ ] Account-specific proxy support
+- [ ] Enable registration and guest access
+- [ ] Multi-database support including MySQL, SQLite, SQL Server, MongoDB, PostgreSQL, Redis, etc.
+- [ ] Payment gateway integration, supporting WeChat, Alipay, and drawing pricing strategies
+- [ ] Add announcement feature
+- [ ] Account-specific modes: Idle Mode/Relax Mode to avoid high-frequency tasks (no new drawings can be created in this mode, but other commands can be executed; can be configured for multiple time intervals or scheduled)
+- [ ] Add forced sleep mode or scheduled sleep mode
+
 ## Support and Sponsorship
 
 - If you find this project helpful, please give it a Star⭐
 - You can also provide temporarily idle drawing accounts for public benefit (sponsor slow mode) to support the development of this project😀
-
-## Friendly Links
-
-- https://github.com/dolfies/discord.py-self
-- https://github.com/bao-io/midjourney-sdk
-- https://github.com/webman-php/midjourney-proxy
-- https://github.com/novicezk/midjourney-proxy
-- https://github.com/litter-coder/midjourney-proxy-plus
-- https://github.com/Dooy/chatgpt-web-midjourney-proxy
-- https://github.com/erictik/midjourney-api
-- https://github.com/yokonsan/midjourney-api
-- https://github.com/imagineapi/imagineapi
-
-## Useful Links
-- Open AI official website: <https://openai.com>
-- Discord official website: <https://discord.com>
-- Discord Developer Platform: <https://discord.com/developers/applications>
-- Wenxin Yiyang official website: <https://cloud.baidu.com/product/wenxinworkshop>
-- Xinghuo Model official website: <https://xinghuo.xfyun.cn/>
-- Api2d official website: <https://api2d.com/>
-- OpenAI-SB official website: <https://www.openai-sb.com>
-- Baota official website: <https://bt.cn>
-- Alibaba Cloud official website: <https://aliyun.com>
-- Tencent Cloud official website: <https://cloud.tencent.com/>
-- SMS Bao official website: <http://www.smsbao.com/>
-- OneAPI project: <https://github.com/songquanpeng/one-api>
-```
