@@ -63,58 +63,6 @@ function download_file() {
     fi
 }
 
-compare_and_merge_json() {
-    local json1="$1"
-    local json2="$2"
-    local temp_file=$(mktemp)
-
-    # 检查文件是否存在
-    if [ ! -f "$json1" ] || [ ! -f "$json2" ]; then
-        echo -e "${RED}One or both of the files do not exist.${NC}"
-        return 1
-    fi
-
-    # 检查JSON格式是否正确
-    if ! jq empty "$json1" > /dev/null 2>&1; then
-        echo -e "${RED}First file is not a valid JSON${NC}"
-        return 1
-    fi
-
-    if ! jq empty "$json2" > /dev/null 2>&1; then
-        echo -e "${RED}Second file is not a valid JSON${NC}"
-        return 1
-    fi
-
-    # 输出两者不同的项
-    echo -e "${BLUE}Differences between the JSON files:${NC}"
-    diff <(jq -S . "$json1") <(jq -S . "$json2")
-
-    # 将相同项文件2覆盖文件1，并保存到临时文件中
-    jq -s '.[0] * .[1]' "$json1" "$json2" > "$temp_file"
-
-    # 获取文件的JSON结构
-    local structure1=$(jq -S . "$json1" | jq '.. | objects | keys | select(length > 0) | unique' | jq -sc add | jq -S .)
-    local structure2=$(jq -S . "$json2" | jq '.. | objects | keys | select(length > 0) | unique' | jq -sc add | jq -S .)
-
-    # 计算缺失和新增的项
-    local added_keys=$(jq -n --argfile a <(echo "$structure1") --argfile b <(echo "$structure2") \
-        '($b - $a) // empty')
-
-    # 让用户逐一输入新增项的值并保存
-    if [ ! -z "$added_keys" ]; then
-        echo -e "${YELLOW}Please input values for the following added keys:${NC}"
-        for key in $(echo "$added_keys" | jq -r '.[]'); do
-            read -p "Value for key \"$key\": " value
-            temp_file=$(jq --arg key "$key" --arg value "$value" \
-                'setpath([($key | split(".")[])]; $value)' "$temp_file")
-        done
-    fi
-
-    # 保存合并后的文件
-    echo "$temp_file" | jq . > "$json1"
-    echo -e "${GREEN}File1 has been updated and saved.${NC}"
-}
-
 # 检查 CPU 架构
 ARCH=$(uname -m)
 if [ "$ARCH" == "x86_64" ]; then
@@ -293,7 +241,6 @@ function prompt_apply_config() {
     fi
 }
 
-
 # 将配置文件应用到指定版本
 function apply_config_to_version() {
     read -p "Enter the version to apply configuration to (e.g., v2.3.7): " VERSION
@@ -302,8 +249,17 @@ function apply_config_to_version() {
             read -p "Select configuration file to apply by number: " num
             selected_file=$(get_config_file_by_number $num)
             if [ -n "$selected_file" ]; then
-                cp "$CONFIG_DIR/$selected_file" "$VERSION/appsettings.json"
-                echo -e "${GREEN}Configuration file applied to version: $VERSION${NC}"
+                if [ -e "$VERSION/appsettings.json" ]; then
+                    read -p "Target version already has an appsettings.json. Do you want to merge? (y/N): " MERGE_CONFIRM
+                    if [[ "$MERGE_CONFIRM" =~ ^[yY]$ ]]; then
+                        compare_and_merge_json "$VERSION/appsettings.json" "$CONFIG_DIR/$selected_file"
+                    else
+                        echo -e "${YELLOW}Configuration not merged.${NC}"
+                    fi
+                else
+                    cp "$CONFIG_DIR/$selected_file" "$VERSION/appsettings.json"
+                    echo -e "${GREEN}Configuration file applied to version: $VERSION${NC}"
+                fi
             else
                 echo -e "${RED}Invalid selection.${NC}"
             fi
@@ -359,7 +315,60 @@ function delete_version() {
     fi
 }
 
-# 从保存的配置中导入版本配置
+# compare_and_merge_json 函数
+compare_and_merge_json() {
+    local json1="$1"
+    local json2="$2"
+    local temp_file=$(mktemp)
+
+    # 检查文件是否存在
+    if [ ! -f "$json1" ] || [ ! -f "$json2" ]; then
+        echo -e "${RED}One or both of the files do not exist.${NC}"
+        return 1
+    fi
+
+    # 检查JSON格式是否正确
+    if ! jq empty "$json1" > /dev/null 2>&1; then
+        echo -e "${RED}First file is not a valid JSON${NC}"
+        return 1
+    fi
+
+    if ! jq empty "$json2" > /dev/null 2>&1; then
+        echo -e "${RED}Second file is not a valid JSON${NC}"
+        return 1
+    fi
+
+    # 输出两者不同的项
+    echo -e "${BLUE}Differences between the JSON files:${NC}"
+    diff <(jq -S . "$json1") <(jq -S . "$json2")
+
+    # 将相同项文件2覆盖文件1，并保存到临时文件中
+    jq -s '.[0] * .[1]' "$json1" "$json2" > "$temp_file"
+
+    # 获取文件的JSON结构
+    local structure1=$(jq -S . "$json1" | jq '.. | objects | keys | select(length > 0) | unique' | jq -sc add | jq -S .)
+    local structure2=$(jq -S . "$json2" | jq '.. | objects | keys | select(length > 0) | unique' | jq -sc add | jq -S .)
+
+    # 计算缺失和新增的项
+    local added_keys=$(jq -n --argfile a <(echo "$structure1") --argfile b <(echo "$structure2") \
+        '($b - $a) // empty')
+
+    # 让用户逐一输入新增项的值并保存
+    if [ ! -z "$added_keys" ]; then
+        echo -e "${YELLOW}Please input values for the following added keys:${NC}"
+        for key in $(echo "$added_keys" | jq -r '.[]'); do
+            read -p "Value for key \"$key\": " value
+            temp_file=$(jq --arg key "$key" --arg value "$value" \
+                'setpath([($key | split(".")[])]; $value)' "$temp_file")
+        done
+    fi
+
+    # 保存合并后的文件
+    echo "$temp_file" | jq . > "$json1"
+    echo -e "${GREEN}File1 has been updated and saved.${NC}"
+}
+
+# 新增函数：导入现有版本配置
 function import_config_from_existing() {
     if [ ${#INSTALLED_VERSIONS[@]} -eq 0 ]; then
         echo -e "${RED}No installed versions available to import configuration.${NC}"
@@ -399,7 +408,6 @@ function import_config_from_existing() {
         echo -e "${RED}Invalid selection. No configuration imported.${NC}"
     fi
 }
-
 
 # 安装指定版本
 function install_version() {
@@ -466,13 +474,31 @@ function install_version() {
     return 0
 }
 
+# 启动程序版本
+function start_program_version() {
+    list_installed_versions
+    read -p "Select a version to start (e.g., v2.3.7): " VERSION
+    if [ -d "$VERSION" ]; then
+        if [ -f "$VERSION/run_app.sh" ]; then
+            echo -e "${GREEN}Starting version $VERSION...${NC}"
+            # 以后台模式运行程序
+            (cd "$VERSION" && nohup ./run_app.sh > "../$VERSION.log" 2>&1 < /dev/null &)
+            echo -e "${GREEN}Program started for version $VERSION. Check logs in $VERSION.log.${NC}"
+        else
+            echo -e "${RED}run_app.sh not found in version directory $VERSION.${NC}"
+        fi
+    else
+        echo -e "${RED}Version directory not found: $VERSION${NC}"
+    fi
+}
+
 # 初始化配置目录
 init_config_dir
 
 # 获取最新版本信息
 get_latest_version_info
 
-until [ "$OPTION" == "5" ]; do
+until [ "$OPTION" == "6" ]; do
     echo
     list_installed_versions
     check_latest_version
@@ -481,8 +507,9 @@ until [ "$OPTION" == "5" ]; do
     echo -e "2. ${GREEN}Install a specific version${NC}"
     echo -e "3. ${GREEN}Delete a specific version${NC}"
     echo -e "4. ${GREEN}Manage configuration files${NC}"
-    echo -e "5. ${GREEN}Exit${NC}"
-    read -p "Choose an option (1/2/3/4/5): " OPTION
+    echo -e "5. ${GREEN}Start a specific version${NC}"
+    echo -e "6. ${GREEN}Exit${NC}"
+    read -p "Choose an option (1/2/3/4/5/6): " OPTION
 
     case $OPTION in
         1)
@@ -532,6 +559,9 @@ until [ "$OPTION" == "5" ]; do
             done
             ;;
         5)
+            start_program_version
+            ;;
+        6)
             echo -e "${GREEN}Exiting.${NC}"
             ;;
         *)
