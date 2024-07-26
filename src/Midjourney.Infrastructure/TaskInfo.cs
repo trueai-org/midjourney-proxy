@@ -176,6 +176,11 @@ namespace Midjourney.Infrastructure
         public string SeedMessageId { get; set; }
 
         /// <summary>
+        /// 绘图任务的 IP 地址
+        /// </summary>
+        public string ClientIp { get; set; }
+
+        /// <summary>
         /// 启动任务。
         /// </summary>
         public void Start()

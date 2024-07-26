@@ -71,15 +71,16 @@ namespace Midjourney.Infrastructure
             }
 
             var ip = string.Empty;
+            var headers = httpRequest.Headers;
 
-            if (httpRequest.Headers.ContainsKey("X-Real-IP"))
+            if (headers.ContainsKey("X-Real-IP"))
             {
-                ip = httpRequest.Headers["X-Real-IP"].FirstOrDefault();
+                ip = headers["X-Real-IP"].ToString();
             }
-
-            if (httpRequest.Headers.ContainsKey("X-Forwarded-For"))
+            else if (headers.ContainsKey("X-Forwarded-For"))
             {
-                ip = httpRequest.Headers["X-Forwarded-For"].FirstOrDefault();
+                var forwardedIps = headers["X-Forwarded-For"].ToString().Split(',');
+                ip = forwardedIps.FirstOrDefault().Trim();
             }
 
             if (string.IsNullOrEmpty(ip))
@@ -111,6 +112,11 @@ namespace Midjourney.Infrastructure
             if (!string.IsNullOrWhiteSpace(ip) && ip.Contains(","))
             {
                 ip = ip.Split(',')[0];
+            }
+
+            if (string.IsNullOrEmpty(ip))
+            {
+                ip = "Unknown";
             }
 
             return ip;

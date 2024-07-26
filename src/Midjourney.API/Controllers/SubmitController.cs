@@ -23,19 +23,23 @@ namespace Midjourney.API.Controllers
         private readonly ProxyProperties _properties;
         private readonly ITaskService _taskService;
         private readonly ILogger<SubmitController> _logger;
+        private readonly string _ip;
 
         public SubmitController(
             ITranslateService translateService,
             ITaskStoreService taskStoreService,
             IOptionsSnapshot<ProxyProperties> properties,
             ITaskService taskService,
-            ILogger<SubmitController> logger)
+            ILogger<SubmitController> logger,
+            IHttpContextAccessor httpContextAccessor)
         {
             _translateService = translateService;
             _taskStoreService = taskStoreService;
             _properties = properties.Value;
             _taskService = taskService;
             _logger = logger;
+
+            _ip = httpContextAccessor.HttpContext.Request.GetIP();
         }
 
         /// <summary>
@@ -434,7 +438,8 @@ namespace Midjourney.API.Controllers
                 Id = $"{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}{RandomUtils.RandomNumbers(3)}",
                 SubmitTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
                 State = baseDTO.State,
-                Status = TaskStatus.NOT_START
+                Status = TaskStatus.NOT_START,
+                ClientIp = _ip
             };
 
             var notifyHook = string.IsNullOrWhiteSpace(baseDTO.NotifyHook) ? _properties.NotifyHook : baseDTO.NotifyHook;
