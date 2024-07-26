@@ -179,7 +179,7 @@ d. 启动方式2: chmod +x run_app_osx.sh && ./run_app_osx.sh
 wget -N --no-check-certificate https://raw.githubusercontent.com/trueai-org/midjourney-proxy/main/scripts/linux_install.sh && chmod +x linux_install.sh && bash linux_install.sh
 
 # 方式2
-curl -o- https://raw.githubusercontent.com/trueai-org/midjourney-proxy/main/scripts/linux_install.sh | bash
+curl -o linux_install.sh https://raw.githubusercontent.com/trueai-org/midjourney-proxy/main/scripts/linux_install.sh && chmod +x linux_install.sh && bash linux_install.sh
 ```
 
 ## 参数配置
