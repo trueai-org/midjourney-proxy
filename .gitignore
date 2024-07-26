@@ -366,3 +366,4 @@ FodyWeavers.xsd
 *appsettings.Production.json
 *.db
 attachments
+ephemeral-attachments

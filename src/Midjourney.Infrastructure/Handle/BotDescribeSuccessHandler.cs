@@ -33,7 +33,7 @@ namespace Midjourney.Infrastructure.Handle
                         task = instance.FindRunningTask(c => c.InteractionMetadataId == msg.InteractionMetadata.Id.ToString()).FirstOrDefault();
                     }
 
-                    if (task == null)
+                    if (task == null || task.Status == TaskStatus.SUCCESS)
                     {
                         return;
                     }

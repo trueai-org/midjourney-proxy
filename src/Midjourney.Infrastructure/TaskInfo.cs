@@ -194,10 +194,13 @@ namespace Midjourney.Infrastructure
             {
                 // https://cdn.discordapp.com/attachments/1265095688782614602/1266300100989161584/03ytbus_LOGO_design_A_warrior_frog_Muscles_like_Popeye_Freehand_06857373-4fd9-403d-a5df-c2f27f9be269.png?ex=66a4a55e&is=66a353de&hm=c597e9d6d128c493df27a4d0ae41204655ab73f7e885878fc1876a8057a7999f&
                 // 将图片保存到本地，并替换 url，并且保持原 url和参数
-                // 默认保存根目录为 /data
+                // 默认保存根目录为 /wwwroot
                 // 保存图片
-
-                if (downloadToLocal && !string.IsNullOrWhiteSpace(ImageUrl) && !IsSaveToLocal)
+                // 如果处理过了，则不再处理
+                if (downloadToLocal
+                    && !string.IsNullOrWhiteSpace(ImageUrl)
+                    && !IsSaveToLocal
+                    && !ImageUrl.StartsWith(customCdn))
                 {
                     // 本地锁
                     LocalLock.TryLock(ImageUrl, TimeSpan.FromSeconds(10), () =>
@@ -207,25 +210,30 @@ namespace Midjourney.Infrastructure
                             // 创建保存路径
                             var uri = new Uri(ImageUrl);
                             var localPath = uri.AbsolutePath.TrimStart('/');
-                            var savePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", localPath);
-                            var directoryPath = Path.GetDirectoryName(savePath);
 
-                            if (!string.IsNullOrWhiteSpace(directoryPath))
+                            // 如果路径是 ephemeral-attachments 或 attachments 才处理
+                            if (localPath.StartsWith("ephemeral-attachments") || localPath.StartsWith("attachments"))
                             {
-                                Directory.CreateDirectory(directoryPath);
+                                var savePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", localPath);
+                                var directoryPath = Path.GetDirectoryName(savePath);
 
-                                // 下载图片并保存
-                                using (HttpClient client = new HttpClient())
+                                if (!string.IsNullOrWhiteSpace(directoryPath))
                                 {
-                                    var response = client.GetAsync(ImageUrl).Result;
-                                    response.EnsureSuccessStatusCode();
-                                    var imageBytes = response.Content.ReadAsByteArrayAsync().Result;
-                                    File.WriteAllBytes(savePath, imageBytes);
-                                }
+                                    Directory.CreateDirectory(directoryPath);
 
-                                // 替换 url
-                                ImageUrl = $"{customCdn?.Trim()?.Trim('/')}/{localPath}{uri?.Query}";
-                                IsSaveToLocal = true;
+                                    // 下载图片并保存
+                                    using (HttpClient client = new HttpClient())
+                                    {
+                                        var response = client.GetAsync(ImageUrl).Result;
+                                        response.EnsureSuccessStatusCode();
+                                        var imageBytes = response.Content.ReadAsByteArrayAsync().Result;
+                                        File.WriteAllBytes(savePath, imageBytes);
+                                    }
+
+                                    // 替换 url
+                                    ImageUrl = $"{customCdn?.Trim()?.Trim('/')}/{localPath}{uri?.Query}";
+                                    IsSaveToLocal = true;
+                                }
                             }
                         }
                     });
