@@ -8,13 +8,13 @@ namespace Midjourney.Infrastructure.Handle
     /// <summary>
     /// Blend 事件处理
     /// </summary>
-    public class BlendSuccessHandler : MessageHandler
+    public class BotBlendSuccessHandler : BotMessageHandler
     {
         private const string CONTENT_REGEX = "\\*\\*(.*)\\*\\* - (.*?)<@\\d+> \\((.*?)\\)";
         private const int MIN_URLS = 2;
         private const int MAX_URLS = 5;
 
-        public BlendSuccessHandler(DiscordLoadBalancer discordLoadBalancer, DiscordHelper discordHelper)
+        public BotBlendSuccessHandler(DiscordLoadBalancer discordLoadBalancer, DiscordHelper discordHelper)
         : base(discordLoadBalancer, discordHelper)
         {
         }

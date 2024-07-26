@@ -4,12 +4,12 @@ using Midjourney.Infrastructure.Util;
 
 namespace Midjourney.Infrastructure.Handle
 {
-    public class VariationSuccessHandler : MessageHandler
+    public class BotVariationSuccessHandler : BotMessageHandler
     {
         private const string CONTENT_REGEX_1 = "\\*\\*(.*)\\*\\* - Variations by <@\\d+> \\((.*?)\\)";
         private const string CONTENT_REGEX_2 = "\\*\\*(.*)\\*\\* - Variations \\(.*?\\) by <@\\d+> \\((.*?)\\)";
 
-        public VariationSuccessHandler(DiscordLoadBalancer discordLoadBalancer, DiscordHelper discordHelper)
+        public BotVariationSuccessHandler(DiscordLoadBalancer discordLoadBalancer, DiscordHelper discordHelper)
         : base(discordLoadBalancer, discordHelper)
         {
         }

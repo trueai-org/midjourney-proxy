@@ -4,9 +4,9 @@ using Midjourney.Infrastructure.Util;
 
 namespace Midjourney.Infrastructure.Handle
 {
-    public class StartAndProgressHandler : MessageHandler
+    public class BotStartAndProgressHandler : BotMessageHandler
     {
-        public StartAndProgressHandler(DiscordLoadBalancer discordLoadBalancer, DiscordHelper discordHelper)
+        public BotStartAndProgressHandler(DiscordLoadBalancer discordLoadBalancer, DiscordHelper discordHelper)
             : base(discordLoadBalancer, discordHelper)
         {
         }
@@ -28,7 +28,7 @@ namespace Midjourney.Infrastructure.Handle
                     task = instance.FindRunningTask(c => c.InteractionMetadataId == umsg.InteractionMetadata.Id.ToString()).FirstOrDefault();
                 }
 
-                if (task == null)
+                if (task == null || task.Status == TaskStatus.SUCCESS)
                 {
                     return;
                 }
@@ -61,7 +61,7 @@ namespace Midjourney.Infrastructure.Handle
                     task = instance.FindRunningTask(c => c.InteractionMetadataId == umsg.InteractionMetadata.Id.ToString()).FirstOrDefault();
                 }
 
-                if (task == null)
+                if (task == null || task.Status == TaskStatus.SUCCESS)
                 {
                     return;
                 }

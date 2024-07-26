@@ -6,9 +6,9 @@ namespace Midjourney.Infrastructure.Handle
     /// <summary>
     /// 图生文完成处理程序。
     /// </summary>
-    public class DescribeSuccessHandler : MessageHandler
+    public class BotDescribeSuccessHandler : BotMessageHandler
     {
-        public DescribeSuccessHandler(DiscordLoadBalancer discordLoadBalancer, DiscordHelper discordHelper)
+        public BotDescribeSuccessHandler(DiscordLoadBalancer discordLoadBalancer, DiscordHelper discordHelper)
         : base(discordLoadBalancer, discordHelper)
         {
         }

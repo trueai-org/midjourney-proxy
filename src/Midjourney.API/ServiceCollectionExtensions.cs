@@ -9,15 +9,21 @@ namespace Midjourney.API
         public static void AddMidjourneyServices(this IServiceCollection services, ProxyProperties config)
         {
             // 注册所有的处理程序
-            services.AddTransient<MessageHandler, ErrorMessageHandler>();
-            services.AddTransient<MessageHandler, ImagineSuccessHandler>();
-            services.AddTransient<MessageHandler, RerollSuccessHandler>();
-            services.AddTransient<MessageHandler, StartAndProgressHandler>();
-            services.AddTransient<MessageHandler, UpscaleSuccessHandler>();
-            services.AddTransient<MessageHandler, VariationSuccessHandler>();
-            services.AddTransient<MessageHandler, DescribeSuccessHandler>();
-            services.AddTransient<MessageHandler, ActionSuccessHandler>();
-            services.AddTransient<MessageHandler, BlendSuccessHandler>();
+
+            // 机器人消息处理程序
+            services.AddTransient<BotMessageHandler, BotErrorMessageHandler>();
+            services.AddTransient<BotMessageHandler, BotImagineSuccessHandler>();
+            services.AddTransient<BotMessageHandler, BotRerollSuccessHandler>();
+            services.AddTransient<BotMessageHandler, BotStartAndProgressHandler>();
+            services.AddTransient<BotMessageHandler, BotUpscaleSuccessHandler>();
+            services.AddTransient<BotMessageHandler, BotVariationSuccessHandler>();
+            services.AddTransient<BotMessageHandler, BotDescribeSuccessHandler>();
+            services.AddTransient<BotMessageHandler, BotActionSuccessHandler>();
+            services.AddTransient<BotMessageHandler, BotBlendSuccessHandler>();
+
+            // 用户消息处理程序
+            services.AddTransient<UserMessageHandler, UserActionSuccessHandler>();
+            services.AddTransient<UserMessageHandler, UserImagineSuccessHandler>();
 
             // 通知服务
             services.AddSingleton<INotifyService, NotifyServiceImpl>();

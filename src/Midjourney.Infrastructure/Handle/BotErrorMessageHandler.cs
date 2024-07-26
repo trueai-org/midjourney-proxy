@@ -4,11 +4,11 @@ using Midjourney.Infrastructure.LoadBalancer;
 
 namespace Midjourney.Infrastructure.Handle
 {
-    public class ErrorMessageHandler : MessageHandler
+    public class BotErrorMessageHandler : BotMessageHandler
     {
-        private readonly ILogger<ErrorMessageHandler> _logger;
+        private readonly ILogger<BotErrorMessageHandler> _logger;
 
-        public ErrorMessageHandler(DiscordLoadBalancer discordLoadBalancer, DiscordHelper discordHelper, ILogger<ErrorMessageHandler> logger)
+        public BotErrorMessageHandler(DiscordLoadBalancer discordLoadBalancer, DiscordHelper discordHelper, ILogger<BotErrorMessageHandler> logger)
             : base(discordLoadBalancer, discordHelper)
         {
             _logger = logger;

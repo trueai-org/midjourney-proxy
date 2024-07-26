@@ -3,7 +3,6 @@ using Discord.Commands;
 using Discord.Net.Rest;
 using Discord.Net.WebSockets;
 using Discord.WebSocket;
-using IdGen;
 using Midjourney.Infrastructure.Domain;
 using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.Handle;
@@ -26,7 +25,8 @@ namespace Midjourney.Infrastructure
         private readonly ILogger _logger = Log.Logger;
 
         private DiscordInstanceImpl _discordInstance;
-        private IEnumerable<MessageHandler> _messageHandlers;
+        private IEnumerable<BotMessageHandler> _botMessageHandlers;
+        private IEnumerable<UserMessageHandler> _userMessageHandlers;
 
         public BotMessageListener(
             DiscordAccount discordAccount,
@@ -38,10 +38,14 @@ namespace Midjourney.Infrastructure
             _discordHelper = discordHelper;
         }
 
-        public void Init(DiscordInstanceImpl instance, IEnumerable<MessageHandler> messageHandlers)
+        public void Init(
+            DiscordInstanceImpl instance,
+            IEnumerable<BotMessageHandler> botMessageHandlers,
+            IEnumerable<UserMessageHandler> userMessageHandlers)
         {
             _discordInstance = instance;
-            _messageHandlers = messageHandlers;
+            _botMessageHandlers = botMessageHandlers;
+            _userMessageHandlers = userMessageHandlers;
         }
 
         public async Task StartAsync()
@@ -141,7 +145,7 @@ namespace Midjourney.Infrastructure
                 if (!string.IsNullOrWhiteSpace(msg.Content)
                     && msg.Author.IsBot)
                 {
-                    foreach (var handler in _messageHandlers.OrderBy(h => h.Order()))
+                    foreach (var handler in _botMessageHandlers.OrderBy(h => h.Order()))
                     {
                         handler.Handle(_discordInstance, MessageType.CREATE, msg);
                     }
@@ -176,14 +180,14 @@ namespace Midjourney.Infrastructure
                     && msg.Content.Contains("%")
                     && msg.Author.IsBot)
                 {
-                    foreach (var handler in _messageHandlers.OrderBy(h => h.Order()))
+                    foreach (var handler in _botMessageHandlers.OrderBy(h => h.Order()))
                     {
                         handler.Handle(_discordInstance, MessageType.UPDATE, after);
                     }
                 }
                 else if (msg.InteractionMetadata is ApplicationCommandInteractionMetadata metadata && metadata.Name == "describe")
                 {
-                    var handler = _messageHandlers.FirstOrDefault(x => x.GetType() == typeof(DescribeSuccessHandler));
+                    var handler = _botMessageHandlers.FirstOrDefault(x => x.GetType() == typeof(BotDescribeSuccessHandler));
                     handler?.Handle(_discordInstance, MessageType.CREATE, after);
                 }
 
@@ -370,7 +374,6 @@ namespace Midjourney.Infrastructure
                     }
                 }
 
-
                 if (isPrivareChannel)
                 {
                     // 私信频道
@@ -447,7 +450,6 @@ namespace Midjourney.Infrastructure
 
                     return;
                 }
-
 
                 // 任务 id
                 // 任务 nonce
@@ -782,17 +784,27 @@ namespace Midjourney.Infrastructure
                     }
                 }
 
-                //Thread.Sleep(50);
+                // 如果消息类型是 CREATE
+                // 则再次处理消息确认事件，确保消息的高可用
+                if (messageType == MessageType.CREATE)
+                {
+                    Thread.Sleep(50);
 
-                //foreach (var messageHandler in _messageHandlers.OrderBy(h => h.Order()))
-                //{
-                //    if (data.TryGetProperty(Constants.MJ_MESSAGE_HANDLED, out JsonElement handled) && handled.GetBoolean())
-                //    {
-                //        return;
-                //    }
+                    var eventData = data.Deserialize<EventData>();
+                    if (eventData != null && eventData.ChannelId == _discordAccount.ChannelId)
+                    {
+                        foreach (var messageHandler in _userMessageHandlers.OrderBy(h => h.Order()))
+                        {
+                            // 处理过了
+                            if (eventData.GetProperty<bool?>(Constants.MJ_MESSAGE_HANDLED, default) == true)
+                            {
+                                return;
+                            }
 
-                //    //messageHandler.Handle(_discordInstance, messageType.Value, data);
-                //}
+                            messageHandler.Handle(_discordInstance, messageType.Value, eventData);
+                        }
+                    }
+                }
             }
             catch (Exception ex)
             {

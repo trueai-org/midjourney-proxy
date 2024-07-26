@@ -1,45 +1,47 @@
-﻿using Discord;
-using Discord.WebSocket;
+﻿using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.LoadBalancer;
 
 namespace Midjourney.Infrastructure.Handle
 {
-    public abstract class MessageHandler
+    /// <summary>
+    /// 用户消息处理程序
+    /// </summary>
+    public abstract class UserMessageHandler
     {
         protected DiscordLoadBalancer discordLoadBalancer;
         protected DiscordHelper discordHelper;
 
-        public MessageHandler(DiscordLoadBalancer discordLoadBalancer, DiscordHelper discordHelper)
+        public UserMessageHandler(DiscordLoadBalancer discordLoadBalancer, DiscordHelper discordHelper)
         {
             this.discordLoadBalancer = discordLoadBalancer;
             this.discordHelper = discordHelper;
         }
 
-        public abstract void Handle(IDiscordInstance instance, MessageType messageType, SocketMessage message);
+        public abstract void Handle(IDiscordInstance instance, MessageType messageType, EventData message);
 
         public virtual int Order() => 100;
 
-        protected string GetMessageContent(SocketMessage message)
+        protected string GetMessageContent(EventData message)
         {
             return message.Content;
         }
 
-        protected string GetMessageId(SocketMessage message)
+        protected string GetMessageId(EventData message)
         {
             return message.Id.ToString();
         }
 
-        protected string GetInteractionName(SocketMessage message)
+        protected string GetInteractionName(EventData message)
         {
             return message?.Interaction?.Name ?? string.Empty;
         }
 
-        protected string GetReferenceMessageId(SocketMessage message)
+        protected string GetReferenceMessageId(EventData message)
         {
-            return message?.Reference?.MessageId.ToString() ?? string.Empty;
+            return message?.Id.ToString() ?? string.Empty;
         }
 
-        protected EBotType? GetBotType(SocketMessage message)
+        protected EBotType? GetBotType(EventData message)
         {
             var botId = message.Author?.Id.ToString();
             EBotType? botType = null;
@@ -55,7 +57,7 @@ namespace Midjourney.Infrastructure.Handle
             return botType;
         }
 
-        protected void FindAndFinishImageTask(IDiscordInstance instance, TaskAction action, string finalPrompt, SocketMessage message)
+        protected void FindAndFinishImageTask(IDiscordInstance instance, TaskAction action, string finalPrompt, EventData message)
         {
             if (string.IsNullOrWhiteSpace(finalPrompt))
                 return;
@@ -67,10 +69,9 @@ namespace Midjourney.Infrastructure.Handle
 
             var task = instance.FindRunningTask(c => c.MessageId == msgId).FirstOrDefault();
 
-            if (task == null && message is SocketUserMessage umsg && umsg != null
-                && umsg.InteractionMetadata?.Id != null)
+            if (task == null && message.InteractionMetadata?.Id != null)
             {
-                task = instance.FindRunningTask(c => c.InteractionMetadataId == umsg.InteractionMetadata.Id.ToString()).FirstOrDefault();
+                task = instance.FindRunningTask(c => c.InteractionMetadataId == message.InteractionMetadata.Id.ToString()).FirstOrDefault();
             }
 
             // 如果依然找不到任务，可能是 NIJI 任务
@@ -95,7 +96,7 @@ namespace Midjourney.Infrastructure.Handle
                 }
             }
 
-            if (task == null)
+            if (task == null || task.Status == TaskStatus.SUCCESS)
             {
                 return;
             }
@@ -105,7 +106,8 @@ namespace Midjourney.Infrastructure.Handle
             if (!task.MessageIds.Contains(msgId))
                 task.MessageIds.Add(msgId);
 
-            task.SetProperty(Constants.MJ_MESSAGE_HANDLED, true);
+            message.SetProperty(Constants.MJ_MESSAGE_HANDLED, true);
+            
             task.SetProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, finalPrompt);
             task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_HASH, messageHash);
             task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_CONTENT, message.Content);
@@ -115,27 +117,23 @@ namespace Midjourney.Infrastructure.Handle
             task.Awake();
         }
 
-        protected void FinishTask(TaskInfo task, SocketMessage message)
+        protected void FinishTask(TaskInfo task, EventData message)
         {
             task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_ID, message.Id.ToString());
             task.SetProperty(Constants.TASK_PROPERTY_FLAGS, Convert.ToInt32(message.Flags));
             task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_HASH, discordHelper.GetMessageHash(task.ImageUrl));
 
             task.Buttons = message.Components.SelectMany(x => x.Components)
-                .Select(c =>
+                .Select(btn =>
                 {
-                    if (c is ButtonComponent btn)
+                    return new CustomComponentModel
                     {
-                        return new CustomComponentModel
-                        {
-                            CustomId = btn.CustomId?.ToString() ?? string.Empty,
-                            Emoji = btn.Emote?.Name ?? string.Empty,
-                            Label = btn.Label ?? string.Empty,
-                            Style = (int?)btn.Style ?? 0,
-                            Type = (int?)btn.Type ?? 0,
-                        };
-                    }
-                    return null;
+                        CustomId = btn.CustomId?.ToString() ?? string.Empty,
+                        Emoji = btn.Emoji?.Name ?? string.Empty,
+                        Label = btn.Label ?? string.Empty,
+                        Style = (int?)btn.Style ?? 0,
+                        Type = (int?)btn.Type ?? 0,
+                    };
                 }).Where(c => c != null && !string.IsNullOrWhiteSpace(c.CustomId)).ToList();
 
             if (string.IsNullOrWhiteSpace(task.Description))
@@ -154,12 +152,12 @@ namespace Midjourney.Infrastructure.Handle
             task.Success();
         }
 
-        protected bool HasImage(SocketMessage message)
+        protected bool HasImage(EventData message)
         {
             return message?.Attachments?.Count > 0;
         }
 
-        protected string GetImageUrl(SocketMessage message)
+        protected string GetImageUrl(EventData message)
         {
             if (message?.Attachments?.Count > 0)
             {

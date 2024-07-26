@@ -4,14 +4,14 @@ using Midjourney.Infrastructure.Util;
 
 namespace Midjourney.Infrastructure.Handle
 {
-    public class RerollSuccessHandler : MessageHandler
+    public class BotRerollSuccessHandler : BotMessageHandler
     {
         private const string CONTENT_REGEX_0 = "\\*\\*(.*)\\*\\* - (.*?)<@\\d+> \\((.*?)\\)";
         private const string CONTENT_REGEX_1 = "\\*\\*(.*)\\*\\* - <@\\d+> \\((.*?)\\)";
         private const string CONTENT_REGEX_2 = "\\*\\*(.*)\\*\\* - Variations by <@\\d+> \\((.*?)\\)";
         private const string CONTENT_REGEX_3 = "\\*\\*(.*)\\*\\* - Variations \\(.*?\\) by <@\\d+> \\((.*?)\\)";
 
-        public RerollSuccessHandler(DiscordLoadBalancer discordLoadBalancer, DiscordHelper discordHelper)
+        public BotRerollSuccessHandler(DiscordLoadBalancer discordLoadBalancer, DiscordHelper discordHelper)
         : base(discordLoadBalancer, discordHelper)
         {
         }
