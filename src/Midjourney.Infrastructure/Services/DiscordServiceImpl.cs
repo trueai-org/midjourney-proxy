@@ -370,7 +370,9 @@ namespace Midjourney.Infrastructure.Services
             }
 
             // 将 2 个空格替换为 1 个空格
-            prompt = prompt.Replace("  ", " ").Replace("  ", " ").Replace("  ", " ").Trim();
+            // 将 " -- " 替换为 " "
+            prompt = prompt.Replace(" -- ", " ")
+                .Replace("  ", " ").Replace("  ", " ").Replace("  ", " ").Trim();
 
             if (_account.Mode != null)
             {
