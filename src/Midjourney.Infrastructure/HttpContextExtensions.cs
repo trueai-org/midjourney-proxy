@@ -72,14 +72,15 @@ namespace Midjourney.Infrastructure
 
             var ip = string.Empty;
             var headers = httpRequest.Headers;
-            if (headers.ContainsKey("X-Forwarded-For"))
+
+            if (headers.ContainsKey("X-Real-IP"))
+            {
+                ip = headers["X-Real-IP"].ToString();
+            }
+            else if (headers.ContainsKey("X-Forwarded-For"))
             {
                 var forwardedIps = headers["X-Forwarded-For"].ToString().Split(',');
                 ip = forwardedIps.FirstOrDefault().Trim();
-            }
-            else if (headers.ContainsKey("X-Real-IP"))
-            {
-                ip = headers["X-Real-IP"].ToString();
             }
 
             if (string.IsNullOrEmpty(ip))
