@@ -41,6 +41,7 @@
 - [x] 任务增加父级任务信息等
 - [x] 🎛️ Remix 模式和 Remix 模式自动提交
 - [x] 内置图片保存到本地、内置 CDN 加速
+- [x] 绘图时当未读消息过多时，自动模拟读未读消息
 
 ## 在线预览
 
@@ -316,6 +317,7 @@ https://discord.com/oauth2/authorize?client_id=xxx&permissions=8&scope=bot
 
 ## 路线图
 
+- [ ] 逆向根据 job 或 图片生成任务信息
 - [ ] 其他指令 PicReader、 BOOKMARK、Picread 等
 - [ ] 优化指令和状态进度显示
 - [ ] 优化任务和队列满时的提醒
@@ -336,6 +338,9 @@ https://discord.com/oauth2/authorize?client_id=xxx&permissions=8&scope=bot
 - [ ] 增加公告功能
 - [ ] 账号增加咸鱼模式/放松模式，避免高频作业（此模式下不可创建新的绘图，仍可以执行其他命令，可以配置为多个时间段或定时等策略）
 - [ ] 增加强制休眠模式，或定时休眠模式
+- [ ] 关于触发 mj cf 真人验证问题处理
+- [ ] 图生文 seed 值处理
+- [ ] 自动读私信消息
 
 ## 支持与赞助
 

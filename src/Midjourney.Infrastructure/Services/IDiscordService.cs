@@ -166,5 +166,12 @@
         /// <param name="finalFileName">最终文件名。</param>
         /// <returns>发送结果消息。</returns>
         Task<Message> SendImageMessageAsync(string content, string finalFileName);
+
+        /// <summary>
+        /// 自动读 discord 最后一条消息（设置为已读）
+        /// </summary>
+        /// <param name="lastMessageId"></param>
+        /// <returns></returns>
+        Task<Message> ReadMessageAsync(string lastMessageId);
     }
 }

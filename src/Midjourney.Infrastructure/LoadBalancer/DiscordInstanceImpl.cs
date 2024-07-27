@@ -4,8 +4,6 @@ using Midjourney.Infrastructure.Util;
 using Serilog;
 using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.Net.WebSockets;
-using System.Threading.Tasks;
 
 namespace Midjourney.Infrastructure.LoadBalancer
 {
@@ -330,6 +328,28 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     }
                 }
 
+                // 任务完成后，自动读消息
+                // 随机 3 次，如果命中则读消息
+                if (new Random().Next(0, 3) == 0)
+                {
+                    try
+                    {
+                        var res = await ReadMessageAsync(info.MessageId);
+                        if (res.Code == ReturnCode.SUCCESS)
+                        {
+                            _logger.Debug("自动读消息成功 {@0} - {@1}", info.InstanceId, info.Id);
+                        }
+                        else
+                        {
+                            _logger.Warning("自动读消息失败 {@0} - {@1}", info.InstanceId, info.Id);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Error(ex, "自动读消息异常 {@0} - {@1}", info.InstanceId, info.Id);
+                    }
+                }
+
                 _logger.Debug("[{AccountDisplay}] task finished, id: {TaskId}, status: {TaskStatus}", _account.GetDisplay(), info.Id, info.Status);
             }
             catch (Exception ex)
@@ -548,6 +568,14 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <param name="finalFileName">最终文件名</param>
         /// <returns>异步任务</returns>
         public Task<Message> SendImageMessageAsync(string content, string finalFileName) => _service.SendImageMessageAsync(content, finalFileName);
+
+        /// <summary>
+        /// 自动读 discord 最后一条消息（设置为已读）
+        /// </summary>
+        /// <param name="lastMessageId"></param>
+        /// <returns></returns>
+        public Task<Message> ReadMessageAsync(string lastMessageId) =>
+            _service.ReadMessageAsync(lastMessageId);
 
         /// <summary>
         /// 查找符合条件的正在运行的任务。
