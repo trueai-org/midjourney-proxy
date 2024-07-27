@@ -166,6 +166,8 @@ namespace Midjourney.Infrastructure.Handle
 
             // 表示消息已经处理过了
             CacheHelper<string, bool>.AddOrUpdate(message.Id.ToString(), true);
+
+            Log.Debug("由 USER 确认消息处理完成 {@0}", message.Id);
         }
 
         protected bool HasImage(EventData message)
