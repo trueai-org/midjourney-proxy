@@ -1,9 +1,7 @@
 ﻿using Midjourney.Infrastructure.Domain;
 using Newtonsoft.Json.Linq;
 using Serilog;
-using System.IO;
 using System.Net.Http.Headers;
-using System.Reflection.Metadata;
 using System.Text;
 
 namespace Midjourney.Infrastructure.Services
@@ -384,12 +382,15 @@ namespace Midjourney.Infrastructure.Services
                     case GenerationSpeedMode.RELAX:
                         prompt += " --relax";
                         break;
+
                     case GenerationSpeedMode.FAST:
                         prompt += " --fast";
                         break;
+
                     case GenerationSpeedMode.TURBO:
                         prompt += " --turbo";
                         break;
+
                     default:
                         break;
                 }
@@ -558,7 +559,6 @@ namespace Midjourney.Infrastructure.Services
             return str;
         }
 
-
         public async Task<Message> UploadAsync(string fileName, DataUrl dataUrl)
         {
             try
@@ -620,6 +620,30 @@ namespace Midjourney.Infrastructure.Services
                 return Message.Success(attachments[0]["url"].ToString());
             }
             return Message.Failure("发送图片消息到discord失败: 图片不存在");
+        }
+
+        /// <summary>
+        /// 自动读 discord 最后一条消息（设置为已读）
+        /// </summary>
+        /// <param name="lastMessageId"></param>
+        /// <returns></returns>
+        public async Task<Message> ReadMessageAsync(string lastMessageId)
+        {
+            if (string.IsNullOrWhiteSpace(lastMessageId))
+            {
+                return Message.Of(ReturnCode.VALIDATION_ERROR, "lastMessageId 不能为空");
+            }
+
+            var paramsStr = @"{""token"":null,""last_viewed"":3496}";
+            var url = $"{_discordMessageUrl}/{lastMessageId}/ack";
+
+            HttpResponseMessage response = await PostJsonAsync(url, paramsStr);
+            if (response.StatusCode != System.Net.HttpStatusCode.OK)
+            {
+                _logger.Error("自动读discord消息失败, status: {StatusCode}, msg: {Body}", response.StatusCode, await response.Content.ReadAsStringAsync());
+                return Message.Of(ReturnCode.VALIDATION_ERROR, "自动读discord消息失败");
+            }
+            return Message.Success();
         }
 
         private async Task PutFileAsync(string uploadUrl, DataUrl dataUrl)
