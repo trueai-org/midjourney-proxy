@@ -329,8 +329,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 }
 
                 // 任务完成后，自动读消息
-                // 随机 5 次，如果命中则读消息
-                if (new Random().Next(0, 5) == 0)
+                // 随机 3 次，如果命中则读消息
+                if (new Random().Next(0, 3) == 0)
                 {
                     try
                     {
