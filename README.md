@@ -317,6 +317,7 @@ https://discord.com/oauth2/authorize?client_id=xxx&permissions=8&scope=bot
 
 ## 路线图
 
+- [ ] 逆向根据 job 或 图片生成任务信息
 - [ ] 其他指令 PicReader、 BOOKMARK、Picread 等
 - [ ] 优化指令和状态进度显示
 - [ ] 优化任务和队列满时的提醒
