@@ -161,11 +161,6 @@ namespace Midjourney.Infrastructure
         }
 
         /// <summary>
-        /// 是否已将图片保存到本地
-        /// </summary>
-        public bool IsSaveToLocal { get; set; }
-
-        /// <summary>
         /// 任务的种子。
         /// </summary>
         public string Seed { get; set; }
@@ -202,15 +197,13 @@ namespace Midjourney.Infrastructure
                 // 默认保存根目录为 /wwwroot
                 // 保存图片
                 // 如果处理过了，则不再处理
-                if (downloadToLocal
-                    && !string.IsNullOrWhiteSpace(ImageUrl)
-                    && !IsSaveToLocal
-                    && !ImageUrl.StartsWith(customCdn))
+                if (downloadToLocal && !string.IsNullOrWhiteSpace(ImageUrl))
                 {
                     // 本地锁
                     LocalLock.TryLock(ImageUrl, TimeSpan.FromSeconds(10), () =>
                     {
-                        if (!IsSaveToLocal)
+                        // 如果不是以自定义 cdn 加速域名开头
+                        if (string.IsNullOrWhiteSpace(customCdn) || !ImageUrl.StartsWith(customCdn))
                         {
                             // 创建保存路径
                             var uri = new Uri(ImageUrl);
@@ -237,7 +230,6 @@ namespace Midjourney.Infrastructure
 
                                     // 替换 url
                                     ImageUrl = $"{customCdn?.Trim()?.Trim('/')}/{localPath}{uri?.Query}";
-                                    IsSaveToLocal = true;
                                 }
                             }
                         }

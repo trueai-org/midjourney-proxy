@@ -422,19 +422,23 @@ namespace Midjourney.Infrastructure
         /// <param name="message"></param>
         private void HandleMessage(string message)
         {
-            try
+            // 不再等待消息处理完毕，直接返回
+            _ = Task.Run(async () =>
             {
-                var data = JsonDocument.Parse(message).RootElement;
-                var opCode = data.GetProperty("op").GetInt32();
-                var seq = data.TryGetProperty("s", out var seqElement) && seqElement.ValueKind == JsonValueKind.Number ? (int?)seqElement.GetInt32() : null;
-                var type = data.TryGetProperty("t", out var typeElement) ? typeElement.GetString() : null;
+                try
+                {
+                    var data = JsonDocument.Parse(message).RootElement;
+                    var opCode = data.GetProperty("op").GetInt32();
+                    var seq = data.TryGetProperty("s", out var seqElement) && seqElement.ValueKind == JsonValueKind.Number ? (int?)seqElement.GetInt32() : null;
+                    var type = data.TryGetProperty("t", out var typeElement) ? typeElement.GetString() : null;
 
-                ProcessMessageAsync((GatewayOpCode)opCode, seq, type, data).Wait();
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "处理接收到的 WebSocket 消息失败 {@0}", _account.ChannelId);
-            }
+                    await ProcessMessageAsync((GatewayOpCode)opCode, seq, type, data);
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error(ex, "处理接收到的 WebSocket 消息失败 {@0}", _account.ChannelId);
+                }
+            });
         }
 
         /// <summary>
