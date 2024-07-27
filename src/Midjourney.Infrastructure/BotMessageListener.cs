@@ -4,13 +4,15 @@ using Discord.Net.Rest;
 using Discord.Net.WebSockets;
 using Discord.WebSocket;
 using Midjourney.Infrastructure.Domain;
-using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.Handle;
 using Midjourney.Infrastructure.LoadBalancer;
+using Midjourney.Infrastructure.Util;
 using Serilog;
 using System.Net;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+
+using EventData = Midjourney.Infrastructure.Dto.EventData;
 
 namespace Midjourney.Infrastructure
 {
@@ -147,7 +149,11 @@ namespace Midjourney.Infrastructure
                 {
                     foreach (var handler in _botMessageHandlers.OrderBy(h => h.Order()))
                     {
-                        handler.Handle(_discordInstance, MessageType.CREATE, msg);
+                        // 消息加锁处理
+                        LocalLock.TryLock($"lock_{msg.Id}", TimeSpan.FromSeconds(10), () =>
+                        {
+                            handler.Handle(_discordInstance, MessageType.CREATE, msg);
+                        });
                     }
                 }
             }
@@ -802,7 +808,11 @@ namespace Midjourney.Infrastructure
                                 return;
                             }
 
-                            messageHandler.Handle(_discordInstance, messageType.Value, eventData);
+                            // 消息加锁处理
+                            LocalLock.TryLock($"lock_{eventData.Id}", TimeSpan.FromSeconds(10), () =>
+                            {
+                                messageHandler.Handle(_discordInstance, messageType.Value, eventData);
+                            });
                         }
                     }
                 }

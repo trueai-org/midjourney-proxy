@@ -1,6 +1,7 @@
 ﻿using Discord.WebSocket;
 using Midjourney.Infrastructure.LoadBalancer;
 using Midjourney.Infrastructure.Util;
+using Serilog;
 using System.Text.RegularExpressions;
 
 namespace Midjourney.Infrastructure.Handle
@@ -18,6 +19,14 @@ namespace Midjourney.Infrastructure.Handle
 
         public override void Handle(IDiscordInstance instance, MessageType messageType, SocketMessage message)
         {
+            // 判断消息是否处理过了
+            CacheHelper<string, bool>.TryAdd(message.Id.ToString(), false);
+            if (CacheHelper<string, bool>.Get(message.Id.ToString()))
+            {
+                Log.Debug("BOT 消息已经处理过了 {@0}", message.Id);
+                return;
+            }
+
             string content = GetMessageContent(message);
             var parseData = GetParseData(content);
             if (messageType == MessageType.CREATE && parseData != null && HasImage(message))

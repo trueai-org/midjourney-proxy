@@ -1,6 +1,8 @@
 ﻿using Discord;
 using Discord.WebSocket;
 using Midjourney.Infrastructure.LoadBalancer;
+using Midjourney.Infrastructure.Util;
+using Serilog;
 
 namespace Midjourney.Infrastructure.Handle
 {
@@ -60,6 +62,14 @@ namespace Midjourney.Infrastructure.Handle
 
         protected void FindAndFinishImageTask(IDiscordInstance instance, TaskAction action, string finalPrompt, SocketMessage message)
         {
+            // 判断消息是否处理过了
+            CacheHelper<string, bool>.TryAdd(message.Id.ToString(), false);
+            if (CacheHelper<string, bool>.Get(message.Id.ToString()))
+            {
+                Log.Debug("BOT 消息已经处理过了 {@0}", message.Id);
+                return;
+            }
+
             if (string.IsNullOrWhiteSpace(finalPrompt))
                 return;
 
@@ -158,6 +168,9 @@ namespace Midjourney.Infrastructure.Handle
             var toLocal = discordHelper.GetSaveToLocal();
 
             task.Success(customCdn, toLocal);
+
+            // 表示消息已经处理过了
+            CacheHelper<string, bool>.AddOrUpdate(message.Id.ToString(), true);
         }
 
         protected bool HasImage(SocketMessage message)

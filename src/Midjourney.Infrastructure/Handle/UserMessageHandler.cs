@@ -1,5 +1,7 @@
 ﻿using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.LoadBalancer;
+using Midjourney.Infrastructure.Util;
+using Serilog;
 
 namespace Midjourney.Infrastructure.Handle
 {
@@ -59,6 +61,14 @@ namespace Midjourney.Infrastructure.Handle
 
         protected void FindAndFinishImageTask(IDiscordInstance instance, TaskAction action, string finalPrompt, EventData message)
         {
+            // 判断消息是否处理过了
+            CacheHelper<string, bool>.TryAdd(message.Id, false);
+            if (CacheHelper<string, bool>.Get(message.Id))
+            {
+                Log.Debug("USER 消息已经处理过了 {@0}", message.Id);
+                return;
+            }
+
             if (string.IsNullOrWhiteSpace(finalPrompt))
                 return;
 
@@ -107,7 +117,7 @@ namespace Midjourney.Infrastructure.Handle
                 task.MessageIds.Add(msgId);
 
             message.SetProperty(Constants.MJ_MESSAGE_HANDLED, true);
-            
+
             task.SetProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, finalPrompt);
             task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_HASH, messageHash);
             task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_CONTENT, message.Content);
@@ -153,6 +163,9 @@ namespace Midjourney.Infrastructure.Handle
             var toLocal = discordHelper.GetSaveToLocal();
 
             task.Success(customCdn, toLocal);
+
+            // 表示消息已经处理过了
+            CacheHelper<string, bool>.AddOrUpdate(message.Id.ToString(), true);
         }
 
         protected bool HasImage(EventData message)
