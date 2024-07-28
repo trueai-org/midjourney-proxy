@@ -152,8 +152,17 @@ namespace Midjourney.Infrastructure.LoadBalancer
                             {
                                 _taskFutureMap[info.Item1.Id] = ExecuteTaskAsync(info.Item1, info.Item2);
 
-                                // 任务提交间隔 1.2s
-                                Thread.Sleep(1200);
+                                // 如果是图生文操作
+                                if (info.Item1.GetProperty<string>(Constants.TASK_PROPERTY_CUSTOM_ID, default)?.Contains("PicReader") == true)
+                                {
+                                    // 批量任务操作提交间隔 8s
+                                    Thread.Sleep(8000);
+                                }
+                                else
+                                {
+                                    // 任务提交间隔 1.2s
+                                    Thread.Sleep(1200);
+                                }
                             }
                         }
                         else
@@ -476,6 +485,19 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <returns></returns>
         public Task<Message> ZoomAsync(string messageId, string customId, string prompt, string nonce, EBotType botType) =>
             _service.ZoomAsync(messageId, customId, prompt, nonce, botType);
+
+
+        /// <summary>
+        /// 图生文 - 生图
+        /// </summary>
+        /// <param name="messageId"></param>
+        /// <param name="customId"></param>
+        /// <param name="prompt"></param>
+        /// <param name="nonce"></param>
+        /// <param name="botType"></param>
+        /// <returns></returns>
+        public Task<Message> PicReaderAsync(string messageId, string customId, string prompt, string nonce, EBotType botType)
+            => _service.PicReaderAsync(messageId, customId, prompt, nonce, botType);
 
         /// <summary>
         /// Remix 操作

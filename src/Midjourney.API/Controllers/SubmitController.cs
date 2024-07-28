@@ -355,12 +355,11 @@ namespace Midjourney.API.Controllers
             {
                 task.Action = TaskAction.INPAINT;
             }
-            // 不支持的操作
-            else if (actionDTO.CustomId.Contains("MJ::Job::PicReader::")
-                || actionDTO.CustomId.Contains("MJ::BOOKMARK")
-                || actionDTO.CustomId.Contains("MJ::Picread::Retry"))
+            // describe 重新提交
+            else if (actionDTO.CustomId.Contains("MJ::Picread::Retry"))
             {
-                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "暂不支持此操作"));
+                task.ImageUrl = targetTask.ImageUrl;
+                task.Action = TaskAction.DESCRIBE;
             }
             else
             {

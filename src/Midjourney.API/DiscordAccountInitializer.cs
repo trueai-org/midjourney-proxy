@@ -40,7 +40,12 @@ namespace Midjourney.API
         /// <param name="cancellationToken">取消令牌。</param>
         public async Task StartAsync(CancellationToken cancellationToken)
         {
-            await Initialize();
+            _ = Task.Run(async () =>
+            {
+                await Initialize();
+            });
+
+            await Task.CompletedTask;
         }
 
         /// <summary>

@@ -83,6 +83,17 @@
         Task<Message> ZoomAsync(string messageId, string customId, string prompt, string nonce, EBotType botType);
 
         /// <summary>
+        /// 图生文 - 生图
+        /// </summary>
+        /// <param name="messageId"></param>
+        /// <param name="customId"></param>
+        /// <param name="prompt"></param>
+        /// <param name="nonce"></param>
+        /// <param name="botType"></param>
+        /// <returns></returns>
+        Task<Message> PicReaderAsync(string messageId, string customId, string prompt, string nonce, EBotType botType);
+
+        /// <summary>
         /// Remix 操作
         /// </summary>
         /// <param name="action"></param>
