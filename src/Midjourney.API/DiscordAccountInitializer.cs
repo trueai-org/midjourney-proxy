@@ -101,7 +101,8 @@ namespace Midjourney.API
                         MaxQueueSize = configAccount.MaxQueueSize,
                         Mode = configAccount.Mode,
                         Weight = configAccount.Weight,
-                        Remark = configAccount.Remark
+                        Remark = configAccount.Remark,
+                        RemixAutoSubmit = configAccount.RemixAutoSubmit
                     };
 
                     db.Add(account);
