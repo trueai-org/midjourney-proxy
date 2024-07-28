@@ -65,7 +65,8 @@ namespace Midjourney.Infrastructure.Handle
                 if (!string.IsNullOrWhiteSpace(prompt))
                 {
                     task = instance
-                        .FindRunningTask(c => c.BotType == botType && (c.PromptEn.FormatPrompt() == prompt || c.PromptEn.FormatPrompt().EndsWith(prompt) || prompt.StartsWith(c.PromptEn.FormatPrompt())))
+                        .FindRunningTask(c => c.BotType == botType && !string.IsNullOrWhiteSpace(c.PromptEn)
+                        && (c.PromptEn.FormatPrompt() == prompt || c.PromptEn.FormatPrompt().EndsWith(prompt) || prompt.StartsWith(c.PromptEn.FormatPrompt())))
                         .OrderBy(c => c.StartTime).FirstOrDefault();
                 }
                 else
@@ -91,6 +92,8 @@ namespace Midjourney.Infrastructure.Handle
             task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_CONTENT, message.Content);
 
             task.ImageUrl = imageUrl;
+            task.JobId = messageHash;
+
             FinishTask(task, message);
             task.Awake();
         }

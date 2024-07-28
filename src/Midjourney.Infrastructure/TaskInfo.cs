@@ -177,6 +177,11 @@ namespace Midjourney.Infrastructure
         public string ClientIp { get; set; }
 
         /// <summary>
+        /// 图片 ID / 图片 hash
+        /// </summary>
+        public string JobId { get; set; }
+
+        /// <summary>
         /// 账号过滤
         /// </summary>
         public AccountFilter AccountFilter { get; set; }
@@ -245,6 +250,31 @@ namespace Midjourney.Infrastructure
             catch (Exception ex)
             {
                 Log.Error(ex, "保存图片失败 {@0}", ImageUrl);
+            }
+
+            // 调整图片 ACTION
+            // 如果是 show 时
+            if (Action == TaskAction.SHOW)
+            {
+                // 根据 buttons 调整
+                if (Buttons.Count > 0)
+                {
+                    // U1
+                    if (Buttons.Any(x => x.CustomId.Contains("MJ::JOB::upsample::1")))
+                    {
+                        Action = TaskAction.IMAGINE;
+                    }
+                    // 局部重绘说明是放大
+                    else if (Buttons.Any(x => x.CustomId.Contains("MJ::Inpaint::")))
+                    {
+                        Action = TaskAction.UPSCALE;
+                    }
+                    // MJ::Job::PicReader
+                    else if (Buttons.Any(x => x.CustomId.Contains("MJ::Job::PicReader")))
+                    {
+                        Action = TaskAction.DESCRIBE;
+                    }
+                }
             }
 
             FinishTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();

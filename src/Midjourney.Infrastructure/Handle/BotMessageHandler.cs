@@ -96,7 +96,8 @@ namespace Midjourney.Infrastructure.Handle
                 if (!string.IsNullOrWhiteSpace(prompt))
                 {
                     task = instance
-                        .FindRunningTask(c => c.BotType == botType && (c.PromptEn.FormatPrompt() == prompt || c.PromptEn.FormatPrompt().EndsWith(prompt) || prompt.StartsWith(c.PromptEn.FormatPrompt())))
+                        .FindRunningTask(c => c.BotType == botType && !string.IsNullOrWhiteSpace(c.PromptEn)
+                        && (c.PromptEn.FormatPrompt() == prompt || c.PromptEn.FormatPrompt().EndsWith(prompt) || prompt.StartsWith(c.PromptEn.FormatPrompt())))
                         .OrderBy(c => c.StartTime).FirstOrDefault();
                 }
                 else
@@ -106,6 +107,12 @@ namespace Midjourney.Infrastructure.Handle
                         .FindRunningTask(c => c.BotType == botType && c.Action == action)
                         .OrderBy(c => c.StartTime).FirstOrDefault();
                 }
+            }
+
+            // 如果是 show job 任务
+            if (task == null && action == TaskAction.SHOW)
+            {
+                task = instance.FindRunningTask(c => c.BotType == botType && c.Action == TaskAction.SHOW && c.JobId == messageHash).OrderBy(c => c.StartTime).FirstOrDefault();
             }
 
             if (task == null || task.Status == TaskStatus.SUCCESS)
@@ -124,7 +131,10 @@ namespace Midjourney.Infrastructure.Handle
             task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_CONTENT, message.Content);
 
             task.ImageUrl = imageUrl;
+            task.JobId = messageHash;
+
             FinishTask(task, message);
+
             task.Awake();
         }
 

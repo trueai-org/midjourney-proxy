@@ -3,6 +3,7 @@ using Midjourney.Infrastructure.LoadBalancer;
 using Midjourney.Infrastructure.Util;
 using Serilog;
 using System.Diagnostics;
+using System.Threading.Tasks;
 
 namespace Midjourney.Infrastructure.Services
 {
@@ -69,6 +70,29 @@ namespace Midjourney.Infrastructure.Services
                     _taskStoreService.Save(info);
                 }
                 return await instance.ImagineAsync(info.PromptEn,
+                    info.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default), info.BotType);
+            });
+        }
+
+        /// <summary>
+        /// 提交 show 任务
+        /// </summary>
+        /// <param name="info"></param>
+        /// <returns></returns>
+        public SubmitResultVO ShowImagine(TaskInfo info)
+        {
+            var instance = _discordLoadBalancer.ChooseInstance(info.AccountFilter);
+            if (instance == null)
+            {
+                return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
+            }
+
+            info.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, instance.GetInstanceId);
+            info.InstanceId = instance.GetInstanceId;
+
+            return instance.SubmitTaskAsync(info, async () =>
+            {
+                return await instance.ShowAsync(info.JobId,
                     info.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default), info.BotType);
             });
         }

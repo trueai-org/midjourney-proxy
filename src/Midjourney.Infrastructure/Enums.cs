@@ -179,6 +179,11 @@
         /// </summary>
         ZOOM,
 
+        /// <summary>
+        /// SHOW 指令
+        /// </summary>
+        SHOW,
+
         //SHORTEN
     }
 

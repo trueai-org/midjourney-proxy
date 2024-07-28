@@ -121,6 +121,15 @@
         Task<Message> SettingAsync(string nonce, EBotType botType);
 
         /// <summary>
+        /// 根据 job id 显示任务信息
+        /// </summary>
+        /// <param name="jobId"></param>
+        /// <param name="nonce"></param>
+        /// <param name="botType"></param>
+        /// <returns></returns>
+        Task<Message> ShowAsync(string jobId, string nonce, EBotType botType);
+
+        /// <summary>
         /// 执行 settings button 操作
         /// </summary>
         /// <param name="nonce"></param>

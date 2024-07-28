@@ -538,6 +538,40 @@ namespace Midjourney.Infrastructure
                                                 }
                                             }
                                         }
+                                        else
+                                        {
+                                            // 如果没有获取到 none
+                                            _logger.Error("未知错误 {@0}, {@1}", _discordAccount.ChannelId, data.ToString());
+
+
+                                            // 如果 meta 是 show
+                                            // 说明是 show 任务出错了
+                                            if (metaName == "show")
+                                            {
+                                                var desc = item.GetProperty("description").GetString();
+                                                if (!string.IsNullOrWhiteSpace(desc))
+                                                {
+                                                    // 设置 none 对应的任务 id
+                                                    var task = _discordInstance.GetRunningTasks().Where(c => c.Action == TaskAction.SHOW && desc.Contains(c.JobId)).FirstOrDefault();
+                                                    if (task != null)
+                                                    {
+                                                        if (messageType == MessageType.CREATE)
+                                                        {
+                                                            task.MessageId = id;
+                                                            task.Description = $"{title}, {item.GetProperty("description").GetString()}";
+
+                                                            if (!task.MessageIds.Contains(id))
+                                                            {
+                                                                task.MessageIds.Add(id);
+                                                            }
+
+                                                            task.Fail(title);
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+
                                     }
                                     // fast 用量已经使用完了
                                     // TODO 可以改为慢速模式

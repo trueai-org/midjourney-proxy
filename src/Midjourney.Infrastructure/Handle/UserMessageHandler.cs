@@ -123,6 +123,8 @@ namespace Midjourney.Infrastructure.Handle
             task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_CONTENT, message.Content);
 
             task.ImageUrl = imageUrl;
+            task.JobId = messageHash;
+
             FinishTask(task, message);
             task.Awake();
         }
