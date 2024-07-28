@@ -148,6 +148,11 @@
         public string Remark { get; set; }
 
         /// <summary>
+        /// 赞助商（富文本）
+        /// </summary>
+        public string Sponsor { get; set; }
+
+        /// <summary>
         /// 权重
         /// </summary>
         public int Weight { get; set; }

@@ -307,6 +307,7 @@ namespace Midjourney.API.Controllers
             model.TimeoutMinutes = account.TimeoutMinutes;
             model.Weight = account.Weight;
             model.Remark = account.Remark;
+            model.Sponsor = account.Sponsor;
 
             _discordAccountInitializer.UpdateAccount(model);
             return Result.Ok();
