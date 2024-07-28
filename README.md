@@ -117,8 +117,8 @@ docker run --name mjproxy -d --restart=always \
  -p 8088:8080 --user root \
  -v /root/mjproxy/logs:/app/logs:rw \
  -v /root/mjproxy/data:/app/data:rw \
- -v /root/mjopen/attachments:/app/wwwroot/attachments:rw \
- -v /root/mjopen/ephemeral-attachments:/app/wwwroot/ephemeral-attachments:rw \
+ -v /root/mjproxy/attachments:/app/wwwroot/attachments:rw \
+ -v /root/mjproxy/ephemeral-attachments:/app/wwwroot/ephemeral-attachments:rw \
  -v /root/mjproxy/appsettings.Production.json:/app/appsettings.Production.json:ro \
  -e TZ=Asia/Shanghai \
  -v /etc/localtime:/etc/localtime:ro \
@@ -131,8 +131,8 @@ docker run --name mjproxy -d --restart=always \
  -p 8088:8080 --user root \
  -v /root/mjproxy/logs:/app/logs:rw \
  -v /root/mjproxy/data:/app/data:rw \
- -v /root/mjopen/attachments:/app/wwwroot/attachments:rw \
- -v /root/mjopen/ephemeral-attachments:/app/wwwroot/ephemeral-attachments:rw \
+ -v /root/mjproxy/attachments:/app/wwwroot/attachments:rw \
+ -v /root/mjproxy/ephemeral-attachments:/app/wwwroot/ephemeral-attachments:rw \
  -v /root/mjproxy/appsettings.Production.json:/app/appsettings.Production.json:ro \
  -e TZ=Asia/Shanghai \
  -v /etc/localtime:/etc/localtime:ro \
@@ -145,8 +145,8 @@ docker run --name mjproxy -d --restart=always \
  -p 8088:8080 --user root \
  -v /root/mjproxy/logs:/app/logs:rw \
  -v /root/mjproxy/data:/app/data:rw \
- -v /root/mjopen/attachments:/app/wwwroot/attachments:rw \
- -v /root/mjopen/ephemeral-attachments:/app/wwwroot/ephemeral-attachments:rw \
+ -v /root/mjproxy/attachments:/app/wwwroot/attachments:rw \
+ -v /root/mjproxy/ephemeral-attachments:/app/wwwroot/ephemeral-attachments:rw \
  -v /root/mjproxy/appsettings.Production.json:/app/appsettings.Production.json:ro \
  -e TZ=Asia/Shanghai \
  -v /etc/localtime:/etc/localtime:ro \
@@ -198,11 +198,11 @@ curl -o linux_install.sh https://raw.githubusercontent.com/trueai-org/midjourney
 - `appsettings.json` 默认配置
 - `appsettings.Production.json` 生产环境配置
 - `/app/data` 数据目录，存放账号、任务等数据
-    - `/app/wwwroot` 静态文件目录
-    - `/app/wwwroot/attachments` 绘图文件目录
-    - `/app/wwwroot/ephemeral-attachments` describe 生成图片目录
     - `/app/data/mj.db` 数据库文件
 - `/app/logs` 日志目录
+- `/app/wwwroot` 静态文件目录
+    - `/app/wwwroot/attachments` 绘图文件目录
+    - `/app/wwwroot/ephemeral-attachments` describe 生成图片目录
 
 ```json
 {
