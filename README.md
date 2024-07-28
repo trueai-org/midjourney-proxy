@@ -45,6 +45,7 @@
 - [x] 图生文之再生图 PicReader、Picread 指令支持，以及批量再生图指令支持（无需 fast 模式）
 - [x] 支持 BOOKMARK 等指令
 - [x] 支持指定实例绘图，支持过滤指定速度的账号绘图，支持过滤 `remix` 模式账号绘图等，详情参考 Swagger `accountFilter` 字段
+- [x] 逆向根据 job id 或 图片生成系统任务信息
 
 ## 在线预览
 
@@ -320,7 +321,6 @@ https://discord.com/oauth2/authorize?client_id=xxx&permissions=8&scope=bot
 
 ## 路线图
 
-- [ ] 逆向根据 job 或 图片生成任务信息
 - [ ] 优化指令和状态进度显示
 - [ ] 优化任务和队列满时的提醒
 - [ ] 优化共享账号的并发队列可能出现的问题
