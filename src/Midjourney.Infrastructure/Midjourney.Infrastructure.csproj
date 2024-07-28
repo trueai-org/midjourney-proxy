@@ -48,6 +48,7 @@
 		<Content Remove="Resources\ApiParams\describeniji.json" />
 		<Content Remove="Resources\ApiParams\seedniji.json" />
 		<Content Remove="Resources\ApiParams\remix.json" />
+		<Content Remove="Resources\ApiParams\picreader.json" />
 		<Content Remove="Resources\mime.types" />
 	</ItemGroup>
 
@@ -64,6 +65,7 @@
 		<EmbeddedResource Include="Resources\ApiParams\setting.json" />
 		<EmbeddedResource Include="Resources\ApiParams\info.json" />
 		<EmbeddedResource Include="Resources\ApiParams\seed.json" />
+		<EmbeddedResource Include="Resources\ApiParams\picreader.json" />
 		<EmbeddedResource Include="Resources\ApiParams\zoom.json" />
 		<EmbeddedResource Include="Resources\ApiParams\reroll.json" />
 		<EmbeddedResource Include="Resources\ApiParams\upscale.json" />

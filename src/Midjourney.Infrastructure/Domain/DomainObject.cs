@@ -116,5 +116,15 @@ namespace Midjourney.Infrastructure.Domain
             get => _properties ??= new Dictionary<string, object>();
             set => _properties = value;
         }
+
+        /// <summary>
+        /// 克隆这个对象
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        public T Clone<T>()
+        {
+            return (T)this.MemberwiseClone();
+        }
     }
 }

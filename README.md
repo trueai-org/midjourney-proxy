@@ -42,6 +42,8 @@
 - [x] 🎛️ Remix 模式和 Remix 模式自动提交
 - [x] 内置图片保存到本地、内置 CDN 加速
 - [x] 绘图时当未读消息过多时，自动模拟读未读消息
+- [x] 图生文之再生图 PicReader、Picread 指令支持，以及批量再生图指令支持（无需 fast 模式）
+- [x] 支持 BOOKMARK 等指令
 
 ## 在线预览
 
@@ -115,8 +117,8 @@ docker run --name mjproxy -d --restart=always \
  -p 8088:8080 --user root \
  -v /root/mjproxy/logs:/app/logs:rw \
  -v /root/mjproxy/data:/app/data:rw \
- -v /root/mjopen/attachments:/app/wwwroot/attachments:rw \
- -v /root/mjopen/ephemeral-attachments:/app/wwwroot/ephemeral-attachments:rw \
+ -v /root/mjproxy/attachments:/app/wwwroot/attachments:rw \
+ -v /root/mjproxy/ephemeral-attachments:/app/wwwroot/ephemeral-attachments:rw \
  -v /root/mjproxy/appsettings.Production.json:/app/appsettings.Production.json:ro \
  -e TZ=Asia/Shanghai \
  -v /etc/localtime:/etc/localtime:ro \
@@ -129,8 +131,8 @@ docker run --name mjproxy -d --restart=always \
  -p 8088:8080 --user root \
  -v /root/mjproxy/logs:/app/logs:rw \
  -v /root/mjproxy/data:/app/data:rw \
- -v /root/mjopen/attachments:/app/wwwroot/attachments:rw \
- -v /root/mjopen/ephemeral-attachments:/app/wwwroot/ephemeral-attachments:rw \
+ -v /root/mjproxy/attachments:/app/wwwroot/attachments:rw \
+ -v /root/mjproxy/ephemeral-attachments:/app/wwwroot/ephemeral-attachments:rw \
  -v /root/mjproxy/appsettings.Production.json:/app/appsettings.Production.json:ro \
  -e TZ=Asia/Shanghai \
  -v /etc/localtime:/etc/localtime:ro \
@@ -143,8 +145,8 @@ docker run --name mjproxy -d --restart=always \
  -p 8088:8080 --user root \
  -v /root/mjproxy/logs:/app/logs:rw \
  -v /root/mjproxy/data:/app/data:rw \
- -v /root/mjopen/attachments:/app/wwwroot/attachments:rw \
- -v /root/mjopen/ephemeral-attachments:/app/wwwroot/ephemeral-attachments:rw \
+ -v /root/mjproxy/attachments:/app/wwwroot/attachments:rw \
+ -v /root/mjproxy/ephemeral-attachments:/app/wwwroot/ephemeral-attachments:rw \
  -v /root/mjproxy/appsettings.Production.json:/app/appsettings.Production.json:ro \
  -e TZ=Asia/Shanghai \
  -v /etc/localtime:/etc/localtime:ro \
@@ -196,11 +198,11 @@ curl -o linux_install.sh https://raw.githubusercontent.com/trueai-org/midjourney
 - `appsettings.json` 默认配置
 - `appsettings.Production.json` 生产环境配置
 - `/app/data` 数据目录，存放账号、任务等数据
-    - `/app/wwwroot` 静态文件目录
-    - `/app/wwwroot/attachments` 绘图文件目录
-    - `/app/wwwroot/ephemeral-attachments` describe 生成图片目录
     - `/app/data/mj.db` 数据库文件
 - `/app/logs` 日志目录
+- `/app/wwwroot` 静态文件目录
+    - `/app/wwwroot/attachments` 绘图文件目录
+    - `/app/wwwroot/ephemeral-attachments` describe 生成图片目录
 
 ```json
 {
@@ -318,7 +320,6 @@ https://discord.com/oauth2/authorize?client_id=xxx&permissions=8&scope=bot
 ## 路线图
 
 - [ ] 逆向根据 job 或 图片生成任务信息
-- [ ] 其他指令 PicReader、 BOOKMARK、Picread 等
 - [ ] 优化指令和状态进度显示
 - [ ] 优化任务和队列满时的提醒
 - [ ] 优化共享账号的并发队列可能出现的问题
