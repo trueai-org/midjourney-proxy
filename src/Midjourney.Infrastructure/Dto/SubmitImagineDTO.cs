@@ -25,5 +25,10 @@ namespace Midjourney.Infrastructure.Dto
         /// </summary>
         [SwaggerSchema("垫图base64数组")]
         public List<string> Base64Array { get; set; }
+
+        /// <summary>
+        /// 账号过滤
+        /// </summary>
+        public AccountFilter AccountFilter { get; set; }
     }
 }

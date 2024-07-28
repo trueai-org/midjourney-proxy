@@ -1,5 +1,6 @@
 ﻿using LiteDB;
 using Midjourney.Infrastructure.Domain;
+using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.Util;
 using Serilog;
 using Swashbuckle.AspNetCore.Annotations;
@@ -171,9 +172,14 @@ namespace Midjourney.Infrastructure
         public string SeedMessageId { get; set; }
 
         /// <summary>
-        /// 绘图任务的 IP 地址
+        /// 绘图任务客户的 IP 地址
         /// </summary>
         public string ClientIp { get; set; }
+
+        /// <summary>
+        /// 账号过滤
+        /// </summary>
+        public AccountFilter AccountFilter { get; set; }
 
         /// <summary>
         /// 启动任务。

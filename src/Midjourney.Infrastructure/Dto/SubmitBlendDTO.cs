@@ -25,5 +25,10 @@ namespace Midjourney.Infrastructure.Dto
         /// </summary>
         [SwaggerSchema("比例: PORTRAIT(2:3); SQUARE(1:1); LANDSCAPE(3:2)", Description = "SQUARE")]
         public BlendDimensions? Dimensions { get; set; } = BlendDimensions.SQUARE;
+
+        /// <summary>
+        /// 账号过滤支持
+        /// </summary>
+        public AccountFilter AccountFilter { get; set; }
     }
 }

@@ -33,7 +33,7 @@ namespace Midjourney.Infrastructure.Services
         /// <returns></returns>
         public SubmitResultVO SubmitImagine(TaskInfo info, List<DataUrl> dataUrls)
         {
-            var instance = _discordLoadBalancer.ChooseInstance();
+            var instance = _discordLoadBalancer.ChooseInstance(info.AccountFilter);
             if (instance == null)
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
@@ -128,7 +128,7 @@ namespace Midjourney.Infrastructure.Services
         /// <returns></returns>
         public SubmitResultVO SubmitDescribe(TaskInfo task, DataUrl dataUrl)
         {
-            var discordInstance = _discordLoadBalancer.ChooseInstance();
+            var discordInstance = _discordLoadBalancer.ChooseInstance(task.AccountFilter);
             if (discordInstance == null)
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
@@ -159,7 +159,7 @@ namespace Midjourney.Infrastructure.Services
         /// <returns></returns>
         public SubmitResultVO SubmitBlend(TaskInfo task, List<DataUrl> dataUrls, BlendDimensions dimensions)
         {
-            var discordInstance = _discordLoadBalancer.ChooseInstance();
+            var discordInstance = _discordLoadBalancer.ChooseInstance(task.AccountFilter);
             if (discordInstance == null)
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");

@@ -88,6 +88,7 @@ namespace Midjourney.API.Controllers
             task.BotType = GetBotType(imagineDTO.BotType);
             task.PromptEn = promptEn;
             task.Description = $"/imagine {prompt}";
+            task.AccountFilter = imagineDTO.AccountFilter;
 
             var data = _taskService.SubmitImagine(task, dataUrls);
             return Ok(data);
@@ -217,6 +218,8 @@ namespace Midjourney.API.Controllers
 
             string taskFileName = $"{task.Id}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
             task.Description = $"/describe {taskFileName}";
+            task.AccountFilter = describeDTO.AccountFilter;
+
             return Ok(_taskService.SubmitDescribe(task, dataUrl));
         }
 
@@ -255,6 +258,7 @@ namespace Midjourney.API.Controllers
             task.BotType = GetBotType(blendDTO.BotType);
             task.Action = TaskAction.BLEND;
             task.Description = $"/blend {task.Id} {dataUrlList.Count}";
+            task.AccountFilter = blendDTO.AccountFilter;
             return Ok(_taskService.SubmitBlend(task, dataUrlList, blendDTO.Dimensions.Value));
         }
 
