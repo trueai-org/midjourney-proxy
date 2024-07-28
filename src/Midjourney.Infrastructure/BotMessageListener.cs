@@ -144,8 +144,7 @@ namespace Midjourney.Infrastructure
 
                 _logger.Information($"BOT Received, {msg.Type}, id: {msg.Id}, rid: {msg.Reference?.MessageId.Value}, mid: {msg?.InteractionMetadata?.Id}, {msg.Content}");
 
-                if (!string.IsNullOrWhiteSpace(msg.Content)
-                    && msg.Author.IsBot)
+                if (!string.IsNullOrWhiteSpace(msg.Content) && msg.Author.IsBot)
                 {
                     foreach (var handler in _botMessageHandlers.OrderBy(h => h.Order()))
                     {
@@ -155,6 +154,18 @@ namespace Midjourney.Infrastructure
                             handler.Handle(_discordInstance, MessageType.CREATE, msg);
                         });
                     }
+                }
+                // describe 重新提交
+                // MJ::Picread::Retry
+                else if (msg.Embeds.Count > 0 && msg.Author.IsBot && msg.Components.Count > 0 && msg.Components.First().Components.Any(x => x.CustomId.Contains("PicReader")))
+                {
+                    var em = msg.Embeds.FirstOrDefault();
+                    if (em != null && !string.IsNullOrWhiteSpace(em.Description))
+                    {
+                        var handler = _botMessageHandlers.FirstOrDefault(x => x.GetType() == typeof(BotDescribeSuccessHandler));
+                        handler?.Handle(_discordInstance, MessageType.CREATE, msg);
+                    }
+
                 }
             }
             catch (Exception ex)

@@ -242,14 +242,41 @@ namespace Midjourney.Infrastructure.Services
             prompt = GetPrompt(prompt);
 
             string paramsStr = ReplaceInteractionParams(_paramsMap["zoom"], nonce, botType)
-                .Replace("$message_id", messageId)
-                .Replace("$prompt", prompt);
+                .Replace("$message_id", messageId);
+            //.Replace("$prompt", prompt);
 
             var obj = JObject.Parse(paramsStr);
 
             obj["data"]["custom_id"] = customId;
+            obj["data"]["components"][0]["components"][0]["value"] = prompt;
 
             paramsStr = obj.ToString();
+            return await PostJsonAndCheckStatusAsync(paramsStr);
+        }
+
+        /// <summary>
+        /// 图生文 - 生图
+        /// </summary>
+        /// <param name="messageId"></param>
+        /// <param name="customId"></param>
+        /// <param name="prompt"></param>
+        /// <param name="nonce"></param>
+        /// <param name="botType"></param>
+        /// <returns></returns>
+        public async Task<Message> PicReaderAsync(string messageId, string customId, string prompt, string nonce, EBotType botType)
+        {
+            var index = customId.Split("::").LastOrDefault();
+            prompt = GetPrompt(prompt);
+
+            string paramsStr = ReplaceInteractionParams(_paramsMap["picreader"], nonce, botType)
+                .Replace("$message_id", messageId)
+                //.Replace("$prompt", prompt)
+                .Replace("$index", index);
+
+            var obj = JObject.Parse(paramsStr);
+            obj["data"]["components"][0]["components"][0]["value"] = prompt;
+            paramsStr = obj.ToString();
+
             return await PostJsonAndCheckStatusAsync(paramsStr);
         }
 
@@ -270,9 +297,13 @@ namespace Midjourney.Infrastructure.Services
 
             string paramsStr = ReplaceInteractionParams(_paramsMap["remix"], nonce, botType)
                 .Replace("$message_id", messageId)
-                .Replace("$prompt", prompt)
+                //.Replace("$prompt", prompt)
                 .Replace("$custom_id", customId)
                 .Replace("$modal", modal);
+
+            var obj = JObject.Parse(paramsStr);
+            obj["data"]["components"][0]["components"][0]["value"] = prompt;
+            paramsStr = obj.ToString();
 
             return await PostJsonAndCheckStatusAsync(paramsStr);
         }
@@ -395,6 +426,9 @@ namespace Midjourney.Infrastructure.Services
                         break;
                 }
             }
+
+            //// 处理转义字符引号等
+            //return prompt.Replace("\\\"", "\"").Replace("\\'", "'").Replace("\\\\", "\\");
 
             return prompt;
         }

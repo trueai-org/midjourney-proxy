@@ -213,7 +213,24 @@ namespace Midjourney.Infrastructure.Services
             task.Prompt = targetTask.Prompt;
             task.PromptEn = targetTask.PromptEn;
 
+            // 点击喜欢
+            if (submitAction.CustomId.Contains("MJ::BOOKMARK"))
+            {
+                var res = discordInstance.ActionAsync(messageId ?? targetTask.MessageId,
+                    submitAction.CustomId, messageFlags,
+                    task.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default), task.BotType)
+                    .ConfigureAwait(false).GetAwaiter().GetResult();
 
+                // 这里不需要保存任务
+                if (res.Code == ReturnCode.SUCCESS)
+                {
+                    return SubmitResultVO.Of(ReturnCode.SUCCESS, "成功", task.ParentId);
+                }
+                else
+                {
+                    return SubmitResultVO.Of(ReturnCode.VALIDATION_ERROR, res.Description, task.ParentId);
+                }
+            }
 
             // 如果是 Modal 作业，则直接返回
             if (submitAction.CustomId.StartsWith("MJ::CustomZoom::")
@@ -226,6 +243,85 @@ namespace Midjourney.Infrastructure.Services
                     task.Prompt = "";
                     task.PromptEn = "";
                 }
+
+                task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_ID, targetTask.MessageId);
+                task.SetProperty(Constants.TASK_PROPERTY_FLAGS, messageFlags);
+
+                _taskStoreService.Save(task);
+
+                // 状态码为 21
+                // 重绘、自定义变焦始终 remix 为true
+                return SubmitResultVO.Of(ReturnCode.EXISTED, "Waiting for window confirm", task.Id)
+                    .SetProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, task.PromptEn)
+                    .SetProperty(Constants.TASK_PROPERTY_REMIX, true);
+            }
+            // describe 全部重新生成绘图
+            else if (submitAction.CustomId.Contains("MJ::Job::PicReader::all"))
+            {
+                var prompts = targetTask.PromptEn.Split('\n').Where(c => !string.IsNullOrWhiteSpace(c)).ToArray();
+                var ids = new List<string>();
+                var count = prompts.Length >= 4 ? 4 : prompts.Length;
+                for (int i = 0; i < count; i++)
+                {
+                    var prompt = prompts[i].Substring(prompts[i].IndexOf(' ')).Trim();
+
+                    var subTask = new TaskInfo()
+                    {
+                        Id = $"{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}{RandomUtils.RandomNumbers(3)}",
+                        SubmitTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                        State = $"{task.State}::{i + 1}",
+                        ParentId = targetTask.Id,
+                        Action = task.Action,
+                        BotType = task.BotType,
+                        InstanceId = task.InstanceId,
+                        Prompt = prompt,
+                        PromptEn = prompt,
+                        Status = TaskStatus.NOT_START
+                    };
+
+                    subTask.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, discordInstance.GetInstanceId);
+                    subTask.SetProperty(Constants.TASK_PROPERTY_BOT_TYPE, targetTask.BotType);
+
+                    var nonce = SnowFlake.NextId();
+                    subTask.Nonce = nonce;
+                    subTask.SetProperty(Constants.TASK_PROPERTY_NONCE, nonce);
+                    subTask.SetProperty(Constants.TASK_PROPERTY_CUSTOM_ID, $"MJ::Job::PicReader::{i + 1}");
+
+                    subTask.SetProperty(Constants.TASK_PROPERTY_MESSAGE_ID, targetTask.MessageId);
+                    subTask.SetProperty(Constants.TASK_PROPERTY_FLAGS, messageFlags);
+
+                    _taskStoreService.Save(subTask);
+
+                    var res = SubmitModal(subTask, new SubmitModalDTO()
+                    {
+                        NotifyHook = submitAction.NotifyHook,
+                        TaskId = subTask.Id,
+                        Prompt = subTask.PromptEn,
+                        State = subTask.State
+                    });
+                    ids.Add(subTask.Id);
+
+                    Thread.Sleep(200);
+
+                    if (res.Code != ReturnCode.SUCCESS && res.Code != ReturnCode.EXISTED && res.Code != ReturnCode.IN_QUEUE)
+                    {
+                        return SubmitResultVO.Of(ReturnCode.SUCCESS, "成功", string.Join(",", ids));
+                    }
+                }
+
+                return SubmitResultVO.Of(ReturnCode.SUCCESS, "成功", string.Join(",", ids));
+            }
+            // 如果是 PicReader 作业，则直接返回
+            // 图生文 -> 生图
+            else if (submitAction.CustomId.StartsWith("MJ::Job::PicReader::"))
+            {
+                var index = int.Parse(submitAction.CustomId.Split("::").LastOrDefault().Trim());
+                var pre = targetTask.PromptEn.Split('\n').Where(c => !string.IsNullOrWhiteSpace(c)).ToArray()[index - 1].Trim();
+                var prompt = pre.Substring(pre.IndexOf(' ')).Trim();
+
+                task.Status = TaskStatus.MODAL;
+                task.Prompt = prompt;
+                task.PromptEn = prompt;
 
                 task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_ID, targetTask.MessageId);
                 task.SetProperty(Constants.TASK_PROPERTY_FLAGS, messageFlags);
@@ -327,8 +423,8 @@ namespace Midjourney.Infrastructure.Services
                 sw.Start();
                 do
                 {
-                    // 等待 1.2s
-                    Thread.Sleep(1200);
+                    // 等待 2.5s
+                    Thread.Sleep(2500);
                     task = discordInstance.GetRunningTask(task.Id);
 
                     if (string.IsNullOrWhiteSpace(task.MessageId) || string.IsNullOrWhiteSpace(task.InteractionMetadataId))
@@ -355,6 +451,15 @@ namespace Midjourney.Infrastructure.Services
                 {
                     var ifarmeCustomId = task.GetProperty<string>(Constants.TASK_PROPERTY_IFRAME_MODAL_CREATE_CUSTOM_ID, default);
                     return await discordInstance.InpaintAsync(ifarmeCustomId, task.PromptEn, submitAction.MaskBase64, task.BotType);
+                }
+                // 图生文 -> 文生图
+                else if (customId.StartsWith("MJ::Job::PicReader::"))
+                {
+                    nonce = SnowFlake.NextId();
+                    task.Nonce = nonce;
+                    task.SetProperty(Constants.TASK_PROPERTY_NONCE, nonce);
+
+                    return await discordInstance.PicReaderAsync(task.MessageId, customId, task.PromptEn, nonce, task.BotType);
                 }
                 // Remix mode
                 else if (task.Action == TaskAction.VARIATION || task.Action == TaskAction.REROLL || task.Action == TaskAction.PAN)
