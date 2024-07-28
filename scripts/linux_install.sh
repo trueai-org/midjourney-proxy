@@ -9,40 +9,60 @@ NC='\033[0m' # No Color
 
 # 配置文件存放目录
 CONFIG_DIR="config_files"
+BASE_DIR=$(pwd)
 
-# 检查包管理器类型
-if command -v apt-get &> /dev/null; then
-    PKG_MANAGER="apt-get"
-elif command -v yum &> /dev/null; then
-    PKG_MANAGER="yum"
-elif command -v dnf &> /dev/null; then
-    PKG_MANAGER="dnf"
-else
-    echo -e "${RED}No supported package manager found (apt-get, yum, dnf).${NC}"
-    exit 1
-fi
+function __init__() {
+    ARCH=$(uname -m)
+    if [ "$ARCH" == "x86_64" ]; then
+        ARCH="x64"
+    elif [[ "$ARCH" == "aarch64" || "$ARCH" == "arm64" ]]; then
+        ARCH="arm64"
+    else
+        echo -e "${RED}Unsupported architecture: $ARCH${NC}"
+        exit 1
+    fi
 
-# 检查是否安装了 curl 和 jq
-if ! command -v curl &> /dev/null; then
-    echo -e "${YELLOW}curl is required but not installed. Installing curl...${NC}"
-    sudo $PKG_MANAGER update && sudo $PKG_MANAGER install curl -y
-fi
+    # 检查包管理器类型
+    if command -v apt-get &>/dev/null; then
+        PKG_MANAGER="apt-get"
+    elif command -v yum &>/dev/null; then
+        PKG_MANAGER="yum"
+    elif command -v dnf &>/dev/null; then
+        PKG_MANAGER="dnf"
+    else
+        echo -e "${RED}No supported package manager found (apt-get, yum, dnf).${NC}"
+        exit 1
+    fi
 
-if ! command -v jq &> /dev/null; then
-    echo -e "${YELLOW}jq is required but not installed. Installing jq...${NC}"
-    sudo $PKG_MANAGER update && sudo $PKG_MANAGER install jq -y
-fi
+    # 检查是否安装了 curl 和 jq
+    if ! command -v curl &>/dev/null; then
+        echo -e "${YELLOW}curl is required but not installed. Installing curl...${NC}"
+        sudo $PKG_MANAGER update && sudo $PKG_MANAGER install curl -y
+    fi
 
-# 检查 curl 和 jq 是否成功安装
-if ! command -v curl &> /dev/null; then
-    echo -e "${RED}Failed to install curl. Please install it manually.${NC}"
-    exit 1
-fi
+    if ! command -v jq &>/dev/null; then
+        echo -e "${YELLOW}jq is required but not installed. Installing jq...${NC}"
+        sudo $PKG_MANAGER update && sudo $PKG_MANAGER install jq -y
+    fi
 
-if ! command -v jq &> /dev/null; then
-    echo -e "${RED}Failed to install jq. Please install it manually.${NC}"
-    exit 1
-fi
+    # 检查 curl 和 jq 是否成功安装
+    if ! command -v curl &>/dev/null; then
+        echo -e "${RED}Failed to install curl. Please install it manually.${NC}"
+        exit 1
+    fi
+
+    if ! command -v jq &>/dev/null; then
+        echo -e "${RED}Failed to install jq. Please install it manually.${NC}"
+        exit 1
+    fi
+
+    # 配置文件目录
+    if [ ! -d "$CONFIG_DIR" ]; then
+        mkdir -p "$CONFIG_DIR"
+        echo -e "${GREEN}Configuration directory created: $CONFIG_DIR${NC}"
+    fi
+}
+
 
 # 下载文件函数，包含镜像重试逻辑
 function download_file() {
@@ -62,17 +82,6 @@ function download_file() {
         fi
     fi
 }
-
-# 检查 CPU 架构
-ARCH=$(uname -m)
-if [ "$ARCH" == "x86_64" ]; then
-    ARCH="x64"
-elif [[ "$ARCH" == "aarch64" || "$ARCH" == "arm64" ]]; then
-    ARCH="arm64"
-else
-    echo -e "${RED}Unsupported architecture: $ARCH${NC}"
-    exit 1
-fi
 
 # GitHub API URL for latest release
 API_URL="https://api.github.com/repos/trueai-org/midjourney-proxy/releases/latest"
@@ -109,14 +118,6 @@ function get_latest_version_info() {
     fi
 }
 
-# 初始化配置文件存放目录
-function init_config_dir() {
-    if [ ! -d "$CONFIG_DIR" ]; then
-        mkdir -p "$CONFIG_DIR"
-        echo -e "${GREEN}Configuration directory created: $CONFIG_DIR${NC}"
-    fi
-}
-
 # 列出配置文件
 function list_config_files() {
     CONFIG_FILES=()
@@ -141,8 +142,8 @@ function list_config_files() {
 # 根据用户选择的编号获取配置文件名称
 function get_config_file_by_number() {
     local num=$1
-    if (( num > 0 && num <= ${#CONFIG_FILES[@]} )); then
-        echo "${CONFIG_FILES[$((num-1))]}"
+    if ((num > 0 && num <= ${#CONFIG_FILES[@]})); then
+        echo "${CONFIG_FILES[$((num - 1))]}"
     else
         echo ""
     fi
@@ -173,7 +174,7 @@ function delete_config_file() {
     if list_config_files; then
         read -p "Select configuration file to delete by number: " num
         selected_file=$(get_config_file_by_number $num)
-        if [ -n "$selected_file" ];then
+        if [ -n "$selected_file" ]; then
             read -p "Are you sure you want to delete $selected_file? [y/N]: " CONFIRM
             CONFIRM=$(echo "$CONFIRM" | tr '[:upper:]' '[:lower:]')
             if [ "$CONFIRM" == "y" ]; then
@@ -328,12 +329,12 @@ compare_and_merge_json() {
     fi
 
     # 检查JSON格式是否正确
-    if ! jq empty "$json1" > /dev/null 2>&1; then
+    if ! jq empty "$json1" >/dev/null 2>&1; then
         echo -e "${RED}First file is not a valid JSON${NC}"
         return 1
     fi
 
-    if ! jq empty "$json2" > /dev/null 2>&1; then
+    if ! jq empty "$json2" >/dev/null 2>&1; then
         echo -e "${RED}Second file is not a valid JSON${NC}"
         return 1
     fi
@@ -343,7 +344,7 @@ compare_and_merge_json() {
     diff <(jq -S . "$json1") <(jq -S . "$json2")
 
     # 将相同项文件2覆盖文件1，并保存到临时文件中
-    jq -s '.[0] * .[1]' "$json1" "$json2" > "$temp_file"
+    jq -s '.[0] * .[1]' "$json1" "$json2" >"$temp_file"
 
     # 获取文件的JSON结构
     local structure1=$(jq -S . "$json1" | jq '.. | objects | keys | select(length > 0) | unique' | jq -sc add | jq -S .)
@@ -364,7 +365,7 @@ compare_and_merge_json() {
     fi
 
     # 保存合并后的文件
-    echo "$temp_file" | jq . > "$json1"
+    echo "$temp_file" | jq . >"$json1"
     echo -e "${GREEN}File1 has been updated and saved.${NC}"
 }
 
@@ -383,8 +384,8 @@ function import_config_from_existing() {
     done
 
     read -p "Select a version to import configuration from (by number): " num
-    if (( num > 0 && num <= ${#INSTALLED_VERSIONS[@]} )); then
-        selected_version="${INSTALLED_VERSIONS[$((num-1))]}"
+    if ((num > 0 && num <= ${#INSTALLED_VERSIONS[@]})); then
+        selected_version="${INSTALLED_VERSIONS[$((num - 1))]}"
         if [ -d "$selected_version" ]; then
             if [ -e "$selected_version/appsettings.json" ]; then
                 if [ -e "$1/appsettings.json" ]; then
@@ -477,7 +478,7 @@ function install_version() {
 # 启动程序版本
 function start_program_version() {
     list_installed_versions
-    
+
     # 检查是否有版本安装，如果没有则中断操作
     if [ ${#INSTALLED_VERSIONS[@]} -eq 0 ]; then
         echo -e "${RED}No versions installed. Please install a version first.${NC}"
@@ -489,7 +490,7 @@ function start_program_version() {
         if [ -f "$VERSION/run_app.sh" ]; then
             echo -e "${GREEN}Starting version $VERSION...${NC}"
             # 以后台模式运行程序
-            (cd "$VERSION" && nohup ./run_app.sh > "../$VERSION.log" 2>&1 < /dev/null &)
+            (cd "$VERSION" && nohup ./run_app.sh >"../$VERSION.log" 2>&1 </dev/null &)
             echo -e "${GREEN}Program started for version $VERSION. Check logs in $VERSION.log.${NC}"
         else
             echo -e "${RED}run_app.sh not found in version directory $VERSION.${NC}"
@@ -535,10 +536,10 @@ function stop_running_version() {
 function is_latest_version_installed() {
     for version_dir in v*; do
         if [ "$version_dir" == "$LATEST_VERSION" ]; then
-            return 0  # 已安装
+            return 0 # 已安装
         fi
     done
-    return 1  # 未安装
+    return 1 # 未安装
 }
 
 # 找到本地最新版本
@@ -605,18 +606,18 @@ function install_or_update_latest_version() {
                 read -p "Choose an option (1/2/3): " CONFIG_OPTION
                 install_version $LATEST_VERSION
                 case $CONFIG_OPTION in
-                    1)
-                        copy_config_from_version "$local_latest_version" "$LATEST_VERSION"
-                        ;;
-                    2)
-                        import_config_from_existing "$LATEST_VERSION"
-                        ;;
-                    3)
-                        prompt_apply_config "$LATEST_VERSION"
-                        ;;
-                    *)
-                        echo -e "${RED}Invalid option, no configuration applied.${NC}"
-                        ;;
+                1)
+                    copy_config_from_version "$local_latest_version" "$LATEST_VERSION"
+                    ;;
+                2)
+                    import_config_from_existing "$LATEST_VERSION"
+                    ;;
+                3)
+                    prompt_apply_config "$LATEST_VERSION"
+                    ;;
+                *)
+                    echo -e "${RED}Invalid option, no configuration applied.${NC}"
+                    ;;
                 esac
             fi
         else
@@ -626,7 +627,6 @@ function install_or_update_latest_version() {
     fi
 }
 
-
 # 初始化配置目录
 init_config_dir
 
@@ -635,7 +635,7 @@ get_latest_version_info
 
 until [ "$OPTION" == "7" ]; do
     echo
-    check_running_version  # 调用检查正在运行的版本函数
+    check_running_version # 调用检查正在运行的版本函数
     list_installed_versions
     check_latest_version
     echo "Menu:"
@@ -644,67 +644,67 @@ until [ "$OPTION" == "7" ]; do
     echo -e "3. ${GREEN}Delete a specific version${NC}"
     echo -e "4. ${GREEN}Manage configuration files${NC}"
     echo -e "5. ${GREEN}Start a specific version${NC}"
-    echo -e "6. ${GREEN}Stop running version${NC}"  # 新增加的选项
-    echo -e "7. ${GREEN}Exit${NC}"  # 更新退出选项的编号
+    echo -e "6. ${GREEN}Stop running version${NC}" # 新增加的选项
+    echo -e "7. ${GREEN}Exit${NC}"                 # 更新退出选项的编号
     read -p "Choose an option (1/2/3/4/5/6/7): " OPTION
 
     case $OPTION in
-        1)
-            install_or_update_latest_version
-            ;;
-        2)
-            read -p "Enter the version you want to install (e.g., v2.3.7): " VERSION
-            install_version $VERSION
-            ;;
-        3)
-            delete_version
-            ;;
-        4)
-            CONFIG_OPTION=""
-            until [ "$CONFIG_OPTION" == "6" ]; do
-                echo "Configuration File Management:"
-                echo -e "1. ${GREEN}List configuration files${NC}"
-                echo -e "2. ${GREEN}Rename a configuration file${NC}"
-                echo -e "3. ${GREEN}Delete a configuration file${NC}"
-                echo -e "4. ${GREEN}Export configuration from version${NC}"
-                echo -e "5. ${GREEN}Apply configuration to version${NC}"
-                echo -e "6. ${GREEN}Back to main menu${NC}"
-                read -p "Choose an option (1/2/3/4/5/6): " CONFIG_OPTION
+    1)
+        install_or_update_latest_version
+        ;;
+    2)
+        read -p "Enter the version you want to install (e.g., v2.3.7): " VERSION
+        install_version $VERSION
+        ;;
+    3)
+        delete_version
+        ;;
+    4)
+        CONFIG_OPTION=""
+        until [ "$CONFIG_OPTION" == "6" ]; do
+            echo "Configuration File Management:"
+            echo -e "1. ${GREEN}List configuration files${NC}"
+            echo -e "2. ${GREEN}Rename a configuration file${NC}"
+            echo -e "3. ${GREEN}Delete a configuration file${NC}"
+            echo -e "4. ${GREEN}Export configuration from version${NC}"
+            echo -e "5. ${GREEN}Apply configuration to version${NC}"
+            echo -e "6. ${GREEN}Back to main menu${NC}"
+            read -p "Choose an option (1/2/3/4/5/6): " CONFIG_OPTION
 
-                case $CONFIG_OPTION in
-                    1)
-                        list_config_files
-                        ;;
-                    2)
-                        rename_config_file
-                        ;;
-                    3)
-                        delete_config_file
-                        ;;
-                    4)
-                        export_config_file
-                        ;;
-                    5)
-                        apply_config_to_version
-                        ;;
-                    6)
-                        ;;
-                    *)
-                        echo -e "${RED}Invalid option.${NC}"
-                        ;;
-                esac
-            done
-            ;;
-        5)
-            start_program_version
-            ;;
-        6)  stop_running_version
-            ;;
-        7)
-            echo -e "${GREEN}Exiting.${NC}"
-            ;;
-        *)
-            echo -e "${RED}Invalid option.${NC}"
-            ;;
+            case $CONFIG_OPTION in
+            1)
+                list_config_files
+                ;;
+            2)
+                rename_config_file
+                ;;
+            3)
+                delete_config_file
+                ;;
+            4)
+                export_config_file
+                ;;
+            5)
+                apply_config_to_version
+                ;;
+            6) ;;
+            *)
+                echo -e "${RED}Invalid option.${NC}"
+                ;;
+            esac
+        done
+        ;;
+    5)
+        start_program_version
+        ;;
+    6)
+        stop_running_version
+        ;;
+    7)
+        echo -e "${GREEN}Exiting.${NC}"
+        ;;
+    *)
+        echo -e "${RED}Invalid option.${NC}"
+        ;;
     esac
 done
