@@ -15,7 +15,9 @@ namespace Midjourney.Infrastructure.Domain
     {
         public DiscordAccount()
         {
+
         }
+
         /// <summary>
         /// 频道ID  = ID
         /// </summary>
@@ -96,6 +98,16 @@ namespace Midjourney.Infrastructure.Domain
         /// 备注
         /// </summary>
         public string Remark { get; set; }
+
+        /// <summary>
+        /// 赞助商（富文本）
+        /// </summary>
+        public string Sponsor { get; set; }
+
+        /// <summary>
+        /// 添加时间
+        /// </summary>
+        public DateTime DateCreated { get; set; } = DateTime.Now;
 
         /// <summary>
         /// 权重

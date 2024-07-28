@@ -101,7 +101,9 @@ namespace Midjourney.API
                         MaxQueueSize = configAccount.MaxQueueSize,
                         Mode = configAccount.Mode,
                         Weight = configAccount.Weight,
-                        Remark = configAccount.Remark
+                        Remark = configAccount.Remark,
+                        RemixAutoSubmit = configAccount.RemixAutoSubmit,
+                        Sponsor = configAccount.Sponsor
                     };
 
                     db.Add(account);
@@ -193,6 +195,7 @@ namespace Midjourney.API
             model.BotToken = account.BotToken;
             model.UserToken = account.UserToken;
             model.Mode = account.Mode;
+            model.Sponsor = account.Sponsor;
 
             DbHelper.AccountStore.Update(model);
         }
