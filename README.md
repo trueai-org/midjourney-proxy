@@ -8,6 +8,14 @@
 
 功能最全、最安全、占用内存最小（100MB+）的 Midjourney Proxy API ~~
 
+## 交流群
+
+由于目前文档不是很完善，使用上和部署上可能会有问题，欢迎加入交流群，一起讨论和解决问题。
+
+[Midjourney公益群](https://qm.qq.com/q/k88clCkyMS)（QQ群：565908696）
+
+<img src="./docs/screenshots/565908696.png" alt="欢迎" width="360"/>
+
 ## 主要功能
 
 - [x] 支持 Imagine 指令和相关动作 [V1/V2.../U1/U2.../R]
