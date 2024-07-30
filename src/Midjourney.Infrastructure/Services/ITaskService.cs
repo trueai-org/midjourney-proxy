@@ -16,6 +16,13 @@ namespace Midjourney.Infrastructure.Services
         SubmitResultVO SubmitImagine(TaskInfo task, List<DataUrl> dataUrls);
 
         /// <summary>
+        /// 提交 show 任务
+        /// </summary>
+        /// <param name="info"></param>
+        /// <returns></returns>
+        SubmitResultVO ShowImagine(TaskInfo info);
+
+        /// <summary>
         /// 提交放大任务。
         /// </summary>
         /// <param name="task">任务对象。</param>

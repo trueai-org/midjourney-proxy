@@ -1,4 +1,5 @@
-﻿using System.Collections.Concurrent;
+﻿using Midjourney.Infrastructure.Dto;
+using System.Collections.Concurrent;
 
 namespace Midjourney.Infrastructure.LoadBalancer
 {
@@ -36,7 +37,34 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// 选择一个实例。
         /// </summary>
         /// <returns>选择的实例。</returns>
-        public IDiscordInstance ChooseInstance() => _rule.Choose(GetAliveInstances());
+        public IDiscordInstance ChooseInstance(AccountFilter accountFilter = null)
+        {
+            if (accountFilter == null)
+            {
+                return _rule.Choose(GetAliveInstances());
+            }
+            else if (!string.IsNullOrWhiteSpace(accountFilter?.InstanceId))
+            {
+                return GetDiscordInstance(accountFilter.InstanceId);
+            }
+            else
+            {
+                var list = _instances.Where(instance => instance.IsAlive)
+                         // 指定速度模式过滤
+                         .WhereIf(accountFilter.Modes.Count > 0, c => c.Account.Mode == null || accountFilter.Modes.Contains(c.Account.Mode.Value))
+                         // Midjourney Remix 过滤
+                         .WhereIf(accountFilter.Remix == true, c => c.Account.MjRemixOn == accountFilter.Remix || !c.Account.RemixAutoSubmit)
+                         .WhereIf(accountFilter.Remix == false, c => c.Account.MjRemixOn == accountFilter.Remix)
+                         // Niji Remix 过滤
+                         .WhereIf(accountFilter.NijiRemix == true, c => c.Account.NijiRemixOn == accountFilter.NijiRemix || !c.Account.RemixAutoSubmit)
+                         .WhereIf(accountFilter.NijiRemix == false, c => c.Account.NijiRemixOn == accountFilter.NijiRemix)
+                         // Remix 自动提交过滤
+                         .WhereIf(accountFilter.RemixAutoConsidered.HasValue, c => c.Account.RemixAutoSubmit == accountFilter.RemixAutoConsidered)
+                         .ToList();
+
+                return _rule.Choose(list);
+            }
+        }
 
         /// <summary>
         /// 获取指定ID的实例。

@@ -49,6 +49,8 @@
 		<Content Remove="Resources\ApiParams\seedniji.json" />
 		<Content Remove="Resources\ApiParams\remix.json" />
 		<Content Remove="Resources\ApiParams\picreader.json" />
+		<None Remove="Resources\ApiParams\show.json" />
+		<None Remove="Resources\ApiParams\showniji.json" />
 		<Content Remove="Resources\mime.types" />
 	</ItemGroup>
 
@@ -59,6 +61,8 @@
 		<EmbeddedResource Include="Resources\ApiParams\imagineniji.json" />
 		<EmbeddedResource Include="Resources\ApiParams\infoniji.json" />
 		<EmbeddedResource Include="Resources\ApiParams\seedniji.json" />
+		<EmbeddedResource Include="Resources\ApiParams\showniji.json" />
+		<EmbeddedResource Include="Resources\ApiParams\show.json" />
 		<EmbeddedResource Include="Resources\ApiParams\settingniji.json" />
 		<EmbeddedResource Include="Resources\ApiParams\settingselect.json" />
 		<EmbeddedResource Include="Resources\ApiParams\settingbutton.json" />

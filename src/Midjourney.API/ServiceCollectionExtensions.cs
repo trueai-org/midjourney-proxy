@@ -20,7 +20,8 @@ namespace Midjourney.API
             services.AddTransient<BotMessageHandler, BotDescribeSuccessHandler>();
             services.AddTransient<BotMessageHandler, BotActionSuccessHandler>();
             services.AddTransient<BotMessageHandler, BotBlendSuccessHandler>();
-
+            services.AddTransient<BotMessageHandler, BotShowSuccessHandler>();
+            
             // 用户消息处理程序
             services.AddTransient<UserMessageHandler, UserActionSuccessHandler>();
             services.AddTransient<UserMessageHandler, UserImagineSuccessHandler>();

@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.TagHelpers.Cache;
 using Microsoft.Extensions.Options;
 using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.Services;
@@ -20,6 +19,7 @@ namespace Midjourney.API.Controllers
         private readonly ITranslateService _translateService;
         private readonly ITaskStoreService _taskStoreService;
 
+        private readonly DiscordHelper _discordHelper;
         private readonly ProxyProperties _properties;
         private readonly ITaskService _taskService;
         private readonly ILogger<SubmitController> _logger;
@@ -31,13 +31,15 @@ namespace Midjourney.API.Controllers
             IOptionsSnapshot<ProxyProperties> properties,
             ITaskService taskService,
             ILogger<SubmitController> logger,
-            IHttpContextAccessor httpContextAccessor)
+            IHttpContextAccessor httpContextAccessor,
+            DiscordHelper discordHelper)
         {
             _translateService = translateService;
             _taskStoreService = taskStoreService;
             _properties = properties.Value;
             _taskService = taskService;
             _logger = logger;
+            _discordHelper = discordHelper;
 
             _ip = httpContextAccessor.HttpContext.Request.GetIP();
         }
@@ -88,8 +90,59 @@ namespace Midjourney.API.Controllers
             task.BotType = GetBotType(imagineDTO.BotType);
             task.PromptEn = promptEn;
             task.Description = $"/imagine {prompt}";
+            task.AccountFilter = imagineDTO.AccountFilter;
 
             var data = _taskService.SubmitImagine(task, dataUrls);
+            return Ok(data);
+        }
+
+        /// <summary>
+        /// 提交 show 任务
+        /// </summary>
+        /// <param name="imagineDTO"></param>
+        /// <returns></returns>
+        [HttpPost("show")]
+        public ActionResult<SubmitResultVO> Show([FromBody] SubmitShowDTO imagineDTO)
+        {
+            string jobId = imagineDTO.JobId;
+            if (string.IsNullOrWhiteSpace(jobId))
+            {
+                return BadRequest(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "请填写 job id 或 url"));
+            }
+            jobId = jobId.Trim();
+
+            if (jobId.Length != 36)
+            {
+                jobId = _discordHelper.GetMessageHash(jobId);
+            }
+
+            if (string.IsNullOrWhiteSpace(jobId))
+            {
+                return BadRequest(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "job id 格式错误"));
+            }
+
+            var model = DbHelper.TaskStore.GetCollection().Query().Where(c => c.JobId == jobId && c.Status == TaskStatus.SUCCESS).FirstOrDefault();
+            if (model != null)
+            {
+                var info = SubmitResultVO.Of(ReturnCode.SUCCESS, "提交成功", model.Id)
+                    .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, model.InstanceId);
+                return Ok(info);
+            }
+
+            if (string.IsNullOrWhiteSpace(imagineDTO.AccountFilter?.InstanceId))
+            {
+                return BadRequest(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "show 命令必须指定实例"));
+            }
+
+            var task = NewTask(imagineDTO);
+
+            task.Action = TaskAction.SHOW;
+            task.BotType = GetBotType(imagineDTO.BotType);
+            task.Description = $"/show {jobId}";
+            task.AccountFilter = imagineDTO.AccountFilter;
+            task.JobId = jobId;
+
+            var data = _taskService.ShowImagine(task);
             return Ok(data);
         }
 
@@ -217,6 +270,8 @@ namespace Midjourney.API.Controllers
 
             string taskFileName = $"{task.Id}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
             task.Description = $"/describe {taskFileName}";
+            task.AccountFilter = describeDTO.AccountFilter;
+
             return Ok(_taskService.SubmitDescribe(task, dataUrl));
         }
 
@@ -255,6 +310,7 @@ namespace Midjourney.API.Controllers
             task.BotType = GetBotType(blendDTO.BotType);
             task.Action = TaskAction.BLEND;
             task.Description = $"/blend {task.Id} {dataUrlList.Count}";
+            task.AccountFilter = blendDTO.AccountFilter;
             return Ok(_taskService.SubmitBlend(task, dataUrlList, blendDTO.Dimensions.Value));
         }
 

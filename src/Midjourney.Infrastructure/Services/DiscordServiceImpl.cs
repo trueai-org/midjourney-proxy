@@ -381,8 +381,27 @@ namespace Midjourney.Infrastructure.Services
             var content = botType == EBotType.NIJI_JOURNEY ? _paramsMap["settingniji"] : _paramsMap["setting"];
 
             var paramsStr = ReplaceInteractionParams(content, nonce);
-            var obj = JObject.Parse(paramsStr);
-            paramsStr = obj.ToString();
+
+            //var obj = JObject.Parse(paramsStr);
+            //paramsStr = obj.ToString();
+
+            return await PostJsonAndCheckStatusAsync(paramsStr);
+        }
+
+        /// <summary>
+        /// 根据 job id 显示任务信息
+        /// </summary>
+        /// <param name="jobId"></param>
+        /// <param name="nonce"></param>
+        /// <param name="botType"></param>
+        /// <returns></returns>
+        public async Task<Message> ShowAsync(string jobId, string nonce, EBotType botType)
+        {
+            var content = botType == EBotType.MID_JOURNEY ? _paramsMap["show"] : _paramsMap["showniji"];
+
+            var paramsStr = ReplaceInteractionParams(content, nonce)
+                .Replace("$value", jobId);
+
             return await PostJsonAndCheckStatusAsync(paramsStr);
         }
 

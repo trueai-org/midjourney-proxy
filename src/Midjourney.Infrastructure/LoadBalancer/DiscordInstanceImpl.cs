@@ -522,6 +522,16 @@ namespace Midjourney.Infrastructure.LoadBalancer
             _service.InfoAsync(nonce, botType);
 
         /// <summary>
+        /// 根据 job id 显示任务信息
+        /// </summary>
+        /// <param name="jobId"></param>
+        /// <param name="nonce"></param>
+        /// <param name="botType"></param>
+        /// <returns></returns>
+        public Task<Message> ShowAsync(string jobId, string nonce, EBotType botType) =>
+            _service.ShowAsync(jobId, nonce, botType);
+
+        /// <summary>
         /// 执行 setting 操作
         /// </summary>
         /// <param name="nonce"></param>
