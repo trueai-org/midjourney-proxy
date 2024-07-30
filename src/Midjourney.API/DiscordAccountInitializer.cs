@@ -203,7 +203,8 @@ namespace Midjourney.API
             model.Lock = false;
 
             DbHelper.AccountStore.Update(model);
-            disInstance.ClearAccountCache(model.Id);
+
+            disInstance?.ClearAccountCache(model.Id);
         }
 
         /// <summary>
