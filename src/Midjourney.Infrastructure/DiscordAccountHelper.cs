@@ -76,8 +76,11 @@ namespace Midjourney.Infrastructure
                 account.UserAgent = Constants.DEFAULT_DISCORD_USER_AGENT;
             }
 
-            var discordService = new DiscordServiceImpl(account, _discordHelper, _paramsMap);
-            var discordInstance = new DiscordInstanceImpl(account, discordService, _taskStoreService, _notifyService);
+            var discordInstance = new DiscordInstance(account,
+                _taskStoreService,
+                _notifyService,
+                _discordHelper,
+                _paramsMap);
 
             if (account.Enable)
             {
@@ -87,14 +90,13 @@ namespace Midjourney.Infrastructure
                 {
                     webProxy = new WebProxy(_properties.Proxy.Host, _properties.Proxy.Port ?? 80);
                 }
-                var messageListener = new BotMessageListener(account, _discordHelper, _properties, webProxy);
+                var messageListener = new BotMessageListener(_discordHelper, _properties, webProxy);
 
                 // 用户 WebSocket 连接
-                var webSocket = new WebSocketManager(account,
+                var webSocket = new WebSocketManager(
                     _discordHelper,
                     messageListener,
                     webProxy,
-                    discordService,
                     discordInstance);
 
                 await webSocket.StartAsync();
