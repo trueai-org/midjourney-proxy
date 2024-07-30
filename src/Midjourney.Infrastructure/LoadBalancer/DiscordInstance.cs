@@ -357,12 +357,31 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <returns>异步任务</returns>
         private async Task ExecuteTaskAsync(TaskInfo info, Func<Task<Message>> discordSubmit)
         {
-            _semaphoreSlimLock.Wait();
-            _runningTasks.Add(info);
-
             try
             {
+                _semaphoreSlimLock.Wait();
+                _runningTasks.Add(info);
+
+
+                // 判断当前实例是否可用
+                if (!IsAlive)
+                {
+                    info.Fail("实例不可用");
+                    SaveAndNotify(info);
+                    _logger.Debug("[{@0}] task error, id: {@1}, status: {@2}", Account.GetDisplay(), info.Id, info.Status);
+                    return;
+                }
+
                 var result = await discordSubmit();
+
+                // 判断当前实例是否可用
+                if (!IsAlive)
+                {
+                    info.Fail("实例不可用");
+                    SaveAndNotify(info);
+                    _logger.Debug("[{@0}] task error, id: {@1}, status: {@2}", Account.GetDisplay(), info.Id, info.Status);
+                    return;
+                }
 
                 info.StartTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
 
@@ -393,7 +412,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                     if (sw.ElapsedMilliseconds > timeoutMin * 60 * 1000)
                     {
-                        throw new TimeoutException($"执行超时 {timeoutMin} 分钟");
+                        info.Fail($"执行超时 {timeoutMin} 分钟");
+                        SaveAndNotify(info);
+                        return;
                     }
                 }
 
