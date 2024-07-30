@@ -279,6 +279,9 @@ function import_config_from_existing() {
 
 # 安装指定版本
 function install_version() {
+    cd $BASE_DIR
+
+    # 检查是否已安装最新版本
     VERSION=$1
     if [ -d "$VERSION" ]; then
         echo -e "${YELLOW}Version $VERSION is already installed. Installation aborted.${NC}"
@@ -291,11 +294,14 @@ function install_version() {
 
     if [ -z "$TAR_URL" ]; then
         echo -e "${RED}No download link found for specified version: $VERSION${NC}"
-        return 1
+        read -p "Retry feching download link? [y/N]: " RETRY_FETCH
+        RETRY_FETCH=$(echo "$RETRY_FETCH" | tr '[:upper:]' '[:lower:]')
+        if [ "$RETRY_FETCH" == "y" ]; then
+            get_latest_version_info
+            install_version
+        else
+            return 1
     fi
-
-    # 记录当前目录
-    BASE_DIR=$(pwd)
 
     # 检查临时目录是否创建成功
     TEMP_DIR=$(mktemp -d)
@@ -495,8 +501,6 @@ until [ "$OPTION" == "6" ]; do
     check_latest_version
     echo "Menu:"
     echo -e "1. ${GREEN}Install or update to the latest version ($LATEST_VERSION)${NC}"
-    echo -e "2. ${GREEN}Install a specific version${NC}"
-    echo -e "3. ${GREEN}Delete a specific version${NC}"
     echo -e "5. ${GREEN}Start a specific version${NC}"
     echo -e "6. ${GREEN}Stop running version${NC}" # 新增加的选项
     echo -e "7. ${GREEN}Exit${NC}"                 # 更新退出选项的编号
