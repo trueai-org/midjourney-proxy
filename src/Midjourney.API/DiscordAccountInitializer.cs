@@ -158,12 +158,12 @@ namespace Midjourney.API
         /// <summary>
         /// 更新账号信息
         /// </summary>
-        /// <param name="account"></param>
-        public void UpdateAccount(DiscordAccount account)
+        /// <param name="param"></param>
+        public void UpdateAccount(DiscordAccount param)
         {
             DiscordAccount model = null;
 
-            var disInstance = _discordLoadBalancer.GetDiscordInstance(account.ChannelId);
+            var disInstance = _discordLoadBalancer.GetDiscordInstance(param.ChannelId);
             if (disInstance != null)
             {
                 model = disInstance.Account;
@@ -171,7 +171,7 @@ namespace Midjourney.API
 
             if (model == null)
             {
-                model = DbHelper.AccountStore.Get(account.Id);
+                model = DbHelper.AccountStore.Get(param.Id);
             }
 
             if (model == null)
@@ -183,24 +183,24 @@ namespace Midjourney.API
             //model.ChannelId = account.ChannelId;
             //model.GuildId = account.GuildId;
 
-            model.Enable = account.Enable;
-            model.PrivateChannelId = account.PrivateChannelId;
-            model.NijiBotChannelId = account.NijiBotChannelId;
-            model.UserAgent = account.UserAgent;
-            model.RemixAutoSubmit = account.RemixAutoSubmit;
-            model.CoreSize = account.CoreSize;
-            model.QueueSize = account.QueueSize;
-            model.MaxQueueSize = account.MaxQueueSize;
-            model.TimeoutMinutes = account.TimeoutMinutes;
-            model.Weight = account.Weight;
-            model.Remark = account.Remark;
-            model.BotToken = account.BotToken;
-            model.UserToken = account.UserToken;
-            model.Mode = account.Mode;
-            model.Sponsor = account.Sponsor;
-
             // 更新账号重连时，自动解锁
             model.Lock = false;
+
+            model.Enable = param.Enable;
+            model.PrivateChannelId = param.PrivateChannelId;
+            model.NijiBotChannelId = param.NijiBotChannelId;
+            model.UserAgent = param.UserAgent;
+            model.RemixAutoSubmit = param.RemixAutoSubmit;
+            model.CoreSize = param.CoreSize;
+            model.QueueSize = param.QueueSize;
+            model.MaxQueueSize = param.MaxQueueSize;
+            model.TimeoutMinutes = param.TimeoutMinutes;
+            model.Weight = param.Weight;
+            model.Remark = param.Remark;
+            model.BotToken = param.BotToken;
+            model.UserToken = param.UserToken;
+            model.Mode = param.Mode;
+            model.Sponsor = param.Sponsor;
 
             DbHelper.AccountStore.Update(model);
 
@@ -215,6 +215,7 @@ namespace Midjourney.API
         {
             try
             {
+                // 如果正在执行则释放
                 var disInstance = _discordLoadBalancer.GetDiscordInstance(account.ChannelId);
                 if (disInstance != null)
                 {

@@ -285,29 +285,29 @@ namespace Midjourney.API.Controllers
         /// <summary>
         /// 编辑账号
         /// </summary>
-        /// <param name="account"></param>
+        /// <param name="param"></param>
         /// <returns></returns>
         [HttpPut("account/{id}")]
-        public Result AccountEdit([FromBody] DiscordAccount account)
+        public Result AccountEdit([FromBody] DiscordAccount param)
         {
             if (_isAnonymous)
             {
                 return Result.Fail("演示模式，禁止操作");
             }
 
-            var model = DbHelper.AccountStore.Get(account.Id);
+            var model = DbHelper.AccountStore.Get(param.Id);
             if (model == null)
             {
                 throw new LogicException("账号不存在");
             }
 
-            model.NijiBotChannelId = account.NijiBotChannelId;
-            model.PrivateChannelId = account.PrivateChannelId;
-            model.RemixAutoSubmit = account.RemixAutoSubmit;
-            model.TimeoutMinutes = account.TimeoutMinutes;
-            model.Weight = account.Weight;
-            model.Remark = account.Remark;
-            model.Sponsor = account.Sponsor;
+            model.NijiBotChannelId = param.NijiBotChannelId;
+            model.PrivateChannelId = param.PrivateChannelId;
+            model.RemixAutoSubmit = param.RemixAutoSubmit;
+            model.TimeoutMinutes = param.TimeoutMinutes;
+            model.Weight = param.Weight;
+            model.Remark = param.Remark;
+            model.Sponsor = param.Sponsor;
 
             _discordAccountInitializer.UpdateAccount(model);
             return Result.Ok();
@@ -317,29 +317,30 @@ namespace Midjourney.API.Controllers
         /// 更新账号并重新连接
         /// </summary>
         /// <param name="id"></param>
-        /// <param name="account"></param>
+        /// <param name="param"></param>
         /// <returns></returns>
         [HttpPut("account-reconnect/{id}")]
-        public async Task<Result> AccountReconnect(string id, [FromBody] DiscordAccount account)
+        public async Task<Result> AccountReconnect(string id, [FromBody] DiscordAccount param)
         {
             if (_isAnonymous)
             {
                 return Result.Fail("演示模式，禁止操作");
             }
 
-            var model = DbHelper.AccountStore.Get(account.Id);
+            var model = DbHelper.AccountStore.Get(param.Id);
             if (model == null)
             {
                 throw new LogicException("账号不存在");
             }
 
             // 不可修改频道 ID
-            if (id != account.ChannelId || account.GuildId != model.GuildId || account.ChannelId != model.ChannelId)
+            if (id != param.ChannelId || param.GuildId != model.GuildId || param.ChannelId != model.ChannelId)
             {
                 return Result.Fail("禁止修改频道 ID 和服务器 ID");
             }
 
-            await _discordAccountInitializer.ReconnectAccount(account);
+            await _discordAccountInitializer.ReconnectAccount(param);
+
             return Result.Ok();
         }
 

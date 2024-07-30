@@ -100,7 +100,7 @@ namespace Midjourney.Infrastructure.Services
         public SubmitResultVO SubmitUpscale(TaskInfo task, string targetMessageId, string targetMessageHash, int index, int messageFlags)
         {
             var instanceId = task.GetProperty<string>(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, default);
-            var discordInstance = _discordLoadBalancer.GetDiscordInstance(instanceId);
+            var discordInstance = _discordLoadBalancer.GetDiscordInstanceIsAlive(instanceId);
             if (discordInstance == null || !discordInstance.IsAlive)
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "账号不可用: " + instanceId);
@@ -113,7 +113,7 @@ namespace Midjourney.Infrastructure.Services
         public SubmitResultVO SubmitVariation(TaskInfo task, string targetMessageId, string targetMessageHash, int index, int messageFlags)
         {
             var instanceId = task.GetProperty<string>(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, default);
-            var discordInstance = _discordLoadBalancer.GetDiscordInstance(instanceId);
+            var discordInstance = _discordLoadBalancer.GetDiscordInstanceIsAlive(instanceId);
             if (discordInstance == null || !discordInstance.IsAlive)
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "账号不可用: " + instanceId);
@@ -134,7 +134,7 @@ namespace Midjourney.Infrastructure.Services
         public SubmitResultVO SubmitReroll(TaskInfo task, string targetMessageId, string targetMessageHash, int messageFlags)
         {
             var instanceId = task.GetProperty<string>(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, default);
-            var discordInstance = _discordLoadBalancer.GetDiscordInstance(instanceId);
+            var discordInstance = _discordLoadBalancer.GetDiscordInstanceIsAlive(instanceId);
             if (discordInstance == null || !discordInstance.IsAlive)
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "账号不可用: " + instanceId);
@@ -216,7 +216,7 @@ namespace Midjourney.Infrastructure.Services
         /// <returns></returns>
         public SubmitResultVO SubmitAction(TaskInfo task, SubmitActionDTO submitAction)
         {
-            var discordInstance = _discordLoadBalancer.GetDiscordInstance(task.InstanceId);
+            var discordInstance = _discordLoadBalancer.GetDiscordInstanceIsAlive(task.InstanceId);
             if (discordInstance == null)
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
@@ -418,7 +418,7 @@ namespace Midjourney.Infrastructure.Services
         /// <returns></returns>
         public SubmitResultVO SubmitModal(TaskInfo task, SubmitModalDTO submitAction, DataUrl dataUrl = null)
         {
-            var discordInstance = _discordLoadBalancer.GetDiscordInstance(task.InstanceId);
+            var discordInstance = _discordLoadBalancer.GetDiscordInstanceIsAlive(task.InstanceId);
             if (discordInstance == null)
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
@@ -630,7 +630,7 @@ namespace Midjourney.Infrastructure.Services
         /// <returns></returns>
         public async Task<SubmitResultVO> SubmitSeed(TaskInfo task)
         {
-            var discordInstance = _discordLoadBalancer.GetDiscordInstance(task.InstanceId);
+            var discordInstance = _discordLoadBalancer.GetDiscordInstanceIsAlive(task.InstanceId);
             if (discordInstance == null)
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
@@ -731,7 +731,7 @@ namespace Midjourney.Infrastructure.Services
         /// <returns></returns>
         public async Task InfoSetting(string id)
         {
-            var discordInstance = _discordLoadBalancer.GetDiscordInstance(id);
+            var discordInstance = _discordLoadBalancer.GetDiscordInstanceIsAlive(id);
             if (discordInstance == null)
             {
                 throw new LogicException("无可用的账号实例");
@@ -781,7 +781,7 @@ namespace Midjourney.Infrastructure.Services
         /// <returns></returns>
         public async Task AccountChangeVersion(string id, string version)
         {
-            var discordInstance = _discordLoadBalancer.GetDiscordInstance(id);
+            var discordInstance = _discordLoadBalancer.GetDiscordInstanceIsAlive(id);
             if (discordInstance == null)
             {
                 throw new LogicException("无可用的账号实例");
@@ -812,7 +812,7 @@ namespace Midjourney.Infrastructure.Services
         /// <returns></returns>
         public async Task AccountAction(string id, string customId, EBotType botType)
         {
-            var discordInstance = _discordLoadBalancer.GetDiscordInstance(id);
+            var discordInstance = _discordLoadBalancer.GetDiscordInstanceIsAlive(id);
             if (discordInstance == null)
             {
                 throw new LogicException("无可用的账号实例");
