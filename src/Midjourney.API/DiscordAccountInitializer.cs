@@ -185,7 +185,11 @@ namespace Midjourney.API
 
             // 更新账号重连时，自动解锁
             model.Lock = false;
+            model.CfHashCreated = null;
+            model.CfHashUrl = null;
+            model.CfUrl = null;
 
+            model.Sort = param.Sort;
             model.Enable = param.Enable;
             model.PrivateChannelId = param.PrivateChannelId;
             model.NijiBotChannelId = param.NijiBotChannelId;

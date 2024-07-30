@@ -251,7 +251,7 @@ namespace Midjourney.Infrastructure
                     {
                         if (t.GetString() == "Action required to continue")
                         {
-                            _logger.Warning("CF 验证 {@0}, {@1}", Account.ChannelId, raw.ToJson());
+                            _logger.Warning("CF 验证 {@0}, {@1}", Account.ChannelId, raw.ToString());
 
                             // 全局锁定中
                             // 等待人工处理或者自动处理
@@ -275,6 +275,9 @@ namespace Midjourney.Infrastructure
                                         // MJ::iframe::U3NmeM-lDTrmTCN_QY5n4DXvjrQRPGOZrQiLa-fT9y3siLA2AGjhj37IjzCqCtVzthUhGBj4KKqNSntQ
                                         var hash = custom_id.Split("::").LastOrDefault();
                                         var hashUrl = $"https://{application_id}.discordsays.com/captcha/api/c/{hash}/ack?hash=1";
+
+                                        Account.CfHashUrl = hashUrl;
+                                        Account.CfHashCreated = DateTime.Now;
 
                                         // 发送 hashUrl GET 请求, 返回 {"hash":"OOUxejO94EQNxsCODRVPbg","token":"dXDm-gSb4Zlsx-PCkNVyhQ"}
                                         // 通过 hash 和 token 拼接验证 CF 验证 URL
@@ -301,11 +304,16 @@ namespace Midjourney.Infrastructure
 
                                                     _logger.Information($"{Account.ChannelId}, CF 真人验证 URL: {url}");
 
+                                                    Account.CfUrl = hashUrl;
+                                           
                                                     // 发送邮件
                                                     EmailJob.Instance.EmailSend(_properties.Smtp, $"CF真人验证-{Account.ChannelId}", url);
                                                 }
                                             }
                                         }
+
+                                        DbHelper.AccountStore.Save(Account);
+                                        _discordInstance.ClearAccountCache(Account.Id);
                                     }
                                 }
                                 catch (Exception ex)

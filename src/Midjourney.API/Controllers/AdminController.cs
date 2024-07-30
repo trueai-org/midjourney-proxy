@@ -4,6 +4,7 @@ using Midjourney.Infrastructure.Domain;
 using Midjourney.Infrastructure.LoadBalancer;
 using Midjourney.Infrastructure.Services;
 using Midjourney.Infrastructure.StandardTable;
+using System.Text.Json;
 
 namespace Midjourney.API.Controllers
 {
@@ -223,6 +224,105 @@ namespace Midjourney.API.Controllers
         }
 
         /// <summary>
+        /// 获取 cf 真人验证链接
+        /// </summary>
+        /// <param name="id"></param>
+        /// <param name="refresh">是否获取新链接</param>
+        /// <returns></returns>
+        /// <exception cref="LogicException"></exception>
+        [HttpGet("account-cf/{id}")]
+        public async Task<ActionResult<DiscordAccount>> CfUrlValidate(string id, [FromQuery] bool refresh = false)
+        {
+            if (_isAnonymous)
+            {
+                throw new LogicException("演示模式，禁止操作");
+            }
+
+            var item = DbHelper.AccountStore.Get(id);
+            if (item == null)
+            {
+                throw new LogicException("账号不存在");
+            }
+
+            if (!item.Lock || string.IsNullOrWhiteSpace(item.CfHashUrl))
+            {
+                throw new LogicException("CF 验证链接不存在");
+            }
+
+            // 发送 hashUrl GET 请求, 返回 {"hash":"OOUxejO94EQNxsCODRVPbg","token":"dXDm-gSb4Zlsx-PCkNVyhQ"}
+            // 通过 hash 和 token 拼接验证 CF 验证 URL
+
+            if (refresh)
+            {
+                var httpClient = new HttpClient();
+                var hashUrl = item.CfHashUrl;
+                var response = await httpClient.GetAsync(hashUrl);
+                var con = await response.Content.ReadAsStringAsync();
+                if (!string.IsNullOrWhiteSpace(con))
+                {
+                    // 解析
+                    var json = JsonSerializer.Deserialize<JsonElement>(con);
+                    if (json.TryGetProperty("hash", out var h) && json.TryGetProperty("token", out var to))
+                    {
+                        var hashStr = h.GetString();
+                        var token = to.GetString();
+
+                        if (!string.IsNullOrWhiteSpace(hashStr) && !string.IsNullOrWhiteSpace(token))
+                        {
+                            // 通过 hash 和 token 拼接验证 CF 验证 URL
+                            // https://editor.midjourney.com/captcha/challenge/index.html?hash=OOUxejO94EQNxsCODRVPbg&token=dXDm-gSb4Zlsx-PCkNVyhQ
+
+                            var url = $"https://editor.midjourney.com/captcha/challenge/index.html?hash={hashStr}&token={token}";
+
+                            item.CfUrl = url;
+
+                            // 更新账号信息
+                            DbHelper.AccountStore.Update(item);
+                        }
+                    }
+                }
+            }
+
+            return Ok(item);
+        }
+
+        /// <summary>
+        /// CF 验证标记完成
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        /// <exception cref="LogicException"></exception>
+        [HttpPost("account-cf/{id}")]
+        public ActionResult CfUrlValidateOK(string id)
+        {
+            if (_isAnonymous)
+            {
+                throw new LogicException("演示模式，禁止操作");
+            }
+
+            var item = DbHelper.AccountStore.Get(id);
+            if (item == null)
+            {
+                throw new LogicException("账号不存在");
+            }
+
+            if (!item.Lock)
+            {
+                throw new LogicException("不需要 CF 验证");
+            }
+
+            item.Lock = false;
+            item.CfHashUrl = null;
+            item.CfHashCreated = null;
+            item.CfUrl = null;
+
+            // 更新账号信息
+            DbHelper.AccountStore.Update(item);
+
+            return Ok();
+        }
+
+        /// <summary>
         /// 修改版本
         /// </summary>
         /// <param name="id"></param>
@@ -308,6 +408,7 @@ namespace Midjourney.API.Controllers
             model.Weight = param.Weight;
             model.Remark = param.Remark;
             model.Sponsor = param.Sponsor;
+            model.Sort = param.Sort;
 
             _discordAccountInitializer.UpdateAccount(model);
             return Result.Ok();
@@ -368,7 +469,7 @@ namespace Midjourney.API.Controllers
         public ActionResult<List<DiscordAccount>> List()
         {
             var db = DbHelper.AccountStore;
-            var data = db.GetAll().ToList();
+            var data = db.GetAll().OrderBy(c => c.Sort).ThenBy(c => c.DateCreated).ToList();
 
             foreach (var item in data)
             {
