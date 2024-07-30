@@ -803,6 +803,7 @@ namespace Midjourney.Infrastructure
 
                 DbHelper.AccountStore.Save(Account);
 
+                _discordInstance?.ClearAccountCache(Account.Id);
                 _discordInstance?.Dispose();
             }
             catch (Exception ex)
@@ -951,6 +952,7 @@ namespace Midjourney.Infrastructure
 
             // 保存
             DbHelper.AccountStore.Save(Account);
+            _discordInstance?.ClearAccountCache(Account.Id);
         }
 
         /// <summary>

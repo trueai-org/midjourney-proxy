@@ -1,4 +1,5 @@
-﻿using Midjourney.Infrastructure.Domain;
+﻿using Microsoft.Extensions.Caching.Memory;
+using Midjourney.Infrastructure.Domain;
 using Midjourney.Infrastructure.Services;
 using Midjourney.Infrastructure.Util;
 using Newtonsoft.Json.Linq;
@@ -16,7 +17,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
     /// </summary>
     public class DiscordInstance : IDiscordInstance
     {
-        private readonly DiscordAccount _account;
         private readonly ITaskStoreService _taskStoreService;
         private readonly INotifyService _notifyService;
         private readonly ILogger _logger;
@@ -38,10 +38,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
         private ConcurrentQueue<(TaskInfo, Func<Task<Message>>)> _queueTasks;
 
-        /// <summary>
-        /// 默认会话ID。
-        /// </summary>
-        public string DefaultSessionId { get; set; } = "f1a313a09ce079ce252459dc70231f30";
+        // 使用 MemoryCache 实例来存储缓存数据
+        private readonly MemoryCache _cache = new MemoryCache(new MemoryCacheOptions());
+
 
         public DiscordInstance(
             DiscordAccount account,
@@ -86,6 +85,13 @@ namespace Midjourney.Infrastructure.LoadBalancer
             _longTask.Start();
         }
 
+        private DiscordAccount _account;
+
+        /// <summary>
+        /// 默认会话ID。
+        /// </summary>
+        public string DefaultSessionId { get; set; } = "f1a313a09ce079ce252459dc70231f30";
+
         /// <summary>
         /// 获取实例ID。
         /// </summary>
@@ -96,7 +102,30 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// 获取Discord账号信息。
         /// </summary>
         /// <returns>Discord账号</returns>
-        public DiscordAccount Account => _account;
+        public DiscordAccount Account
+        {
+            get
+            {
+                // 缓存 1 分钟
+                _account = _cache.GetOrCreate(_account.Id, (c) =>
+                {
+                    c.SetAbsoluteExpiration(TimeSpan.FromMinutes(1));
+
+                    return DbHelper.AccountStore.Get(_account.Id);
+                });
+
+                return _account;
+            }
+        }
+
+        /// <summary>
+        /// 清理账号缓存
+        /// </summary>
+        /// <param name="id"></param>
+        public void ClearAccountCache(string id)
+        {
+            _cache.Remove(id);
+        }
 
         /// <summary>
         /// 判断实例是否存活

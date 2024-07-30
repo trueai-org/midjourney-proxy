@@ -251,6 +251,8 @@ namespace Midjourney.Infrastructure
                     {
                         if (t.GetString() == "Action required to continue")
                         {
+                            _logger.Warning("CF 验证 {@0}, {@1}", Account.ChannelId, raw.ToJson());
+
                             // 全局锁定中
                             // 等待人工处理或者自动处理
                             // 重试最多 3 次，最多处理 5 分钟
@@ -258,13 +260,12 @@ namespace Midjourney.Infrastructure
                             {
                                 try
                                 {
-                                    _logger.Warning("CF 验证 {@0}, {@1}", Account.ChannelId, raw.ToJson());
-
                                     // 验证中，处于锁定模式
                                     Account.DisabledReason = "CF 验证中...";
                                     Account.Lock = true;
 
                                     DbHelper.AccountStore.Save(Account);
+                                    _discordInstance.ClearAccountCache(Account.Id);
 
                                     var custom_id = data.TryGetProperty("custom_id", out var c) ? c.GetString() : string.Empty;
                                     var application_id = data.TryGetProperty("application", out var a) && a.TryGetProperty("id", out var id) ? id.GetString() : string.Empty;
@@ -422,6 +423,7 @@ namespace Midjourney.Infrastructure
                     }
 
                     DbHelper.AccountStore.Save(Account);
+                    _discordInstance.ClearAccountCache(Account.Id);
 
                     return;
                 }
