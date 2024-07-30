@@ -197,6 +197,9 @@ namespace Midjourney.API
             model.Mode = account.Mode;
             model.Sponsor = account.Sponsor;
 
+            // 更新账号重连时，自动解锁
+            model.Lock = false;
+
             DbHelper.AccountStore.Update(model);
         }
 

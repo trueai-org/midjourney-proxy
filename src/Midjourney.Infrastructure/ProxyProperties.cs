@@ -1,4 +1,6 @@
-﻿namespace Midjourney.Infrastructure
+﻿using System.Reflection.Metadata.Ecma335;
+
+namespace Midjourney.Infrastructure
 {
     /// <summary>
     /// 代理配置属性类.
@@ -59,6 +61,55 @@
         /// 通知回调线程池大小.
         /// </summary>
         public int NotifyPoolSize { get; set; } = 10;
+
+        /// <summary>
+        /// 邮件发送配置
+        /// </summary>
+        public SmtpConfig Smtp { get; set; }
+    }
+
+    /// <summary>
+    /// 邮件发送配置项
+    /// </summary>
+    public class SmtpConfig
+    {
+        /// <summary>
+        /// SMTP服务器信息
+        /// smtp.mxhichina.com
+        /// </summary>
+        public string Host { get; set; }
+
+        /// <summary>
+        /// SMTP端口，一般为587或465，具体依据你的SMTP服务器而定
+        /// </summary>
+        public int Port { get; set; } = 465;
+
+        /// <summary>
+        /// 根据你的SMTP服务器要求设置
+        /// </summary>
+        public bool EnableSsl { get; set; } = true;
+
+        /// <summary>
+        /// 发件人昵称
+        /// system
+        /// </summary>
+        public string FromName { get; set; }
+
+        /// <summary>
+        /// 发件人邮箱地址
+        /// system@trueai.org
+        /// </summary>
+        public string FromEmail { get; set; }
+
+        /// <summary>
+        /// 你的邮箱密码或应用专用密码
+        /// </summary>
+        public string FromPassword { get; set; }
+
+        /// <summary>
+        /// 收件人
+        /// </summary>
+        public string To { get; set; }
     }
 
     /// <summary>

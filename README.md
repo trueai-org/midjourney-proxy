@@ -54,6 +54,8 @@
 - [x] 支持 BOOKMARK 等指令
 - [x] 支持指定实例绘图，支持过滤指定速度的账号绘图，支持过滤 `remix` 模式账号绘图等，详情参考 Swagger `accountFilter` 字段
 - [x] 逆向根据 job id 或 图片生成系统任务信息
+- [x] cloudflare 真人验证，触发后自动锁定账号，并通知客户点击链接即可过人机验证，需配置邮件通知（BETA）
+- [ ] cloudflare 自动过真人验证（BETA）
 
 ## 在线预览
 
@@ -258,7 +260,16 @@ curl -o linux_install.sh https://raw.githubusercontent.com/trueai-org/midjourney
     "TranslateWay": "NULL", // NULL | GTP | BAIDU, 翻译配置, 默认: NULL
     "ApiSecret": "", // your_api_secret
     "NotifyHook": "", // your_notify_hook, 回调配置
-    "NotifyPoolSize": 10
+    "NotifyPoolSize": 10,
+    "Smtp": {
+      "Host": "smtp.mxhichina.com", // SMTP服务器信息
+      "Port": 465, // SMTP端口，一般为587或465，具体依据你的SMTP服务器而定
+      "EnableSsl": true, // 根据你的SMTP服务器要求设置
+      "FromName": "system", // 发件人昵称
+      "FromEmail": "system@***.org", // 发件人邮箱地址
+      "FromPassword": "", // 你的邮箱密码或应用专用密码
+      "To": "" // 收件人
+    }
   },
   "Serilog": {
     "MinimumLevel": {

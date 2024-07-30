@@ -1,5 +1,4 @@
 ﻿using Midjourney.Infrastructure.Dto;
-using System.Collections.Concurrent;
 
 namespace Midjourney.Infrastructure.LoadBalancer
 {
@@ -75,7 +74,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         {
             return string.IsNullOrWhiteSpace(instanceId)
                 ? null
-                : _instances.FirstOrDefault(instance => instance.GetInstanceId == instanceId);
+                : _instances.FirstOrDefault(instance => instance.GetInstanceId == instanceId && instance.IsAlive);
         }
 
         /// <summary>
