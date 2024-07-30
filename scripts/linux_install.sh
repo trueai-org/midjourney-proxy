@@ -152,34 +152,6 @@ function prompt_apply_config() {
     fi
 }
 
-# 将配置文件应用到指定版本
-function apply_config_to_version() {
-    read -p "Enter the version to apply configuration to (e.g., v2.3.7): " VERSION
-    if [ -d "$VERSION" ]; then
-        if list_config_files; then
-            read -p "Select configuration file to apply by number: " num
-            selected_file=$(get_config_file_by_number $num)
-            if [ -n "$selected_file" ]; then
-                if [ -e "$VERSION/appsettings.json" ]; then
-                    read -p "Target version already has an appsettings.json. Do you want to merge? (y/N): " MERGE_CONFIRM
-                    if [[ "$MERGE_CONFIRM" =~ ^[yY]$ ]]; then
-                        compare_and_merge_json "$VERSION/appsettings.json" "$CONFIG_DIR/$selected_file"
-                    else
-                        echo -e "${YELLOW}Configuration not merged.${NC}"
-                    fi
-                else
-                    cp "$CONFIG_DIR/$selected_file" "$VERSION/appsettings.json"
-                    echo -e "${GREEN}Configuration file applied to version: $VERSION${NC}"
-                fi
-            else
-                echo -e "${RED}Invalid selection.${NC}"
-            fi
-        fi
-    else
-        echo -e "${RED}Version directory not found: $VERSION${NC}"
-    fi
-}
-
 # 检查已安装的版本
 function list_installed_versions() {
     INSTALLED_VERSIONS=()
@@ -209,21 +181,6 @@ function check_latest_version() {
         fi
     done
     echo -e "${YELLOW}A new version is available: $LATEST_VERSION.${NC}"
-}
-
-# 删除指定版本
-function delete_version() {
-    read -p "Enter the version you want to delete (e.g., v2.3.7): " VERSION
-    if [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-        if [ -d "$VERSION" ]; then
-            rm -rf "$VERSION"
-            echo -e "${GREEN}Version $VERSION deleted.${NC}"
-        else
-            echo -e "${RED}Version $VERSION is not installed.${NC}"
-        fi
-    else
-        echo -e "${RED}Invalid version format.${NC}"
-    fi
 }
 
 # compare_and_merge_json 函数
@@ -324,7 +281,7 @@ function import_config_from_existing() {
 function install_version() {
     VERSION=$1
     if [ -d "$VERSION" ]; then
-        echo -e "${YELLOW}Version $VERSION is already installed. Please delete it first.${NC}"
+        echo -e "${YELLOW}Version $VERSION is already installed. Installation aborted.${NC}"
         return 1
     fi
 
@@ -338,7 +295,7 @@ function install_version() {
     fi
 
     # 记录当前目录
-    ORIGINAL_DIR=$(pwd)
+    BASE_DIR=$(pwd)
 
     # 检查临时目录是否创建成功
     TEMP_DIR=$(mktemp -d)
@@ -358,18 +315,18 @@ function install_version() {
     EXTRACTED_DIR=$(tar -tzf "midjourney-proxy-linux-${ARCH}-$VERSION.tar.gz" | head -1 | cut -f1 -d "/")
 
     if [ "$EXTRACTED_DIR" == "." ]; then
-        mv "$TEMP_DIR" "$ORIGINAL_DIR/${VERSION}"
-        cd $ORIGINAL_DIR
+        mv "$TEMP_DIR" "$BASE_DIR/${VERSION}"
+        cd $BASE_DIR
     elif [ -d "$EXTRACTED_DIR" ]; then
         # 移动解压目录到目标位置
-        mv "$EXTRACTED_DIR" "$ORIGINAL_DIR/${VERSION}"
-        cd $ORIGINAL_DIR
+        mv "$EXTRACTED_DIR" "$BASE_DIR/${VERSION}"
+        cd $BASE_DIR
     else
         echo -e "${RED}Failed to find extracted directory. Installation might have failed.${NC}"
     fi
 
     # 清理下载文件和临时目录
-    cd $ORIGINAL_DIR
+    cd $BASE_DIR
     rm -rf $TEMP_DIR
 
     # 新增：提示用户选择是否从现有版本导入配置文件
