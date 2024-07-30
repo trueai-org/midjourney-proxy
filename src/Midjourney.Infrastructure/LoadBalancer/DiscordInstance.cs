@@ -106,10 +106,10 @@ namespace Midjourney.Infrastructure.LoadBalancer
         {
             get
             {
-                // 缓存 1 分钟
+                // 缓存 3 分钟
                 _account = _cache.GetOrCreate(_account.Id, (c) =>
                 {
-                    c.SetAbsoluteExpiration(TimeSpan.FromMinutes(1));
+                    c.SetAbsoluteExpiration(TimeSpan.FromMinutes(3));
 
                     return DbHelper.AccountStore.Get(_account.Id);
                 });
@@ -131,9 +131,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// 判断实例是否存活
         /// </summary>
         /// <returns>是否存活</returns>
-        public bool IsAlive => _account?.Enable == true
+        public bool IsAlive => Account?.Enable == true
             && WebSocketManager?.Running == true
-            && _account?.Lock != true;
+            && Account?.Lock != true;
 
         /// <summary>
         /// 获取正在运行的任务列表。
@@ -301,7 +301,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         {
             // 在任务提交时，前面的的任务数量
             var currentWaitNumbers = _queueTasks.Count;
-            if (_account.MaxQueueSize > 0 && currentWaitNumbers >= _account.MaxQueueSize)
+            if (Account.MaxQueueSize > 0 && currentWaitNumbers >= Account.MaxQueueSize)
             {
                 return SubmitResultVO.Fail(ReturnCode.FAILURE, "提交失败，队列已满，请稍后重试")
                     .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, GetInstanceId);
@@ -370,7 +370,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 {
                     info.Fail(result.Description);
                     SaveAndNotify(info);
-                    _logger.Debug("[{@0}] task finished, id: {@1}, status: {@2}", _account.GetDisplay(), info.Id, info.Status);
+                    _logger.Debug("[{@0}] task finished, id: {@1}, status: {@2}", Account.GetDisplay(), info.Id, info.Status);
                     return;
                 }
 
@@ -382,7 +382,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 await AsyncSaveAndNotify(info);
 
                 // 超时处理
-                var timeoutMin = _account.TimeoutMinutes;
+                var timeoutMin = Account.TimeoutMinutes;
                 var sw = new Stopwatch();
                 sw.Start();
 
@@ -419,11 +419,11 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     }
                 }
 
-                _logger.Debug("[{AccountDisplay}] task finished, id: {TaskId}, status: {TaskStatus}", _account.GetDisplay(), info.Id, info.Status);
+                _logger.Debug("[{AccountDisplay}] task finished, id: {TaskId}, status: {TaskStatus}", Account.GetDisplay(), info.Id, info.Status);
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "[{AccountDisplay}] task execute error, id: {TaskId}", _account.GetDisplay(), info.Id);
+                _logger.Error(ex, "[{AccountDisplay}] task execute error, id: {TaskId}", Account.GetDisplay(), info.Id);
                 info.Fail("[Internal Server Error] " + ex.Message);
 
                 SaveAndNotify(info);
@@ -715,7 +715,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
             // 私聊频道
             var json = botType == EBotType.NIJI_JOURNEY ? _paramsMap["seedniji"] : _paramsMap["seed"];
             var paramsStr = json
-              .Replace("$channel_id", botType == EBotType.MID_JOURNEY ? _account.PrivateChannelId : _account.NijiBotChannelId)
+              .Replace("$channel_id", botType == EBotType.MID_JOURNEY ? Account.PrivateChannelId : Account.NijiBotChannelId)
               .Replace("$session_id", DefaultSessionId)
               .Replace("$nonce", nonce)
               .Replace("$job_id", jobId);
@@ -742,10 +742,10 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     Content = new StringContent("", Encoding.UTF8, "application/json")
                 };
 
-                request.Headers.UserAgent.ParseAdd(_account.UserAgent);
+                request.Headers.UserAgent.ParseAdd(Account.UserAgent);
 
                 // 设置 request Authorization 为 UserToken，不需要 Bearer 前缀
-                request.Headers.Add("Authorization", _account.UserToken);
+                request.Headers.Add("Authorization", Account.UserToken);
 
                 var response = await _httpClient.SendAsync(request);
 
@@ -878,13 +878,13 @@ namespace Midjourney.Infrastructure.LoadBalancer
             {
                 paramsStr = paramsStr
                     .Replace("$application_id", Constants.NIJI_APPLICATION_ID)
-                    .Replace("$message_id", _account.NijiSettingsMessageId);
+                    .Replace("$message_id", Account.NijiSettingsMessageId);
             }
             else if (botType == EBotType.MID_JOURNEY)
             {
                 paramsStr = paramsStr
                     .Replace("$application_id", Constants.MJ_APPLICATION_ID)
-                    .Replace("$message_id", _account.SettingsMessageId);
+                    .Replace("$message_id", Account.SettingsMessageId);
             }
 
             var obj = JObject.Parse(paramsStr);
@@ -901,7 +901,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         public async Task<Message> SettingSelectAsync(string nonce, string values)
         {
             var paramsStr = ReplaceInteractionParams(_paramsMap["settingselect"], nonce)
-              .Replace("$message_id", _account.SettingsMessageId)
+              .Replace("$message_id", Account.SettingsMessageId)
               .Replace("$values", values);
             var obj = JObject.Parse(paramsStr);
             paramsStr = obj.ToString();
@@ -960,12 +960,12 @@ namespace Midjourney.Infrastructure.LoadBalancer
             prompt = prompt.Replace(" -- ", " ")
                 .Replace("  ", " ").Replace("  ", " ").Replace("  ", " ").Trim();
 
-            if (_account.Mode != null)
+            if (Account.Mode != null)
             {
                 // 移除 prompt 可能的的参数
                 prompt = prompt.Replace("--fast", "").Replace("--relax", "").Replace("--turbo", "");
 
-                switch (_account.Mode.Value)
+                switch (Account.Mode.Value)
                 {
                     case GenerationSpeedMode.RELAX:
                         prompt += " --relax";
@@ -1128,8 +1128,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
         private string ReplaceInteractionParams(string paramsStr, string nonce)
         {
-            return paramsStr.Replace("$guild_id", _account.GuildId)
-                .Replace("$channel_id", _account.ChannelId)
+            return paramsStr.Replace("$guild_id", Account.GuildId)
+                .Replace("$channel_id", Account.ChannelId)
                 .Replace("$session_id", DefaultSessionId)
                 .Replace("$nonce", nonce);
         }
@@ -1195,7 +1195,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
             string fileName = finalFileName.Substring(finalFileName.LastIndexOf("/") + 1);
             string paramsStr = _paramsMap["message"]
                 .Replace("$content", content)
-                .Replace("$channel_id", _account.ChannelId)
+                .Replace("$channel_id", Account.ChannelId)
                 .Replace("$file_name", fileName)
                 .Replace("$final_file_name", finalFileName);
             HttpResponseMessage response = await PostJsonAsync(_discordMessageUrl, paramsStr);
@@ -1246,7 +1246,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
             };
             request.Content.Headers.ContentType = new MediaTypeHeaderValue(dataUrl.MimeType);
             request.Content.Headers.ContentLength = dataUrl.Data.Length;
-            request.Headers.UserAgent.ParseAdd(_account.UserAgent);
+            request.Headers.UserAgent.ParseAdd(Account.UserAgent);
             await _httpClient.SendAsync(request);
         }
 
@@ -1257,10 +1257,10 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 Content = new StringContent(paramsStr, Encoding.UTF8, "application/json")
             };
 
-            request.Headers.UserAgent.ParseAdd(_account.UserAgent);
+            request.Headers.UserAgent.ParseAdd(Account.UserAgent);
 
             // 设置 request Authorization 为 UserToken，不需要 Bearer 前缀
-            request.Headers.Add("Authorization", _account.UserToken);
+            request.Headers.Add("Authorization", Account.UserToken);
 
             return await _httpClient.SendAsync(request);
         }
