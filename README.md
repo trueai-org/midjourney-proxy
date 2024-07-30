@@ -54,6 +54,7 @@
 - [x] 支持 BOOKMARK 等指令
 - [x] 支持指定实例绘图，支持过滤指定速度的账号绘图，支持过滤 `remix` 模式账号绘图等，详情参考 Swagger `accountFilter` 字段
 - [x] 逆向根据 job id 或 图片生成系统任务信息
+- [x] cloudflare 真人验证，触发后自动锁定账号，并通知客户点击 url 即可过人机验证（BETA）
 
 ## 在线预览
 
