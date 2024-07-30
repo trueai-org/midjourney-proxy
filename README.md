@@ -258,7 +258,16 @@ curl -o linux_install.sh https://raw.githubusercontent.com/trueai-org/midjourney
     "TranslateWay": "NULL", // NULL | GTP | BAIDU, 翻译配置, 默认: NULL
     "ApiSecret": "", // your_api_secret
     "NotifyHook": "", // your_notify_hook, 回调配置
-    "NotifyPoolSize": 10
+    "NotifyPoolSize": 10,
+    "Smtp": {
+      "Host": "smtp.mxhichina.com", // SMTP服务器信息
+      "Port": 465, // SMTP端口，一般为587或465，具体依据你的SMTP服务器而定
+      "EnableSsl": true, // 根据你的SMTP服务器要求设置
+      "FromName": "system", // 发件人昵称
+      "FromEmail": "system@***.org", // 发件人邮箱地址
+      "FromPassword": "", // 你的邮箱密码或应用专用密码
+      "To": "" // 收件人
+    }
   },
   "Serilog": {
     "MinimumLevel": {

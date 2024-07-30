@@ -73,7 +73,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// 判断实例是否存活
         /// </summary>
         /// <returns>是否存活</returns>
-        public bool IsAlive => _account?.Enable == true && WebSocketManager?.Running == true;
+        public bool IsAlive => _account?.Enable == true
+            && WebSocketManager?.Running == true
+            && _account?.Lock != true;
 
         /// <summary>
         /// 获取正在运行的任务列表。

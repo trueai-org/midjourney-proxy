@@ -21,10 +21,12 @@ namespace Midjourney.Infrastructure
     /// </summary>
     public class BotMessageListener : IDisposable
     {
+        private readonly ILogger _logger = Log.Logger;
+
         private readonly WebProxy _webProxy;
         private readonly DiscordAccount _discordAccount;
         private readonly DiscordHelper _discordHelper;
-        private readonly ILogger _logger = Log.Logger;
+        private readonly ProxyProperties _properties;
 
         private DiscordInstanceImpl _discordInstance;
         private IEnumerable<BotMessageHandler> _botMessageHandlers;
@@ -33,8 +35,10 @@ namespace Midjourney.Infrastructure
         public BotMessageListener(
             DiscordAccount discordAccount,
             DiscordHelper discordHelper,
+            ProxyProperties properties,
             WebProxy webProxy = null)
         {
+            _properties = properties;
             _discordAccount = discordAccount;
             _webProxy = webProxy;
             _discordHelper = discordHelper;
@@ -165,7 +169,6 @@ namespace Midjourney.Infrastructure
                         var handler = _botMessageHandlers.FirstOrDefault(x => x.GetType() == typeof(BotDescribeSuccessHandler));
                         handler?.Handle(_discordInstance, MessageType.CREATE, msg);
                     }
-
                 }
             }
             catch (Exception ex)
@@ -216,7 +219,6 @@ namespace Midjourney.Infrastructure
             }
         }
 
-
         /// <summary>
         /// 处理接收到用户 ws 消息
         /// </summary>
@@ -241,6 +243,84 @@ namespace Midjourney.Infrastructure
                 if (!raw.TryGetProperty("d", out JsonElement data))
                 {
                     return;
+                }
+
+                // 触发 CF 真人验证
+                if (messageType == MessageType.INTERACTION_IFRAME_MODAL_CREATE)
+                {
+                    if (data.TryGetProperty("title", out var t))
+                    {
+                        if (t.GetString() == "Action required to continue")
+                        {
+                            // 全局锁定中
+                            // 等待人工处理或者自动处理
+                            // 重试最多 3 次，最多处理 5 分钟
+                            LocalLock.TryLock($"cf_{_discordAccount.ChannelId}", TimeSpan.FromSeconds(10), () =>
+                            {
+                                try
+                                {
+                                    _logger.Warning("CF 验证 {@0}, {@1}", _discordAccount.ChannelId, raw.ToJson());
+
+                                    // 验证中，处于锁定模式
+                                    _discordAccount.DisabledReason = "CF 验证中...";
+                                    _discordAccount.Lock = true;
+
+                                    DbHelper.AccountStore.Save(_discordAccount);
+
+                                    var custom_id = data.TryGetProperty("custom_id", out var c) ? c.GetString() : string.Empty;
+                                    var application_id = data.TryGetProperty("application", out var a) && a.TryGetProperty("id", out var id) ? id.GetString() : string.Empty;
+
+                                    if (!string.IsNullOrWhiteSpace(custom_id) && !string.IsNullOrWhiteSpace(application_id))
+                                    {
+                                        // MJ::iframe::U3NmeM-lDTrmTCN_QY5n4DXvjrQRPGOZrQiLa-fT9y3siLA2AGjhj37IjzCqCtVzthUhGBj4KKqNSntQ
+                                        var hash = custom_id.Split("::").LastOrDefault();
+                                        var hashUrl = $"https://{application_id}.discordsays.com/captcha/api/c/{hash}/ack?hash=1";
+
+                                        // 发送 hashUrl GET 请求, 返回 {"hash":"OOUxejO94EQNxsCODRVPbg","token":"dXDm-gSb4Zlsx-PCkNVyhQ"}
+                                        // 通过 hash 和 token 拼接验证 CF 验证 URL
+
+                                        var httpClient = new HttpClient();
+                                        var response = httpClient.GetAsync(hashUrl).Result;
+                                        var con = response.Content.ReadAsStringAsync().Result;
+                                        if (!string.IsNullOrWhiteSpace(con))
+                                        {
+                                            // 解析
+                                            var json = JsonSerializer.Deserialize<JsonElement>(con);
+                                            if (json.TryGetProperty("hash", out var h) && json.TryGetProperty("token", out var to))
+                                            {
+                                                var hashStr = h.GetString();
+                                                var token = to.GetString();
+
+                                                if (!string.IsNullOrWhiteSpace(hashStr) && !string.IsNullOrWhiteSpace(token))
+                                                {
+                                                    // 发送验证 URL
+                                                    // 通过 hash 和 token 拼接验证 CF 验证 URL
+                                                    // https://editor.midjourney.com/captcha/challenge/index.html?hash=OOUxejO94EQNxsCODRVPbg&token=dXDm-gSb4Zlsx-PCkNVyhQ
+
+                                                    var url = $"https://editor.midjourney.com/captcha/challenge/index.html?hash={hashStr}&token={token}";
+
+                                                    _logger.Information($"{_discordAccount.ChannelId}, CF 真人验证 URL: {url}");
+
+                                                    // 发送邮件
+                                                    EmailJob.Instance.EmailSend(_properties.Smtp, $"CF真人验证-{_discordAccount.ChannelId}", url);
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    _logger.Error(ex, "CF 真人验证处理异常 {@0}", _discordAccount.ChannelId);
+                                }
+                                finally
+                                {
+                                    // TODO 最终处理结果
+                                }
+                            });
+
+                            return;
+                        }
+                    }
                 }
 
                 // 内容
@@ -543,7 +623,6 @@ namespace Midjourney.Infrastructure
                                             // 如果没有获取到 none
                                             _logger.Error("未知错误 {@0}, {@1}", _discordAccount.ChannelId, data.ToString());
 
-
                                             // 如果 meta 是 show
                                             // 说明是 show 任务出错了
                                             if (metaName == "show")
@@ -571,7 +650,6 @@ namespace Midjourney.Infrastructure
                                                 }
                                             }
                                         }
-
                                     }
                                     // fast 用量已经使用完了
                                     // TODO 可以改为慢速模式
@@ -798,7 +876,6 @@ namespace Midjourney.Infrastructure
                                 if (isPrivareChannel)
                                 {
                                     // 私信频道
-
                                 }
                                 else
                                 {

@@ -66,6 +66,11 @@ namespace Midjourney.Infrastructure.Domain
         public bool Enable { get; set; } = true;
 
         /// <summary>
+        /// 是否锁定（暂时锁定，可能触发了人机验证）
+        /// </summary>
+        public bool Lock { get; set; }
+
+        /// <summary>
         /// 禁用原因
         /// </summary>
         public string DisabledReason { get; set; }

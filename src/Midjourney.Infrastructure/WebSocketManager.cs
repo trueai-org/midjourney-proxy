@@ -949,7 +949,10 @@ namespace Midjourney.Infrastructure
         /// <param name="reason"></param>
         private void NotifyWss(int code, string reason)
         {
-            _account.DisabledReason = reason;
+            if (!_account.Lock)
+            {
+                _account.DisabledReason = reason;
+            }
 
             // 保存
             DbHelper.AccountStore.Save(_account);
