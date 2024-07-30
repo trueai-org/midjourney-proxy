@@ -438,11 +438,13 @@ namespace Midjourney.Infrastructure
                         {
                             Account.NijiComponents = eventData.Components;
                             DbHelper.AccountStore.Update(Account);
+                            _discordInstance.ClearAccountCache(Account.Id);
                         }
                         else if (applicationId == Constants.MJ_APPLICATION_ID)
                         {
                             Account.Components = eventData.Components;
                             DbHelper.AccountStore.Update(Account);
+                            _discordInstance.ClearAccountCache(Account.Id);
                         }
                     }
                 }
@@ -683,7 +685,7 @@ namespace Midjourney.Infrastructure
                                                 Account.DisabledReason = "账号用量已经用完";
 
                                                 DbHelper.AccountStore.Save(Account);
-
+                                                _discordInstance?.ClearAccountCache(Account.Id);
                                                 _discordInstance?.Dispose();
                                             }
                                             catch (Exception ex)
@@ -727,6 +729,7 @@ namespace Midjourney.Infrastructure
 
                                                 DbHelper.AccountStore.Save(Account);
 
+                                                _discordInstance?.ClearAccountCache(Account.Id);
                                                 _discordInstance?.Dispose();
                                             }
                                             catch (Exception ex)
@@ -830,6 +833,7 @@ namespace Midjourney.Infrastructure
 
                                             var db = DbHelper.AccountStore;
                                             db.Update(Account);
+                                            _discordInstance?.ClearAccountCache(Account.Id);
                                         }
                                     }
                                 }
@@ -849,6 +853,7 @@ namespace Midjourney.Infrastructure
                                     Account.NijiSettingsMessageId = id;
 
                                     DbHelper.AccountStore.Update(Account);
+                                    _discordInstance?.ClearAccountCache(Account.Id);
                                 }
                                 else if (applicationId == Constants.MJ_APPLICATION_ID)
                                 {
@@ -856,6 +861,7 @@ namespace Midjourney.Infrastructure
                                     Account.SettingsMessageId = id;
 
                                     DbHelper.AccountStore.Update(Account);
+                                    _discordInstance?.ClearAccountCache(Account.Id);
                                 }
                             }
 

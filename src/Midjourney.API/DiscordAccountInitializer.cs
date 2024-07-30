@@ -119,9 +119,10 @@ namespace Midjourney.API
                     continue;
                 }
 
+                IDiscordInstance disInstance = null;
                 try
                 {
-                    var disInstance = _discordLoadBalancer.GetDiscordInstance(account.ChannelId);
+                    disInstance = _discordLoadBalancer.GetDiscordInstance(account.ChannelId);
                     if (disInstance == null)
                     {
                         disInstance = await _discordAccountHelper.CreateDiscordInstance(account);
@@ -143,6 +144,7 @@ namespace Midjourney.API
                     account.Enable = false;
 
                     db.Update(account);
+                    disInstance?.ClearAccountCache(account.Id);
                 }
             }
 
@@ -201,6 +203,7 @@ namespace Midjourney.API
             model.Lock = false;
 
             DbHelper.AccountStore.Update(model);
+            disInstance.ClearAccountCache(model.Id);
         }
 
         /// <summary>

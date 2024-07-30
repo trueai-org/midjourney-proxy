@@ -196,6 +196,12 @@ namespace Midjourney.Infrastructure.LoadBalancer
         Task<Message> ReadMessageAsync(string lastMessageId);
 
         /// <summary>
+        /// 清理账号缓存
+        /// </summary>
+        /// <param name="id"></param>
+        void ClearAccountCache(string id);
+
+        /// <summary>
         /// 获取Discord账号信息。
         /// </summary>
         /// <returns>Discord账号信息。</returns>
