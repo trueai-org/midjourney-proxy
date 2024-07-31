@@ -231,7 +231,7 @@ namespace Midjourney.API.Controllers
         /// <returns></returns>
         /// <exception cref="LogicException"></exception>
         [HttpGet("account-cf/{id}")]
-        public async Task<ActionResult<DiscordAccount>> CfUrlValidate(string id, [FromQuery] bool refresh = false)
+        public async Task<Result<DiscordAccount>> CfUrlValidate(string id, [FromQuery] bool refresh = false)
         {
             if (_isAnonymous)
             {
@@ -284,10 +284,14 @@ namespace Midjourney.API.Controllers
                             inc?.ClearAccountCache(item.Id);
                         }
                     }
+                    else
+                    {
+                        throw new LogicException("生成链接失败");
+                    }
                 }
             }
 
-            return Ok(item);
+            return Result.Ok(item);
         }
 
         /// <summary>
@@ -297,7 +301,7 @@ namespace Midjourney.API.Controllers
         /// <returns></returns>
         /// <exception cref="LogicException"></exception>
         [HttpPost("account-cf/{id}")]
-        public ActionResult CfUrlValidateOK(string id)
+        public Result CfUrlValidateOK(string id)
         {
             if (_isAnonymous)
             {
@@ -310,10 +314,10 @@ namespace Midjourney.API.Controllers
                 throw new LogicException("账号不存在");
             }
 
-            if (!item.Lock)
-            {
-                throw new LogicException("不需要 CF 验证");
-            }
+            //if (!item.Lock)
+            //{
+            //    throw new LogicException("不需要 CF 验证");
+            //}
 
             item.Lock = false;
             item.CfHashUrl = null;
@@ -328,7 +332,7 @@ namespace Midjourney.API.Controllers
             var inc = _loadBalancer.GetDiscordInstance(item.ChannelId);
             inc?.ClearAccountCache(item.Id);
 
-            return Ok();
+            return Result.Ok();
         }
 
         /// <summary>
@@ -493,6 +497,9 @@ namespace Midjourney.API.Controllers
                     // Token 加密
                     item.UserToken = item.UserToken?.Substring(0, 4) + "****" + item.UserToken?.Substring(item.UserToken.Length - 4);
                     item.BotToken = item.BotToken?.Substring(0, 4) + "****" + item.BotToken?.Substring(item.BotToken.Length - 4);
+
+                    item.CfUrl = item.CfUrl?.Substring(0, item.CfUrl.Length / 2) + "****";
+                    item.CfHashUrl = item.CfHashUrl?.Substring(0, item.CfHashUrl.Length / 2) + "****";
                 }
             }
 
