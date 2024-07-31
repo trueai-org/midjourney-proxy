@@ -26,6 +26,9 @@ namespace Midjourney.Captcha.API
 
             try
             {
+                // 下载日志
+                Log.Information("CF 验证, 正在下载浏览器 URL: {@0}", url);
+
                 // 下载并设置浏览器
                 await new BrowserFetcher().DownloadAsync();
 
@@ -72,7 +75,7 @@ namespace Midjourney.Captcha.API
                 await Task.Delay(6000);
 
                 // 日志
-                Log.Information("CF 验证 URL: {@0}", url);
+                Log.Information("CF 开始验证 URL: {@0}", url);
 
                 var siteKeyCount = 0;
                 var siteKey = string.Empty;

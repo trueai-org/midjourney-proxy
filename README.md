@@ -322,6 +322,8 @@ curl -o linux_install.sh https://raw.githubusercontent.com/trueai-org/midjourney
 
 注意：自行部署需提供 2captcha.com 的 API Key，否则无法使用，价格：1000次/9元，官网：<https://2captcha.cn/p/cloudflare-turnstile>
 
+提示：首次启动会下载 Chrome 浏览器，会比较慢，请耐心等待。
+
 > `appsettings.json` 配置参考
 
 ```json
