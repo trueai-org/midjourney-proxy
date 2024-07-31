@@ -316,6 +316,24 @@ curl -o linux_install.sh https://raw.githubusercontent.com/trueai-org/midjourney
 }
 ```
 
+## CloudFlare 验证器部署
+
+仅支持 Windows 部署，由于 CloudFlare 验证器需要使用到 Chrome 浏览器，所以需要在 Windows 环境下部署，而在 Linux 环境下部署会依赖很多库，所以暂时不支持 Linux 部署。
+
+> `appsettings.json` 配置
+
+```json
+{
+  "Demo": null, // 网站配置为演示模式
+  "Captcha": {
+    "Headless": true, // chrome 是否后台运行
+    "TwoCaptchaKey": "" // 2captcha.com 的 API Key
+  },
+  "urls": "http://*:8081" // 默认端口
+}
+
+```
+
 ## 机器人 Token（必须配置）
 
 本项目利用 Discord 机器人 Token 连接 wss，可以获取错误信息和完整功能，确保消息的高可用性等问题。
