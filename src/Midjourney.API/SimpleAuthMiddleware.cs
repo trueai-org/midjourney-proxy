@@ -20,6 +20,24 @@ namespace Midjourney.API
 
         public async Task Invoke(HttpContext context)
         {
+            var path = context.Request.Path.Value;
+            if (path.StartsWith("/mj-turbo"))
+            {
+                context.Items["Mode"] = "turbo";
+            }
+            else if (path.StartsWith("/mj-relax"))
+            {
+                context.Items["Mode"] = "relax";
+            }
+            else if (path.StartsWith("/mj-fast"))
+            {
+                context.Items["Mode"] = "fast";
+            }
+            else
+            {
+                context.Items["Mode"] = "";
+            }
+
             // 演示模式下不需要验证
             if (GlobalConfiguration.IsDemoMode == true)
             {

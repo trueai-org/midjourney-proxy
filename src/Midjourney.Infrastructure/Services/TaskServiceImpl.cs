@@ -69,7 +69,7 @@ namespace Midjourney.Infrastructure.Services
                     info.Description = "/imagine " + info.Prompt;
                     _taskStoreService.Save(info);
                 }
-                return await instance.ImagineAsync(info.PromptEn,
+                return await instance.ImagineAsync(info, info.PromptEn,
                     info.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default), info.BotType);
             });
         }
@@ -468,13 +468,13 @@ namespace Midjourney.Infrastructure.Services
                     task.Nonce = nonce;
                     task.SetProperty(Constants.TASK_PROPERTY_NONCE, nonce);
 
-                    return await discordInstance.ZoomAsync(task.MessageId, customId, task.PromptEn, nonce, task.BotType);
+                    return await discordInstance.ZoomAsync(task, task.MessageId, customId, task.PromptEn, nonce, task.BotType);
                 }
                 // 局部重绘
                 else if (customId.StartsWith("MJ::Inpaint::"))
                 {
                     var ifarmeCustomId = task.GetProperty<string>(Constants.TASK_PROPERTY_IFRAME_MODAL_CREATE_CUSTOM_ID, default);
-                    return await discordInstance.InpaintAsync(ifarmeCustomId, task.PromptEn, submitAction.MaskBase64, task.BotType);
+                    return await discordInstance.InpaintAsync(task, ifarmeCustomId, task.PromptEn, submitAction.MaskBase64, task.BotType);
                 }
                 // 图生文 -> 文生图
                 else if (customId.StartsWith("MJ::Job::PicReader::"))
@@ -483,7 +483,7 @@ namespace Midjourney.Infrastructure.Services
                     task.Nonce = nonce;
                     task.SetProperty(Constants.TASK_PROPERTY_NONCE, nonce);
 
-                    return await discordInstance.PicReaderAsync(task.MessageId, customId, task.PromptEn, nonce, task.BotType);
+                    return await discordInstance.PicReaderAsync(task, task.MessageId, customId, task.PromptEn, nonce, task.BotType);
                 }
                 // Remix mode
                 else if (task.Action == TaskAction.VARIATION || task.Action == TaskAction.REROLL || task.Action == TaskAction.PAN)
@@ -612,7 +612,7 @@ namespace Midjourney.Infrastructure.Services
                         return Message.Failure("未知操作");
                     }
 
-                    return await discordInstance.RemixAsync(task.Action.Value, task.MessageId, modal,
+                    return await discordInstance.RemixAsync(task, task.Action.Value, task.MessageId, modal,
                         customId, task.PromptEn, nonce, task.BotType);
                 }
                 else

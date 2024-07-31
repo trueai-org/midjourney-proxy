@@ -55,6 +55,7 @@
 - [x] 支持指定实例绘图，支持过滤指定速度的账号绘图，支持过滤 `remix` 模式账号绘图等，详情参考 Swagger `accountFilter` 字段
 - [x] 逆向根据 job id 或 图片生成系统任务信息
 - [x] 支持账号排序、并行数、队列数、最大队列数、任务执行间隔等配置
+- [x] 支持客户端路径指定模式，默认地址例子 https://{BASE_URL}/mj/submit/imagine, /mj-turbo/mj 是 turbo mode, /mj-relax/mj 是 relax mode, /mj-fast/mj 是 fast mode, /mj 不指定模式
 - [x] CloudFlare 真人验证，触发后自动锁定账号，通过 GUI 直接验证或通过邮件通知客户点击链接即可过人机验证
 - [ ] CloudFlare 自动过真人验证（BETA）
 
@@ -362,6 +363,7 @@ https://discord.com/oauth2/authorize?client_id=xxx&permissions=8&scope=bot
 - [ ] 自动读私信消息
 - [ ] 增加允许速度模式配置
 - [ ] 服务重启后，如果有未启动的任务，则加入到执行的队列中
+- [ ] 允许共享频道或子频道绘画，即便账号被封，也可以继续之前的绘画，将被封的账号频道作为正常账号的子频道即可，保存永久邀请链接，和子频道链接，支持批量修改，可直接输入邀请链接，或共享频道地址，系统自动加入频道转换。或者通过转交所有权实现。
 
 ## 支持与赞助
 

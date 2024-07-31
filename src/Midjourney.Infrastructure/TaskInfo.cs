@@ -182,6 +182,11 @@ namespace Midjourney.Infrastructure
         public string JobId { get; set; }
 
         /// <summary>
+        /// 当前绘画客户端指定的速度模式
+        /// </summary>
+        public GenerationSpeedMode? Mode { get; set; }
+
+        /// <summary>
         /// 账号过滤
         /// </summary>
         public AccountFilter AccountFilter { get; set; }

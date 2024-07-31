@@ -623,9 +623,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <param name="nonce"></param>
         /// <param name="botType"></param>
         /// <returns></returns>
-        public async Task<Message> ImagineAsync(string prompt, string nonce, EBotType botType)
+        public async Task<Message> ImagineAsync(TaskInfo info, string prompt, string nonce, EBotType botType)
         {
-            prompt = GetPrompt(prompt);
+            prompt = GetPrompt(prompt, info);
 
             var json = botType == EBotType.MID_JOURNEY ? _paramsMap["imagine"] : _paramsMap["imagineniji"];
             var paramsStr = ReplaceInteractionParams(json, nonce);
@@ -801,10 +801,10 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <param name="nonce"></param>
         /// <param name="botType"></param>
         /// <returns></returns>
-        public async Task<Message> ZoomAsync(string messageId, string customId, string prompt, string nonce, EBotType botType)
+        public async Task<Message> ZoomAsync(TaskInfo info, string messageId, string customId, string prompt, string nonce, EBotType botType)
         {
             customId = customId.Replace("MJ::CustomZoom::", "MJ::OutpaintCustomZoomModal::");
-            prompt = GetPrompt(prompt);
+            prompt = GetPrompt(prompt, info);
 
             string paramsStr = ReplaceInteractionParams(_paramsMap["zoom"], nonce, botType)
                 .Replace("$message_id", messageId);
@@ -828,10 +828,10 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <param name="nonce"></param>
         /// <param name="botType"></param>
         /// <returns></returns>
-        public async Task<Message> PicReaderAsync(string messageId, string customId, string prompt, string nonce, EBotType botType)
+        public async Task<Message> PicReaderAsync(TaskInfo info, string messageId, string customId, string prompt, string nonce, EBotType botType)
         {
             var index = customId.Split("::").LastOrDefault();
-            prompt = GetPrompt(prompt);
+            prompt = GetPrompt(prompt, info);
 
             string paramsStr = ReplaceInteractionParams(_paramsMap["picreader"], nonce, botType)
                 .Replace("$message_id", messageId)
@@ -856,9 +856,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <param name="nonce"></param>
         /// <param name="botType"></param>
         /// <returns></returns>
-        public async Task<Message> RemixAsync(TaskAction action, string messageId, string modal, string customId, string prompt, string nonce, EBotType botType)
+        public async Task<Message> RemixAsync(TaskInfo info, TaskAction action, string messageId, string modal, string customId, string prompt, string nonce, EBotType botType)
         {
-            prompt = GetPrompt(prompt);
+            prompt = GetPrompt(prompt, info);
 
             string paramsStr = ReplaceInteractionParams(_paramsMap["remix"], nonce, botType)
                 .Replace("$message_id", messageId)
@@ -975,7 +975,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// </summary>
         /// <param name="prompt"></param>
         /// <returns></returns>
-        public string GetPrompt(string prompt)
+        public string GetPrompt(string prompt, TaskInfo info)
         {
             if (string.IsNullOrWhiteSpace(prompt))
             {
@@ -986,6 +986,34 @@ namespace Midjourney.Infrastructure.LoadBalancer
             // 将 " -- " 替换为 " "
             prompt = prompt.Replace(" -- ", " ")
                 .Replace("  ", " ").Replace("  ", " ").Replace("  ", " ").Trim();
+
+            if (info != null)
+            {
+                // 移除 prompt 可能的的参数
+                prompt = prompt.Replace("--fast", "").Replace("--relax", "").Replace("--turbo", "");
+
+                // 如果任务指定了速度模式
+                if (info.Mode != null)
+                {
+                    switch (info.Mode.Value)
+                    {
+                        case GenerationSpeedMode.RELAX:
+                            prompt += " --relax";
+                            break;
+
+                        case GenerationSpeedMode.FAST:
+                            prompt += " --fast";
+                            break;
+
+                        case GenerationSpeedMode.TURBO:
+                            prompt += " --turbo";
+                            break;
+
+                        default:
+                            break;
+                    }
+                }
+            }
 
             if (Account.Mode != null)
             {
@@ -1025,11 +1053,11 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <param name="maskBase64"></param>
         /// <param name="botType"></param>
         /// <returns></returns>
-        public async Task<Message> InpaintAsync(string customId, string prompt, string maskBase64, EBotType botType)
+        public async Task<Message> InpaintAsync(TaskInfo info, string customId, string prompt, string maskBase64, EBotType botType)
         {
             try
             {
-                prompt = GetPrompt(prompt);
+                prompt = GetPrompt(prompt, info);
 
                 customId = customId?.Replace("MJ::iframe::", "");
 
