@@ -225,13 +225,9 @@ namespace Midjourney.Captcha.API
                         {
                             break;
                         }
-
                         retry++;
-                        var options = new RestClientOptions("")
-                        {
-                            MaxTimeout = -1,
-                        };
-                        var client = new RestClient(options);
+ 
+                        var client = new RestClient();
                         var request = new RestRequest($"https://editor.midjourney.com/captcha/api/c/{hash}/submit", Method.Post);
                         request.AlwaysMultipartFormData = true;
                         request.AddParameter("captcha_token", token);
