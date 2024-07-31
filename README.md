@@ -56,7 +56,7 @@
 - [x] 逆向根据 job id 或 图片生成系统任务信息
 - [x] 支持账号排序、并行数、队列数、最大队列数、任务执行间隔等配置
 - [x] 支持客户端路径指定模式，默认地址例子 https://{BASE_URL}/mj/submit/imagine, /mj-turbo/mj 是 turbo mode, /mj-relax/mj 是 relax mode, /mj-fast/mj 是 fast mode, /mj 不指定模式
-- [x] CloudFlare 手动真人验证，触发后自动锁定账号，通过 GUI 直接验证或通过邮件通知客户点击链接即可过人机验证
+- [x] CloudFlare 手动真人验证，触发后自动锁定账号，通过 GUI 直接验证或通过邮件通知验证
 - [x] CloudFlare 自动真人验证，配置验证服务器地址
 
 ## 在线预览
