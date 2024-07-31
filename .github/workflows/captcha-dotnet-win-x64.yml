@@ -1,4 +1,4 @@
-name: Release Windows x64 .NET Application
+name: Captcha Windows x64 .NET Application
 
 on:
   release:
@@ -55,12 +55,12 @@ jobs:
       - name: 压缩构建产物
         run: |
           # 将发布目录中的文件压缩为 zip 文件
-          Compress-Archive -Path src/Midjourney.Captcha.API/bin/Release/net8.0/win-x64/publish/* -DestinationPath "midjourney-proxy-win-x64-${{ github.event.release.tag_name }}.zip"
+          Compress-Archive -Path src/Midjourney.Captcha.API/bin/Release/net8.0/win-x64/publish/* -DestinationPath "midjourney-captcha-win-x64-${{ github.event.release.tag_name }}.zip"
 
       - name: 检查 ZIP 文件
         run: |
           echo "生成的 ZIP 文件："
-          dir midjourney-proxy-win-x64-${{ github.event.release.tag_name }}.zip
+          dir midjourney-captcha-win-x64-${{ github.event.release.tag_name }}.zip
 
       - name: 上传 ZIP 文件到 release
         uses: actions/upload-release-asset@v1  # 使用最新稳定版本
@@ -68,6 +68,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ github.event.release.upload_url }}
-          asset_path: "midjourney-proxy-win-x64-${{ github.event.release.tag_name }}.zip"
-          asset_name: "midjourney-proxy-win-x64-${{ github.event.release.tag_name }}.zip"
+          asset_path: "midjourney-captcha-win-x64-${{ github.event.release.tag_name }}.zip"
+          asset_name: "midjourney-captcha-win-x64-${{ github.event.release.tag_name }}.zip"
           asset_content_type: application/zip

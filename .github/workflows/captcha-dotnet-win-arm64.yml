@@ -1,4 +1,4 @@
-name: Release Windows arm64 .NET Application
+name: Captcha Windows arm64 .NET Application
 
 on:
   release:
