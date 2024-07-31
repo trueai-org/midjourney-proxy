@@ -20,5 +20,15 @@
         /// 回调地址, 为空时使用全局notifyHook。
         /// </summary>
         public string NotifyHook { get; set; }
+
+        /// <summary>
+        /// 是否验证成功
+        /// </summary>
+        public bool Success { get; set; }
+
+        /// <summary>
+        /// 消息
+        /// </summary>
+        public string Message { get; set; }
     }
 }

@@ -94,6 +94,9 @@ namespace Midjourney.Captcha.API.Controllers
                                         var success = await CloudflareHelper.Validate(_captchaOption, hash, url);
                                         if (success)
                                         {
+                                            request.Success = true;
+                                            request.Message = "CF 自动验证成功";
+
                                             // 通过验证
                                             // 通知最多重试 3 次
                                             var notifyHook = request.NotifyHook;
@@ -152,6 +155,52 @@ namespace Midjourney.Captcha.API.Controllers
                 finally
                 {
                     Log.Information("CF 验证最终结果 {@0}, {@1}", request, finSuccess);
+
+                    try
+                    {
+                        if (!finSuccess)
+                        {
+                            request.Success = false;
+                            request.Message = "CF 自动验证失败，请手动验证";
+
+                            // 通知服务器手动验证
+                            // 通过验证
+                            // 通知最多重试 3 次
+                            var notifyHook = request.NotifyHook;
+                            if (!string.IsNullOrWhiteSpace(notifyHook))
+                            {
+                                // 使用 reshshrp 通知 post 请求
+                                var notifyCount = 0;
+                                do
+                                {
+                                    if (notifyCount > 3)
+                                    {
+                                        break;
+                                    }
+                                    notifyCount++;
+
+                                    notifyHook = $"{notifyHook.Trim().TrimEnd('/')}/account-cf-notify";
+                                    var client = new RestClient();
+                                    var req = new RestRequest(notifyHook, Method.Post);
+                                    req.AddHeader("Content-Type", "application/json");
+                                    req.AddJsonBody(request, contentType: ContentType.Json);
+                                    var res = await client.ExecuteAsync(req);
+                                    if (res.StatusCode != System.Net.HttpStatusCode.OK)
+                                    {
+                                        Log.Error("通知失败 {@0} - {@1}", request, notifyHook);
+                                    }
+                                    else
+                                    {
+                                        break;
+                                    }
+                                } while (true);
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Error(ex, "通知服务器手动验证异常 {@0}", request);
+                    }
                 }
             });
 

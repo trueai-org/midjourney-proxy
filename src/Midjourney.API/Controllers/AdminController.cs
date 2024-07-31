@@ -109,11 +109,19 @@ namespace Midjourney.API.Controllers
                 var item = DbHelper.AccountStore.Get(request.State);
                 if (item != null && item.CfHashUrl == request.Url)
                 {
-                    item.Lock = false;
-                    item.CfHashUrl = null;
-                    item.CfHashCreated = null;
-                    item.CfUrl = null;
-                    item.DisabledReason = null;
+                    if (request.Success)
+                    {
+                        item.Lock = false;
+                        item.CfHashUrl = null;
+                        item.CfHashCreated = null;
+                        item.CfUrl = null;
+                        item.DisabledReason = null;
+                    }
+                    else
+                    {
+                        // 更新验证失败原因
+                        item.DisabledReason = request.Message;
+                    }
 
                     // 更新账号信息
                     DbHelper.AccountStore.Update(item);
