@@ -320,7 +320,9 @@ curl -o linux_install.sh https://raw.githubusercontent.com/trueai-org/midjourney
 
 仅支持 Windows 部署，由于 CloudFlare 验证器需要使用到 Chrome 浏览器，所以需要在 Windows 环境下部署，而在 Linux 环境下部署会依赖很多库，所以暂时不支持 Linux 部署。
 
-> `appsettings.json` 配置
+注意：自行部署需提供 2captcha.com 的 API Key，否则无法使用，价格：1000次/9元，官网：<https://2captcha.cn/p/cloudflare-turnstile>
+
+> `appsettings.json` 配置参考
 
 ```json
 {
