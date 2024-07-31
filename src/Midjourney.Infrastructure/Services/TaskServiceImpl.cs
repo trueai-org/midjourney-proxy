@@ -300,7 +300,8 @@ namespace Midjourney.Infrastructure.Services
                         InstanceId = task.InstanceId,
                         Prompt = prompt,
                         PromptEn = prompt,
-                        Status = TaskStatus.NOT_START
+                        Status = TaskStatus.NOT_START,
+                        Mode = task.Mode
                     };
 
                     subTask.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, discordInstance.GetInstanceId);
