@@ -102,6 +102,8 @@ namespace Midjourney.Captcha.API.Controllers
                                             var notifyHook = request.NotifyHook;
                                             if (!string.IsNullOrWhiteSpace(notifyHook))
                                             {
+                                                notifyHook = $"{notifyHook.Trim().TrimEnd('/')}/mj/admin/account-cf-notify";
+
                                                 // 使用 reshshrp 通知 post 请求
                                                 var notifyCount = 0;
                                                 do
@@ -111,7 +113,6 @@ namespace Midjourney.Captcha.API.Controllers
                                                         break;
                                                     }
 
-                                                    notifyHook = $"{notifyHook.Trim().TrimEnd('/')}/account-cf-notify";
                                                     var client = new RestClient();
                                                     var req = new RestRequest(notifyHook, Method.Post);
                                                     req.AddHeader("Content-Type", "application/json");
@@ -169,6 +170,8 @@ namespace Midjourney.Captcha.API.Controllers
                             var notifyHook = request.NotifyHook;
                             if (!string.IsNullOrWhiteSpace(notifyHook))
                             {
+                                notifyHook = $"{notifyHook.Trim().TrimEnd('/')}/mj/admin/account-cf-notify";
+
                                 // 使用 reshshrp 通知 post 请求
                                 var notifyCount = 0;
                                 do
@@ -179,7 +182,6 @@ namespace Midjourney.Captcha.API.Controllers
                                     }
                                     notifyCount++;
 
-                                    notifyHook = $"{notifyHook.Trim().TrimEnd('/')}/account-cf-notify";
                                     var client = new RestClient();
                                     var req = new RestRequest(notifyHook, Method.Post);
                                     req.AddHeader("Content-Type", "application/json");

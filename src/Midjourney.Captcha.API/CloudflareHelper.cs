@@ -216,7 +216,7 @@ namespace Midjourney.Captcha.API
                 Log.Information("CF 验证 Token: {@0}", token);
 
                 // 提交到 mj 服务器
-                if (string.IsNullOrWhiteSpace(token))
+                if (!string.IsNullOrWhiteSpace(token))
                 {
                     var retry = 0;
                     do
