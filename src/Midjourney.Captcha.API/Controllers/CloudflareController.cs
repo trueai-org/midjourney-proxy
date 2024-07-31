@@ -124,6 +124,9 @@ namespace Midjourney.Captcha.API.Controllers
                                                     }
                                                     else
                                                     {
+                                                        // 通知成功
+                                                        Log.Information("通知成功 {@0} - {@1}", request, notifyHook);
+
                                                         finSuccess = true;
                                                         break;
                                                     }
@@ -193,6 +196,8 @@ namespace Midjourney.Captcha.API.Controllers
                                     }
                                     else
                                     {
+                                        // 通知请手动验证成功
+                                        Log.Information("通知成功 {@0} - {@1}", request, notifyHook);
                                         break;
                                     }
                                 } while (true);
