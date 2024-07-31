@@ -315,6 +315,7 @@ namespace Midjourney.API.Controllers
             item.CfHashUrl = null;
             item.CfHashCreated = null;
             item.CfUrl = null;
+            item.DisabledReason = null;
 
             // 更新账号信息
             DbHelper.AccountStore.Update(item);
