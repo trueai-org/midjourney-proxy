@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Midjourney.Infrastructure.Domain;
+using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.LoadBalancer;
 using Midjourney.Infrastructure.Services;
 using Midjourney.Infrastructure.StandardTable;
@@ -91,6 +92,38 @@ namespace Midjourney.API.Controllers
         [HttpPost("logout")]
         public ActionResult Logout()
         {
+            return Ok();
+        }
+
+        /// <summary>
+        /// CF 验证通过通知（允许匿名）
+        /// </summary>
+        /// <param name="request"></param>
+        /// <returns></returns>
+        [AllowAnonymous]
+        [HttpPost("account-cf-notify")]
+        public ActionResult Validate([FromBody] CaptchaVerfyRequest request)
+        {
+            if (!string.IsNullOrWhiteSpace(request.State) && !string.IsNullOrWhiteSpace(request.Url))
+            {
+                var item = DbHelper.AccountStore.Get(request.State);
+                if (item != null && item.CfHashUrl == request.Url)
+                {
+                    item.Lock = false;
+                    item.CfHashUrl = null;
+                    item.CfHashCreated = null;
+                    item.CfUrl = null;
+                    item.DisabledReason = null;
+
+                    // 更新账号信息
+                    DbHelper.AccountStore.Update(item);
+
+                    // 清空缓存
+                    var inc = _loadBalancer.GetDiscordInstance(item.ChannelId);
+                    inc?.ClearAccountCache(item.Id);
+                }
+            }
+
             return Ok();
         }
 

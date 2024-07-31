@@ -66,6 +66,16 @@ namespace Midjourney.Infrastructure
         /// 邮件发送配置
         /// </summary>
         public SmtpConfig Smtp { get; set; }
+
+        /// <summary>
+        /// CF 验证服务器地址
+        /// </summary>
+        public string CaptchaServer { get; set; }
+
+        /// <summary>
+        /// CF 验证通知地址（验证通过后的回调通知，默认就是你的当前域名）
+        /// </summary>
+        public string CaptchaNotifyHook { get; set; }
     }
 
     /// <summary>

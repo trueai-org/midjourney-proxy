@@ -12,9 +12,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "doc", "doc", "{D2283666-695
 		docs\api.md = docs\api.md
 		CHANGELOG.md = CHANGELOG.md
 		docs\discord-params.md = docs\discord-params.md
-		README.md = README.md
 		README.en.md = README.en.md
+		README.md = README.md
 	EndProjectSection
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Midjourney.Captcha.API", "src\Midjourney.Captcha.API\Midjourney.Captcha.API.csproj", "{13660D62-42AF-4019-BF88-90C0CF79A853}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -30,6 +32,10 @@ Global
 		{6812FA3A-CB56-42A2-BA01-3D31C36E0AFB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6812FA3A-CB56-42A2-BA01-3D31C36E0AFB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6812FA3A-CB56-42A2-BA01-3D31C36E0AFB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{13660D62-42AF-4019-BF88-90C0CF79A853}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{13660D62-42AF-4019-BF88-90C0CF79A853}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{13660D62-42AF-4019-BF88-90C0CF79A853}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{13660D62-42AF-4019-BF88-90C0CF79A853}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
