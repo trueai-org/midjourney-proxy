@@ -278,6 +278,10 @@ namespace Midjourney.API.Controllers
 
                             // 更新账号信息
                             DbHelper.AccountStore.Update(item);
+
+                            // 清空缓存
+                            var inc = _loadBalancer.GetDiscordInstance(item.ChannelId);
+                            inc?.ClearAccountCache(item.Id);
                         }
                     }
                 }
@@ -319,6 +323,10 @@ namespace Midjourney.API.Controllers
 
             // 更新账号信息
             DbHelper.AccountStore.Update(item);
+
+            // 清空缓存
+            var inc = _loadBalancer.GetDiscordInstance(item.ChannelId);
+            inc?.ClearAccountCache(item.Id);
 
             return Ok();
         }
