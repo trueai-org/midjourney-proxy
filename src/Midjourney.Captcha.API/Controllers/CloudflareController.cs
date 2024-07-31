@@ -94,6 +94,7 @@ namespace Midjourney.Captcha.API.Controllers
                                         var success = await CloudflareHelper.Validate(_captchaOption, hash, url);
                                         if (success)
                                         {
+                                            finSuccess = true;
                                             request.Success = true;
                                             request.Message = "CF 自动验证成功";
 
@@ -125,9 +126,7 @@ namespace Midjourney.Captcha.API.Controllers
                                                     else
                                                     {
                                                         // 通知成功
-                                                        Log.Information("通知成功 {@0} - {@1}", request, notifyHook);
-
-                                                        finSuccess = true;
+                                                        Log.Information("系统自动验证通过，通知成功 {@0} - {@1}", request, notifyHook);
                                                         break;
                                                     }
 
@@ -197,7 +196,7 @@ namespace Midjourney.Captcha.API.Controllers
                                     else
                                     {
                                         // 通知请手动验证成功
-                                        Log.Information("通知成功 {@0} - {@1}", request, notifyHook);
+                                        Log.Information("通知手动验证成功 {@0} - {@1}", request, notifyHook);
                                         break;
                                     }
                                 } while (true);
