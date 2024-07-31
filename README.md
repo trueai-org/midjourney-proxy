@@ -97,6 +97,8 @@
 
 > Docker 版本
 
+**注意：一定确认映射文件和路径不要出错⚠⚠**
+
 ```bash
 # 阿里云镜像（推荐国内使用）
 docker pull registry.cn-guangzhou.aliyuncs.com/trueai-org/midjourney-proxy
@@ -113,6 +115,7 @@ curl -o /root/mjopen/appsettings.Production.json https://raw.githubusercontent.c
 docker stop mjopen && docker rm mjopen
 
 # 3.启动新的 Docker 容器
+# 部署请删除 DEMO 变量，否则会进入演示模式
 docker run -m 1g --name mjopen -d --restart=always \
  -e DEMO=true \
  -p 8086:8080 --user root \
