@@ -204,6 +204,16 @@ namespace Midjourney.Infrastructure
         public string Sponsor { get; set; }
 
         /// <summary>
+        /// 排序
+        /// </summary>
+        public int Sort { get; set; }
+
+        /// <summary>
+        /// 任务执行间隔时间（秒，默认：1.2s）。
+        /// </summary>
+        public decimal Interval { get; set; } = 1.2m;
+
+        /// <summary>
         /// 权重
         /// </summary>
         public int Weight { get; set; }

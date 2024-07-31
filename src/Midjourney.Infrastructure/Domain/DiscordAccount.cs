@@ -97,6 +97,11 @@ namespace Midjourney.Infrastructure.Domain
         public int CoreSize { get; set; } = 3;
 
         /// <summary>
+        /// 任务执行间隔时间（秒，默认：1.2s）。
+        /// </summary>
+        public decimal Interval { get; set; } = 1.2m;
+
+        /// <summary>
         /// 等待队列长度。
         /// </summary>
         [Display(Name = "等待队列长度")]
@@ -138,8 +143,6 @@ namespace Midjourney.Infrastructure.Domain
         /// 排序
         /// </summary>
         public int Sort { get; set; }
-
-
 
         /// <summary>
         /// Remix 自动提交

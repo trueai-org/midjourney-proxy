@@ -202,6 +202,12 @@ namespace Midjourney.Infrastructure.LoadBalancer
                         break;
                     }
 
+                    var interval = Account.Interval;
+                    if (interval <= 1.2m)
+                    {
+                        interval = 1.2m;
+                    }
+
                     if (_queueTasks.TryPeek(out var info))
                     {
                         // 判断是否还有资源可用
@@ -215,13 +221,13 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                 // 如果是图生文操作
                                 if (info.Item1.GetProperty<string>(Constants.TASK_PROPERTY_CUSTOM_ID, default)?.Contains("PicReader") == true)
                                 {
-                                    // 批量任务操作提交间隔 8s
-                                    Thread.Sleep(8000);
+                                    // 批量任务操作提交间隔 1.2s + 6.8s
+                                    Thread.Sleep((int)(interval * 1000) + 6800);
                                 }
                                 else
                                 {
                                     // 任务提交间隔 1.2s
-                                    Thread.Sleep(1200);
+                                    Thread.Sleep((int)(interval * 1000));
                                 }
                             }
                         }

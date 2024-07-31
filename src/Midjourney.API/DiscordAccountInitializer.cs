@@ -103,7 +103,9 @@ namespace Midjourney.API
                         Weight = configAccount.Weight,
                         Remark = configAccount.Remark,
                         RemixAutoSubmit = configAccount.RemixAutoSubmit,
-                        Sponsor = configAccount.Sponsor
+                        Sponsor = configAccount.Sponsor,
+                        Sort = configAccount.Sort,
+                        Interval = configAccount.Interval
                     };
 
                     db.Add(account);
@@ -189,6 +191,7 @@ namespace Midjourney.API
             model.CfHashUrl = null;
             model.CfUrl = null;
 
+            model.Interval = param.Interval;
             model.Sort = param.Sort;
             model.Enable = param.Enable;
             model.PrivateChannelId = param.PrivateChannelId;
