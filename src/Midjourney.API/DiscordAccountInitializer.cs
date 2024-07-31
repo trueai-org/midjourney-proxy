@@ -83,6 +83,11 @@ namespace Midjourney.API
                 var account = accounts.FirstOrDefault(c => c.ChannelId == configAccount.ChannelId);
                 if (account == null)
                 {
+                    if (configAccount.Interval < 1.2m)
+                    {
+                        configAccount.Interval = 1.2m;
+                    }
+
                     account = new DiscordAccount
                     {
                         Id = configAccount.ChannelId,
@@ -190,6 +195,11 @@ namespace Midjourney.API
             model.CfHashCreated = null;
             model.CfHashUrl = null;
             model.CfUrl = null;
+
+            if (param.Interval < 1.2m)
+            {
+                param.Interval = 1.2m;
+            }
 
             model.Interval = param.Interval;
             model.Sort = param.Sort;
