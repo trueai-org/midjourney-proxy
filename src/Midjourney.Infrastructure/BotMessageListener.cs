@@ -304,7 +304,7 @@ namespace Midjourney.Infrastructure
 
                                                     _logger.Information($"{Account.ChannelId}, CF 真人验证 URL: {url}");
 
-                                                    Account.CfUrl = hashUrl;
+                                                    Account.CfUrl = url;
                                            
                                                     // 发送邮件
                                                     EmailJob.Instance.EmailSend(_properties.Smtp, $"CF真人验证-{Account.ChannelId}", url);
