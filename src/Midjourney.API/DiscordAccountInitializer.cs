@@ -64,7 +64,7 @@ namespace Midjourney.API
             }
 
             var db = DbHelper.AccountStore;
-            var accounts = db.GetAll();
+            var accounts = db.GetAll().OrderBy(c => c.Sort).ToList();
 
             // 将启动配置中的 account 添加到数据库
             var configAccounts = _properties.Accounts.ToList();
