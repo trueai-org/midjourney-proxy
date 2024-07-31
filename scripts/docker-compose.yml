@@ -1,0 +1,19 @@
+version: '3'
+services:
+  mjopen:
+    image: registry.cn-guangzhou.aliyuncs.com/trueai-org/midjourney-proxy
+    container_name: mjopen
+    restart: always
+    environment:
+      - DEMO=true
+      - TZ=Asia/Shanghai
+    ports:
+      - "8086:8080"
+    volumes:
+      - /root/mjopen/logs:/app/logs:rw
+      - /root/mjopen/data:/app/data:rw
+      - /root/mjopen/attachments:/app/wwwroot/attachments:rw
+      - /root/mjopen/ephemeral-attachments:/app/wwwroot/ephemeral-attachments:rw
+      - /root/mjopen/appsettings.Production.json:/app/appsettings.Production.json:ro
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
