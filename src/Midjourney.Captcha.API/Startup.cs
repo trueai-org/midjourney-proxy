@@ -97,6 +97,9 @@ namespace Midjourney.Captcha.API
                     c.IncludeXmlComments(xmlPath, true);
                 }
             });
+
+            // 注册 BrowserDownloadService
+            services.AddHostedService<BrowserDownloadService>();
         }
 
         public void Configure(IApplicationBuilder app, IHostEnvironment env)

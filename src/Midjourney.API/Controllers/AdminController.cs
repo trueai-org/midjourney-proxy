@@ -107,7 +107,7 @@ namespace Midjourney.API.Controllers
             if (!string.IsNullOrWhiteSpace(request.State) && !string.IsNullOrWhiteSpace(request.Url))
             {
                 var item = DbHelper.AccountStore.Get(request.State);
-                if (item != null && item.CfHashUrl == request.Url)
+                if (item != null && item.CfHashUrl == request.Url && item.Lock)
                 {
                     if (request.Success)
                     {

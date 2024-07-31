@@ -12,6 +12,28 @@ namespace Midjourney.Captcha.API
     /// </summary>
     public class CloudflareHelper
     {
+        // 定义支持异步锁
+        private static readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
+
+        /// <summary>
+        /// 下载浏览器
+        /// </summary>
+        /// <returns></returns>
+        public static async Task DownloadBrowser()
+        {
+            try
+            {
+                await _semaphore.WaitAsync();
+
+                // 下载并设置浏览器
+                await new BrowserFetcher().DownloadAsync();
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
+        }
+
         /// <summary>
         /// 验证 URL 模拟人机验证
         /// </summary>
@@ -26,11 +48,7 @@ namespace Midjourney.Captcha.API
 
             try
             {
-                // 下载日志
-                Log.Information("CF 验证, 正在下载浏览器 URL: {@0}", url);
-
-                // 下载并设置浏览器
-                await new BrowserFetcher().DownloadAsync();
+                await DownloadBrowser();
 
                 // 启动浏览器
                 browser = await Puppeteer.LaunchAsync(new LaunchOptions
