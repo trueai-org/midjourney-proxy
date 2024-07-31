@@ -127,13 +127,13 @@ docker run -m 1g --name mjopen -d --restart=always \
  registry.cn-guangzhou.aliyuncs.com/trueai-org/midjourney-proxy
 
 # 生产环境启动配置示例
-docker run --name mjproxy -d --restart=always \
- -p 8088:8080 --user root \
- -v /root/mjproxy/logs:/app/logs:rw \
- -v /root/mjproxy/data:/app/data:rw \
- -v /root/mjproxy/attachments:/app/wwwroot/attachments:rw \
- -v /root/mjproxy/ephemeral-attachments:/app/wwwroot/ephemeral-attachments:rw \
- -v /root/mjproxy/appsettings.Production.json:/app/appsettings.Production.json:ro \
+docker run --name mjopen -d --restart=always \
+ -p 8086:8080 --user root \
+ -v /root/mjopen/logs:/app/logs:rw \
+ -v /root/mjopen/data:/app/data:rw \
+ -v /root/mjopen/attachments:/app/wwwroot/attachments:rw \
+ -v /root/mjopen/ephemeral-attachments:/app/wwwroot/ephemeral-attachments:rw \
+ -v /root/mjopen/appsettings.Production.json:/app/appsettings.Production.json:ro \
  -e TZ=Asia/Shanghai \
  -v /etc/localtime:/etc/localtime:ro \
  -v /etc/timezone:/etc/timezone:ro \
@@ -141,13 +141,13 @@ docker run --name mjproxy -d --restart=always \
 
 # GitHub 镜像
 docker pull ghcr.io/trueai-org/midjourney-proxy
-docker run --name mjproxy -d --restart=always \
- -p 8088:8080 --user root \
- -v /root/mjproxy/logs:/app/logs:rw \
- -v /root/mjproxy/data:/app/data:rw \
- -v /root/mjproxy/attachments:/app/wwwroot/attachments:rw \
- -v /root/mjproxy/ephemeral-attachments:/app/wwwroot/ephemeral-attachments:rw \
- -v /root/mjproxy/appsettings.Production.json:/app/appsettings.Production.json:ro \
+docker run --name mjopen -d --restart=always \
+ -p 8086:8080 --user root \
+ -v /root/mjopen/logs:/app/logs:rw \
+ -v /root/mjopen/data:/app/data:rw \
+ -v /root/mjopen/attachments:/app/wwwroot/attachments:rw \
+ -v /root/mjopen/ephemeral-attachments:/app/wwwroot/ephemeral-attachments:rw \
+ -v /root/mjopen/appsettings.Production.json:/app/appsettings.Production.json:ro \
  -e TZ=Asia/Shanghai \
  -v /etc/localtime:/etc/localtime:ro \
  -v /etc/timezone:/etc/timezone:ro \
@@ -155,13 +155,13 @@ docker run --name mjproxy -d --restart=always \
 
 # DockerHub 镜像
 docker pull trueaiorg/midjourney-proxy
-docker run --name mjproxy -d --restart=always \
- -p 8088:8080 --user root \
- -v /root/mjproxy/logs:/app/logs:rw \
- -v /root/mjproxy/data:/app/data:rw \
- -v /root/mjproxy/attachments:/app/wwwroot/attachments:rw \
- -v /root/mjproxy/ephemeral-attachments:/app/wwwroot/ephemeral-attachments:rw \
- -v /root/mjproxy/appsettings.Production.json:/app/appsettings.Production.json:ro \
+docker run --name mjopen -d --restart=always \
+ -p 8086:8080 --user root \
+ -v /root/mjopen/logs:/app/logs:rw \
+ -v /root/mjopen/data:/app/data:rw \
+ -v /root/mjopen/attachments:/app/wwwroot/attachments:rw \
+ -v /root/mjopen/ephemeral-attachments:/app/wwwroot/ephemeral-attachments:rw \
+ -v /root/mjopen/appsettings.Production.json:/app/appsettings.Production.json:ro \
  -e TZ=Asia/Shanghai \
  -v /etc/localtime:/etc/localtime:ro \
  -v /etc/timezone:/etc/timezone:ro \
