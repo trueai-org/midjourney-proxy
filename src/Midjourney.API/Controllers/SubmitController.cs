@@ -14,6 +14,9 @@ namespace Midjourney.API.Controllers
     /// </summary>
     [ApiController]
     [Route("mj/submit")]
+    [Route("mj-fast/mj/submit")]
+    [Route("mj-turbo/mj/submit")]
+    [Route("mj-relax/mj/submit")]
     public class SubmitController : ControllerBase
     {
         private readonly ITranslateService _translateService;
@@ -24,6 +27,8 @@ namespace Midjourney.API.Controllers
         private readonly ITaskService _taskService;
         private readonly ILogger<SubmitController> _logger;
         private readonly string _ip;
+
+        private readonly GenerationSpeedMode? _mode;
 
         public SubmitController(
             ITranslateService translateService,
@@ -42,6 +47,18 @@ namespace Midjourney.API.Controllers
             _discordHelper = discordHelper;
 
             _ip = httpContextAccessor.HttpContext.Request.GetIP();
+
+            var mode = httpContextAccessor.HttpContext.Items["Mode"]?.ToString();
+            if (!string.IsNullOrWhiteSpace(mode))
+            {
+                _mode = mode switch
+                {
+                    "turbo" => GenerationSpeedMode.TURBO,
+                    "relax" => GenerationSpeedMode.RELAX,
+                    "fast" => GenerationSpeedMode.FAST,
+                    _ => null
+                };
+            }
         }
 
         /// <summary>
@@ -494,8 +511,19 @@ namespace Midjourney.API.Controllers
                 SubmitTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
                 State = baseDTO.State,
                 Status = TaskStatus.NOT_START,
-                ClientIp = _ip
+                ClientIp = _ip,
+                Mode = _mode
             };
+
+            if (_mode != null)
+            {
+                task.AccountFilter ??= new AccountFilter();
+
+                if (!task.AccountFilter.Modes.Contains(_mode.Value))
+                {
+                    task.AccountFilter.Modes.Add(_mode.Value);
+                }
+            }
 
             var notifyHook = string.IsNullOrWhiteSpace(baseDTO.NotifyHook) ? _properties.NotifyHook : baseDTO.NotifyHook;
             task.SetProperty(Constants.TASK_PROPERTY_NOTIFY_HOOK, notifyHook);

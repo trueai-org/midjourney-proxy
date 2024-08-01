@@ -66,11 +66,23 @@ namespace Midjourney.Infrastructure.LoadBalancer
         }
 
         /// <summary>
-        /// 获取指定ID的实例。
+        /// 获取指定ID的实例（不判断是否存活）
         /// </summary>
         /// <param name="instanceId">实例ID。</param>
         /// <returns>实例。</returns>
         public IDiscordInstance GetDiscordInstance(string instanceId)
+        {
+            return string.IsNullOrWhiteSpace(instanceId)
+                ? null
+                : _instances.FirstOrDefault(instance => instance.GetInstanceId == instanceId);
+        }
+
+        /// <summary>
+        /// 获取指定ID的实例（不判断是否存活）
+        /// </summary>
+        /// <param name="instanceId">实例ID。</param>
+        /// <returns>实例。</returns>
+        public IDiscordInstance GetDiscordInstanceIsAlive(string instanceId)
         {
             return string.IsNullOrWhiteSpace(instanceId)
                 ? null

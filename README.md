@@ -54,8 +54,11 @@
 - [x] 支持 BOOKMARK 等指令
 - [x] 支持指定实例绘图，支持过滤指定速度的账号绘图，支持过滤 `remix` 模式账号绘图等，详情参考 Swagger `accountFilter` 字段
 - [x] 逆向根据 job id 或 图片生成系统任务信息
-- [x] cloudflare 真人验证，触发后自动锁定账号，并通知客户点击链接即可过人机验证，需配置邮件通知（BETA）
-- [ ] cloudflare 自动过真人验证（BETA）
+- [x] 支持账号排序、并行数、队列数、最大队列数、任务执行间隔等配置
+- [x] 支持客户端路径指定模式，默认地址例子 https://{BASE_URL}/mj/submit/imagine, /mj-turbo/mj 是 turbo mode, /mj-relax/mj 是 relax mode, /mj-fast/mj 是 fast mode, /mj 不指定模式
+- [x] CloudFlare 手动真人验证，触发后自动锁定账号，通过 GUI 直接验证或通过邮件通知验证
+- [x] [⚠⚠暂不稳定] CloudFlare 自动真人验证，配置验证服务器地址（自动验证器仅支持 Windows 部署）
+- [x] 支持工作时间段配置，连续 24 小时不间断绘图可能会触发警告，建议休息 6~8 小时，示例：`09:10-23:55, 13:00-08:10`
 
 ## 在线预览
 
@@ -66,6 +69,8 @@
 - 公益接口：<https://ai.trueai.org/mj>
 - 接口文档：<https://ai.trueai.org/swagger>
 - 接口密钥：`无`
+- CF 自动验证服务器地址：<http://47.76.110.222:8081>
+- CF 自动验证服务器文档：<http://47.76.110.222:8081/swagger>
 
 ## 预览截图
 
@@ -95,6 +100,8 @@
 
 > Docker 版本
 
+**注意：一定确认映射文件和路径不要出错⚠⚠**
+
 ```bash
 # 阿里云镜像（推荐国内使用）
 docker pull registry.cn-guangzhou.aliyuncs.com/trueai-org/midjourney-proxy
@@ -111,6 +118,7 @@ curl -o /root/mjopen/appsettings.Production.json https://raw.githubusercontent.c
 docker stop mjopen && docker rm mjopen
 
 # 3.启动新的 Docker 容器
+# 部署请删除 DEMO 变量，否则会进入演示模式
 docker run -m 1g --name mjopen -d --restart=always \
  -e DEMO=true \
  -p 8086:8080 --user root \
@@ -125,13 +133,13 @@ docker run -m 1g --name mjopen -d --restart=always \
  registry.cn-guangzhou.aliyuncs.com/trueai-org/midjourney-proxy
 
 # 生产环境启动配置示例
-docker run --name mjproxy -d --restart=always \
- -p 8088:8080 --user root \
- -v /root/mjproxy/logs:/app/logs:rw \
- -v /root/mjproxy/data:/app/data:rw \
- -v /root/mjproxy/attachments:/app/wwwroot/attachments:rw \
- -v /root/mjproxy/ephemeral-attachments:/app/wwwroot/ephemeral-attachments:rw \
- -v /root/mjproxy/appsettings.Production.json:/app/appsettings.Production.json:ro \
+docker run --name mjopen -d --restart=always \
+ -p 8086:8080 --user root \
+ -v /root/mjopen/logs:/app/logs:rw \
+ -v /root/mjopen/data:/app/data:rw \
+ -v /root/mjopen/attachments:/app/wwwroot/attachments:rw \
+ -v /root/mjopen/ephemeral-attachments:/app/wwwroot/ephemeral-attachments:rw \
+ -v /root/mjopen/appsettings.Production.json:/app/appsettings.Production.json:ro \
  -e TZ=Asia/Shanghai \
  -v /etc/localtime:/etc/localtime:ro \
  -v /etc/timezone:/etc/timezone:ro \
@@ -139,13 +147,13 @@ docker run --name mjproxy -d --restart=always \
 
 # GitHub 镜像
 docker pull ghcr.io/trueai-org/midjourney-proxy
-docker run --name mjproxy -d --restart=always \
- -p 8088:8080 --user root \
- -v /root/mjproxy/logs:/app/logs:rw \
- -v /root/mjproxy/data:/app/data:rw \
- -v /root/mjproxy/attachments:/app/wwwroot/attachments:rw \
- -v /root/mjproxy/ephemeral-attachments:/app/wwwroot/ephemeral-attachments:rw \
- -v /root/mjproxy/appsettings.Production.json:/app/appsettings.Production.json:ro \
+docker run --name mjopen -d --restart=always \
+ -p 8086:8080 --user root \
+ -v /root/mjopen/logs:/app/logs:rw \
+ -v /root/mjopen/data:/app/data:rw \
+ -v /root/mjopen/attachments:/app/wwwroot/attachments:rw \
+ -v /root/mjopen/ephemeral-attachments:/app/wwwroot/ephemeral-attachments:rw \
+ -v /root/mjopen/appsettings.Production.json:/app/appsettings.Production.json:ro \
  -e TZ=Asia/Shanghai \
  -v /etc/localtime:/etc/localtime:ro \
  -v /etc/timezone:/etc/timezone:ro \
@@ -153,13 +161,13 @@ docker run --name mjproxy -d --restart=always \
 
 # DockerHub 镜像
 docker pull trueaiorg/midjourney-proxy
-docker run --name mjproxy -d --restart=always \
- -p 8088:8080 --user root \
- -v /root/mjproxy/logs:/app/logs:rw \
- -v /root/mjproxy/data:/app/data:rw \
- -v /root/mjproxy/attachments:/app/wwwroot/attachments:rw \
- -v /root/mjproxy/ephemeral-attachments:/app/wwwroot/ephemeral-attachments:rw \
- -v /root/mjproxy/appsettings.Production.json:/app/appsettings.Production.json:ro \
+docker run --name mjopen -d --restart=always \
+ -p 8086:8080 --user root \
+ -v /root/mjopen/logs:/app/logs:rw \
+ -v /root/mjopen/data:/app/data:rw \
+ -v /root/mjopen/attachments:/app/wwwroot/attachments:rw \
+ -v /root/mjopen/ephemeral-attachments:/app/wwwroot/ephemeral-attachments:rw \
+ -v /root/mjopen/appsettings.Production.json:/app/appsettings.Production.json:ro \
  -e TZ=Asia/Shanghai \
  -v /etc/localtime:/etc/localtime:ro \
  -v /etc/timezone:/etc/timezone:ro \
@@ -269,7 +277,9 @@ curl -o linux_install.sh https://raw.githubusercontent.com/trueai-org/midjourney
       "FromEmail": "system@***.org", // 发件人邮箱地址
       "FromPassword": "", // 你的邮箱密码或应用专用密码
       "To": "" // 收件人
-    }
+    },
+    "CaptchaServer": "", // CF 验证服务器地址
+    "CaptchaNotifyHook": "" // CF 验证通知地址（验证通过后的回调通知，默认就是你的当前域名）
   },
   "Serilog": {
     "MinimumLevel": {
@@ -305,6 +315,28 @@ curl -o linux_install.sh https://raw.githubusercontent.com/trueai-org/midjourney
   "AllowedHosts": "*",
   "urls": "http://*:8080" // 默认端口
 }
+```
+
+## CloudFlare 验证器部署
+
+仅支持 Windows 部署，由于 CloudFlare 验证器需要使用到 Chrome 浏览器，所以需要在 Windows 环境下部署，而在 Linux 环境下部署会依赖很多库，所以暂时不支持 Linux 部署。
+
+注意：自行部署需提供 2captcha.com 的 API Key，否则无法使用，价格：1000次/9元，官网：<https://2captcha.cn/p/cloudflare-turnstile>
+
+提示：首次启动会下载 Chrome 浏览器，会比较慢，请耐心等待。
+
+> `appsettings.json` 配置参考
+
+```json
+{
+  "Demo": null, // 网站配置为演示模式
+  "Captcha": {
+    "Headless": true, // chrome 是否后台运行
+    "TwoCaptchaKey": "" // 2captcha.com 的 API Key
+  },
+  "urls": "http://*:8081" // 默认端口
+}
+
 ```
 
 ## 机器人 Token（必须配置）
@@ -356,10 +388,11 @@ https://discord.com/oauth2/authorize?client_id=xxx&permissions=8&scope=bot
 - [ ] 支付接入支持、支持微信、支付宝，支持绘图定价策略等
 - [ ] 增加公告功能
 - [ ] 账号增加咸鱼模式/放松模式，避免高频作业（此模式下不可创建新的绘图，仍可以执行其他命令，可以配置为多个时间段或定时等策略）
-- [ ] 增加强制休眠模式，或定时休眠模式
-- [ ] 关于触发 mj cf 真人验证问题处理
 - [ ] 图生文 seed 值处理
 - [ ] 自动读私信消息
+- [ ] 增加允许速度模式配置
+- [ ] 服务重启后，如果有未启动的任务，则加入到执行的队列中
+- [ ] 允许共享频道或子频道绘画，即便账号被封，也可以继续之前的绘画，将被封的账号频道作为正常账号的子频道即可，保存永久邀请链接，和子频道链接，支持批量修改，可直接输入邀请链接，或共享频道地址，系统自动加入频道转换。或者通过转交所有权实现。
 
 ## 支持与赞助
 

@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Linq.Expressions;
 using System.Text.RegularExpressions;
+using static Org.BouncyCastle.Math.EC.ECCurve;
 
 namespace Midjourney.Infrastructure
 {
@@ -275,5 +276,82 @@ namespace Midjourney.Infrastructure
         {
             return long.TryParse(value, out long result) ? result : 0;
         }
+
+        /// <summary>
+        /// 时间段输入解析
+        /// 格式为 "HH:mm-HH:mm, HH:mm-HH:mm, ..."，例如 "09:00-17:00, 18:00-22:00"
+        /// </summary>
+        /// <param name="input"></param>
+        /// <returns></returns>
+        public static List<TimeSlot> ToTimeSlots(this string input)
+        {
+            var timeSlots = new List<TimeSlot>();
+            var slots = input.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+
+            foreach (var slot in slots)
+            {
+                var times = slot.Trim().Split('-');
+                if (times.Length == 2 && TimeSpan.TryParse(times[0], out var start) && TimeSpan.TryParse(times[1], out var end))
+                {
+                    timeSlots.Add(new TimeSlot { Start = start, End = end });
+                }
+            }
+
+            return timeSlots;
+        }
+
+        /// <summary>
+        /// 判断是否在工作时间内
+        /// </summary>
+        /// <param name="dateTime"></param>
+        /// <param name="input"></param>
+        /// <returns></returns>
+        public static bool IsInWorkTime(this DateTime dateTime, string input)
+        {
+            var currentTime = dateTime.TimeOfDay;
+            if (string.IsNullOrWhiteSpace(input))
+            {
+                return true;
+            }
+
+            var ts = input.ToTimeSlots();
+            foreach (var slot in ts)
+            {
+                if (slot.Start <= slot.End)
+                {
+                    // 正常时间段：例如 09:00-17:00
+                    if (currentTime >= slot.Start && currentTime <= slot.End)
+                    {
+                        return true;
+                    }
+                }
+                else
+                {
+                    // 跨越午夜的时间段：例如 23:00-02:00
+                    if (currentTime >= slot.Start || currentTime <= slot.End)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// 时间段解析
+    /// </summary>
+    public class TimeSlot
+    {
+        /// <summary>
+        /// 当天开始时间
+        /// </summary>
+        public TimeSpan Start { get; set; }
+
+        /// <summary>
+        /// 当天结束时间
+        /// </summary>
+        public TimeSpan End { get; set; }
     }
 }

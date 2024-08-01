@@ -1,9 +1,11 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Midjourney.Infrastructure.Domain;
+using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.LoadBalancer;
 using Midjourney.Infrastructure.Services;
 using Midjourney.Infrastructure.StandardTable;
+using System.Text.Json;
 
 namespace Midjourney.API.Controllers
 {
@@ -90,6 +92,46 @@ namespace Midjourney.API.Controllers
         [HttpPost("logout")]
         public ActionResult Logout()
         {
+            return Ok();
+        }
+
+        /// <summary>
+        /// CF 验证通过通知（允许匿名）
+        /// </summary>
+        /// <param name="request"></param>
+        /// <returns></returns>
+        [AllowAnonymous]
+        [HttpPost("account-cf-notify")]
+        public ActionResult Validate([FromBody] CaptchaVerfyRequest request)
+        {
+            if (!string.IsNullOrWhiteSpace(request.State) && !string.IsNullOrWhiteSpace(request.Url))
+            {
+                var item = DbHelper.AccountStore.Get(request.State);
+                if (item != null && item.CfHashUrl == request.Url && item.Lock)
+                {
+                    if (request.Success)
+                    {
+                        item.Lock = false;
+                        item.CfHashUrl = null;
+                        item.CfHashCreated = null;
+                        item.CfUrl = null;
+                        item.DisabledReason = null;
+                    }
+                    else
+                    {
+                        // 更新验证失败原因
+                        item.DisabledReason = request.Message;
+                    }
+
+                    // 更新账号信息
+                    DbHelper.AccountStore.Update(item);
+
+                    // 清空缓存
+                    var inc = _loadBalancer.GetDiscordInstance(item.ChannelId);
+                    inc?.ClearAccountCache(item.Id);
+                }
+            }
+
             return Ok();
         }
 
@@ -223,6 +265,118 @@ namespace Midjourney.API.Controllers
         }
 
         /// <summary>
+        /// 获取 cf 真人验证链接
+        /// </summary>
+        /// <param name="id"></param>
+        /// <param name="refresh">是否获取新链接</param>
+        /// <returns></returns>
+        /// <exception cref="LogicException"></exception>
+        [HttpGet("account-cf/{id}")]
+        public async Task<Result<DiscordAccount>> CfUrlValidate(string id, [FromQuery] bool refresh = false)
+        {
+            if (_isAnonymous)
+            {
+                throw new LogicException("演示模式，禁止操作");
+            }
+
+            var item = DbHelper.AccountStore.Get(id);
+            if (item == null)
+            {
+                throw new LogicException("账号不存在");
+            }
+
+            if (!item.Lock || string.IsNullOrWhiteSpace(item.CfHashUrl))
+            {
+                throw new LogicException("CF 验证链接不存在");
+            }
+
+            // 发送 hashUrl GET 请求, 返回 {"hash":"OOUxejO94EQNxsCODRVPbg","token":"dXDm-gSb4Zlsx-PCkNVyhQ"}
+            // 通过 hash 和 token 拼接验证 CF 验证 URL
+
+            if (refresh)
+            {
+                var httpClient = new HttpClient();
+                var hashUrl = item.CfHashUrl;
+                var response = await httpClient.GetAsync(hashUrl);
+                var con = await response.Content.ReadAsStringAsync();
+                if (!string.IsNullOrWhiteSpace(con))
+                {
+                    // 解析
+                    var json = JsonSerializer.Deserialize<JsonElement>(con);
+                    if (json.TryGetProperty("hash", out var h) && json.TryGetProperty("token", out var to))
+                    {
+                        var hashStr = h.GetString();
+                        var token = to.GetString();
+
+                        if (!string.IsNullOrWhiteSpace(hashStr) && !string.IsNullOrWhiteSpace(token))
+                        {
+                            // 通过 hash 和 token 拼接验证 CF 验证 URL
+                            // https://editor.midjourney.com/captcha/challenge/index.html?hash=OOUxejO94EQNxsCODRVPbg&token=dXDm-gSb4Zlsx-PCkNVyhQ
+
+                            var url = $"https://editor.midjourney.com/captcha/challenge/index.html?hash={hashStr}&token={token}";
+
+                            item.CfUrl = url;
+
+                            // 更新账号信息
+                            DbHelper.AccountStore.Update(item);
+
+                            // 清空缓存
+                            var inc = _loadBalancer.GetDiscordInstance(item.ChannelId);
+                            inc?.ClearAccountCache(item.Id);
+                        }
+                    }
+                    else
+                    {
+                        throw new LogicException("生成链接失败");
+                    }
+                }
+            }
+
+            return Result.Ok(item);
+        }
+
+        /// <summary>
+        /// CF 验证标记完成
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        /// <exception cref="LogicException"></exception>
+        [HttpPost("account-cf/{id}")]
+        public Result CfUrlValidateOK(string id)
+        {
+            if (_isAnonymous)
+            {
+                throw new LogicException("演示模式，禁止操作");
+            }
+
+            var item = DbHelper.AccountStore.Get(id);
+            if (item == null)
+            {
+                throw new LogicException("账号不存在");
+            }
+
+            //if (!item.Lock)
+            //{
+            //    throw new LogicException("不需要 CF 验证");
+            //}
+
+            item.Lock = false;
+            item.CfHashUrl = null;
+            item.CfHashCreated = null;
+            item.CfUrl = null;
+            item.DisabledReason = null;
+
+            // 更新账号信息
+            DbHelper.AccountStore.Update(item);
+
+            // 清空缓存
+            var inc = _loadBalancer.GetDiscordInstance(item.ChannelId);
+            inc?.ClearAccountCache(item.Id);
+
+            return Result.Ok();
+        }
+
+        /// <summary>
         /// 修改版本
         /// </summary>
         /// <param name="id"></param>
@@ -285,29 +439,30 @@ namespace Midjourney.API.Controllers
         /// <summary>
         /// 编辑账号
         /// </summary>
-        /// <param name="account"></param>
+        /// <param name="param"></param>
         /// <returns></returns>
         [HttpPut("account/{id}")]
-        public Result AccountEdit([FromBody] DiscordAccount account)
+        public Result AccountEdit([FromBody] DiscordAccount param)
         {
             if (_isAnonymous)
             {
                 return Result.Fail("演示模式，禁止操作");
             }
 
-            var model = DbHelper.AccountStore.Get(account.Id);
+            var model = DbHelper.AccountStore.Get(param.Id);
             if (model == null)
             {
                 throw new LogicException("账号不存在");
             }
 
-            model.NijiBotChannelId = account.NijiBotChannelId;
-            model.PrivateChannelId = account.PrivateChannelId;
-            model.RemixAutoSubmit = account.RemixAutoSubmit;
-            model.TimeoutMinutes = account.TimeoutMinutes;
-            model.Weight = account.Weight;
-            model.Remark = account.Remark;
-            model.Sponsor = account.Sponsor;
+            model.NijiBotChannelId = param.NijiBotChannelId;
+            model.PrivateChannelId = param.PrivateChannelId;
+            model.RemixAutoSubmit = param.RemixAutoSubmit;
+            model.TimeoutMinutes = param.TimeoutMinutes;
+            model.Weight = param.Weight;
+            model.Remark = param.Remark;
+            model.Sponsor = param.Sponsor;
+            model.Sort = param.Sort;
 
             _discordAccountInitializer.UpdateAccount(model);
             return Result.Ok();
@@ -317,29 +472,30 @@ namespace Midjourney.API.Controllers
         /// 更新账号并重新连接
         /// </summary>
         /// <param name="id"></param>
-        /// <param name="account"></param>
+        /// <param name="param"></param>
         /// <returns></returns>
         [HttpPut("account-reconnect/{id}")]
-        public async Task<Result> AccountReconnect(string id, [FromBody] DiscordAccount account)
+        public async Task<Result> AccountReconnect(string id, [FromBody] DiscordAccount param)
         {
             if (_isAnonymous)
             {
                 return Result.Fail("演示模式，禁止操作");
             }
 
-            var model = DbHelper.AccountStore.Get(account.Id);
+            var model = DbHelper.AccountStore.Get(param.Id);
             if (model == null)
             {
                 throw new LogicException("账号不存在");
             }
 
             // 不可修改频道 ID
-            if (id != account.ChannelId || account.GuildId != model.GuildId || account.ChannelId != model.ChannelId)
+            if (id != param.ChannelId || param.GuildId != model.GuildId || param.ChannelId != model.ChannelId)
             {
                 return Result.Fail("禁止修改频道 ID 和服务器 ID");
             }
 
-            await _discordAccountInitializer.ReconnectAccount(account);
+            await _discordAccountInitializer.ReconnectAccount(param);
+
             return Result.Ok();
         }
 
@@ -367,7 +523,7 @@ namespace Midjourney.API.Controllers
         public ActionResult<List<DiscordAccount>> List()
         {
             var db = DbHelper.AccountStore;
-            var data = db.GetAll().ToList();
+            var data = db.GetAll().OrderBy(c => c.Sort).ThenBy(c => c.DateCreated).ToList();
 
             foreach (var item in data)
             {
@@ -382,6 +538,9 @@ namespace Midjourney.API.Controllers
                     // Token 加密
                     item.UserToken = item.UserToken?.Substring(0, 4) + "****" + item.UserToken?.Substring(item.UserToken.Length - 4);
                     item.BotToken = item.BotToken?.Substring(0, 4) + "****" + item.BotToken?.Substring(item.BotToken.Length - 4);
+
+                    item.CfUrl = item.CfUrl?.Substring(0, item.CfUrl.Length / 2) + "****";
+                    item.CfHashUrl = item.CfHashUrl?.Substring(0, item.CfHashUrl.Length / 2) + "****";
                 }
             }
 

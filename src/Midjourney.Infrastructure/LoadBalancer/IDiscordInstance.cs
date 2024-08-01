@@ -13,7 +13,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <param name="prompt">提示词。</param>
         /// <param name="nonce">随机字符串。</param>
         /// <returns>提交结果消息。</returns>
-        Task<Message> ImagineAsync(string prompt, string nonce, EBotType botType);
+        Task<Message> ImagineAsync(TaskInfo info, string prompt, string nonce, EBotType botType);
 
         /// <summary>
         /// 提交放大任务。
@@ -81,7 +81,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <param name="prompt"></param>
         /// <param name="nonce"></param>
         /// <returns></returns>
-        Task<Message> ZoomAsync(string messageId, string customId, string prompt, string nonce, EBotType botType);
+        Task<Message> ZoomAsync(TaskInfo info, string messageId, string customId, string prompt, string nonce, EBotType botType);
 
         /// <summary>
         /// 图生文 - 生图
@@ -92,7 +92,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <param name="nonce"></param>
         /// <param name="botType"></param>
         /// <returns></returns>
-        Task<Message> PicReaderAsync(string messageId, string customId, string prompt, string nonce, EBotType botType);
+        Task<Message> PicReaderAsync(TaskInfo info, string messageId, string customId, string prompt, string nonce, EBotType botType);
 
         /// <summary>
         /// Remix 操作
@@ -104,7 +104,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <param name="nonce"></param>
         /// <param name="botType"></param>
         /// <returns></returns>
-        Task<Message> RemixAsync(TaskAction action, string messageId, string modal, string customId, string prompt, string nonce, EBotType botType);
+        Task<Message> RemixAsync(TaskInfo info, TaskAction action, string messageId, string modal, string customId, string prompt, string nonce, EBotType botType);
 
         /// <summary>
         /// 执行 info 操作
@@ -153,7 +153,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <param name="prompt"></param>
         /// <param name="maskBase64"></param>
         /// <returns></returns>
-        Task<Message> InpaintAsync(string customId, string prompt, string maskBase64, EBotType botType);
+        Task<Message> InpaintAsync(TaskInfo info, string customId, string prompt, string maskBase64, EBotType botType);
 
         /// <summary>
         /// 提交描述任务。
@@ -194,6 +194,12 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <param name="lastMessageId"></param>
         /// <returns></returns>
         Task<Message> ReadMessageAsync(string lastMessageId);
+
+        /// <summary>
+        /// 清理账号缓存
+        /// </summary>
+        /// <param name="id"></param>
+        void ClearAccountCache(string id);
 
         /// <summary>
         /// 获取Discord账号信息。

@@ -76,10 +76,30 @@ namespace Midjourney.Infrastructure.Domain
         public string DisabledReason { get; set; }
 
         /// <summary>
+        /// 真人验证 hash url 创建时间
+        /// </summary>
+        public DateTime? CfHashCreated { get; set; }
+
+        /// <summary>
+        /// 真人验证 hash Url
+        /// </summary>
+        public string CfHashUrl { get; set; }
+
+        /// <summary>
+        /// 真人验证 Url
+        /// </summary>
+        public string CfUrl { get; set; }
+
+        /// <summary>
         /// 并发数。
         /// </summary>
         [Display(Name = "并发数")]
         public int CoreSize { get; set; } = 3;
+
+        /// <summary>
+        /// 任务执行间隔时间（秒，默认：1.2s）。
+        /// </summary>
+        public decimal Interval { get; set; } = 1.2m;
 
         /// <summary>
         /// 等待队列长度。
@@ -118,6 +138,16 @@ namespace Midjourney.Infrastructure.Domain
         /// 权重
         /// </summary>
         public int Weight { get; set; }
+
+        /// <summary>
+        /// 工作时间
+        /// </summary>
+        public string WorkTime { get; set; }
+
+        /// <summary>
+        /// 排序
+        /// </summary>
+        public int Sort { get; set; }
 
         /// <summary>
         /// Remix 自动提交

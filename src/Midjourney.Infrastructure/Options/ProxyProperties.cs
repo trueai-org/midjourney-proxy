@@ -66,6 +66,16 @@ namespace Midjourney.Infrastructure
         /// 邮件发送配置
         /// </summary>
         public SmtpConfig Smtp { get; set; }
+
+        /// <summary>
+        /// CF 验证服务器地址
+        /// </summary>
+        public string CaptchaServer { get; set; }
+
+        /// <summary>
+        /// CF 验证通知地址（验证通过后的回调通知，默认就是你的当前域名）
+        /// </summary>
+        public string CaptchaNotifyHook { get; set; }
     }
 
     /// <summary>
@@ -202,6 +212,21 @@ namespace Midjourney.Infrastructure
         /// 赞助商（富文本）
         /// </summary>
         public string Sponsor { get; set; }
+
+        /// <summary>
+        /// 排序
+        /// </summary>
+        public int Sort { get; set; }
+
+        /// <summary>
+        /// 任务执行间隔时间（秒，默认：1.2s）。
+        /// </summary>
+        public decimal Interval { get; set; } = 1.2m;
+
+        /// <summary>
+        /// 工作时间
+        /// </summary>
+        public string WorkTime { get; set; }
 
         /// <summary>
         /// 权重

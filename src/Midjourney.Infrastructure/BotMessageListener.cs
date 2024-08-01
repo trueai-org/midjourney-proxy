@@ -4,9 +4,11 @@ using Discord.Net.Rest;
 using Discord.Net.WebSockets;
 using Discord.WebSocket;
 using Midjourney.Infrastructure.Domain;
+using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.Handle;
 using Midjourney.Infrastructure.LoadBalancer;
 using Midjourney.Infrastructure.Util;
+using RestSharp;
 using Serilog;
 using System.Net;
 using System.Text.Json;
@@ -251,7 +253,7 @@ namespace Midjourney.Infrastructure
                     {
                         if (t.GetString() == "Action required to continue")
                         {
-                            _logger.Warning("CF 验证 {@0}, {@1}", Account.ChannelId, raw.ToJson());
+                            _logger.Warning("CF 验证 {@0}, {@1}", Account.ChannelId, raw.ToString());
 
                             // 全局锁定中
                             // 等待人工处理或者自动处理
@@ -260,61 +262,120 @@ namespace Midjourney.Infrastructure
                             {
                                 try
                                 {
-                                    // 验证中，处于锁定模式
-                                    Account.DisabledReason = "CF 验证中...";
-                                    Account.Lock = true;
-
-                                    DbHelper.AccountStore.Save(Account);
-                                    _discordInstance.ClearAccountCache(Account.Id);
-
                                     var custom_id = data.TryGetProperty("custom_id", out var c) ? c.GetString() : string.Empty;
                                     var application_id = data.TryGetProperty("application", out var a) && a.TryGetProperty("id", out var id) ? id.GetString() : string.Empty;
-
                                     if (!string.IsNullOrWhiteSpace(custom_id) && !string.IsNullOrWhiteSpace(application_id))
                                     {
+                                        Account.Lock = true;
+
                                         // MJ::iframe::U3NmeM-lDTrmTCN_QY5n4DXvjrQRPGOZrQiLa-fT9y3siLA2AGjhj37IjzCqCtVzthUhGBj4KKqNSntQ
                                         var hash = custom_id.Split("::").LastOrDefault();
                                         var hashUrl = $"https://{application_id}.discordsays.com/captcha/api/c/{hash}/ack?hash=1";
 
-                                        // 发送 hashUrl GET 请求, 返回 {"hash":"OOUxejO94EQNxsCODRVPbg","token":"dXDm-gSb4Zlsx-PCkNVyhQ"}
-                                        // 通过 hash 和 token 拼接验证 CF 验证 URL
+                                        // 验证中，处于锁定模式
+                                        Account.DisabledReason = "CF 自动验证中...";
+                                        Account.CfHashUrl = hashUrl;
+                                        Account.CfHashCreated = DateTime.Now;
 
-                                        var httpClient = new HttpClient();
-                                        var response = httpClient.GetAsync(hashUrl).Result;
-                                        var con = response.Content.ReadAsStringAsync().Result;
-                                        if (!string.IsNullOrWhiteSpace(con))
+                                        DbHelper.AccountStore.Save(Account);
+                                        _discordInstance.ClearAccountCache(Account.Id);
+
+                                        try
                                         {
-                                            // 解析
-                                            var json = JsonSerializer.Deserialize<JsonElement>(con);
-                                            if (json.TryGetProperty("hash", out var h) && json.TryGetProperty("token", out var to))
+                                            // 通知验证服务器
+                                            if (!string.IsNullOrWhiteSpace(_properties.CaptchaNotifyHook) && !string.IsNullOrWhiteSpace(_properties.CaptchaServer))
                                             {
-                                                var hashStr = h.GetString();
-                                                var token = to.GetString();
-
-                                                if (!string.IsNullOrWhiteSpace(hashStr) && !string.IsNullOrWhiteSpace(token))
+                                                // 使用 restsharp 通知，最多 3 次
+                                                var notifyCount = 0;
+                                                do
                                                 {
-                                                    // 发送验证 URL
-                                                    // 通过 hash 和 token 拼接验证 CF 验证 URL
-                                                    // https://editor.midjourney.com/captcha/challenge/index.html?hash=OOUxejO94EQNxsCODRVPbg&token=dXDm-gSb4Zlsx-PCkNVyhQ
+                                                    if (notifyCount > 3)
+                                                    {
+                                                        break;
+                                                    }
 
-                                                    var url = $"https://editor.midjourney.com/captcha/challenge/index.html?hash={hashStr}&token={token}";
+                                                    notifyCount++;
+                                                    var notifyUrl = $"{_properties.CaptchaServer.Trim().TrimEnd('/')}/cf/verify";
+                                                    var client = new RestClient();
+                                                    var request = new RestRequest(notifyUrl, Method.Post);
+                                                    request.AddHeader("Content-Type", "application/json");
+                                                    var body = new CaptchaVerfyRequest
+                                                    {
+                                                        Url = hashUrl,
+                                                        State = Account.ChannelId,
+                                                        NotifyHook = _properties.CaptchaNotifyHook
+                                                    };
+                                                    var json = Newtonsoft.Json.JsonConvert.SerializeObject(body);
+                                                    request.AddJsonBody(json);
+                                                    var response = client.Execute(request);
+                                                    if (response.StatusCode == System.Net.HttpStatusCode.OK)
+                                                    {
+                                                        // 已通知自动验证服务器
+                                                        _logger.Information("CF 验证，已通知服务器 {@0}, {@1}", Account.ChannelId, hashUrl);
 
-                                                    _logger.Information($"{Account.ChannelId}, CF 真人验证 URL: {url}");
+                                                        break;
+                                                    }
 
-                                                    // 发送邮件
-                                                    EmailJob.Instance.EmailSend(_properties.Smtp, $"CF真人验证-{Account.ChannelId}", url);
-                                                }
+                                                    Thread.Sleep(1000);
+                                                } while (true);
                                             }
+                                            else
+                                            {
+                                                // 发送 hashUrl GET 请求, 返回 {"hash":"OOUxejO94EQNxsCODRVPbg","token":"dXDm-gSb4Zlsx-PCkNVyhQ"}
+                                                // 通过 hash 和 token 拼接验证 CF 验证 URL
+
+                                                var httpClient = new HttpClient();
+                                                var response = httpClient.GetAsync(hashUrl).Result;
+                                                var con = response.Content.ReadAsStringAsync().Result;
+                                                if (!string.IsNullOrWhiteSpace(con))
+                                                {
+                                                    // 解析
+                                                    var json = JsonSerializer.Deserialize<JsonElement>(con);
+                                                    if (json.TryGetProperty("hash", out var h) && json.TryGetProperty("token", out var to))
+                                                    {
+                                                        var hashStr = h.GetString();
+                                                        var token = to.GetString();
+
+                                                        if (!string.IsNullOrWhiteSpace(hashStr) && !string.IsNullOrWhiteSpace(token))
+                                                        {
+                                                            // 发送验证 URL
+                                                            // 通过 hash 和 token 拼接验证 CF 验证 URL
+                                                            // https://editor.midjourney.com/captcha/challenge/index.html?hash=OOUxejO94EQNxsCODRVPbg&token=dXDm-gSb4Zlsx-PCkNVyhQ
+
+                                                            var url = $"https://editor.midjourney.com/captcha/challenge/index.html?hash={hashStr}&token={token}";
+
+                                                            _logger.Information($"{Account.ChannelId}, CF 真人验证 URL: {url}");
+
+                                                            Account.CfUrl = url;
+
+                                                            try
+                                                            {
+                                                                // 发送邮件
+                                                                EmailJob.Instance.EmailSend(_properties.Smtp, $"CF真人验证-{Account.ChannelId}", url);
+                                                            }
+                                                            catch (Exception ex)
+                                                            {
+                                                                _logger.Error(ex, "邮件发送异常");
+                                                            }
+                                                        }
+                                                    }
+                                                }
+
+                                                Account.DisabledReason = "CF 人工验证...";
+
+                                                DbHelper.AccountStore.Save(Account);
+                                                _discordInstance.ClearAccountCache(Account.Id);
+                                            }
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            _logger.Error(ex, "CF 真人验证处理失败 {@0}", Account.ChannelId);
                                         }
                                     }
                                 }
                                 catch (Exception ex)
                                 {
                                     _logger.Error(ex, "CF 真人验证处理异常 {@0}", Account.ChannelId);
-                                }
-                                finally
-                                {
-                                    // TODO 最终处理结果
                                 }
                             });
 
@@ -438,11 +499,13 @@ namespace Midjourney.Infrastructure
                         {
                             Account.NijiComponents = eventData.Components;
                             DbHelper.AccountStore.Update(Account);
+                            _discordInstance.ClearAccountCache(Account.Id);
                         }
                         else if (applicationId == Constants.MJ_APPLICATION_ID)
                         {
                             Account.Components = eventData.Components;
                             DbHelper.AccountStore.Update(Account);
+                            _discordInstance.ClearAccountCache(Account.Id);
                         }
                     }
                 }
@@ -683,7 +746,7 @@ namespace Midjourney.Infrastructure
                                                 Account.DisabledReason = "账号用量已经用完";
 
                                                 DbHelper.AccountStore.Save(Account);
-
+                                                _discordInstance?.ClearAccountCache(Account.Id);
                                                 _discordInstance?.Dispose();
                                             }
                                             catch (Exception ex)
@@ -727,6 +790,7 @@ namespace Midjourney.Infrastructure
 
                                                 DbHelper.AccountStore.Save(Account);
 
+                                                _discordInstance?.ClearAccountCache(Account.Id);
                                                 _discordInstance?.Dispose();
                                             }
                                             catch (Exception ex)
@@ -830,6 +894,7 @@ namespace Midjourney.Infrastructure
 
                                             var db = DbHelper.AccountStore;
                                             db.Update(Account);
+                                            _discordInstance?.ClearAccountCache(Account.Id);
                                         }
                                     }
                                 }
@@ -849,6 +914,7 @@ namespace Midjourney.Infrastructure
                                     Account.NijiSettingsMessageId = id;
 
                                     DbHelper.AccountStore.Update(Account);
+                                    _discordInstance?.ClearAccountCache(Account.Id);
                                 }
                                 else if (applicationId == Constants.MJ_APPLICATION_ID)
                                 {
@@ -856,6 +922,7 @@ namespace Midjourney.Infrastructure
                                     Account.SettingsMessageId = id;
 
                                     DbHelper.AccountStore.Update(Account);
+                                    _discordInstance?.ClearAccountCache(Account.Id);
                                 }
                             }
 
