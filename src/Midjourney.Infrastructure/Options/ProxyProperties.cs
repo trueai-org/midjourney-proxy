@@ -204,6 +204,11 @@ namespace Midjourney.Infrastructure
         public GenerationSpeedMode? Mode { get; set; }
 
         /// <summary>
+        /// 允许速度模式（如果出现不允许的速度模式，将会自动清除关键词）
+        /// </summary>
+        public List<GenerationSpeedMode> AllowModes { get; set; } = new List<GenerationSpeedMode>();
+
+        /// <summary>
         /// 备注
         /// </summary>
         public string Remark { get; set; }

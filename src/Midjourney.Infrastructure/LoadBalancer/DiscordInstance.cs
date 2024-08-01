@@ -994,7 +994,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
             prompt = prompt.Replace(" -- ", " ")
                 .Replace("  ", " ").Replace("  ", " ").Replace("  ", " ").Trim();
 
-            if (info != null)
+            // 任务指定速度模式
+            if (info != null && info.Mode != null)
             {
                 // 移除 prompt 可能的的参数
                 prompt = prompt.Replace("--fast", "").Replace("--relax", "").Replace("--turbo", "");
@@ -1022,6 +1023,32 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 }
             }
 
+            // 允许速度模式
+            if (Account.AllowModes?.Count > 0)
+            {
+                // 计算不允许的速度模式，并删除相关参数
+                var notAllowModes = new List<string>();
+                if (!Account.AllowModes.Contains(GenerationSpeedMode.RELAX))
+                {
+                    notAllowModes.Add("--relax");
+                }
+                if (!Account.AllowModes.Contains(GenerationSpeedMode.FAST))
+                {
+                    notAllowModes.Add("--fast");
+                }
+                if (!Account.AllowModes.Contains(GenerationSpeedMode.TURBO))
+                {
+                    notAllowModes.Add("--turbo");
+                }
+
+                // 移除 prompt 可能的的参数
+                foreach (var mode in notAllowModes)
+                {
+                    prompt = prompt.Replace(mode, "");
+                }
+            }
+
+            // 指定生成速度模式
             if (Account.Mode != null)
             {
                 // 移除 prompt 可能的的参数
