@@ -2,6 +2,8 @@
 using Midjourney.Infrastructure.Domain;
 using Midjourney.Infrastructure.LoadBalancer;
 using Midjourney.Infrastructure.Services;
+using Midjourney.Infrastructure.Util;
+using MimeKit;
 using Serilog;
 
 using ILogger = Serilog.ILogger;
@@ -19,6 +21,8 @@ namespace Midjourney.API
         private readonly ProxyProperties _properties;
         private readonly ILogger _logger;
 
+        private readonly SemaphoreSlim _semaphoreSlim = new(1, 1);
+        private Timer _timer;
 
         public DiscordAccountInitializer(
             DiscordLoadBalancer discordLoadBalancer,
@@ -40,20 +44,6 @@ namespace Midjourney.API
         /// <param name="cancellationToken">取消令牌。</param>
         public async Task StartAsync(CancellationToken cancellationToken)
         {
-            _ = Task.Run(async () =>
-            {
-                await Initialize();
-            });
-
-            await Task.CompletedTask;
-        }
-
-        /// <summary>
-        /// 初始化所有账号
-        /// </summary>
-        /// <returns></returns>
-        public async Task Initialize(params DiscordAccountConfig[] appends)
-        {
             var proxy = _properties.Proxy;
             if (!string.IsNullOrEmpty(proxy.Host))
             {
@@ -63,103 +53,169 @@ namespace Midjourney.API
                 Environment.SetEnvironmentVariable("https_proxyPort", proxy.Port.ToString());
             }
 
-            var db = DbHelper.AccountStore;
-            var accounts = db.GetAll().OrderBy(c => c.Sort).ToList();
+            _timer = new Timer(DoWork, null, TimeSpan.Zero, TimeSpan.FromMinutes(1));
 
-            // 将启动配置中的 account 添加到数据库
-            var configAccounts = _properties.Accounts.ToList();
-            if (!string.IsNullOrEmpty(_properties.Discord.ChannelId))
+            await Task.CompletedTask;
+        }
+
+        private async void DoWork(object state)
+        {
+            if (_semaphoreSlim.CurrentCount == 0)
             {
-                configAccounts.Add(_properties.Discord);
+                return;
             }
 
-            if (appends?.Length > 0)
-            {
-                configAccounts.AddRange(appends);
-            }
+            await _semaphoreSlim.WaitAsync();
 
-            foreach (var configAccount in configAccounts)
+            try
             {
-                var account = accounts.FirstOrDefault(c => c.ChannelId == configAccount.ChannelId);
-                if (account == null)
+                _logger.Information("开始例行检查");
+
+                await Initialize();
+
+                _logger.Information("例行检查完成");
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "执行例行检查时发生异常");
+            }
+            finally
+            {
+                _semaphoreSlim.Release();
+            }
+        }
+
+        /// <summary>
+        /// 初始化所有账号
+        /// </summary>
+        /// <returns></returns>
+        public async Task Initialize(params DiscordAccountConfig[] appends)
+        {
+            var isLock = LocalLock.TryLock("Initialize", TimeSpan.FromSeconds(10), async () =>
+            {
+                var proxy = _properties.Proxy;
+                var db = DbHelper.AccountStore;
+                var accounts = db.GetAll().OrderBy(c => c.Sort).ToList();
+
+                // 将启动配置中的 account 添加到数据库
+                var configAccounts = _properties.Accounts.ToList();
+                if (!string.IsNullOrEmpty(_properties.Discord.ChannelId))
                 {
-                    if (configAccount.Interval < 1.2m)
+                    configAccounts.Add(_properties.Discord);
+                }
+
+                if (appends?.Length > 0)
+                {
+                    configAccounts.AddRange(appends);
+                }
+
+                foreach (var configAccount in configAccounts)
+                {
+                    var account = accounts.FirstOrDefault(c => c.ChannelId == configAccount.ChannelId);
+                    if (account == null)
                     {
-                        configAccount.Interval = 1.2m;
+                        if (configAccount.Interval < 1.2m)
+                        {
+                            configAccount.Interval = 1.2m;
+                        }
+
+                        account = new DiscordAccount
+                        {
+                            Id = configAccount.ChannelId,
+                            ChannelId = configAccount.ChannelId,
+
+                            GuildId = configAccount.GuildId,
+                            UserToken = configAccount.UserToken,
+                            UserAgent = string.IsNullOrEmpty(configAccount.UserAgent) ? Constants.DEFAULT_DISCORD_USER_AGENT : configAccount.UserAgent,
+                            Enable = configAccount.Enable,
+                            CoreSize = configAccount.CoreSize,
+                            QueueSize = configAccount.QueueSize,
+                            BotToken = configAccount.BotToken,
+                            TimeoutMinutes = configAccount.TimeoutMinutes,
+                            PrivateChannelId = configAccount.PrivateChannelId,
+                            NijiBotChannelId = configAccount.NijiBotChannelId,
+                            MaxQueueSize = configAccount.MaxQueueSize,
+                            Mode = configAccount.Mode,
+                            Weight = configAccount.Weight,
+                            Remark = configAccount.Remark,
+                            RemixAutoSubmit = configAccount.RemixAutoSubmit,
+                            Sponsor = configAccount.Sponsor,
+                            Sort = configAccount.Sort,
+                            Interval = configAccount.Interval,
+                            WorkTime = configAccount.WorkTime
+                        };
+
+                        db.Add(account);
+                        accounts.Add(account);
+                    }
+                }
+
+                var instances = _discordLoadBalancer.GetAllInstances();
+                foreach (var account in accounts)
+                {
+                    if (!account.Enable)
+                    {
+                        continue;
                     }
 
-                    account = new DiscordAccount
+                    IDiscordInstance disInstance = null;
+                    try
                     {
-                        Id = configAccount.ChannelId,
-                        ChannelId = configAccount.ChannelId,
+                        disInstance = _discordLoadBalancer.GetDiscordInstance(account.ChannelId);
 
-                        GuildId = configAccount.GuildId,
-                        UserToken = configAccount.UserToken,
-                        UserAgent = string.IsNullOrEmpty(configAccount.UserAgent) ? Constants.DEFAULT_DISCORD_USER_AGENT : configAccount.UserAgent,
-                        Enable = configAccount.Enable,
-                        CoreSize = configAccount.CoreSize,
-                        QueueSize = configAccount.QueueSize,
-                        BotToken = configAccount.BotToken,
-                        TimeoutMinutes = configAccount.TimeoutMinutes,
-                        PrivateChannelId = configAccount.PrivateChannelId,
-                        NijiBotChannelId = configAccount.NijiBotChannelId,
-                        MaxQueueSize = configAccount.MaxQueueSize,
-                        Mode = configAccount.Mode,
-                        Weight = configAccount.Weight,
-                        Remark = configAccount.Remark,
-                        RemixAutoSubmit = configAccount.RemixAutoSubmit,
-                        Sponsor = configAccount.Sponsor,
-                        Sort = configAccount.Sort,
-                        Interval = configAccount.Interval
-                    };
+                        // 判断是否在工作时间内
+                        if (DateTime.Now.IsInWorkTime(account.WorkTime))
+                        {
+                            if (disInstance == null)
+                            {
+                                disInstance = await _discordAccountHelper.CreateDiscordInstance(account);
+                                instances.Add(disInstance);
+                                _discordLoadBalancer.AddInstance(disInstance);
 
-                    db.Add(account);
-                    accounts.Add(account);
-                }
-            }
+                                // 这里应该等待初始化完成，并获取用户信息验证，获取用户成功后设置为可用状态
+                                // 多账号启动时，等待一段时间再启动下一个账号
+                                await Task.Delay(1000 * 5);
 
-            var instances = _discordLoadBalancer.GetAllInstances();
-            foreach (var account in accounts)
-            {
-                if (!account.Enable)
-                {
-                    continue;
-                }
+                                // 启动后执行 info setting 操作
+                                await _taskService.InfoSetting(account.ChannelId);
+                            }
+                        }
+                        else
+                        {
+                            // 非工作时间内，如果存在实例则释放
+                            if (disInstance != null)
+                            {
+                                _discordLoadBalancer.RemoveInstance(disInstance);
 
-                IDiscordInstance disInstance = null;
-                try
-                {
-                    disInstance = _discordLoadBalancer.GetDiscordInstance(account.ChannelId);
-                    if (disInstance == null)
+                                disInstance.Dispose();
+                            }
+                        }
+                    }
+                    catch (Exception ex)
                     {
-                        disInstance = await _discordAccountHelper.CreateDiscordInstance(account);
-                        instances.Add(disInstance);
-                        _discordLoadBalancer.AddInstance(disInstance);
+                        _logger.Error("Account({@0}) init fail, disabled: {@1}", account.GetDisplay(), ex.Message);
 
-                        // TODO 这里应该等待初始化完成，并获取用户信息验证，获取用户成功后设置为可用状态
-                        // 多账号启动时，等待一段时间再启动下一个账号
-                        await Task.Delay(1000 * 5);
+                        account.Enable = false;
+                        account.DisabledReason = "初始化失败";
 
-                        // 启动后执行 info setting 操作
-                        await _taskService.InfoSetting(account.ChannelId);
+                        db.Update(account);
+
+                        disInstance?.ClearAccountCache(account.Id);
                     }
                 }
-                catch (Exception ex)
-                {
-                    _logger.Error("Account({@0}) init fail, disabled: {@1}", account.GetDisplay(), ex.Message);
 
-                    account.Enable = false;
+                var enableInstanceIds = instances.Where(instance => instance.IsAlive)
+                    .Select(instance => instance.GetInstanceId)
+                    .ToHashSet();
 
-                    db.Update(account);
-                    disInstance?.ClearAccountCache(account.Id);
-                }
+                _logger.Information("当前可用账号数 [{@0}] - {@1}", enableInstanceIds.Count, string.Join(", ", enableInstanceIds));
+            });
+            if (!isLock)
+            {
+                throw new LogicException("初始化中，请稍后重拾");
             }
 
-            var enableInstanceIds = instances.Where(instance => instance.IsAlive)
-                .Select(instance => instance.GetInstanceId)
-                .ToHashSet();
-
-            _logger.Information("当前可用账号数 [{@0}] - {@1}", enableInstanceIds.Count, string.Join(", ", enableInstanceIds));
+            await Task.CompletedTask;
         }
 
         /// <summary>
@@ -196,11 +252,24 @@ namespace Midjourney.API
             model.CfHashUrl = null;
             model.CfUrl = null;
 
+
+            // 验证 Interval
             if (param.Interval < 1.2m)
             {
                 param.Interval = 1.2m;
             }
 
+            // 验证 WorkTime
+            if (!string.IsNullOrEmpty(param.WorkTime))
+            {
+                var ts = param.WorkTime.ToTimeSlots();
+                if (ts.Count == 0)
+                {
+                    param.WorkTime = null;
+                }
+            }
+
+            model.WorkTime = param.WorkTime;
             model.Interval = param.Interval;
             model.Sort = param.Sort;
             model.Enable = param.Enable;
@@ -282,9 +351,13 @@ namespace Midjourney.API
         /// </summary>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public Task StopAsync(CancellationToken cancellationToken)
+        public async Task StopAsync(CancellationToken cancellationToken)
         {
-            return Task.CompletedTask;
+            _logger.Information("例行检查服务已停止");
+
+            _timer?.Change(Timeout.Infinite, 0);
+            await _semaphoreSlim.WaitAsync();
+            _semaphoreSlim.Release();
         }
     }
 }

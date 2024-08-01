@@ -140,6 +140,11 @@ namespace Midjourney.Infrastructure.Domain
         public int Weight { get; set; }
 
         /// <summary>
+        /// 工作时间
+        /// </summary>
+        public string WorkTime { get; set; }
+
+        /// <summary>
         /// 排序
         /// </summary>
         public int Sort { get; set; }

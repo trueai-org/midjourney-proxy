@@ -58,6 +58,7 @@
 - [x] 支持客户端路径指定模式，默认地址例子 https://{BASE_URL}/mj/submit/imagine, /mj-turbo/mj 是 turbo mode, /mj-relax/mj 是 relax mode, /mj-fast/mj 是 fast mode, /mj 不指定模式
 - [x] CloudFlare 手动真人验证，触发后自动锁定账号，通过 GUI 直接验证或通过邮件通知验证
 - [x] [⚠⚠暂不稳定] CloudFlare 自动真人验证，配置验证服务器地址（自动验证器仅支持 Windows 部署）
+- [x] 支持工作时间段配置，24 小时不间断绘图可能会触发警告，建议休息 6~8 小时
 
 ## 在线预览
 
@@ -371,7 +372,6 @@ https://discord.com/oauth2/authorize?client_id=xxx&permissions=8&scope=bot
 
 ## 路线图
 
-- [ ] 工作时间段配置，非工作时间段释放连接，到了非工作时间自动释放，24 小时不间断作业将会触发警告
 - [ ] 优化指令和状态进度显示
 - [ ] 优化任务和队列满时的提醒
 - [ ] 优化共享账号的并发队列可能出现的问题
@@ -388,7 +388,6 @@ https://discord.com/oauth2/authorize?client_id=xxx&permissions=8&scope=bot
 - [ ] 支付接入支持、支持微信、支付宝，支持绘图定价策略等
 - [ ] 增加公告功能
 - [ ] 账号增加咸鱼模式/放松模式，避免高频作业（此模式下不可创建新的绘图，仍可以执行其他命令，可以配置为多个时间段或定时等策略）
-- [ ] 增加强制休眠模式，或定时休眠模式
 - [ ] 图生文 seed 值处理
 - [ ] 自动读私信消息
 - [ ] 增加允许速度模式配置

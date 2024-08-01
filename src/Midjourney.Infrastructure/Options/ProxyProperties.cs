@@ -224,6 +224,11 @@ namespace Midjourney.Infrastructure
         public decimal Interval { get; set; } = 1.2m;
 
         /// <summary>
+        /// 工作时间
+        /// </summary>
+        public string WorkTime { get; set; }
+
+        /// <summary>
         /// 权重
         /// </summary>
         public int Weight { get; set; }
