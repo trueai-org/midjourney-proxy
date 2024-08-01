@@ -15,7 +15,7 @@ namespace Midjourney.Infrastructure
         /// <summary>
         /// 版本号
         /// </summary>
-        public static string Version { get; set; } = "v2.8.13";
+        public static string Version { get; set; } = "v2.8.14";
 
         /// <summary>
         /// 判断是否是 Windows 系统

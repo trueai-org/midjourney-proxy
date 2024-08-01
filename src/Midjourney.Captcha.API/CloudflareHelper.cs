@@ -260,6 +260,7 @@ namespace Midjourney.Captcha.API
                         var response = await client.ExecuteAsync(request);
                         if (response.StatusCode == System.Net.HttpStatusCode.OK)
                         {
+                            Log.Information("CF 验证提交成功, 方法0, {@0}", submitUrl);
                             return true;
                         }
                         else
@@ -301,6 +302,8 @@ namespace Midjourney.Captcha.API
                             var response = await client.SendAsync(request);
                             if (response.IsSuccessStatusCode)
                             {
+                                Log.Information("CF 验证提交成功, 方法1, {@0}", submitUrl);
+
                                 return true;
                             }
                             else
@@ -351,6 +354,8 @@ namespace Midjourney.Captcha.API
                                 // 处理响应
                                 if (response.IsSuccessStatusCode)
                                 {
+                                    Log.Information("CF 验证提交成功, 方法2, {@0}", submitUrl);
+
                                     return true;
                                 }
                             }
