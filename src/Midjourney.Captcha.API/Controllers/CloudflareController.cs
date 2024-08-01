@@ -53,6 +53,7 @@ namespace Midjourney.Captcha.API.Controllers
                 try
                 {
                     // https://936929561302675456.discordsays.com/captcha/api/c/hIlZOI0ZQI3qQjpXhzS4GTgw_DuRTjYiyyww38dJuTzmqA8pa3OC60yTJbTmK6jd3i6Q0wZNxiuEp2dW/ack?hash=1
+                    // 此链接 30分钟内有效
                     var hashUrl = request.Url;
                     var hash = hashUrl?.Split('/').Where(c => !c.Contains("?")).OrderByDescending(c => c.Length).FirstOrDefault();
                     if (string.IsNullOrWhiteSpace(hash))
