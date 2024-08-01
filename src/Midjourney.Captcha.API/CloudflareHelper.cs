@@ -226,15 +226,28 @@ namespace Midjourney.Captcha.API
                             break;
                         }
                         retry++;
- 
+
+                        var submitUrl = $"https://editor.midjourney.com/captcha/api/c/{hash}/submit";
+
+                        Log.Information("CF 验证提交 第 {@1} 次, {@0}", retry, submitUrl);
+
                         var client = new RestClient();
-                        var request = new RestRequest($"https://editor.midjourney.com/captcha/api/c/{hash}/submit", Method.Post);
+                        var request = new RestRequest(submitUrl, Method.Post);
                         request.AlwaysMultipartFormData = true;
                         request.AddParameter("captcha_token", token);
+
+                        // Configurando o agente de usuário
+                        request.AddHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36");
+
                         var response = await client.ExecuteAsync(request);
                         if (response.StatusCode == System.Net.HttpStatusCode.OK)
                         {
                             return true;
+                        }
+                        else
+                        {
+                            // 记录错误
+                            Log.Error("CF 验证提交失败 {@0}, {@1}", submitUrl, response.Content);
                         }
                     } while (true);
                 }
