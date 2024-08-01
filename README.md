@@ -371,6 +371,7 @@ https://discord.com/oauth2/authorize?client_id=xxx&permissions=8&scope=bot
 
 ## 路线图
 
+- [ ] 工作时间段配置，非工作时间段释放连接，到了非工作时间自动释放，24 小时不间断作业将会触发警告
 - [ ] 优化指令和状态进度显示
 - [ ] 优化任务和队列满时的提醒
 - [ ] 优化共享账号的并发队列可能出现的问题
