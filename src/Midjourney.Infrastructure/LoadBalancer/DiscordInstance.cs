@@ -216,6 +216,14 @@ namespace Midjourney.Infrastructure.LoadBalancer
                             // 从队列中移除任务，并开始执行
                             if (_queueTasks.TryDequeue(out info))
                             {
+                                // 提交任务前间隔
+                                // 当一个作业完成后，是否先等待一段时间再提交下一个作业
+                                var sp = interval - 1.2m;
+                                if (sp > 0)
+                                {
+                                    Thread.Sleep((int)(sp * 1000));
+                                }
+
                                 _taskFutureMap[info.Item1.Id] = ExecuteTaskAsync(info.Item1, info.Item2);
 
                                 // 如果是图生文操作
@@ -226,7 +234,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                 }
                                 else
                                 {
-                                    // 任务提交间隔 1.2s
+                                    // 队列提交间隔
                                     Thread.Sleep((int)(interval * 1000));
                                 }
                             }
@@ -367,7 +375,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
             {
                 _semaphoreSlimLock.Wait();
                 _runningTasks.Add(info);
-
 
                 // 判断当前实例是否可用
                 if (!IsAlive)
