@@ -313,7 +313,29 @@ namespace Midjourney.Infrastructure
             {
                 return true;
             }
-            return input.ToTimeSlots().Any(slot => currentTime >= slot.Start && currentTime <= slot.End);
+
+            var ts = input.ToTimeSlots();
+            foreach (var slot in ts)
+            {
+                if (slot.Start <= slot.End)
+                {
+                    // 正常时间段：例如 09:00-17:00
+                    if (currentTime >= slot.Start && currentTime <= slot.End)
+                    {
+                        return true;
+                    }
+                }
+                else
+                {
+                    // 跨越午夜的时间段：例如 23:00-02:00
+                    if (currentTime >= slot.Start || currentTime <= slot.End)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
         }
     }
 
