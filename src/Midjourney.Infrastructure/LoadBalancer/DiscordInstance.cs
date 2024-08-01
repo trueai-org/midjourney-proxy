@@ -1339,7 +1339,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                 _logger.Warning("Http 请求执行失败 {@0}, {@1}, {@2}", paramsStr, response.StatusCode, response.Content);
 
-                return Message.Of((int)response.StatusCode, paramsStr.Substring(0, Math.Min(paramsStr.Length, 100)));
+                return Message.Of((int)response.StatusCode, paramsStr.Substring(0, Math.Min(paramsStr.Length, 1000)));
             }
             catch (HttpRequestException e)
             {
