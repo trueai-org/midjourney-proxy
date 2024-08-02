@@ -76,20 +76,23 @@ namespace Midjourney.Infrastructure
                 account.UserAgent = Constants.DEFAULT_DISCORD_USER_AGENT;
             }
 
+            // Bot 消息监听器
+            WebProxy webProxy = null;
+            if (!string.IsNullOrEmpty(_properties.Proxy?.Host))
+            {
+                webProxy = new WebProxy(_properties.Proxy.Host, _properties.Proxy.Port ?? 80);
+            }
+
             var discordInstance = new DiscordInstance(account,
                 _taskStoreService,
                 _notifyService,
                 _discordHelper,
-                _paramsMap);
+                _paramsMap,
+                webProxy);
 
             if (account.Enable)
             {
-                // Bot 消息监听器
-                WebProxy webProxy = null;
-                if (!string.IsNullOrEmpty(_properties.Proxy?.Host))
-                {
-                    webProxy = new WebProxy(_properties.Proxy.Host, _properties.Proxy.Port ?? 80);
-                }
+              
                 var messageListener = new BotMessageListener(_discordHelper, _properties, webProxy);
 
                 // 用户 WebSocket 连接

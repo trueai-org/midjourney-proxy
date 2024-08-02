@@ -6,6 +6,7 @@ using Newtonsoft.Json.Linq;
 using Serilog;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 
@@ -47,11 +48,18 @@ namespace Midjourney.Infrastructure.LoadBalancer
             ITaskStoreService taskStoreService,
             INotifyService notifyService,
             DiscordHelper discordHelper,
-            Dictionary<string, string> paramsMap)
+            Dictionary<string, string> paramsMap,
+            IWebProxy webProxy)
         {
-            _httpClient = new HttpClient()
+            var hch = new HttpClientHandler
             {
-                Timeout = TimeSpan.FromMinutes(10)
+                UseProxy = webProxy != null,
+                Proxy = webProxy
+            };
+
+            _httpClient = new HttpClient(hch)
+            {
+                Timeout = TimeSpan.FromMinutes(10),
             };
 
             _paramsMap = paramsMap;

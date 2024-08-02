@@ -1,6 +1,5 @@
 ﻿using Discord;
 using Discord.Commands;
-using Discord.Net.Rest;
 using Discord.Net.WebSockets;
 using Discord.WebSocket;
 using Midjourney.Infrastructure.Domain;
@@ -67,7 +66,7 @@ namespace Midjourney.Infrastructure
                 // you must set the MessageCacheSize. You may adjust the number as needed.
                 //MessageCacheSize = 50,
 
-                RestClientProvider = DefaultRestClientProvider.Create(true),
+                RestClientProvider = CustomRestClientProvider.Create(_webProxy, true), // DefaultRestClientProvider.Create(true),
                 WebSocketProvider = DefaultWebSocketProvider.Create(_webProxy),
 
                 // 读取消息权限 GatewayIntents.MessageContent
@@ -747,7 +746,7 @@ namespace Midjourney.Infrastructure
 
 
                                                 // 发送邮件
-                                                EmailJob.Instance.EmailSend(_properties.Smtp, $"MJ账号禁用通知-{Account.ChannelId}", 
+                                                EmailJob.Instance.EmailSend(_properties.Smtp, $"MJ账号禁用通知-{Account.ChannelId}",
                                                     $"{Account.ChannelId}, {Account.DisabledReason}");
                                             }
                                             catch (Exception ex)
