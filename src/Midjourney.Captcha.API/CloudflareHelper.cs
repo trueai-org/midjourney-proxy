@@ -260,7 +260,7 @@ namespace Midjourney.Captcha.API
                     // 如果是 200 或 404 则认为提交成功
                     if (response.StatusCode == System.Net.HttpStatusCode.OK || response.StatusCode == System.Net.HttpStatusCode.NotFound)
                     {
-                        Log.Information("CF 验证提交成功, {@0}, {@1}, {@}", submitUrl, response.StatusCode, response.Content);
+                        Log.Information("CF 验证提交成功, {@0}, {@1}, {@2}", submitUrl, response.StatusCode, response.Content);
                         return true;
                     }
                     else
