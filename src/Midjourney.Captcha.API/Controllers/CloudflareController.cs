@@ -64,8 +64,8 @@ namespace Midjourney.Captcha.API.Controllers
                     var retry = 0;
                     do
                     {
-                        // 最多 5 次重试
-                        if (finSuccess || retry > 5)
+                        // 最多执行 3 次
+                        if (finSuccess || retry >= 3)
                         {
                             break;
                         }
