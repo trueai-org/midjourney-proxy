@@ -252,8 +252,6 @@ namespace Midjourney.Captcha.API
                         var client = new RestClient(options);
                         var request = new RestRequest(submitUrl, Method.Post);
 
-                        request.AddHeader("origin", "https://editor.midjourney.com");
-
                         request.AlwaysMultipartFormData = true;
                         request.AddParameter("captcha_token", token);
 
@@ -295,7 +293,7 @@ namespace Midjourney.Captcha.API
                             {
                                 Content = requestContent
                             };
-                            request.Headers.Add("origin", "https://editor.midjourney.com");
+
                             request.Headers.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36");
 
                             var client = new HttpClient();
@@ -338,7 +336,6 @@ namespace Midjourney.Captcha.API
 
                             using (var client = new HttpClient())
                             {
-                                client.DefaultRequestHeaders.Add("origin", "https://editor.midjourney.com");
                                 client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36");
 
                                 // 创建 MultipartFormDataContent 对象
