@@ -72,11 +72,11 @@
 - CF 自动验证服务器地址：<http://47.76.110.222:8081>
 - CF 自动验证服务器文档：<http://47.76.110.222:8081/swagger>
 
-> CF 自动验证配置示例（免费过验证码）
+> CF 自动验证配置示例（免费自动过验证码）
 
 ```json
 "CaptchaServer": "http://47.76.110.222:8081",
-"CaptchaNotifyHook": "https://ai.trueai.org" // CF 验证通知地址（验证通过后的回调通知，默认就是你的当前域名）
+"CaptchaNotifyHook": "https://ai.trueai.org" // 通知回调，默认为当前域名
 ```
 
 ## 预览截图
