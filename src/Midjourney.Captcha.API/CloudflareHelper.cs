@@ -120,6 +120,10 @@ namespace Midjourney.Captcha.API
 
                 // 日志
                 Log.Information("CF 验证 SiteKey: {@0}", siteKey);
+                if (string.IsNullOrWhiteSpace(siteKey))
+                {
+                    return false;
+                }
 
                 var taskId = string.Empty;
                 var taskCount = 0;
@@ -169,6 +173,10 @@ namespace Midjourney.Captcha.API
 
                 // 日志
                 Log.Information("CF 验证 TaskId: {@0}", taskId);
+                if (string.IsNullOrWhiteSpace(taskId))
+                {
+                    return false;
+                }
 
                 // 等待
                 await Task.Delay(6000);
@@ -214,43 +222,154 @@ namespace Midjourney.Captcha.API
 
                 // 日志
                 Log.Information("CF 验证 Token: {@0}", token);
-
-                // 提交到 mj 服务器
-                if (!string.IsNullOrWhiteSpace(token))
+                if (string.IsNullOrWhiteSpace(token))
                 {
-                    var retry = 0;
-                    do
-                    {
-                        if (retry > 3)
-                        {
-                            break;
-                        }
-                        retry++;
-
-                        var submitUrl = $"https://editor.midjourney.com/captcha/api/c/{hash}/submit";
-
-                        Log.Information("CF 验证提交 第 {@1} 次, {@0}", retry, submitUrl);
-
-                        var client = new RestClient();
-                        var request = new RestRequest(submitUrl, Method.Post);
-                        request.AlwaysMultipartFormData = true;
-                        request.AddParameter("captcha_token", token);
-
-                        // Configurando o agente de usuário
-                        request.AddHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36");
-
-                        var response = await client.ExecuteAsync(request);
-                        if (response.StatusCode == System.Net.HttpStatusCode.OK)
-                        {
-                            return true;
-                        }
-                        else
-                        {
-                            // 记录错误
-                            Log.Error("CF 验证提交失败 {@0}, {@1}", submitUrl, response.Content);
-                        }
-                    } while (true);
+                    return false;
                 }
+
+                var submitUrl = $"https://editor.midjourney.com/captcha/api/c/{hash}/submit";
+
+                try
+                {
+                    // 只提交一次
+                    // 提交到 mj 服务器
+                    //var retry = 0;
+                    //do
+                    //{
+                    //    if (retry > 3)
+                    //    {
+                    //        break;
+                    //    }
+                    //    retry++;
+                    //    Log.Information("CF 验证提交 第 {@1} 次, {@0}", retry, submitUrl);
+                    //} while (true);
+
+                    var options = new RestClientOptions()
+                    {
+                        MaxTimeout = -1,
+                        UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36",
+                    };
+                    var client = new RestClient(options);
+                    var request = new RestRequest(submitUrl, Method.Post);
+
+                    request.AlwaysMultipartFormData = true;
+                    request.AddParameter("captcha_token", token);
+
+                    var response = await client.ExecuteAsync(request);
+
+                    // 如果是 200 或 404 则认为提交成功
+                    if (response.StatusCode == System.Net.HttpStatusCode.OK || response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                    {
+                        Log.Information("CF 验证提交成功, {@0}, {@1}, {@2}", submitUrl, response.StatusCode, response.Content);
+                        return true;
+                    }
+                    else
+                    {
+                        // 记录错误
+                        Log.Error("CF 验证提交失败 {@0}, {@1}", submitUrl, response.Content);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex, "CF 验证提交异常 {@0}", url);
+                }
+
+                //// 使用 httpclient 提交
+                //try
+                //{
+                //    var maxRetries = 3;
+                //    int retry = 0;
+                //    do
+                //    {
+                //        try
+                //        {
+                //            Log.Information("第 {@0} 次提交 CF 验证, URL: {@1}", retry + 1, submitUrl);
+
+                //            var requestContent = new MultipartFormDataContent
+                //            {
+                //                { new StringContent(token), "captcha_token" }
+                //            };
+
+                //            var request = new HttpRequestMessage(HttpMethod.Post, submitUrl)
+                //            {
+                //                Content = requestContent
+                //            };
+
+                //            request.Headers.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36");
+
+                //            var client = new HttpClient();
+                //            var response = await client.SendAsync(request);
+                //            if (response.IsSuccessStatusCode)
+                //            {
+                //                Log.Information("CF 验证提交成功, 方法1, {@0}", submitUrl);
+
+                //                return true;
+                //            }
+                //            else
+                //            {
+                //                var content = await response.Content.ReadAsStringAsync();
+                //                Log.Error("CF 验证提交失败, URL: {SubmitUrl}, 响应内容: {ResponseContent}", submitUrl, content);
+                //            }
+                //        }
+                //        catch (Exception ex)
+                //        {
+                //            Log.Error(ex, "CF 验证提交异常, URL: {SubmitUrl}", submitUrl);
+                //        }
+
+                //        retry++;
+                //    } while (retry < maxRetries);
+                //}
+                //catch (Exception ex)
+                //{
+                //    Log.Error(ex, "CF 验证提交异常 {@0}", url);
+                //}
+
+                //// 使用 httpclient 提交
+                //try
+                //{
+                //    var maxRetries = 3;
+                //    int retry = 0;
+                //    do
+                //    {
+                //        try
+                //        {
+                //            Log.Information("第 {@0} 次提交 CF 验证, URL: {@1}", retry + 1, submitUrl);
+
+                //            using (var client = new HttpClient())
+                //            {
+                //                client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36");
+
+                //                // 创建 MultipartFormDataContent 对象
+                //                var form = new MultipartFormDataContent
+                //                {
+                //                    // 添加表单字段
+                //                    { new StringContent(token), "captcha_token" },
+                //                };
+
+                //                // 发送 POST 请求
+                //                var response = await client.PostAsync(submitUrl, form);
+
+                //                // 处理响应
+                //                if (response.IsSuccessStatusCode)
+                //                {
+                //                    Log.Information("CF 验证提交成功, 方法2, {@0}", submitUrl);
+
+                //                    return true;
+                //                }
+                //            }
+                //        }
+                //        catch (Exception ex)
+                //        {
+                //            Log.Error(ex, "CF 验证提交异常, URL: {SubmitUrl}", submitUrl);
+                //        }
+
+                //        retry++;
+                //    } while (retry < maxRetries);
+                //}
+                //catch (Exception ex)
+                //{
+                //    Log.Error(ex, "CF 验证提交异常 {@0}", url);
+                //}
 
                 await Task.Delay(1000);
 
@@ -264,7 +383,8 @@ namespace Midjourney.Captcha.API
             finally
             {
                 // 关闭浏览器
-                await browser.CloseAsync();
+                await page?.CloseAsync();
+                await browser?.CloseAsync();
             }
 
             return false;

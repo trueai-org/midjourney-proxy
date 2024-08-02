@@ -1,5 +1,8 @@
+using RestSharp;
 using Serilog;
 using Serilog.Debugging;
+using System.Net;
+using System.Net.Security;
 
 namespace Midjourney.Captcha.API
 {
@@ -7,6 +10,10 @@ namespace Midjourney.Captcha.API
     {
         public static void Main(string[] args)
         {
+            ServicePointManager.ServerCertificateValidationCallback = new RemoteCertificateValidationCallback(delegate { return true; });
+            //ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+            //ServicePointManager.SecurityProtocol = SecurityProtocolType.SystemDefault;
+
             var builder = CreateHostBuilder(args).Build();
             var env = builder.Services.GetService<IWebHostEnvironment>();
 

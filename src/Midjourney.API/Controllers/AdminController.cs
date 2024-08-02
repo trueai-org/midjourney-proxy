@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using Midjourney.Infrastructure.Domain;
 using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.LoadBalancer;
@@ -25,13 +26,15 @@ namespace Midjourney.API.Controllers
         private readonly string _adminToken;
         private readonly DiscordLoadBalancer _loadBalancer;
         private readonly DiscordAccountInitializer _discordAccountInitializer;
+        private readonly ProxyProperties _properties;
 
         public AdminController(
             ITaskService taskService,
             IConfiguration configuration,
             DiscordLoadBalancer loadBalancer,
             DiscordAccountInitializer discordAccountInitializer,
-            IHttpContextAccessor httpContextAccessor)
+            IHttpContextAccessor httpContextAccessor,
+            IOptionsSnapshot<ProxyProperties> properties)
         {
             _loadBalancer = loadBalancer;
             _taskService = taskService;
@@ -48,6 +51,7 @@ namespace Midjourney.API.Controllers
 
             // 如果不是管理员，并且是演示模式时，则是为匿名用户
             _isAnonymous = !isAdmin && isDemo;
+            _properties = properties.Value;
         }
 
         /// <summary>
@@ -129,6 +133,12 @@ namespace Midjourney.API.Controllers
                     // 清空缓存
                     var inc = _loadBalancer.GetDiscordInstance(item.ChannelId);
                     inc?.ClearAccountCache(item.Id);
+
+                    if (!request.Success)
+                    {
+                        // 发送邮件
+                        EmailJob.Instance.EmailSend(_properties.Smtp, $"CF自动真人验证失败-{item.ChannelId}", $"CF自动真人验证失败-{item.ChannelId}, 请手动验证");
+                    }
                 }
             }
 

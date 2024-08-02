@@ -1,9 +1,6 @@
 ﻿using LiteDB;
 using Midjourney.Infrastructure.Dto;
-using Newtonsoft.Json;
 using System.ComponentModel.DataAnnotations;
-using System.Reactive;
-using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 
 namespace Midjourney.Infrastructure.Domain
@@ -159,6 +156,11 @@ namespace Midjourney.Infrastructure.Domain
         /// </summary>
         [Display(Name = "生成速度模式 fast | relax | turbo")]
         public GenerationSpeedMode? Mode { get; set; }
+
+        /// <summary>
+        /// 允许速度模式（如果出现不允许的速度模式，将会自动清除关键词）
+        /// </summary>
+        public List<GenerationSpeedMode> AllowModes { get; set; } = new List<GenerationSpeedMode>();
 
         /// <summary>
         /// MJ 组件列表。

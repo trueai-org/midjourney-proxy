@@ -57,7 +57,7 @@
 - [x] 支持账号排序、并行数、队列数、最大队列数、任务执行间隔等配置
 - [x] 支持客户端路径指定模式，默认地址例子 https://{BASE_URL}/mj/submit/imagine, /mj-turbo/mj 是 turbo mode, /mj-relax/mj 是 relax mode, /mj-fast/mj 是 fast mode, /mj 不指定模式
 - [x] CloudFlare 手动真人验证，触发后自动锁定账号，通过 GUI 直接验证或通过邮件通知验证
-- [x] [⚠⚠暂不稳定] CloudFlare 自动真人验证，配置验证服务器地址（自动验证器仅支持 Windows 部署）
+- [x] CloudFlare 自动真人验证，配置验证服务器地址（自动验证器仅支持 Windows 部署）
 - [x] 支持工作时间段配置，连续 24 小时不间断绘图可能会触发警告，建议休息 6~8 小时，示例：`09:10-23:55, 13:00-08:10`
 
 ## 在线预览
@@ -71,6 +71,13 @@
 - 接口密钥：`无`
 - CF 自动验证服务器地址：<http://47.76.110.222:8081>
 - CF 自动验证服务器文档：<http://47.76.110.222:8081/swagger>
+
+> CF 自动验证配置示例（免费自动过人机验证）
+
+```json
+"CaptchaServer": "http://47.76.110.222:8081",
+"CaptchaNotifyHook": "https://ai.trueai.org" // 通知回调，默认为当前域名
+```
 
 ## 预览截图
 
@@ -319,7 +326,7 @@ curl -o linux_install.sh https://raw.githubusercontent.com/trueai-org/midjourney
 
 ## CloudFlare 验证器部署
 
-仅支持 Windows 部署，由于 CloudFlare 验证器需要使用到 Chrome 浏览器，所以需要在 Windows 环境下部署，而在 Linux 环境下部署会依赖很多库，所以暂时不支持 Linux 部署。
+仅支持 Windows 部署（并且支持 TLS 1.3，系统要求 Windows11 或 Windows Server 2022），由于 CloudFlare 验证器需要使用到 Chrome 浏览器，所以需要在 Windows 环境下部署，而在 Linux 环境下部署会依赖很多库，所以暂时不支持 Linux 部署。
 
 注意：自行部署需提供 2captcha.com 的 API Key，否则无法使用，价格：1000次/9元，官网：<https://2captcha.cn/p/cloudflare-turnstile>
 
@@ -372,6 +379,7 @@ https://discord.com/oauth2/authorize?client_id=xxx&permissions=8&scope=bot
 
 ## 路线图
 
+- [ ] 配置机器人 Token 可选配置，不配置也可以使用
 - [ ] 优化指令和状态进度显示
 - [ ] 优化任务和队列满时的提醒
 - [ ] 优化共享账号的并发队列可能出现的问题
@@ -390,7 +398,6 @@ https://discord.com/oauth2/authorize?client_id=xxx&permissions=8&scope=bot
 - [ ] 账号增加咸鱼模式/放松模式，避免高频作业（此模式下不可创建新的绘图，仍可以执行其他命令，可以配置为多个时间段或定时等策略）
 - [ ] 图生文 seed 值处理
 - [ ] 自动读私信消息
-- [ ] 增加允许速度模式配置
 - [ ] 服务重启后，如果有未启动的任务，则加入到执行的队列中
 - [ ] 允许共享频道或子频道绘画，即便账号被封，也可以继续之前的绘画，将被封的账号频道作为正常账号的子频道即可，保存永久邀请链接，和子频道链接，支持批量修改，可直接输入邀请链接，或共享频道地址，系统自动加入频道转换。或者通过转交所有权实现。
 

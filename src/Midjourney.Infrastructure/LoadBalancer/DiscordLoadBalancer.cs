@@ -51,6 +51,11 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 var list = _instances.Where(instance => instance.IsAlive)
                          // 指定速度模式过滤
                          .WhereIf(accountFilter.Modes.Count > 0, c => c.Account.Mode == null || accountFilter.Modes.Contains(c.Account.Mode.Value))
+
+                         // 允许速度模式过滤
+                         // 或者有交集的
+                         .WhereIf(accountFilter.Modes.Count > 0, c => c.Account.AllowModes == null || c.Account.AllowModes.Count <= 0 || c.Account.AllowModes.Any(x => accountFilter.Modes.Contains(x)))
+
                          // Midjourney Remix 过滤
                          .WhereIf(accountFilter.Remix == true, c => c.Account.MjRemixOn == accountFilter.Remix || !c.Account.RemixAutoSubmit)
                          .WhereIf(accountFilter.Remix == false, c => c.Account.MjRemixOn == accountFilter.Remix)

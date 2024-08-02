@@ -6,6 +6,7 @@ using Newtonsoft.Json.Linq;
 using Serilog;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 
@@ -47,11 +48,18 @@ namespace Midjourney.Infrastructure.LoadBalancer
             ITaskStoreService taskStoreService,
             INotifyService notifyService,
             DiscordHelper discordHelper,
-            Dictionary<string, string> paramsMap)
+            Dictionary<string, string> paramsMap,
+            IWebProxy webProxy)
         {
-            _httpClient = new HttpClient()
+            var hch = new HttpClientHandler
             {
-                Timeout = TimeSpan.FromMinutes(10)
+                UseProxy = webProxy != null,
+                Proxy = webProxy
+            };
+
+            _httpClient = new HttpClient(hch)
+            {
+                Timeout = TimeSpan.FromMinutes(10),
             };
 
             _paramsMap = paramsMap;
@@ -994,7 +1002,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
             prompt = prompt.Replace(" -- ", " ")
                 .Replace("  ", " ").Replace("  ", " ").Replace("  ", " ").Trim();
 
-            if (info != null)
+            // 任务指定速度模式
+            if (info != null && info.Mode != null)
             {
                 // 移除 prompt 可能的的参数
                 prompt = prompt.Replace("--fast", "").Replace("--relax", "").Replace("--turbo", "");
@@ -1022,6 +1031,32 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 }
             }
 
+            // 允许速度模式
+            if (Account.AllowModes?.Count > 0)
+            {
+                // 计算不允许的速度模式，并删除相关参数
+                var notAllowModes = new List<string>();
+                if (!Account.AllowModes.Contains(GenerationSpeedMode.RELAX))
+                {
+                    notAllowModes.Add("--relax");
+                }
+                if (!Account.AllowModes.Contains(GenerationSpeedMode.FAST))
+                {
+                    notAllowModes.Add("--fast");
+                }
+                if (!Account.AllowModes.Contains(GenerationSpeedMode.TURBO))
+                {
+                    notAllowModes.Add("--turbo");
+                }
+
+                // 移除 prompt 可能的的参数
+                foreach (var mode in notAllowModes)
+                {
+                    prompt = prompt.Replace(mode, "");
+                }
+            }
+
+            // 指定生成速度模式
             if (Account.Mode != null)
             {
                 // 移除 prompt 可能的的参数
@@ -1339,7 +1374,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                 _logger.Warning("Http 请求执行失败 {@0}, {@1}, {@2}", paramsStr, response.StatusCode, response.Content);
 
-                return Message.Of((int)response.StatusCode, paramsStr.Substring(0, Math.Min(paramsStr.Length, 100)));
+                return Message.Of((int)response.StatusCode, paramsStr.Substring(0, Math.Min(paramsStr.Length, 1000)));
             }
             catch (HttpRequestException e)
             {

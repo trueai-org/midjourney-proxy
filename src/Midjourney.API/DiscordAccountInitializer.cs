@@ -136,6 +136,7 @@ namespace Midjourney.API
                             NijiBotChannelId = configAccount.NijiBotChannelId,
                             MaxQueueSize = configAccount.MaxQueueSize,
                             Mode = configAccount.Mode,
+                            AllowModes = configAccount.AllowModes,
                             Weight = configAccount.Weight,
                             Remark = configAccount.Remark,
                             RemixAutoSubmit = configAccount.RemixAutoSubmit,
@@ -269,6 +270,7 @@ namespace Midjourney.API
                 }
             }
 
+            model.AllowModes = param.AllowModes;
             model.WorkTime = param.WorkTime;
             model.Interval = param.Interval;
             model.Sort = param.Sort;
