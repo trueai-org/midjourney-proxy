@@ -380,18 +380,6 @@ function install_version() {
     # 清理下载文件和临时目录
     cd $ORIGINAL_DIR
     rm -rf $TEMP_DIR
-
-    # 新增：提示用户选择是否从现有版本导入配置文件
-    echo -e "${GREEN}Installation completed for version $VERSION.${NC}"
-    read -p "Do you want to import configuration from an existing version? [y/N]: " IMPORT_CONFIG
-    IMPORT_CONFIG=$(echo "$IMPORT_CONFIG" | tr '[:upper:]' '[:lower:]')
-    if [ "$IMPORT_CONFIG" == "y" ]; then
-        import_config_from_existing "$VERSION"
-    else
-        prompt_apply_config "$VERSION"
-    fi
-
-    return 0
 }
 
 # 初始化配置目录
