@@ -318,6 +318,9 @@ namespace Midjourney.Infrastructure
 
                                                     Thread.Sleep(1000);
                                                 } while (true);
+
+                                                // 发送邮件
+                                                EmailJob.Instance.EmailSend(_properties.Smtp, $"CF自动真人验证-{Account.ChannelId}", hashUrl);
                                             }
                                             else
                                             {
@@ -348,15 +351,8 @@ namespace Midjourney.Infrastructure
 
                                                             Account.CfUrl = url;
 
-                                                            try
-                                                            {
-                                                                // 发送邮件
-                                                                EmailJob.Instance.EmailSend(_properties.Smtp, $"CF真人验证-{Account.ChannelId}", url);
-                                                            }
-                                                            catch (Exception ex)
-                                                            {
-                                                                _logger.Error(ex, "邮件发送异常");
-                                                            }
+                                                            // 发送邮件
+                                                            EmailJob.Instance.EmailSend(_properties.Smtp, $"CF手动真人验证-{Account.ChannelId}", url);
                                                         }
                                                     }
                                                 }
@@ -748,6 +744,11 @@ namespace Midjourney.Infrastructure
                                                 DbHelper.AccountStore.Save(Account);
                                                 _discordInstance?.ClearAccountCache(Account.Id);
                                                 _discordInstance?.Dispose();
+
+
+                                                // 发送邮件
+                                                EmailJob.Instance.EmailSend(_properties.Smtp, $"MJ账号禁用通知-{Account.ChannelId}", 
+                                                    $"{Account.ChannelId}, {Account.DisabledReason}");
                                             }
                                             catch (Exception ex)
                                             {
@@ -792,6 +793,10 @@ namespace Midjourney.Infrastructure
 
                                                 _discordInstance?.ClearAccountCache(Account.Id);
                                                 _discordInstance?.Dispose();
+
+                                                // 发送邮件
+                                                EmailJob.Instance.EmailSend(_properties.Smtp, $"MJ账号禁用通知-{Account.ChannelId}",
+                                                    $"{Account.ChannelId}, {Account.DisabledReason}");
                                             }
                                             catch (Exception ex)
                                             {
