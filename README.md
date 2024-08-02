@@ -59,6 +59,7 @@
 - [x] CloudFlare 手动真人验证，触发后自动锁定账号，通过 GUI 直接验证或通过邮件通知验证
 - [x] CloudFlare 自动真人验证，配置验证服务器地址（自动验证器仅支持 Windows 部署）
 - [x] 支持工作时间段配置，连续 24 小时不间断绘图可能会触发警告，建议休息 6~8 小时，示例：`09:10-23:55, 13:00-08:10`
+- [x] 内置 IP 限流、IP 段限流、黑名单、白名单、自动黑名单等功能
 
 ## 在线预览
 
@@ -288,6 +289,57 @@ curl -o linux_install.sh https://raw.githubusercontent.com/trueai-org/midjourney
     "CaptchaServer": "", // CF 验证服务器地址
     "CaptchaNotifyHook": "" // CF 验证通知地址（验证通过后的回调通知，默认就是你的当前域名）
   },
+  // IP/IP 段 限流配置，可以用来限制某个 IP/IP 段 的访问频率
+  // 黑白名、白名单支持 IP 和 CIDR 格式 IP 段，例如：192.168.1.100、192.168.1.0/24
+  "IpRateLimiting": {
+    "Enable": true,
+    "Whitelist": [], // 永久白名单
+    "Blacklist": [ "127.0.0.1" ], // 永久黑名单
+    "IpRules": {
+      "/": {
+        "1": 5,
+        "60": 20
+      },
+      "*/mj/*": {
+        "10": 10
+      }
+    },
+    "IpRangeRules": {
+      "/": {
+        "1": 5,
+        "60": 20
+      },
+      "*/mj/*": {
+        "10": 10
+      }
+    }
+  },
+  // IP 黑名单限流配置，触发后自动封锁 IP，支持封锁时间配置
+  // 黑白名、白名单支持 IP 和 CIDR 格式 IP 段，例如：192.168.1.100、192.168.1.0/24
+  "IpBlackRateLimiting": {
+    "Enable": true,
+    "Whitelist": [], // 永久白名单
+    "Blacklist": [], // 永久黑名单
+    "BlockTime": 1440, // 封锁时间，单位：分钟
+    "IpRules": {
+      "/": {
+        "1": 5,
+        "60": 20
+      },
+      "*/mj/*": {
+        "10": 10
+      }
+    },
+    "IpRangeRules": {
+      "/": {
+        "1": 5,
+        "60": 20
+      },
+      "*/mj/*": {
+        "10": 10
+      }
+    }
+  },
   "Serilog": {
     "MinimumLevel": {
       "Default": "Information",
@@ -387,7 +439,6 @@ https://discord.com/oauth2/authorize?client_id=xxx&permissions=8&scope=bot
 - [ ] 接入官网绘图 API 支持
 - [ ] 增加统计面板、绘图统计、访客统计
 - [ ] 内置用户体系、可注册可管理、限流、最大次数等
-- [ ] 内置 IP 限流、全局限流、账号限流、黑名单、白名单、账号限速
 - [ ] GPT 翻译接入
 - [ ] 最终提示词增加翻译中文显示支持
 - [ ] 账号支持单独的代理
