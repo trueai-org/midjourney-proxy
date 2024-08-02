@@ -382,7 +382,8 @@ namespace Midjourney.Captcha.API
             finally
             {
                 // 关闭浏览器
-                await browser.CloseAsync();
+                await page?.CloseAsync();
+                await browser?.CloseAsync();
             }
 
             return false;
