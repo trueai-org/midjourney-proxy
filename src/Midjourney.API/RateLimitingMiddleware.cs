@@ -38,8 +38,9 @@ namespace Midjourney.API
                 await _next(context);
                 return;
             }
-
             var clientIp = context.Request.GetIP();
+
+            // 转为 /32
             clientIp += "/32";
 
             var ipAddress = IPNetwork2.Parse(clientIp);
@@ -49,14 +50,14 @@ namespace Midjourney.API
             if (_ipRateOptions?.Enable == true)
             {
                 // 检查是否在白名单中
-                if (_ipRateOptions.Whitelist.Any(ip => IPNetwork2.Parse(ip).Contains(ipAddress)))
+                if (_ipRateOptions.WhitelistNetworks.Any(c => c.Contains(ipAddress)))
                 {
                     await _next(context);
                     return;
                 }
 
                 // 检查是否在黑名单中
-                if (_ipRateOptions.Blacklist.Any(ip => IPNetwork2.Parse(ip).Contains(ipAddress)))
+                if (_ipRateOptions.BlacklistNetworks.Any(c => c.Contains(ipAddress)))
                 {
                     context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
                     return;
@@ -74,14 +75,14 @@ namespace Midjourney.API
             if (_ipBlackRateOptions.Enable)
             {
                 // 检查是否在白名单中
-                if (_ipBlackRateOptions.Whitelist.Any(ip => IPNetwork2.Parse(ip).Contains(ipAddress)))
+                if (_ipBlackRateOptions.WhitelistNetworks.Any(c => c.Contains(ipAddress)))
                 {
                     await _next(context);
                     return;
                 }
 
                 // 检查是否在黑名单中
-                if (_cache.TryGetValue($"BLACK_RATE_{ipAddress.Value}", out _) || _ipBlackRateOptions.Blacklist.Any(ip => IPNetwork2.Parse(ip).Contains(ipAddress)))
+                if (_cache.TryGetValue($"BLACK_RATE_{ipAddress.Value}", out _) || _ipBlackRateOptions.BlacklistNetworks.Any(c => c.Contains(ipAddress)))
                 {
                     context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
                     return;
@@ -123,19 +124,13 @@ namespace Midjourney.API
             }
 
             // 检查 IP 段规则
+            // 将当前 ip 转为 ip 段 192.168.1.3/32 -> 192.168.1.0/24
+            var ipRange = IPNetwork2.Parse($"{ipAddress.Network}/24");
             foreach (var rule in ipRangeRules)
             {
                 if (MatchesPath(requestPath, rule.Key))
                 {
-                    // 将当前 ip 转为 ip 段 192.168.1.3/32 -> 192.168.1.0/24
-                    var ipRange = IPNetwork2.Parse(ipAddress.Value);
-                    if (ipRange == null)
-                    {
-                        continue;
-                    }
-                    var ip24 = IPNetwork2.Parse(ipRange.Value.Substring(0, ipRange.Value.LastIndexOf('.')) + ".0/24");
-
-                    if (!ApplyRateLimits(ip24, requestPath, rule.Value))
+                    if (!ApplyRateLimits(ipRange, requestPath, rule.Value))
                     {
                         return false;
                     }
