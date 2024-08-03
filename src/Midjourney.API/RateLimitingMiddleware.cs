@@ -116,7 +116,7 @@ namespace Midjourney.API
             {
                 if (MatchesPath(requestPath, rule.Key))
                 {
-                    if (!ApplyRateLimits(ipAddress, requestPath, rule.Value))
+                    if (!ApplyRateLimits(ipAddress, rule.Key, rule.Value))
                     {
                         return false;
                     }
@@ -130,7 +130,7 @@ namespace Midjourney.API
             {
                 if (MatchesPath(requestPath, rule.Key))
                 {
-                    if (!ApplyRateLimits(ipRange, requestPath, rule.Value))
+                    if (!ApplyRateLimits(ipRange, rule.Key, rule.Value))
                     {
                         return false;
                     }
@@ -144,14 +144,14 @@ namespace Midjourney.API
         /// 应用限流规则。
         /// </summary>
         /// <param name="ipAddress">请求的 IP 地址。</param>
-        /// <param name="requestPath">请求路径。</param>
-        /// <param name="rateLimits">限流规则。</param>
+        /// <param name="requestPathKey">请求路径规则：*/mj/*</param>
+        /// <param name="rateLimits">限流规则</param>
         /// <returns>是否符合限流规则。</returns>
-        private bool ApplyRateLimits(IPNetwork2 ipAddress, string requestPath, Dictionary<int, int> rateLimits)
+        private bool ApplyRateLimits(IPNetwork2 ipAddress, string requestPathKey, Dictionary<int, int> rateLimits)
         {
             foreach (var limit in rateLimits)
             {
-                var cacheKey = $"{ipAddress}:{requestPath}:{limit.Key}";
+                var cacheKey = $"RateLimiter:{ipAddress}:{requestPathKey}:{limit.Key}";
                 var limitTime = TimeSpan.FromSeconds(limit.Key);
                 if (_cache.TryGetValue(cacheKey, out int count))
                 {
