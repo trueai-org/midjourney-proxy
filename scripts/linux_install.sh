@@ -380,18 +380,6 @@ function install_version() {
     # 清理下载文件和临时目录
     cd $ORIGINAL_DIR
     rm -rf $TEMP_DIR
-
-    # 新增：提示用户选择是否从现有版本导入配置文件
-    echo -e "${GREEN}Installation completed for version $VERSION.${NC}"
-    read -p "Do you want to import configuration from an existing version? [y/N]: " IMPORT_CONFIG
-    IMPORT_CONFIG=$(echo "$IMPORT_CONFIG" | tr '[:upper:]' '[:lower:]')
-    if [ "$IMPORT_CONFIG" == "y" ]; then
-        import_config_from_existing "$VERSION"
-    else
-        prompt_apply_config "$VERSION"
-    fi
-
-    return 0
 }
 
 # 初始化配置目录
@@ -408,9 +396,8 @@ until [ "$OPTION" == "5" ]; do
     echo -e "1. ${GREEN}Install or update to the latest version ($LATEST_VERSION)${NC}"
     echo -e "2. ${GREEN}Install a specific version${NC}"
     echo -e "3. ${GREEN}Delete a specific version${NC}"
-    echo -e "4. ${GREEN}Manage configuration files${NC}"
-    echo -e "5. ${GREEN}Exit${NC}"
-    read -p "Choose an option (1/2/3/4/5): " OPTION
+    echo -e "4. ${GREEN}Exit${NC}"
+    read -p "Choose an option (1/2/3/4): " OPTION
 
     case $OPTION in
         1)
@@ -424,42 +411,6 @@ until [ "$OPTION" == "5" ]; do
             delete_version
             ;;
         4)
-            CONFIG_OPTION=""
-            until [ "$CONFIG_OPTION" == "6" ]; do
-                echo "Configuration File Management:"
-                echo -e "1. ${GREEN}List configuration files${NC}"
-                echo -e "2. ${GREEN}Rename a configuration file${NC}"
-                echo -e "3. ${GREEN}Delete a configuration file${NC}"
-                echo -e "4. ${GREEN}Export configuration from version${NC}"
-                echo -e "5. ${GREEN}Apply configuration to version${NC}"
-                echo -e "6. ${GREEN}Back to main menu${NC}"
-                read -p "Choose an option (1/2/3/4/5/6): " CONFIG_OPTION
-
-                case $CONFIG_OPTION in
-                    1)
-                        list_config_files
-                        ;;
-                    2)
-                        rename_config_file
-                        ;;
-                    3)
-                        delete_config_file
-                        ;;
-                    4)
-                        export_config_file
-                        ;;
-                    5)
-                        apply_config_to_version
-                        ;;
-                    6)
-                        ;;
-                    *)
-                        echo -e "${RED}Invalid option.${NC}"
-                        ;;
-                esac
-            done
-            ;;
-        5)
             echo -e "${GREEN}Exiting.${NC}"
             ;;
         *)

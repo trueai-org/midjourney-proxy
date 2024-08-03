@@ -201,6 +201,7 @@ c. 执行: run_app.sh
 c. 启动方式1: sh run_app.sh
 d. 启动方式2: chmod +x run_app.sh && ./run_app.sh
 ```
+
 > macOS 版本
 
 ```bash
