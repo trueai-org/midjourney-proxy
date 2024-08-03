@@ -329,13 +329,13 @@ curl -o linux_install.sh https://raw.githubusercontent.com/trueai-org/midjourney
     "BlockTime": 1440, // Block time, unit: minutes
     "IpRules": {
       "*/mj/*": {
-        "1": 20,
-        "60": 300
+        "1": 30,
+        "60": 900
       }
     },
     "IpRangeRules": {
       "*/mj/*": {
-        "1": 60,
+        "1": 90,
         "60": 3000
       }
     }
