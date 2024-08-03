@@ -4,6 +4,7 @@ global using Midjourney.Infrastructure.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.OpenApi.Models;
+using Midjourney.Infrastructure.Options;
 using Serilog;
 using System.Reflection;
 using System.Text.Json.Serialization;
@@ -24,6 +25,10 @@ namespace Midjourney.API
             var configSec = Configuration.GetSection("mj");
             var config = configSec.Get<ProxyProperties>();
             services.Configure<ProxyProperties>(configSec);
+
+            services.AddMemoryCache();
+            services.Configure<IpRateLimitingOptions>(Configuration.GetSection("IpRateLimiting"));
+            services.Configure<IpBlackRateLimitingOptions>(Configuration.GetSection("IpBlackRateLimiting"));
 
             // 是否为演示模式
             var isDemoMode = Configuration.GetSection("Demo").Get<bool?>();
@@ -153,6 +158,9 @@ namespace Midjourney.API
 
             // 使用自定义中间件
             app.UseMiddleware<SimpleAuthMiddleware>();
+
+            // 限流
+            app.UseMiddleware<RateLimitingMiddleware>();
 
             app.UseAuthorization();
 

@@ -439,27 +439,28 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     }
                 }
 
+                // 不随机，直接读消息
                 // 任务完成后，自动读消息
                 // 随机 3 次，如果命中则读消息
-                if (new Random().Next(0, 3) == 0)
+                //if (new Random().Next(0, 3) == 0)
+                //{
+                try
                 {
-                    try
+                    var res = await ReadMessageAsync(info.MessageId);
+                    if (res.Code == ReturnCode.SUCCESS)
                     {
-                        var res = await ReadMessageAsync(info.MessageId);
-                        if (res.Code == ReturnCode.SUCCESS)
-                        {
-                            _logger.Debug("自动读消息成功 {@0} - {@1}", info.InstanceId, info.Id);
-                        }
-                        else
-                        {
-                            _logger.Warning("自动读消息失败 {@0} - {@1}", info.InstanceId, info.Id);
-                        }
+                        _logger.Debug("自动读消息成功 {@0} - {@1}", info.InstanceId, info.Id);
                     }
-                    catch (Exception ex)
+                    else
                     {
-                        _logger.Error(ex, "自动读消息异常 {@0} - {@1}", info.InstanceId, info.Id);
+                        _logger.Warning("自动读消息失败 {@0} - {@1}", info.InstanceId, info.Id);
                     }
                 }
+                catch (Exception ex)
+                {
+                    _logger.Error(ex, "自动读消息异常 {@0} - {@1}", info.InstanceId, info.Id);
+                }
+                //}
 
                 _logger.Debug("[{AccountDisplay}] task finished, id: {TaskId}, status: {TaskStatus}", Account.GetDisplay(), info.Id, info.Status);
             }
