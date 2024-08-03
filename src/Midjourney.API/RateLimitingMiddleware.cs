@@ -40,6 +40,8 @@ namespace Midjourney.API
             }
 
             var clientIp = context.Request.GetIP();
+            clientIp += "/32";
+
             var ipAddress = IPNetwork2.Parse(clientIp);
             var requestPath = context.Request.Path.ToString();
 
@@ -79,7 +81,7 @@ namespace Midjourney.API
                 }
 
                 // 检查是否在黑名单中
-                if (_cache.TryGetValue(ipAddress.Value, out _) || _ipBlackRateOptions.Blacklist.Any(ip => IPNetwork2.Parse(ip).Contains(ipAddress)))
+                if (_cache.TryGetValue($"BLACK_RATE_{ipAddress.Value}", out _) || _ipBlackRateOptions.Blacklist.Any(ip => IPNetwork2.Parse(ip).Contains(ipAddress)))
                 {
                     context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
                     return;
@@ -88,7 +90,7 @@ namespace Midjourney.API
                 // 检查黑名单限流规则
                 if (!CheckRateLimits(ipAddress, requestPath, _ipBlackRateOptions.IpRules, _ipBlackRateOptions.IpRangeRules))
                 {
-                    _cache.Set(ipAddress.Value, 1, TimeSpan.FromMinutes(_ipBlackRateOptions.BlockTime));
+                    _cache.Set($"BLACK_RATE_{ipAddress.Value}", 1, TimeSpan.FromMinutes(_ipBlackRateOptions.BlockTime));
 
                     context.Response.StatusCode = (int)HttpStatusCode.TooManyRequests;
                     return;
@@ -125,7 +127,15 @@ namespace Midjourney.API
             {
                 if (MatchesPath(requestPath, rule.Key))
                 {
-                    if (!ApplyRateLimits(ipAddress, requestPath, rule.Value))
+                    // 将当前 ip 转为 ip 段 192.168.1.3/32 -> 192.168.1.0/24
+                    var ipRange = IPNetwork2.Parse(ipAddress.Value);
+                    if (ipRange == null)
+                    {
+                        continue;
+                    }
+                    var ip24 = IPNetwork2.Parse(ipRange.Value.Substring(0, ipRange.Value.LastIndexOf('.')) + ".0/24");
+
+                    if (!ApplyRateLimits(ip24, requestPath, rule.Value))
                     {
                         return false;
                     }
