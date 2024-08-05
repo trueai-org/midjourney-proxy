@@ -30,11 +30,6 @@
 
 > CF 自动验证配置示例（免费自动过人机验证）
 
-```json
-"CaptchaServer": "http://47.76.110.222:8081",
-"CaptchaNotifyHook": "https://ai.trueai.org" // 通知回调，默认为当前域名
-```
-
 ## 预览截图
 
 ![欢迎](./docs/screenshots/ui1.png)
