@@ -9,3 +9,5 @@
 
 [GitHub](https://github.com/trueai-org/midjourney-proxy)
 [Get Started](#)
+
+![](https://bing.img.run/rand.php)
