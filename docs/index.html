@@ -12,12 +12,14 @@
 
 <body>
   <div id="app"></div>
+  <style type="text/css">
+    .content {
+      overflow: auto;
+    }
+  </style>
   <script>
     window.$docsify = {
-      coverpage: {
-        '/': '_coverpage.md',
-        '/en/': '_coverpage.md',
-      },
+      coverpage: ['/', '/en/'],
       loadSidebar: true,
       loadNavbar: true,
       search: 'auto'
