@@ -10,4 +10,6 @@
 [GitHub](https://github.com/trueai-org/midjourney-proxy)
 [Get Started](#)
 
+<!-- 背景图片 -->
+
 ![](https://bing.img.run/rand.php)
