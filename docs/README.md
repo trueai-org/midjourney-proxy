@@ -14,7 +14,7 @@
 
 [Midjourney公益群](https://qm.qq.com/q/k88clCkyMS)（QQ群：565908696）
 
-<img src="https://raw.githubusercontent.com/dbccccccc/midjourney-proxy/blob/main/docs/screenshots/565908696.png" alt="欢迎" width="360"/>
+<img src="https://vip.123pan.cn/1816233029/8626602" alt="欢迎" width="360"/>
 
 ## 主要功能
 
