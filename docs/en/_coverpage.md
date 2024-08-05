@@ -1,3 +1,5 @@
+![logo](https://vip.123pan.cn/1816233029/8627755)
+
 # Midjourney Proxy <small>v2.8.23</small>
 
 > The most feature-rich, secure, and memory-efficient (100MB+) Midjourney Proxy API~~
