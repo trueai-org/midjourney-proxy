@@ -2,10 +2,11 @@
 
 # Midjourney Proxy <small>v2.8.23</small>
 
-> The most feature-rich, secure, and memory-efficient (100MB+) Midjourney Proxy API~~
+> Using Midjourney AI drawing in API form
 
 - Free, open-source, cross-platform
 - Public welfare project, providing drawing API for free use
+- The most feature-rich, secure, and memory-efficient (100MB+) Midjourney Proxy API~~
 
 [GitHub](https://github.com/trueai-org/midjourney-proxy)
 [Get Started](#)
