@@ -1,5 +1,3 @@
-![logo](_media/icon.svg)
-
 # Midjourney Proxy <small>v2.8.23</small>
 
 > 功能最全、最安全、占用内存最小（100MB+）的 Midjourney Proxy API ~~
@@ -9,7 +7,3 @@
 
 [GitHub](https://github.com/trueai-org/midjourney-proxy)
 [Get Started](#)
-
-<!-- 背景图片 -->
-
-![](https://bing.img.run/rand.php)
