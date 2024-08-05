@@ -1,4 +1,4 @@
-![logo](https://vip.123pan.cn/1816233029/8627755)
+![logo](https://vip.123pan.cn/1816233029/mjproxy/logo.png)
 
 # Midjourney Proxy <small>v2.8.23</small>
 
