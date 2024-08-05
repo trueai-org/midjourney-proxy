@@ -1,5 +1,3 @@
-![logo](_media/icon.svg)
-
 # Midjourney Proxy <small>v2.8.23</small>
 
 > The most feature-rich, secure, and memory-efficient (100MB+) Midjourney Proxy API~~
