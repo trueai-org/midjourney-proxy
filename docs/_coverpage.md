@@ -1,4 +1,4 @@
-# Midjourney Proxy <small>v2.8.23123</small>
+# Midjourney Proxy <small>v2.8.23</small>
 
 > 功能最全、最安全、占用内存最小（100MB+）的 Midjourney Proxy API ~~
 
