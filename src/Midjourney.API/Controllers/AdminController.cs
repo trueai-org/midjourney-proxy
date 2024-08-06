@@ -121,7 +121,8 @@ namespace Midjourney.API.Controllers
 
             // 发送邮件
             EmailJob.Instance.EmailSend(GlobalConfiguration.Setting.Smtp,
-                $"Midjourney Proxy 注册通知", $"您的登录密码为：{user.Token}");
+                $"Midjourney Proxy 注册通知", $"您的登录密码为：{user.Token}",
+                user.Email);
 
             // 设置缓存
             _memoryCache.Set(key, true, TimeSpan.FromDays(1));
@@ -137,6 +138,27 @@ namespace Midjourney.API.Controllers
         [HttpPost("login")]
         public ActionResult Login([FromBody] string token)
         {
+            // 兼容 admin token 为空时的情况
+            User user = null;
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                user = DbHelper.UserStore.Single(u => u.Token == token && u.Id == Constants.ADMIN_USER_ID);
+                if (user != null && user.Role == EUserRole.ADMIN)
+                {
+                    // 更新最后登录时间
+                    user.LastLoginTime = DateTime.Now;
+                    user.LastLoginIp = _workContext.GetIp();
+
+                    DbHelper.UserStore.Update(user);
+
+                    return Ok(new
+                    {
+                        code = 1,
+                        apiSecret = user.Token,
+                    });
+                }
+            }
+
             // 如果 DEMO 模式，并且没有传入 token，则返回空 token
             if (GlobalConfiguration.IsDemoMode == true && string.IsNullOrWhiteSpace(token))
             {
@@ -157,7 +179,7 @@ namespace Midjourney.API.Controllers
                 });
             }
 
-            var user = DbHelper.UserStore.Single(u => u.Token == token);
+            user = DbHelper.UserStore.Single(u => u.Token == token);
             if (user == null)
             {
                 throw new LogicException("用户 Token 错误");
@@ -639,7 +661,8 @@ namespace Midjourney.API.Controllers
             var data = db.GetAll().OrderBy(c => c.Sort).ThenBy(c => c.DateCreated).ToList();
 
             // 当前时间转为 Unix 时间戳
-            var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            // 今日 0 点 Unix 时间戳
+            var now = new DateTimeOffset(DateTime.UtcNow.Date).ToUnixTimeMilliseconds();
             var tasks = DbHelper.TaskStore.GetCollection().Query()
                 .Where(c => c.SubmitTime >= now)
                 .ToList(); ;
@@ -1093,6 +1116,9 @@ namespace Midjourney.API.Controllers
             DbHelper.SettingStore.Update(setting);
 
             GlobalConfiguration.Setting = setting;
+
+            // 首页缓存
+            _memoryCache.Remove("HOME");
 
             return Result.Ok();
         }

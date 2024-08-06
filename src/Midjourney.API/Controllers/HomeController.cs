@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
+using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.Dto;
 
 namespace Midjourney.API.Controllers
@@ -14,12 +15,9 @@ namespace Midjourney.API.Controllers
     public class HomeController : ControllerBase
     {
         private readonly IMemoryCache _memoryCache;
-        private readonly string _ip;
-
-        public HomeController(IMemoryCache memoryCache, IHttpContextAccessor httpContextAccessor)
+        public HomeController(IMemoryCache memoryCache)
         {
             _memoryCache = memoryCache;
-            _ip = httpContextAccessor.HttpContext.Request.GetIP();
         }
 
         /// <summary>
@@ -29,14 +27,45 @@ namespace Midjourney.API.Controllers
         [HttpGet()]
         public Result<HomeDto> Info()
         {
-            var dto = new HomeDto
+            var data = _memoryCache.GetOrCreate("HOME", c =>
             {
-                IsRegister = GlobalConfiguration.Setting.EnableRegister == true
-                && !string.IsNullOrWhiteSpace(GlobalConfiguration.Setting?.Smtp?.FromPassword),
-                IsGuest = GlobalConfiguration.Setting.EnableGuest == true,
-            };
+                c.SetAbsoluteExpiration(TimeSpan.FromMinutes(10));
 
-            return Result.Ok(dto);
+                var dto = new HomeDto
+                {
+                    IsRegister = GlobalConfiguration.Setting.EnableRegister == true
+                    && !string.IsNullOrWhiteSpace(GlobalConfiguration.Setting?.Smtp?.FromPassword),
+                    IsGuest = GlobalConfiguration.Setting.EnableGuest == true,
+                    IsDemoMode = GlobalConfiguration.IsDemoMode == true
+                };
+
+                var now = new DateTimeOffset(DateTime.UtcNow.Date).ToUnixTimeMilliseconds();
+                var yesterday = new DateTimeOffset(DateTime.UtcNow.Date.AddDays(-1)).ToUnixTimeMilliseconds();
+
+                dto.TodayDraw = (int)DbHelper.TaskStore.Count(x => x.SubmitTime >= now);
+                dto.YesterdayDraw = (int)DbHelper.TaskStore.Count(x => x.SubmitTime >= yesterday && x.SubmitTime < now);
+                dto.TotalDraw = DbHelper.TaskStore.GetCollection().Query().Count();
+
+                // 今日绘图客户端 top 5
+                var top5 = DbHelper.TaskStore.GetCollection().Query()
+                    .Where(x => x.SubmitTime >= now)
+                    .ToList()
+                    .GroupBy(c => c.ClientIp)
+                    .Select(c => new
+                    {
+                        ip = c.Key,
+                        count = c.Count()
+                    })
+                    .OrderByDescending(c => c.count)
+                    .Take(5)
+                    .ToDictionary(c => c.ip, c => c.count);
+
+                dto.Tops = top5;
+
+                return dto;
+            });
+
+            return Result.Ok(data);
         }
     }
 }
