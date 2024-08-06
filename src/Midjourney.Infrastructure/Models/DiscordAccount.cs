@@ -194,9 +194,9 @@ namespace Midjourney.Infrastructure.Models
         public bool IsDescribe { get; set; } = true;
 
         /// <summary>
-        /// 日绘图最大次数限制，默认 0 不限制
+        /// 日绘图最大次数限制，默认 -1 不限制
         /// </summary>
-        public int DayDrawLimit { get; set; }
+        public int DayDrawLimit { get; set; } = -1;
 
         /// <summary>
         /// 当日已绘图次数
