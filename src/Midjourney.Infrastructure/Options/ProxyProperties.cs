@@ -178,6 +178,16 @@ namespace Midjourney.Infrastructure
         public bool Enable { get; set; }
 
         /// <summary>
+        /// 开启 Midjourney 绘图
+        /// </summary>
+        public bool EnableMj { get; set; } = true;
+
+        /// <summary>
+        /// 开启 Niji 绘图
+        /// </summary>
+        public bool EnableNiji { get; set; } = true;
+
+        /// <summary>
         /// 并发数.
         /// </summary>
         public int CoreSize { get; set; } = 3;

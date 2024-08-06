@@ -180,10 +180,13 @@ namespace Midjourney.API
 
         public void Configure(IApplicationBuilder app, IHostEnvironment env)
         {
-            if (env.IsDevelopment() || GlobalConfiguration.IsDemoMode == true)
+            if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
+            }
 
+            if (env.IsDevelopment() || GlobalConfiguration.IsDemoMode == true || GlobalConfiguration.Setting?.EnableSwagger == true)
+            {
                 app.UseSwagger();
                 app.UseSwaggerUI();
             }

@@ -8,6 +8,11 @@ namespace Midjourney.Infrastructure.Models
     public class Setting : ProxyProperties
     {
         /// <summary>
+        /// 启用 Swagger
+        /// </summary>
+        public bool EnableSwagger { get; set; }
+
+        /// <summary>
         /// 限流配置
         /// </summary>
         public IpRateLimitingOptions IpRateLimiting { get; set; }

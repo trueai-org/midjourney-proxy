@@ -45,7 +45,6 @@ namespace Midjourney.API.Controllers
             _discordAccountInitializer = discordAccountInitializer;
             _workContext = workContext;
 
-
             // 如果不是管理员，并且是演示模式时，则是为匿名用户
             var user = workContext.GetUser();
 
@@ -68,6 +67,46 @@ namespace Midjourney.API.Controllers
                 }
             }
         }
+
+        ///// <summary>
+        ///// 重启
+        ///// </summary>
+        ///// <returns></returns>
+        //[HttpPost("restart")]
+        //public Result Restart()
+        //{
+        //    try
+        //    {
+        //        if (_isAnonymous)
+        //        {
+        //            return Result.Fail("演示模式，禁止操作");
+        //        }
+
+        //        // 使用 dotnet 命令启动 DLL
+        //        var fileName = "dotnet";
+        //        var arguments = Path.GetFileName(Assembly.GetExecutingAssembly().Location);
+
+        //        var processStartInfo = new ProcessStartInfo
+        //        {
+        //            FileName = fileName,
+        //            Arguments = arguments,
+        //            WorkingDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location),
+        //            UseShellExecute = true
+        //        };
+        //        Process.Start(processStartInfo);
+
+        //        // 退出当前应用程序
+        //        Environment.Exit(0);
+
+        //        return Result.Ok("Application is restarting...");
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Log.Error(ex, "系统自动重启异常");
+
+        //        return Result.Fail("重启失败，请手动重启");
+        //    }
+        //}
 
         /// <summary>
         /// 注册用户

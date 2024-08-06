@@ -230,6 +230,8 @@ namespace Midjourney.API
                             IsVerticalDomain = configAccount.IsVerticalDomain,
                             IsDescribe = configAccount.IsDescribe,
                             DayDrawLimit = configAccount.DayDrawLimit,
+                            EnableMj = configAccount.EnableMj,
+                            EnableNiji = configAccount.EnableNiji
                         };
 
                         db.Add(account);
@@ -369,6 +371,8 @@ namespace Midjourney.API
             model.VerticalDomainIds = param.VerticalDomainIds;
             model.SubChannels = param.SubChannels;
 
+            model.EnableNiji = param.EnableNiji;
+            model.EnableMj = param.EnableMj;
             model.AllowModes = param.AllowModes;
             model.WorkTime = param.WorkTime;
             model.Interval = param.Interval;
