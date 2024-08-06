@@ -30,7 +30,7 @@
 
 ## 预览截图
 
-![欢迎](./docs/screenshots/ui1.png)
+![欢迎](https://raw.githubusercontent.com/trueai-org/midjourney-proxy/main/docs/screenshots/ui1.png)
 
 ![账号](./docs/screenshots/ui2.png)
 
