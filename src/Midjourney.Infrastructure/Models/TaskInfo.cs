@@ -2,6 +2,7 @@
 using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.Util;
 using Serilog;
+using System.Net;
 
 namespace Midjourney.Infrastructure.Models
 {
@@ -220,8 +221,22 @@ namespace Midjourney.Infrastructure.Models
                                 {
                                     Directory.CreateDirectory(directoryPath);
 
+                                    // Bot 消息监听器
+                                    WebProxy webProxy = null;
+                                    var proxy = GlobalConfiguration.Setting.Proxy;
+                                    if (!string.IsNullOrEmpty(proxy?.Host))
+                                    {
+                                        webProxy = new WebProxy(proxy.Host, proxy.Port ?? 80);
+                                    }
+
+                                    var hch = new HttpClientHandler
+                                    {
+                                        UseProxy = webProxy != null,
+                                        Proxy = webProxy
+                                    };
+
                                     // 下载图片并保存
-                                    using (HttpClient client = new HttpClient())
+                                    using (HttpClient client = new HttpClient(hch))
                                     {
                                         var response = client.GetAsync(ImageUrl).Result;
                                         response.EnsureSuccessStatusCode();
