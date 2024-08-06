@@ -221,14 +221,12 @@ namespace Midjourney.Infrastructure.Models
                                 {
                                     Directory.CreateDirectory(directoryPath);
 
-                                    // Bot 消息监听器
                                     WebProxy webProxy = null;
                                     var proxy = GlobalConfiguration.Setting.Proxy;
                                     if (!string.IsNullOrEmpty(proxy?.Host))
                                     {
                                         webProxy = new WebProxy(proxy.Host, proxy.Port ?? 80);
                                     }
-
                                     var hch = new HttpClientHandler
                                     {
                                         UseProxy = webProxy != null,
