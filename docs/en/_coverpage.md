@@ -9,4 +9,5 @@
 - The most feature-rich, secure, and memory-efficient (100MB+) Midjourney Proxy API~~
 
 [GitHub](https://github.com/trueai-org/midjourney-proxy)
+[Demo](https://ai.trueai.org)
 [Get Started](https://dbccccccc.github.io/midjourney-proxy/#/en/?id=midjourney-proxy)

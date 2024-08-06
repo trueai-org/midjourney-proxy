@@ -9,4 +9,5 @@
 - 功能最全、最安全、占用内存最小（100MB+）的 Midjourney Proxy API ~~
 
 [GitHub](https://github.com/trueai-org/midjourney-proxy)
-[Get Started](https://dbccccccc.github.io/midjourney-proxy/#/?id=midjourney-proxy)
+[演示站](https://ai.trueai.org)
+[开始](https://dbccccccc.github.io/midjourney-proxy/#/?id=midjourney-proxy)
