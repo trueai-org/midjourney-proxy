@@ -524,6 +524,8 @@ namespace Midjourney.API.Controllers
         /// <returns></returns>
         private TaskInfo NewTask(BaseSubmitDTO baseDTO)
         {
+            var user = _workContext.GetUser();
+
             var task = new TaskInfo
             {
                 Id = $"{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}{RandomUtils.RandomNumbers(3)}",
@@ -531,7 +533,8 @@ namespace Midjourney.API.Controllers
                 State = baseDTO.State,
                 Status = TaskStatus.NOT_START,
                 ClientIp = _ip,
-                Mode = _mode
+                Mode = _mode,
+                UserId = user?.Id
             };
 
             if (_mode != null)

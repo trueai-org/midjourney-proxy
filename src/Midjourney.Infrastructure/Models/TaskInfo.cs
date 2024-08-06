@@ -27,6 +27,11 @@ namespace Midjourney.Infrastructure.Models
         public EBotType BotType { get; set; }
 
         /// <summary>
+        /// 绘画用户 ID
+        /// </summary>
+        public string UserId { get; set; }
+
+        /// <summary>
         /// 提交作业的唯一ID。
         /// </summary>
         public string Nonce { get; set; }

@@ -321,6 +321,12 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <returns>任务提交结果</returns>
         public SubmitResultVO SubmitTaskAsync(TaskInfo info, Func<Task<Message>> discordSubmit)
         {
+            // TODO : 限制提交频率
+            var ipLimitKey = $"limit:{info.ClientIp}";
+            var userLimitKey = $"limit:{info.UserId}";
+
+            //_cache.GetOrCreate("");
+
             // 在任务提交时，前面的的任务数量
             var currentWaitNumbers = _queueTasks.Count;
             if (Account.MaxQueueSize > 0 && currentWaitNumbers >= Account.MaxQueueSize)

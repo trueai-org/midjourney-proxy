@@ -61,6 +61,7 @@ namespace Midjourney.API
                     TranslateWay = configOpt.TranslateWay,
                     Smtp = configOpt.Smtp
                 };
+                DbHelper.SettingStore.Add(setting);
             }
             GlobalConfiguration.Setting = setting;
 
