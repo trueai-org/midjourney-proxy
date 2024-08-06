@@ -382,9 +382,6 @@ function install_version() {
     rm -rf $TEMP_DIR
 }
 
-# 初始化配置目录
-init_config_dir
-
 # 获取最新版本信息
 get_latest_version_info
 
