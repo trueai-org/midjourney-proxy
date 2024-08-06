@@ -20,7 +20,7 @@ namespace Midjourney.Infrastructure.Util
             {
                 var assembly = typeof(BannedPromptUtils).Assembly;
                 var assemblyName = assembly.GetName().Name;
-                var resourceStream = assembly.GetManifestResourceStream($"{assembly}.Resources.bannedWords.txt");
+                var resourceStream = assembly.GetManifestResourceStream($"{assemblyName}.Resources.bannedWords.txt");
                 if (resourceStream != null)
                 {
                     using (var reader = new StreamReader(resourceStream, Encoding.UTF8))

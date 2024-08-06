@@ -1,9 +1,9 @@
 ﻿using Microsoft.Extensions.Options;
-using Midjourney.Infrastructure.Domain;
+using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.LoadBalancer;
+using Midjourney.Infrastructure.Options;
 using Midjourney.Infrastructure.Services;
 using Midjourney.Infrastructure.Util;
-using MimeKit;
 using Serilog;
 
 using ILogger = Serilog.ILogger;
@@ -19,7 +19,9 @@ namespace Midjourney.API
         private readonly DiscordLoadBalancer _discordLoadBalancer;
         private readonly DiscordAccountHelper _discordAccountHelper;
         private readonly ProxyProperties _properties;
+
         private readonly ILogger _logger;
+        private readonly IConfiguration _configuration;
 
         private readonly SemaphoreSlim _semaphoreSlim = new(1, 1);
         private Timer _timer;
@@ -27,6 +29,7 @@ namespace Midjourney.API
         public DiscordAccountInitializer(
             DiscordLoadBalancer discordLoadBalancer,
             DiscordAccountHelper discordAccountHelper,
+            IConfiguration configuration,
             IOptions<ProxyProperties> options,
             ITaskService taskService)
         {
@@ -34,7 +37,7 @@ namespace Midjourney.API
             _discordAccountHelper = discordAccountHelper;
             _properties = options.Value;
             _taskService = taskService;
-
+            _configuration = configuration;
             _logger = Log.Logger;
         }
 
@@ -44,13 +47,80 @@ namespace Midjourney.API
         /// <param name="cancellationToken">取消令牌。</param>
         public async Task StartAsync(CancellationToken cancellationToken)
         {
-            var proxy = _properties.Proxy;
+            // 初始化环境变量
+            var proxy = GlobalConfiguration.Setting?.Proxy;
             if (!string.IsNullOrEmpty(proxy.Host))
             {
                 Environment.SetEnvironmentVariable("http_proxyHost", proxy.Host);
                 Environment.SetEnvironmentVariable("http_proxyPort", proxy.Port.ToString());
                 Environment.SetEnvironmentVariable("https_proxyHost", proxy.Host);
                 Environment.SetEnvironmentVariable("https_proxyPort", proxy.Port.ToString());
+            }
+
+            // 初始化管理员用户
+            // 判断超管是否存在
+            var admin = DbHelper.UserStore.Get(Constants.ADMIN_USER_ID);
+            if (admin == null)
+            {
+                admin = new User
+                {
+                    Id = Constants.ADMIN_USER_ID,
+                    Name = Constants.ADMIN_USER_ID,
+                    Token = _configuration["AdminToken"],
+                    Role = EUserRole.ADMIN,
+                    Status = EUserStatus.NORMAL,
+                    IsWhite = true
+                };
+
+                DbHelper.UserStore.Add(admin);
+            }
+
+            // 初始化普通用户
+            var user = DbHelper.UserStore.Get(Constants.DEFAULT_USER_ID);
+            if (user == null)
+            {
+                user = new User
+                {
+                    Id = Constants.DEFAULT_USER_ID,
+                    Name = Constants.DEFAULT_USER_ID,
+                    Token = _configuration["UserToken"],
+                    Role = EUserRole.USER,
+                    Status = EUserStatus.NORMAL,
+                    IsWhite = true
+                };
+                DbHelper.UserStore.Add(user);
+            }
+
+            // 初始化领域标签
+            var defaultDomain = DbHelper.DomainStore.Get(Constants.DEFAULT_DOMAIN_ID);
+            if (defaultDomain == null)
+            {
+                defaultDomain = new DomainTag
+                {
+                    Id = Constants.DEFAULT_DOMAIN_ID,
+                    Name = "默认标签",
+                    Description = "",
+                    Sort = 0,
+                    Enable = true,
+                    Keywords = WordsUtils.GetWords()
+                };
+                DbHelper.DomainStore.Add(defaultDomain);
+            }
+
+            // 完整标签
+            var fullDomain = DbHelper.DomainStore.Get(Constants.DEFAULT_DOMAIN_FULL_ID);
+            if (fullDomain == null)
+            {
+                fullDomain = new DomainTag
+                {
+                    Id = Constants.DEFAULT_DOMAIN_FULL_ID,
+                    Name = "默认完整标签",
+                    Description = "",
+                    Sort = 0,
+                    Enable = true,
+                    Keywords = WordsUtils.GetWordsFull()
+                };
+                DbHelper.DomainStore.Add(fullDomain);
             }
 
             _timer = new Timer(DoWork, null, TimeSpan.Zero, TimeSpan.FromMinutes(1));
@@ -71,7 +141,14 @@ namespace Midjourney.API
             {
                 _logger.Information("开始例行检查");
 
-                await Initialize();
+                // 配置中的默认账号，如果存在
+                var configAccounts = _properties.Accounts.ToList();
+                if (!string.IsNullOrEmpty(_properties.Discord?.ChannelId) && _properties.Discord.ChannelId.EndsWith("***"))
+                {
+                    configAccounts.Add(_properties.Discord);
+                }
+
+                await Initialize(configAccounts.ToArray());
 
                 _logger.Information("例行检查完成");
             }
@@ -93,17 +170,13 @@ namespace Midjourney.API
         {
             var isLock = LocalLock.TryLock("Initialize", TimeSpan.FromSeconds(10), async () =>
             {
-                var proxy = _properties.Proxy;
+                var setting = GlobalConfiguration.Setting;
+                var proxy = setting.Proxy;
                 var db = DbHelper.AccountStore;
                 var accounts = db.GetAll().OrderBy(c => c.Sort).ToList();
 
                 // 将启动配置中的 account 添加到数据库
-                var configAccounts = _properties.Accounts.ToList();
-                if (!string.IsNullOrEmpty(_properties.Discord.ChannelId))
-                {
-                    configAccounts.Add(_properties.Discord);
-                }
-
+                var configAccounts = new List<DiscordAccountConfig>();
                 if (appends?.Length > 0)
                 {
                     configAccounts.AddRange(appends);
@@ -143,7 +216,14 @@ namespace Midjourney.API
                             Sponsor = configAccount.Sponsor,
                             Sort = configAccount.Sort,
                             Interval = configAccount.Interval,
-                            WorkTime = configAccount.WorkTime
+                            WorkTime = configAccount.WorkTime,
+
+                            SubChannels = configAccount.SubChannels,
+                            IsBlend = configAccount.IsBlend,
+                            VerticalDomainIds = configAccount.VerticalDomainIds,
+                            IsVerticalDomain = configAccount.IsVerticalDomain,
+                            IsDescribe = configAccount.IsDescribe,
+                            DayDrawLimit = configAccount.DayDrawLimit,
                         };
 
                         db.Add(account);
@@ -165,7 +245,13 @@ namespace Midjourney.API
                         disInstance = _discordLoadBalancer.GetDiscordInstance(account.ChannelId);
 
                         // 判断是否在工作时间内
-                        if (DateTime.Now.IsInWorkTime(account.WorkTime))
+                        var now = new DateTimeOffset(DateTime.UtcNow.Date).ToUnixTimeMilliseconds();
+                        var dayCount = DbHelper.TaskStore.GetCollection().Query()
+                            .Where(c => c.InstanceId == account.ChannelId && c.SubmitTime >= now)
+                            .Count();
+
+                        if (DateTime.Now.IsInWorkTime(account.WorkTime)
+                        && (account.DayDrawLimit < 0 || dayCount < account.DayDrawLimit))
                         {
                             if (disInstance == null)
                             {
@@ -269,6 +355,13 @@ namespace Midjourney.API
                     param.WorkTime = null;
                 }
             }
+
+            model.IsBlend = param.IsBlend;
+            model.IsDescribe = param.IsDescribe;
+            model.DayDrawLimit = param.DayDrawLimit;
+            model.IsVerticalDomain = param.IsVerticalDomain;
+            model.VerticalDomainIds = param.VerticalDomainIds;
+            model.SubChannels = param.SubChannels;
 
             model.AllowModes = param.AllowModes;
             model.WorkTime = param.WorkTime;

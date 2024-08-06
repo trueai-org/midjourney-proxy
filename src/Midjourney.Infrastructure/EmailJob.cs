@@ -10,16 +10,18 @@ namespace Midjourney.Infrastructure
     /// </summary>
     public class EmailJob : SingletonBase<EmailJob>
     {
-        public async void EmailSend(SmtpConfig config, string subject, string body)
+        public async void EmailSend(SmtpConfig config, string subject, string body, string to = null)
         {
-            if (string.IsNullOrWhiteSpace(config?.FromPassword) || string.IsNullOrWhiteSpace(config?.To))
+            var mailTo = config.To;
+            if (!string.IsNullOrWhiteSpace(to))
+            {
+                mailTo = to;
+            }
+
+            if (string.IsNullOrWhiteSpace(config?.FromPassword) || string.IsNullOrWhiteSpace(mailTo))
             {
                 return;
             }
-
-            var mailTo = config.To;
-
-
 
             try
             {

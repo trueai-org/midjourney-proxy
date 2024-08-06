@@ -1,8 +1,9 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
+using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.Services;
 using Midjourney.Infrastructure.Util;
+using System.Net;
 using System.Text.RegularExpressions;
 
 using TaskStatus = Midjourney.Infrastructure.TaskStatus;
@@ -29,22 +30,40 @@ namespace Midjourney.API.Controllers
         private readonly string _ip;
 
         private readonly GenerationSpeedMode? _mode;
+        private readonly WorkContext _workContext;
 
         public SubmitController(
             ITranslateService translateService,
             ITaskStoreService taskStoreService,
-            IOptionsSnapshot<ProxyProperties> properties,
             ITaskService taskService,
             ILogger<SubmitController> logger,
+            DiscordHelper discordHelper,
             IHttpContextAccessor httpContextAccessor,
-            DiscordHelper discordHelper)
+            WorkContext workContext)
         {
             _translateService = translateService;
             _taskStoreService = taskStoreService;
-            _properties = properties.Value;
+            _properties = GlobalConfiguration.Setting;
             _taskService = taskService;
             _logger = logger;
             _discordHelper = discordHelper;
+            _workContext = workContext;
+
+            var user = _workContext.GetUser();
+
+            // 如果非演示模式、未开启访客，如果没有登录，直接返回 403 错误
+            if (GlobalConfiguration.IsDemoMode != true
+                && GlobalConfiguration.Setting.EnableGuest != true)
+            {
+                if (user == null)
+                {
+                    // 如果是普通用户, 并且不是匿名控制器，则返回 403
+                    httpContextAccessor.HttpContext.Response.StatusCode = (int)HttpStatusCode.Forbidden;
+                    httpContextAccessor.HttpContext.Response.WriteAsync("未登录");
+                    return;
+                }
+            }
+
 
             _ip = httpContextAccessor.HttpContext.Request.GetIP();
 
@@ -505,6 +524,8 @@ namespace Midjourney.API.Controllers
         /// <returns></returns>
         private TaskInfo NewTask(BaseSubmitDTO baseDTO)
         {
+            var user = _workContext.GetUser();
+
             var task = new TaskInfo
             {
                 Id = $"{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}{RandomUtils.RandomNumbers(3)}",
@@ -512,7 +533,8 @@ namespace Midjourney.API.Controllers
                 State = baseDTO.State,
                 Status = TaskStatus.NOT_START,
                 ClientIp = _ip,
-                Mode = _mode
+                Mode = _mode,
+                UserId = user?.Id
             };
 
             if (_mode != null)

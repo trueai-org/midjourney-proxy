@@ -4,6 +4,7 @@ global using Midjourney.Infrastructure.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.OpenApi.Models;
+using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.Options;
 using Serilog;
 using System.Reflection;
@@ -22,13 +23,50 @@ namespace Midjourney.API
 
         public void ConfigureServices(IServiceCollection services)
         {
+            // 启动时，优先初始化全局配置项
             var configSec = Configuration.GetSection("mj");
-            var config = configSec.Get<ProxyProperties>();
+            var configOpt = configSec.Get<ProxyProperties>();
             services.Configure<ProxyProperties>(configSec);
 
+            var ipSec = Configuration.GetSection("IpRateLimiting");
+            var ipRateOpt = ipSec.Get<IpRateLimitingOptions>();
+            services.Configure<IpRateLimitingOptions>(ipSec);
+
+            var ipBlackSec = Configuration.GetSection("IpBlackRateLimiting");
+            var ipBlackOpt = ipBlackSec.Get<IpBlackRateLimitingOptions>();
+            services.Configure<IpBlackRateLimitingOptions>(ipBlackSec);
+
+            var setting = DbHelper.SettingStore.Get(Constants.DEFAULT_SETTING_ID);
+            if (setting == null)
+            {
+                setting = new Setting
+                {
+                    Id = Constants.DEFAULT_SETTING_ID,
+                    IpRateLimiting = ipRateOpt,
+                    IpBlackRateLimiting = ipBlackOpt,
+                    EnableRegister = true,
+                    EnableGuest = true,
+                    RegisterUserDefaultDayLimit = -1,
+                    GuestDefaultDayLimit = -1,
+
+                    AccountChooseRule = configOpt.AccountChooseRule,
+                    BaiduTranslate = configOpt.BaiduTranslate,
+                    CaptchaNotifyHook = configOpt.CaptchaNotifyHook,
+                    CaptchaServer = configOpt.CaptchaServer,
+                    NgDiscord = configOpt.NgDiscord,
+                    NotifyHook = configOpt.NotifyHook,
+                    NotifyPoolSize = configOpt.NotifyPoolSize,
+                    Openai = configOpt.Openai,
+                    Proxy = configOpt.Proxy,
+                    TranslateWay = configOpt.TranslateWay,
+                    Smtp = configOpt.Smtp
+                };
+                DbHelper.SettingStore.Add(setting);
+            }
+            GlobalConfiguration.Setting = setting;
+
+            // 缓存
             services.AddMemoryCache();
-            services.Configure<IpRateLimitingOptions>(Configuration.GetSection("IpRateLimiting"));
-            services.Configure<IpBlackRateLimitingOptions>(Configuration.GetSection("IpBlackRateLimiting"));
 
             // 是否为演示模式
             var isDemoMode = Configuration.GetSection("Demo").Get<bool?>();
@@ -42,6 +80,7 @@ namespace Midjourney.API
             GlobalConfiguration.IsDemoMode = isDemoMode;
 
             services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
+            services.AddTransient<WorkContext>();
 
             // API 异常过滤器
             // API 方法/模型过滤器
@@ -74,7 +113,7 @@ namespace Midjourney.API
             services.AddHttpClient();
 
             // 注册 Midjourney 服务
-            services.AddMidjourneyServices(config);
+            services.AddMidjourneyServices(setting);
 
             // 注册 Discord 账号初始化器
             services.AddSingleton<DiscordAccountInitializer>();

@@ -1,12 +1,14 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
-using Midjourney.Infrastructure.Domain;
+using Microsoft.Extensions.Caching.Memory;
+using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.LoadBalancer;
 using Midjourney.Infrastructure.Services;
 using Midjourney.Infrastructure.StandardTable;
+using System.Net;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace Midjourney.API.Controllers
 {
@@ -23,35 +25,126 @@ namespace Midjourney.API.Controllers
         // 是否匿名用户
         private readonly bool _isAnonymous;
 
-        private readonly string _adminToken;
         private readonly DiscordLoadBalancer _loadBalancer;
         private readonly DiscordAccountInitializer _discordAccountInitializer;
         private readonly ProxyProperties _properties;
+        private readonly IMemoryCache _memoryCache;
+        private readonly WorkContext _workContext;
 
         public AdminController(
             ITaskService taskService,
-            IConfiguration configuration,
             DiscordLoadBalancer loadBalancer,
             DiscordAccountInitializer discordAccountInitializer,
-            IHttpContextAccessor httpContextAccessor,
-            IOptionsSnapshot<ProxyProperties> properties)
+            IMemoryCache memoryCache,
+            WorkContext workContext,
+            IHttpContextAccessor context)
         {
+            _memoryCache = memoryCache;
             _loadBalancer = loadBalancer;
             _taskService = taskService;
             _discordAccountInitializer = discordAccountInitializer;
+            _workContext = workContext;
 
-            _adminToken = configuration["AdminToken"];
-
-            var hasAuthHeader = httpContextAccessor.HttpContext.Request.Headers.TryGetValue("Authorization", out var authHeader);
-            var hasApiSecretHeader = httpContextAccessor.HttpContext.Request.Headers.TryGetValue("Mj-Api-Secret", out var apiSecretHeader);
-            var token = hasAuthHeader ? authHeader.ToString() : apiSecretHeader.ToString();
-
-            var isAdmin = _adminToken == token;
-            var isDemo = GlobalConfiguration.IsDemoMode == true;
 
             // 如果不是管理员，并且是演示模式时，则是为匿名用户
-            _isAnonymous = !isAdmin && isDemo;
-            _properties = properties.Value;
+            var user = workContext.GetUser();
+
+            _isAnonymous = user?.Role != EUserRole.ADMIN;
+            _properties = GlobalConfiguration.Setting;
+
+            // 普通用户，无法登录管理后台，演示模式除外
+            // 判断当前用户如果是普通用户
+            // 并且不是匿名控制器时
+            if (user?.Role == EUserRole.USER)
+            {
+                var endpoint = context.HttpContext.GetEndpoint();
+                var allowAnonymous = endpoint?.Metadata?.GetMetadata<IAllowAnonymous>() != null;
+                if (!allowAnonymous && GlobalConfiguration.IsDemoMode != true)
+                {
+                    // 如果是普通用户, 并且不是匿名控制器，则返回 403
+                    context.HttpContext.Response.StatusCode = (int)HttpStatusCode.Forbidden;
+                    context.HttpContext.Response.WriteAsync("Forbidden: User is not admin.");
+                    return;
+                }
+            }
+        }
+
+        /// <summary>
+        /// 注册用户
+        /// </summary>
+        /// <param name="registerDto"></param>
+        /// <returns></returns>
+        /// <exception cref="LogicException"></exception>
+        [HttpPost("register")]
+        [AllowAnonymous]
+        public Result Register([FromBody] RegisterDto registerDto)
+        {
+            if (registerDto == null || string.IsNullOrWhiteSpace(registerDto.Email))
+            {
+                throw new LogicException("参数错误");
+            }
+
+            // 验证长度
+            if (registerDto.Email.Length < 5 || registerDto.Email.Length > 50)
+            {
+                throw new LogicException("邮箱长度错误");
+            }
+
+            var mail = registerDto.Email.Trim();
+
+            // 验证 email 格式
+            var isMatch = Regex.IsMatch(mail, @"^[\w-]+(\.[\w-]+)*@[\w-]+(\.[\w-]+)+$");
+            if (!isMatch)
+            {
+                throw new LogicException("邮箱格式错误");
+            }
+
+            // 判断是否开放注册
+            // 如果没有配置邮件服务，则不允许注册
+            if (GlobalConfiguration.Setting.EnableRegister != true
+                || string.IsNullOrWhiteSpace(GlobalConfiguration.Setting?.Smtp?.FromPassword))
+            {
+                throw new LogicException("注册已关闭");
+            }
+
+            // 每个IP每天只能注册一个账号
+            var ip = _workContext.GetIp();
+            var key = $"register:{ip}";
+            if (_memoryCache.TryGetValue(key, out _))
+            {
+                throw new LogicException("注册太频繁");
+            }
+
+            // 验证用户是否存在
+            var user = DbHelper.UserStore.Single(u => u.Email == mail);
+            if (user != null)
+            {
+                throw new LogicException("用户已存在");
+            }
+
+            user = new User
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                Role = EUserRole.USER,
+                Status = EUserStatus.NORMAL,
+                DayDrawLimit = GlobalConfiguration.Setting.RegisterUserDefaultDayLimit,
+                Email = mail,
+                RegisterIp = ip,
+                RegisterTime = DateTime.Now,
+                Token = Guid.NewGuid().ToString("N") + Guid.NewGuid().ToString("N"),
+                Name = mail.Split('@').FirstOrDefault()
+            };
+            DbHelper.UserStore.Add(user);
+
+            // 发送邮件
+            EmailJob.Instance.EmailSend(GlobalConfiguration.Setting.Smtp,
+                $"Midjourney Proxy 注册通知", $"您的登录密码为：{user.Token}",
+                user.Email);
+
+            // 设置缓存
+            _memoryCache.Set(key, true, TimeSpan.FromDays(1));
+
+            return Result.Ok();
         }
 
         /// <summary>
@@ -62,8 +155,29 @@ namespace Midjourney.API.Controllers
         [HttpPost("login")]
         public ActionResult Login([FromBody] string token)
         {
-            // 如果匿名登录，并且没有输入 token
-            if (_isAnonymous && string.IsNullOrWhiteSpace(token))
+            // 兼容 admin token 为空时的情况
+            User user = null;
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                user = DbHelper.UserStore.Single(u => u.Token == token && u.Id == Constants.ADMIN_USER_ID);
+                if (user != null && user.Role == EUserRole.ADMIN)
+                {
+                    // 更新最后登录时间
+                    user.LastLoginTime = DateTime.Now;
+                    user.LastLoginIp = _workContext.GetIp();
+
+                    DbHelper.UserStore.Update(user);
+
+                    return Ok(new
+                    {
+                        code = 1,
+                        apiSecret = user.Token,
+                    });
+                }
+            }
+
+            // 如果 DEMO 模式，并且没有传入 token，则返回空 token
+            if (GlobalConfiguration.IsDemoMode == true && string.IsNullOrWhiteSpace(token))
             {
                 return Ok(new
                 {
@@ -72,19 +186,43 @@ namespace Midjourney.API.Controllers
                 });
             }
 
-            if (!string.IsNullOrWhiteSpace(_adminToken) && token != _adminToken)
+            // 如果开启访客
+            if (string.IsNullOrWhiteSpace(token) && GlobalConfiguration.Setting.EnableGuest)
             {
                 return Ok(new
                 {
-                    code = 0,
-                    description = "登录口令错误",
+                    code = 1,
+                    apiSecret = "",
                 });
             }
+
+            user = DbHelper.UserStore.Single(u => u.Token == token);
+            if (user == null)
+            {
+                throw new LogicException("用户 Token 错误");
+            }
+
+            if (user.Status == EUserStatus.DISABLED)
+            {
+                throw new LogicException("用户已被禁用");
+            }
+
+            // 非演示模式，普通用户和访客无法登录后台
+            if (user.Role != EUserRole.ADMIN && GlobalConfiguration.IsDemoMode != true)
+            {
+                throw new LogicException("用户无权限");
+            }
+
+            // 更新最后登录时间
+            user.LastLoginTime = DateTime.Now;
+            user.LastLoginIp = _workContext.GetIp();
+
+            DbHelper.UserStore.Update(user);
 
             return Ok(new
             {
                 code = 1,
-                apiSecret = _adminToken,
+                apiSecret = user.Token,
             });
         }
 
@@ -150,14 +288,18 @@ namespace Midjourney.API.Controllers
         /// </summary>
         /// <returns></returns>
         [HttpGet("current")]
+        [AllowAnonymous]
         public ActionResult Current()
         {
-            var name = "Admin";
-            var token = _adminToken;
-            if (_isAnonymous)
+            var user = _workContext.GetUser();
+
+            var token = user?.Token;
+            var name = user?.Name ?? "Guest";
+
+            // 如果未开启访客，且未登录，且未开启演示模式，则返回 403
+            if (GlobalConfiguration.Setting.EnableGuest != true && user == null && GlobalConfiguration.IsDemoMode != true)
             {
-                name = "Guest";
-                token = "";
+                return StatusCode(403);
             }
 
             return Ok(new
@@ -176,7 +318,7 @@ namespace Midjourney.API.Controllers
                 group = "",
                 tags = new[]
                 {
-                    new { key = "role", label = "Guest" },
+                    new { key = "role",label = user?.Role?.GetDescription() ?? "Guest" },
                 },
                 notifyCount = 0,
                 unreadCount = 0,
@@ -305,7 +447,19 @@ namespace Midjourney.API.Controllers
 
             if (refresh)
             {
-                var httpClient = new HttpClient();
+                WebProxy webProxy = null;
+                var proxy = GlobalConfiguration.Setting.Proxy;
+                if (!string.IsNullOrEmpty(proxy?.Host))
+                {
+                    webProxy = new WebProxy(proxy.Host, proxy.Port ?? 80);
+                }
+                var hch = new HttpClientHandler
+                {
+                    UseProxy = webProxy != null,
+                    Proxy = webProxy
+                };
+
+                var httpClient = new HttpClient(hch);
                 var hashUrl = item.CfHashUrl;
                 var response = await httpClient.GetAsync(hashUrl);
                 var con = await response.Content.ReadAsStringAsync();
@@ -522,6 +676,7 @@ namespace Midjourney.API.Controllers
             }
 
             _discordAccountInitializer.DeleteAccount(id);
+
             return Result.Ok();
         }
 
@@ -535,6 +690,13 @@ namespace Midjourney.API.Controllers
             var db = DbHelper.AccountStore;
             var data = db.GetAll().OrderBy(c => c.Sort).ThenBy(c => c.DateCreated).ToList();
 
+            // 当前时间转为 Unix 时间戳
+            // 今日 0 点 Unix 时间戳
+            var now = new DateTimeOffset(DateTime.UtcNow.Date).ToUnixTimeMilliseconds();
+            var tasks = DbHelper.TaskStore.GetCollection().Query()
+                .Where(c => c.SubmitTime >= now)
+                .ToList(); ;
+
             foreach (var item in data)
             {
                 var inc = _loadBalancer.GetDiscordInstance(item.ChannelId);
@@ -542,6 +704,8 @@ namespace Midjourney.API.Controllers
                 item.RunningCount = inc?.GetRunningFutures().Count ?? 0;
                 item.QueueCount = inc?.GetQueueTasks().Count ?? 0;
                 item.Running = inc?.IsAlive ?? false;
+
+                item.DayDrawCount = tasks.Count(c => c.InstanceId == item.ChannelId);
 
                 if (_isAnonymous)
                 {
@@ -637,6 +801,354 @@ namespace Midjourney.API.Controllers
 
                 DbHelper.TaskStore.Delete(id);
             }
+
+            return Result.Ok();
+        }
+
+        /// <summary>
+        /// 用户列表
+        /// </summary>
+        /// <param name="request"></param>
+        /// <returns></returns>
+        /// <exception cref="LogicException"></exception>
+        [HttpPost("users")]
+        public ActionResult<StandardTableResult<User>> Users([FromBody] StandardTableParam<User> request)
+        {
+            var page = request.Pagination;
+
+            // 演示模式 100 条
+            if (_isAnonymous)
+            {
+                page.PageSize = 10;
+
+                if (page.Current > 10)
+                {
+                    throw new LogicException("演示模式，禁止查看更多数据");
+                }
+            }
+
+            var param = request.Search;
+
+            var xx = DbHelper.UserStore.GetAll();
+
+            var query = DbHelper.UserStore.GetCollection().Query()
+                .WhereIf(!string.IsNullOrWhiteSpace(param.Id), c => c.Id == param.Id)
+                .WhereIf(!string.IsNullOrWhiteSpace(param.Name), c => c.Name.Contains(param.Name))
+                .WhereIf(!string.IsNullOrWhiteSpace(param.Email), c => c.Email.Contains(param.Email))
+                .WhereIf(!string.IsNullOrWhiteSpace(param.Phone), c => c.Phone.Contains(param.Phone))
+                .WhereIf(param.Role.HasValue, c => c.Role == param.Role)
+                .WhereIf(param.Status.HasValue, c => c.Status == param.Status);
+
+            var count = query.Count();
+            var list = query
+                .OrderByDescending(c => c.UpdateTime)
+                .Skip((page.Current - 1) * page.PageSize)
+                .Limit(page.PageSize)
+                .ToList();
+
+            if (_isAnonymous)
+            {
+                // 对用户信息进行脱敏处理
+                foreach (var item in list)
+                {
+                    item.Name = "***";
+                    item.Email = "***";
+                    item.Phone = "***";
+                    item.Token = "***";
+                }
+            }
+
+            var data = list.ToTableResult(request.Pagination.Current, request.Pagination.PageSize, count);
+
+            return Ok(data);
+        }
+
+        /// <summary>
+        /// 添加或编辑用户
+        /// </summary>
+        /// <param name="user"></param>
+        /// <returns></returns>
+        /// <exception cref="LogicException"></exception>
+        [HttpPost("user")]
+        public Result UserAddOrEdit([FromBody] User user)
+        {
+            if (_isAnonymous)
+            {
+                return Result.Fail("演示模式，禁止操作");
+            }
+
+            var oldToken = user?.Token;
+
+            if (string.IsNullOrWhiteSpace(user.Id))
+            {
+                user.Id = Guid.NewGuid().ToString();
+            }
+            else
+            {
+                var model = DbHelper.UserStore.Get(user.Id);
+                if (model == null)
+                {
+                    throw new LogicException("用户不存在");
+                }
+
+                oldToken = model?.Token;
+
+                user.LastLoginIp = model.LastLoginIp;
+                user.LastLoginTime = model.LastLoginTime;
+                user.RegisterIp = model.RegisterIp;
+                user.RegisterTime = model.RegisterTime;
+                user.CreateTime = model.CreateTime;
+            }
+
+            // 参数校验
+            // token 不能为空
+            if (string.IsNullOrWhiteSpace(user.Token))
+            {
+                throw new LogicException("Token 不能为空");
+            }
+
+            // 判断 token 重复
+            var tokenUser = DbHelper.UserStore.Single(c => c.Id != user.Id && c.Token == user.Token);
+            if (tokenUser != null)
+            {
+                throw new LogicException("Token 重复");
+            }
+
+            // 用户名不能为空
+            if (string.IsNullOrWhiteSpace(user.Name))
+            {
+                throw new LogicException("用户名不能为空");
+            }
+
+            // 角色
+            if (user.Role == null)
+            {
+                user.Role = EUserRole.USER;
+            }
+
+            // 状态
+            if (user.Status == null)
+            {
+                user.Status = EUserStatus.NORMAL;
+            }
+
+            user.UpdateTime = DateTime.Now;
+
+            DbHelper.UserStore.Save(user);
+
+            // 清除缓存
+            var key = $"USER_{oldToken}";
+            _memoryCache.Remove(key);
+
+            return Result.Ok();
+        }
+
+        /// <summary>
+        /// 删除用户
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        [HttpDelete("user/{id}")]
+        public Result UserDelete(string id)
+        {
+            if (_isAnonymous)
+            {
+                return Result.Fail("演示模式，禁止操作");
+            }
+
+            var model = DbHelper.UserStore.Get(id);
+            if (model == null)
+            {
+                throw new LogicException("用户不存在");
+            }
+            if (model.Id == Constants.ADMIN_USER_ID)
+            {
+                throw new LogicException("不能删除管理员账号");
+            }
+            if (model.Id == Constants.DEFAULT_USER_ID)
+            {
+                throw new LogicException("不能删除默认账号");
+            }
+
+            // 清除缓存
+            var key = $"USER_{model.Token}";
+            _memoryCache.Remove(key);
+
+            DbHelper.UserStore.Delete(id);
+            return Result.Ok();
+        }
+
+        /// <summary>
+        /// 获取所有启动的领域标签
+        /// </summary>
+        /// <returns></returns>
+        [HttpGet("domain-tags")]
+        public Result<List<SelectOption>> DomainTags()
+        {
+            var data = DbHelper.DomainStore.GetAll()
+                .Select(c => new SelectOption()
+                {
+                    Value = c.Id,
+                    Label = c.Name,
+                    Disabled = !c.Enable
+                }).ToList();
+            return Result.Ok(data);
+        }
+
+        /// <summary>
+        /// 领域标签管理
+        /// </summary>
+        /// <param name="request"></param>
+        /// <returns></returns>
+        /// <exception cref="LogicException"></exception>
+        [HttpPost("domain-tags")]
+        public ActionResult<StandardTableResult<DomainTag>> Domains([FromBody] StandardTableParam<DomainTag> request)
+        {
+            var page = request.Pagination;
+
+            var firstKeyword = request.Search.Keywords?.FirstOrDefault();
+            var param = request.Search;
+
+            var query = DbHelper.DomainStore.GetCollection().Query()
+                .WhereIf(!string.IsNullOrWhiteSpace(param.Id), c => c.Id == param.Id)
+                .WhereIf(!string.IsNullOrWhiteSpace(firstKeyword), c => c.Keywords.Contains(firstKeyword));
+
+            var count = query.Count();
+            var list = query
+                .OrderBy(c => c.Sort)
+                .Skip((page.Current - 1) * page.PageSize)
+                .Limit(page.PageSize)
+                .ToList();
+
+            var data = list.ToTableResult(request.Pagination.Current, request.Pagination.PageSize, count);
+
+            return Ok(data);
+        }
+
+        /// <summary>
+        /// 添加或编辑领域标签
+        /// </summary>
+        /// <param name="domain"></param>
+        /// <returns></returns>
+        /// <exception cref="LogicException"></exception>
+        [HttpPost("domain-tag")]
+        public Result DomainAddOrEdit([FromBody] DomainTag domain)
+        {
+            if (_isAnonymous)
+            {
+                return Result.Fail("演示模式，禁止操作");
+            }
+
+            if (string.IsNullOrWhiteSpace(domain.Id))
+            {
+                domain.Id = Guid.NewGuid().ToString();
+            }
+            else
+            {
+                var model = DbHelper.DomainStore.Get(domain.Id);
+                if (model == null)
+                {
+                    throw new LogicException("领域标签不存在");
+                }
+
+                domain.CreateTime = model.CreateTime;
+            }
+
+            domain.UpdateTime = DateTime.Now;
+
+            DbHelper.DomainStore.Save(domain);
+            return Result.Ok();
+        }
+
+        /// <summary>
+        /// 删除领域标签
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        [HttpDelete("domain-tag/{id}")]
+        public Result DomainDelete(string id)
+        {
+            if (_isAnonymous)
+            {
+                return Result.Fail("演示模式，禁止操作");
+            }
+
+            var model = DbHelper.DomainStore.Get(id);
+            if (model == null)
+            {
+                throw new LogicException("领域标签不存在");
+            }
+
+            if (model.Id == Constants.DEFAULT_DOMAIN_ID)
+            {
+                throw new LogicException("不能删除默认领域标签");
+            }
+
+            if (model.Id == Constants.DEFAULT_DOMAIN_FULL_ID)
+            {
+                throw new LogicException("不能删除默认领域标签");
+            }
+
+            DbHelper.DomainStore.Delete(id);
+
+            return Result.Ok();
+        }
+
+        /// <summary>
+        /// 获取系统配置
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="LogicException"></exception>
+        [HttpGet("setting")]
+        public Result<Setting> GetSetting()
+        {
+            var model = DbHelper.SettingStore.Get(Constants.DEFAULT_SETTING_ID);
+            if (model == null)
+            {
+                throw new LogicException("系统配置错误，请重启服务");
+            }
+
+            // 演示模式，部分配置不可见
+            if (_isAnonymous)
+            {
+                if (model.Smtp != null)
+                {
+                    model.Smtp.FromPassword = "****";
+                    model.Smtp.FromEmail = "****";
+                    model.Smtp.To = "****";
+                }
+
+                if (model.BaiduTranslate != null)
+                {
+                    model.BaiduTranslate.Appid = "****";
+                    model.BaiduTranslate.AppSecret = "****";
+                }
+            }
+
+            return Result.Ok(model);
+        }
+
+        /// <summary>
+        /// 编辑系统配置
+        /// </summary>
+        /// <param name="setting"></param>
+        /// <returns></returns>
+        [HttpPost("setting")]
+        public Result SettingEdit([FromBody] Setting setting)
+        {
+            if (_isAnonymous)
+            {
+                return Result.Fail("演示模式，禁止操作");
+            }
+
+            setting.Id = Constants.DEFAULT_SETTING_ID;
+
+            DbHelper.SettingStore.Update(setting);
+
+            GlobalConfiguration.Setting = setting;
+
+            // 首页缓存
+            _memoryCache.Remove("HOME");
 
             return Result.Ok();
         }

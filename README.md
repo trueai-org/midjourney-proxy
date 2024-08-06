@@ -60,9 +60,16 @@
 - [x] CloudFlare 自动真人验证，配置验证服务器地址（自动验证器仅支持 Windows 部署）
 - [x] 支持工作时间段配置，连续 24 小时不间断绘图可能会触发警告，建议休息 6~8 小时，示例：`09:10-23:55, 13:00-08:10`
 - [x] 内置 IP 限流、IP 段限流、黑名单、白名单、自动黑名单等功能
-- [ ] 单日绘图上限支持，超出上限后自动停止绘图
+- [x] 单日绘图上限支持，超出上限后自动停止绘图 (BETA)
+- [x] 开启注册、开启访客 (BETA)
+- [x] 可视化配置功能 (BETA)
 - [ ] 配置机器人 Token 可选配置，不配置机器人也可以使用
 - [ ] 账号垂直分类支持，账号支持词条配置，每个账号只做某一类作品，例如：只做风景、只做人物
+- [ ] 允许共享频道或子频道绘画，即便账号被封，也可以继续之前的绘画，将被封的账号频道作为正常账号的子频道即可，保存永久邀请链接，和子频道链接，支持批量修改，可直接输入邀请链接，或共享频道地址，系统自动加入频道转换。或者通过转交所有权实现。
+- [ ] 征集一个视频教程
+- [ ] 优化指令和状态进度显示
+- [ ] 服务重启后，如果有未启动的任务，则加入到执行的队列中
+- [ ] 支持 `mjplus` 或其他服务一键迁移到本服务
 
 ## 在线预览
 
@@ -120,16 +127,19 @@ docker pull registry.cn-guangzhou.aliyuncs.com/trueai-org/midjourney-proxy
 # 公益演示站点启动配置示例
 
 # 1.下载并重命名配置文件（示例配置）
+# 提示：3.x 版本无需配置文件
 wget -O /root/mjopen/appsettings.Production.json https://raw.githubusercontent.com/trueai-org/midjourney-proxy/main/src/Midjourney.API/appsettings.json
 
 # 或使用 curl 下载并重命名配置文件（示例配置）
+# 提示：3.x 版本无需配置文件
 curl -o /root/mjopen/appsettings.Production.json https://raw.githubusercontent.com/trueai-org/midjourney-proxy/main/src/Midjourney.API/appsettings.json
 
 # 2.停止并移除旧的 Docker 容器
 docker stop mjopen && docker rm mjopen
 
 # 3.启动新的 Docker 容器
-# 部署请删除 DEMO 变量，否则会进入演示模式
+# 提示：部署请删除 DEMO 变量，否则会进入演示模式
+# 提示：3.x 版本无需配置文件
 docker run -m 1g --name mjopen -d --restart=always \
  -e DEMO=true \
  -p 8086:8080 --user root \
@@ -235,6 +245,13 @@ curl -o linux_install.sh https://raw.githubusercontent.com/trueai-org/midjourney
 - `/app/wwwroot` 静态文件目录
     - `/app/wwwroot/attachments` 绘图文件目录
     - `/app/wwwroot/ephemeral-attachments` describe 生成图片目录
+
+#### 角色说明
+
+- `普通用户`：只可用于绘图接口，无法登录后台。
+- `管理员`：可以登录后台，可以查看任务、配置等。
+
+> 3.x 版本，无需此配置，修改配置请通过 GUI 修改
 
 ```json
 {
@@ -434,8 +451,6 @@ https://discord.com/oauth2/authorize?client_id=xxx&permissions=8&scope=bot
 
 ## 路线图
 
-- [ ] 征集一个视频教程
-- [ ] 优化指令和状态进度显示
 - [ ] 优化任务和队列满时的提醒
 - [ ] 优化共享账号的并发队列可能出现的问题
 - [ ] 内置词库管理，批量修改
@@ -445,15 +460,12 @@ https://discord.com/oauth2/authorize?client_id=xxx&permissions=8&scope=bot
 - [ ] GPT 翻译接入
 - [ ] 最终提示词增加翻译中文显示支持
 - [ ] 账号支持单独的代理
-- [ ] 开启注册、开启访客
 - [ ] 多数据库支持 MySQL、Sqlite、SqlServer、MongoDB、PostgeSQL、Redis 等
 - [ ] 支付接入支持、支持微信、支付宝，支持绘图定价策略等
 - [ ] 增加公告功能
 - [ ] 账号增加咸鱼模式/放松模式，避免高频作业（此模式下不可创建新的绘图，仍可以执行其他命令，可以配置为多个时间段或定时等策略）
 - [ ] 图生文 seed 值处理
 - [ ] 自动读私信消息
-- [ ] 服务重启后，如果有未启动的任务，则加入到执行的队列中
-- [ ] 允许共享频道或子频道绘画，即便账号被封，也可以继续之前的绘画，将被封的账号频道作为正常账号的子频道即可，保存永久邀请链接，和子频道链接，支持批量修改，可直接输入邀请链接，或共享频道地址，系统自动加入频道转换。或者通过转交所有权实现。
 
 ## 支持与赞助
 

@@ -8,6 +8,7 @@ namespace Midjourney.API
     {
         public static void AddMidjourneyServices(this IServiceCollection services, ProxyProperties config)
         {
+     
             // 注册所有的处理程序
 
             // 机器人消息处理程序

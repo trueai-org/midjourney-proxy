@@ -1,10 +1,37 @@
-﻿namespace Midjourney.Infrastructure
+﻿namespace Midjourney.Infrastructure.Data
 {
     /// <summary>
     /// 常量类.
     /// </summary>
     public static class Constants
     {
+        /// <summary>
+        /// 默认配置 ID
+        /// </summary>
+        public const string DEFAULT_SETTING_ID = "default";
+
+        /// <summary>
+        /// 超管用户 ID
+        /// </summary>
+        public const string ADMIN_USER_ID = "admin";
+
+        /// <summary>
+        /// 默认普通绘图用户 ID
+        /// </summary>
+        public const string DEFAULT_USER_ID = "user";
+
+        /// <summary>
+        /// 简单的
+        /// </summary>
+        public const string DEFAULT_DOMAIN_ID = "simple";
+
+        /// <summary>
+        /// 完整的
+        /// </summary>
+        public const string DEFAULT_DOMAIN_FULL_ID = "full";
+
+        // -----------------
+
         /// <summary>
         /// niji journey Bot 应用 ID
         /// </summary>

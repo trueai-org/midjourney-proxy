@@ -1,5 +1,6 @@
 ﻿using Discord;
 using Discord.WebSocket;
+using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.LoadBalancer;
 using Midjourney.Infrastructure.Util;
 using Serilog;

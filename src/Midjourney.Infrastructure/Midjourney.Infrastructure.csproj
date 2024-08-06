@@ -52,9 +52,11 @@
 		<Content Remove="Resources\ApiParams\seedniji.json" />
 		<Content Remove="Resources\ApiParams\remix.json" />
 		<Content Remove="Resources\ApiParams\picreader.json" />
-		<None Remove="Resources\ApiParams\show.json" />
-		<None Remove="Resources\ApiParams\showniji.json" />
+		<Content Remove="Resources\ApiParams\show.json" />
+		<Content Remove="Resources\ApiParams\showniji.json" />
 		<Content Remove="Resources\mime.types" />
+		<Content Remove="Resources\words.txt" />
+		<Content Remove="Resources\wordsfull.txt" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -83,6 +85,8 @@
 		<EmbeddedResource Include="Resources\ApiParams\imagine.json" />
 		<EmbeddedResource Include="Resources\ApiParams\message.json" />
 		<EmbeddedResource Include="Resources\mime.types" />
+		<EmbeddedResource Include="Resources\words.txt" />
+		<EmbeddedResource Include="Resources\wordsfull.txt" />
 	</ItemGroup>
 
 	<ItemGroup>

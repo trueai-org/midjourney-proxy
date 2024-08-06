@@ -1,6 +1,4 @@
-﻿using Midjourney.Infrastructure.Domain;
-
-namespace Midjourney.Infrastructure.LoadBalancer
+﻿namespace Midjourney.Infrastructure.LoadBalancer
 {
     /// <summary>
     /// Discord实例接口，定义了与Discord服务交互的基本方法。
