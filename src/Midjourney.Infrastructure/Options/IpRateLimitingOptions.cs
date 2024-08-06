@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using LiteDB;
+using System.Net;
 
 namespace Midjourney.Infrastructure.Options
 {
@@ -20,13 +21,23 @@ namespace Midjourney.Infrastructure.Options
         /// <summary>
         /// 白名单 IP 网络
         /// </summary>
+        [BsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        [System.Text.Json.Serialization.JsonIgnore]
         public List<IPNetwork2> WhitelistNetworks
         {
             get
             {
-                // 格式化白名单
-                // 如果没有 / , 则默认为 /32
-                return Whitelist.Select(ip => !ip.Contains("/") ? IPNetwork2.Parse(ip + "/32") : IPNetwork2.Parse(ip)).ToList();
+                try
+                {
+                    // 格式化白名单
+                    // 如果没有 / , 则默认为 /32
+                    return Whitelist.Select(ip => !ip.Contains("/") ? IPNetwork2.Parse(ip + "/32") : IPNetwork2.Parse(ip)).ToList();
+                }
+                catch
+                {
+                }
+                return new List<IPNetwork2>();
             }
         }
 
@@ -38,12 +49,23 @@ namespace Midjourney.Infrastructure.Options
         /// <summary>
         /// 黑名单 IP 网络
         /// </summary>
+        [BsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        [System.Text.Json.Serialization.JsonIgnore]
         public List<IPNetwork2> BlacklistNetworks
         {
             get
             {
-                // 格式化黑名单
-                return Blacklist.Select(ip => IPNetwork2.Parse(ip + "/32")).ToList();
+                try
+                {
+                    // 格式化黑名单
+                    return Blacklist.Select(ip => IPNetwork2.Parse(ip + "/32")).ToList();
+                }
+                catch
+                {
+                }
+
+                return new List<IPNetwork2>();
             }
         }
 

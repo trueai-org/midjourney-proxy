@@ -63,7 +63,8 @@ namespace Midjourney.API
                 };
                 DbHelper.SettingStore.Save(setting);
 
-                Thread.Sleep(5 * 1000);
+                // 等待 1s
+                Thread.Sleep(1 * 1000);
             }
             GlobalConfiguration.Setting = setting;
 
