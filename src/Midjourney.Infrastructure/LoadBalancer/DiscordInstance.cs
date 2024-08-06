@@ -221,17 +221,17 @@ namespace Midjourney.Infrastructure.LoadBalancer
                         // 判断是否还有资源可用
                         if (_semaphoreSlimLock.TryWait(100))
                         {
+                            // 提交任务前间隔
+                            // 当一个作业完成后，是否先等待一段时间再提交下一个作业
+                            var sp = interval - 1.2m;
+                            if (sp > 0)
+                            {
+                                Thread.Sleep((int)(sp * 1000));
+                            }
+
                             // 从队列中移除任务，并开始执行
                             if (_queueTasks.TryDequeue(out info))
                             {
-                                // 提交任务前间隔
-                                // 当一个作业完成后，是否先等待一段时间再提交下一个作业
-                                var sp = interval - 1.2m;
-                                if (sp > 0)
-                                {
-                                    Thread.Sleep((int)(sp * 1000));
-                                }
-
                                 _taskFutureMap[info.Item1.Id] = ExecuteTaskAsync(info.Item1, info.Item2);
 
                                 // 如果是图生文操作

@@ -49,6 +49,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
             else
             {
                 var list = _instances.Where(instance => instance.IsAlive)
+
                          // 指定速度模式过滤
                          .WhereIf(accountFilter.Modes.Count > 0, c => c.Account.Mode == null || accountFilter.Modes.Contains(c.Account.Mode.Value))
 

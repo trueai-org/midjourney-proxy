@@ -46,21 +46,21 @@ namespace Midjourney.API.Controllers
                 dto.YesterdayDraw = (int)DbHelper.TaskStore.Count(x => x.SubmitTime >= yesterday && x.SubmitTime < now);
                 dto.TotalDraw = DbHelper.TaskStore.GetCollection().Query().Count();
 
-                // 今日绘图客户端 top 5
-                var top5 = DbHelper.TaskStore.GetCollection().Query()
+                // 今日绘图客户端 top 10
+                var top10 = DbHelper.TaskStore.GetCollection().Query()
                     .Where(x => x.SubmitTime >= now)
                     .ToList()
-                    .GroupBy(c => string.Join(".", c.ClientIp?.Split('.').Take(2)) + ".*.*")
+                    .GroupBy(c => string.Join(".", c.ClientIp?.Split('.')?.Take(2) ?? []) + ".*.*")
                     .Select(c => new
                     {
-                        ip = c.Key,
+                        ip = c.Key ?? "null",
                         count = c.Count()
                     })
                     .OrderByDescending(c => c.count)
-                    .Take(5)
+                    .Take(10)
                     .ToDictionary(c => c.ip, c => c.count);
 
-                dto.Tops = top5;
+                dto.Tops = top10;
 
                 return dto;
             });
