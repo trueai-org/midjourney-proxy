@@ -72,18 +72,24 @@ namespace Midjourney.API
                     IsWhite = true
                 };
 
+                if (string.IsNullOrWhiteSpace(admin.Token))
+                {
+                    admin.Token = "admin";
+                }
+
                 DbHelper.UserStore.Add(admin);
             }
 
             // 初始化普通用户
             var user = DbHelper.UserStore.Get(Constants.DEFAULT_USER_ID);
-            if (user == null)
+            var userToken = _configuration["UserToken"];
+            if (user == null && !string.IsNullOrWhiteSpace(userToken))
             {
                 user = new User
                 {
                     Id = Constants.DEFAULT_USER_ID,
                     Name = Constants.DEFAULT_USER_ID,
-                    Token = _configuration["UserToken"],
+                    Token = userToken,
                     Role = EUserRole.USER,
                     Status = EUserStatus.NORMAL,
                     IsWhite = true
