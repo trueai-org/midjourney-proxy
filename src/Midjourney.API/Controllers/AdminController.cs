@@ -6,6 +6,7 @@ using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.LoadBalancer;
 using Midjourney.Infrastructure.Services;
 using Midjourney.Infrastructure.StandardTable;
+using System.Net;
 using System.Text.Json;
 
 namespace Midjourney.API.Controllers
@@ -306,7 +307,19 @@ namespace Midjourney.API.Controllers
 
             if (refresh)
             {
-                var httpClient = new HttpClient();
+                WebProxy webProxy = null;
+                var proxy = GlobalConfiguration.Setting.Proxy;
+                if (!string.IsNullOrEmpty(proxy?.Host))
+                {
+                    webProxy = new WebProxy(proxy.Host, proxy.Port ?? 80);
+                }
+                var hch = new HttpClientHandler
+                {
+                    UseProxy = webProxy != null,
+                    Proxy = webProxy
+                };
+
+                var httpClient = new HttpClient(hch);
                 var hashUrl = item.CfHashUrl;
                 var response = await httpClient.GetAsync(hashUrl);
                 var con = await response.Content.ReadAsStringAsync();

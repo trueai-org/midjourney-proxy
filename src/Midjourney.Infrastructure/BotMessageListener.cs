@@ -325,7 +325,19 @@ namespace Midjourney.Infrastructure
                                                 // 发送 hashUrl GET 请求, 返回 {"hash":"OOUxejO94EQNxsCODRVPbg","token":"dXDm-gSb4Zlsx-PCkNVyhQ"}
                                                 // 通过 hash 和 token 拼接验证 CF 验证 URL
 
-                                                var httpClient = new HttpClient();
+                                                WebProxy webProxy = null;
+                                                var proxy = GlobalConfiguration.Setting.Proxy;
+                                                if (!string.IsNullOrEmpty(proxy?.Host))
+                                                {
+                                                    webProxy = new WebProxy(proxy.Host, proxy.Port ?? 80);
+                                                }
+                                                var hch = new HttpClientHandler
+                                                {
+                                                    UseProxy = webProxy != null,
+                                                    Proxy = webProxy
+                                                };
+
+                                                var httpClient = new HttpClient(hch);
                                                 var response = httpClient.GetAsync(hashUrl).Result;
                                                 var con = response.Content.ReadAsStringAsync().Result;
                                                 if (!string.IsNullOrWhiteSpace(con))

@@ -5,6 +5,7 @@ using Midjourney.Infrastructure.Options;
 using Midjourney.Infrastructure.Util;
 using RestSharp;
 using Serilog;
+using System.Net;
 using System.Text.Json;
 
 namespace Midjourney.Captcha.API.Controllers
@@ -72,7 +73,19 @@ namespace Midjourney.Captcha.API.Controllers
 
                         try
                         {
-                            var httpClient = new HttpClient()
+                            WebProxy webProxy = null;
+                            var proxy = GlobalConfiguration.Setting.Proxy;
+                            if (!string.IsNullOrEmpty(proxy?.Host))
+                            {
+                                webProxy = new WebProxy(proxy.Host, proxy.Port ?? 80);
+                            }
+                            var hch = new HttpClientHandler
+                            {
+                                UseProxy = webProxy != null,
+                                Proxy = webProxy
+                            };
+
+                            var httpClient = new HttpClient(hch)
                             {
                                 Timeout = Timeout.InfiniteTimeSpan
                             };
