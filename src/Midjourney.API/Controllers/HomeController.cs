@@ -50,7 +50,7 @@ namespace Midjourney.API.Controllers
                 var top5 = DbHelper.TaskStore.GetCollection().Query()
                     .Where(x => x.SubmitTime >= now)
                     .ToList()
-                    .GroupBy(c => c.ClientIp)
+                    .GroupBy(c => string.Join(".", c.ClientIp?.Split('.').Take(2)) + ".*.*")
                     .Select(c => new
                     {
                         ip = c.Key,
