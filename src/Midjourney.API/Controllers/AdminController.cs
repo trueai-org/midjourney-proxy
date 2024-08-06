@@ -36,7 +36,8 @@ namespace Midjourney.API.Controllers
             DiscordLoadBalancer loadBalancer,
             DiscordAccountInitializer discordAccountInitializer,
             IMemoryCache memoryCache,
-            WorkContext workContext)
+            WorkContext workContext,
+            IHttpContextAccessor context)
         {
             _memoryCache = memoryCache;
             _loadBalancer = loadBalancer;
@@ -50,6 +51,22 @@ namespace Midjourney.API.Controllers
 
             _isAnonymous = user?.Role != EUserRole.ADMIN;
             _properties = GlobalConfiguration.Setting;
+
+            // 普通用户，无法登录管理后台，演示模式除外
+            // 判断当前用户如果是普通用户
+            // 并且不是匿名控制器时
+            if (user?.Role == EUserRole.USER)
+            {
+                var endpoint = context.HttpContext.GetEndpoint();
+                var allowAnonymous = endpoint?.Metadata?.GetMetadata<IAllowAnonymous>() != null;
+                if (!allowAnonymous && GlobalConfiguration.IsDemoMode != true)
+                {
+                    // 如果是普通用户, 并且不是匿名控制器，则返回 403
+                    context.HttpContext.Response.StatusCode = (int)HttpStatusCode.Forbidden;
+                    context.HttpContext.Response.WriteAsync("Forbidden: User is not admin.");
+                    return;
+                }
+            }
         }
 
         /// <summary>
@@ -190,6 +207,12 @@ namespace Midjourney.API.Controllers
                 throw new LogicException("用户已被禁用");
             }
 
+            // 非演示模式，普通用户和访客无法登录后台
+            if (user.Role != EUserRole.ADMIN && GlobalConfiguration.IsDemoMode != true)
+            {
+                throw new LogicException("用户无权限");
+            }
+
             // 更新最后登录时间
             user.LastLoginTime = DateTime.Now;
             user.LastLoginIp = _workContext.GetIp();
@@ -265,12 +288,19 @@ namespace Midjourney.API.Controllers
         /// </summary>
         /// <returns></returns>
         [HttpGet("current")]
+        [AllowAnonymous]
         public ActionResult Current()
         {
             var user = _workContext.GetUser();
 
             var token = user?.Token;
             var name = user?.Name ?? "Guest";
+
+            // 如果未开启访客，且未登录，且未开启演示模式，则返回 403
+            if (GlobalConfiguration.Setting.EnableGuest != true && user == null && GlobalConfiguration.IsDemoMode != true)
+            {
+                return StatusCode(403);
+            }
 
             return Ok(new
             {

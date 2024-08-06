@@ -245,6 +245,13 @@ curl -o linux_install.sh https://raw.githubusercontent.com/trueai-org/midjourney
     - `/app/wwwroot/attachments` 绘图文件目录
     - `/app/wwwroot/ephemeral-attachments` describe 生成图片目录
 
+#### 角色说明
+
+- `普通用户`：只可用于绘图接口，无法登录后台。
+- `管理员`：可以登录后台，可以查看任务、配置等。
+
+> 3.x 版本，无需此配置，修改配置请通过 GUI 修改
+
 ```json
 {
   "Demo": null, // 网站配置为演示模式

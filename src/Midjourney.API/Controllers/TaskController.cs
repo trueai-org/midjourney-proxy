@@ -3,6 +3,7 @@ using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.LoadBalancer;
 using Midjourney.Infrastructure.Services;
+using System.Net;
 
 namespace Midjourney.API.Controllers
 {
@@ -19,12 +20,35 @@ namespace Midjourney.API.Controllers
         private readonly ITaskStoreService _taskStoreService;
         private readonly DiscordLoadBalancer _discordLoadBalancer;
         private readonly ITaskService _taskService;
+        private readonly WorkContext _workContext;
 
-        public TaskController(ITaskStoreService taskStoreService, DiscordLoadBalancer discordLoadBalancer, ITaskService taskService)
+        public TaskController(
+            ITaskStoreService taskStoreService,
+            DiscordLoadBalancer discordLoadBalancer, 
+            ITaskService taskService,
+            IHttpContextAccessor httpContextAccessor,
+            WorkContext workContext)
         {
             _taskStoreService = taskStoreService;
             _discordLoadBalancer = discordLoadBalancer;
             _taskService = taskService;
+
+            _workContext = workContext;
+
+            var user = _workContext.GetUser();
+
+            // 如果非演示模式、未开启访客，如果没有登录，直接返回 403 错误
+            if (GlobalConfiguration.IsDemoMode != true
+                && GlobalConfiguration.Setting.EnableGuest != true)
+            {
+                if (user == null)
+                {
+                    // 如果是普通用户, 并且不是匿名控制器，则返回 403
+                    httpContextAccessor.HttpContext.Response.StatusCode = (int)HttpStatusCode.Forbidden;
+                    httpContextAccessor.HttpContext.Response.WriteAsync("未登录");
+                    return;
+                }
+            }
         }
 
         /// <summary>
