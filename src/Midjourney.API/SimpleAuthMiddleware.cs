@@ -8,17 +8,13 @@ namespace Midjourney.API
     public class SimpleAuthMiddleware
     {
         private readonly RequestDelegate _next;
-        private readonly string _userToken;
-        private readonly string _adminToken;
 
-        public SimpleAuthMiddleware(RequestDelegate next, IConfiguration configuration)
+        public SimpleAuthMiddleware(RequestDelegate next)
         {
             _next = next;
-            _userToken = configuration["UserToken"]; // 从配置中获取用户令牌
-            _adminToken = configuration["AdminToken"]; // 从配置中获取管理员令牌
         }
 
-        public async Task Invoke(HttpContext context)
+        public async Task Invoke(HttpContext context, WorkContext workContext)
         {
             var path = context.Request.Path.Value;
             if (path.StartsWith("/mj-turbo"))
@@ -45,51 +41,46 @@ namespace Midjourney.API
                 return;
             }
 
-            // 如果都为空，则不需要验证
-            if (string.IsNullOrWhiteSpace(_userToken) && string.IsNullOrWhiteSpace(_adminToken))
-            {
-                await _next(context);
-                return;
-            }
-
-            // 获取 Authorization 或 Mj-Api-Secret 头部
-            var hasAuthHeader = context.Request.Headers.TryGetValue("Authorization", out var authHeader);
-            var hasApiSecretHeader = context.Request.Headers.TryGetValue("Mj-Api-Secret", out var apiSecretHeader);
-
             // 检查是否有 AllowAnonymous 特性
             var endpoint = context.GetEndpoint();
             var allowAnonymous = endpoint?.Metadata?.GetMetadata<IAllowAnonymous>() != null;
-
-            // 如果没有这两个头部，且不允许匿名访问，则返回 401
-            if (!allowAnonymous && !hasAuthHeader && !hasApiSecretHeader)
-            {
-                context.Response.StatusCode = 401; // Unauthorized
-                await context.Response.WriteAsync("Authorization header missing.");
-                return;
-            }
-
-            // 验证令牌是否正确
             if (!allowAnonymous)
             {
-                var token = hasAuthHeader ? authHeader.ToString() : apiSecretHeader.ToString();
-                if (token != _userToken && token != _adminToken)
+                var user = workContext.GetUser();
+
+                // 如果用户被禁用
+                if (user?.Status == EUserStatus.DISABLED)
                 {
-                    context.Response.StatusCode = 401; // Unauthorized
-                    await context.Response.WriteAsync("Invalid token.");
+                    context.Response.StatusCode = 403;
+                    await context.Response.WriteAsync("Forbidden: User is disabled.");
                     return;
                 }
 
-                // 如果是管理员接口，需要管理员令牌
-                if (context.Request.Path.StartsWithSegments("/mj/admin") && token != _adminToken)
+                // 如果是管理员接口，需要管理员角色
+                if (context.Request.Path.StartsWithSegments("/mj/admin"))
                 {
-                    context.Response.StatusCode = 403; // Forbidden
-                    await context.Response.WriteAsync("Forbidden: Admin access required.");
-                    return;
+                    if (user?.Role != EUserRole.ADMIN)
+                    {
+                        context.Response.StatusCode = 403;
+                        await context.Response.WriteAsync("Forbidden: Admin access required.");
+                        return;
+                    }
+                }
+                else
+                {
+                    // 非管理员接口，只要登录即可或开启访客模式
+                    // 未开启访客
+                    // 并且不允许匿名访问，则返回 401
+                    if (user == null && !GlobalConfiguration.Setting.EnableGuest)
+                    {
+                        context.Response.StatusCode = 401;
+                        await context.Response.WriteAsync("Authorization header missing.");
+                        return;
+                    }
                 }
             }
 
             await _next(context);
         }
     }
-
 }

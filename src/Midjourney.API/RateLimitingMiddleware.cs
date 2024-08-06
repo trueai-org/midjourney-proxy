@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Options;
 using Midjourney.Infrastructure.Options;
 using System.Net;
 
@@ -15,15 +14,12 @@ namespace Midjourney.API
         private readonly IpRateLimitingOptions _ipRateOptions;
         private readonly IpBlackRateLimitingOptions _ipBlackRateOptions;
 
-        public RateLimitingMiddleware(RequestDelegate next,
-            IMemoryCache cache,
-            IOptionsMonitor<IpRateLimitingOptions> ipRateoptions,
-            IOptionsMonitor<IpBlackRateLimitingOptions> ipBlackRateoptions)
+        public RateLimitingMiddleware(RequestDelegate next, IMemoryCache cache)
         {
             _next = next;
             _cache = cache;
-            _ipRateOptions = ipRateoptions.CurrentValue;
-            _ipBlackRateOptions = ipBlackRateoptions.CurrentValue;
+            _ipRateOptions = GlobalConfiguration.Setting?.IpRateLimiting;
+            _ipBlackRateOptions = GlobalConfiguration.Setting?.IpBlackRateLimiting;
         }
 
         /// <summary>

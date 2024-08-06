@@ -3,7 +3,7 @@ using Discord.Commands;
 using Discord.Net.Rest;
 using Discord.Net.WebSockets;
 using Discord.WebSocket;
-using Midjourney.Infrastructure.Domain;
+using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.Handle;
 using Midjourney.Infrastructure.LoadBalancer;
@@ -33,12 +33,9 @@ namespace Midjourney.Infrastructure
         private IEnumerable<BotMessageHandler> _botMessageHandlers;
         private IEnumerable<UserMessageHandler> _userMessageHandlers;
 
-        public BotMessageListener(
-            DiscordHelper discordHelper,
-            ProxyProperties properties,
-            WebProxy webProxy = null)
+        public BotMessageListener(DiscordHelper discordHelper, WebProxy webProxy = null)
         {
-            _properties = properties;
+            _properties = GlobalConfiguration.Setting;
             _webProxy = webProxy;
             _discordHelper = discordHelper;
         }

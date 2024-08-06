@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.Options;
-using Midjourney.Infrastructure.Domain;
+﻿using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.Handle;
 using Midjourney.Infrastructure.LoadBalancer;
 using Midjourney.Infrastructure.Services;
@@ -23,14 +22,13 @@ namespace Midjourney.Infrastructure
 
         public DiscordAccountHelper(
             DiscordHelper discordHelper,
-            IOptionsMonitor<ProxyProperties> options,
             ITaskStoreService taskStoreService,
             IEnumerable<BotMessageHandler> messageHandlers,
             INotifyService notifyService,
             IEnumerable<UserMessageHandler> userMessageHandlers)
         {
+            _properties = GlobalConfiguration.Setting;
             _discordHelper = discordHelper;
-            _properties = options.CurrentValue;
             _taskStoreService = taskStoreService;
             _notifyService = notifyService;
             _botMessageHandlers = messageHandlers;
@@ -93,7 +91,7 @@ namespace Midjourney.Infrastructure
             if (account.Enable)
             {
               
-                var messageListener = new BotMessageListener(_discordHelper, _properties, webProxy);
+                var messageListener = new BotMessageListener(_discordHelper, webProxy);
 
                 // 用户 WebSocket 连接
                 var webSocket = new WebSocketManager(

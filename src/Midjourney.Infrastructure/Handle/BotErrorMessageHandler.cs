@@ -1,5 +1,6 @@
 ﻿using Discord.WebSocket;
 using Microsoft.Extensions.Logging;
+using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.LoadBalancer;
 
 namespace Midjourney.Infrastructure.Handle

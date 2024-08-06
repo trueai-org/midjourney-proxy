@@ -1,5 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
+using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.Services;
 using Midjourney.Infrastructure.Util;
@@ -33,7 +33,6 @@ namespace Midjourney.API.Controllers
         public SubmitController(
             ITranslateService translateService,
             ITaskStoreService taskStoreService,
-            IOptionsSnapshot<ProxyProperties> properties,
             ITaskService taskService,
             ILogger<SubmitController> logger,
             IHttpContextAccessor httpContextAccessor,
@@ -41,7 +40,7 @@ namespace Midjourney.API.Controllers
         {
             _translateService = translateService;
             _taskStoreService = taskStoreService;
-            _properties = properties.Value;
+            _properties = GlobalConfiguration.Setting;
             _taskService = taskService;
             _logger = logger;
             _discordHelper = discordHelper;

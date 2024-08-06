@@ -1,11 +1,12 @@
-﻿using System.Reflection.Metadata.Ecma335;
+﻿using LiteDB;
+using Midjourney.Infrastructure.Data;
 
 namespace Midjourney.Infrastructure
 {
     /// <summary>
     /// 代理配置属性类.
     /// </summary>
-    public class ProxyProperties
+    public class ProxyProperties : DomainObject
     {
         /// <summary>
         /// Discord账号选择规则.
@@ -15,11 +16,13 @@ namespace Midjourney.Infrastructure
         /// <summary>
         /// Discord单账号配置.
         /// </summary>
+        [BsonIgnore]
         public DiscordAccountConfig Discord { get; set; } = new DiscordAccountConfig();
 
         /// <summary>
         /// Discord账号池配置.
         /// </summary>
+        [BsonIgnore]
         public List<DiscordAccountConfig> Accounts { get; set; } = new List<DiscordAccountConfig>();
 
         /// <summary>
@@ -40,17 +43,13 @@ namespace Midjourney.Infrastructure
         /// <summary>
         /// OpenAI配置.
         /// </summary>
+        [BsonIgnore]
         public OpenaiConfig Openai { get; set; } = new OpenaiConfig();
 
         /// <summary>
         /// 中文prompt翻译方式.
         /// </summary>
         public TranslateWay TranslateWay { get; set; } = TranslateWay.NULL;
-
-        /// <summary>
-        /// 接口密钥，为空不启用鉴权；调用接口时需要加请求头 mj-api-secret.
-        /// </summary>
-        public string ApiSecret { get; set; }
 
         /// <summary>
         /// 任务状态变更回调地址.
@@ -207,6 +206,36 @@ namespace Midjourney.Infrastructure
         /// 允许速度模式（如果出现不允许的速度模式，将会自动清除关键词）
         /// </summary>
         public List<GenerationSpeedMode> AllowModes { get; set; } = new List<GenerationSpeedMode>();
+
+        /// <summary>
+        /// 开启 Blend 功能
+        /// </summary>
+        public bool IsBlend { get; set; } = true;
+
+        /// <summary>
+        /// 开启 Describe 功能
+        /// </summary>
+        public bool IsDescribe { get; set; } = true;
+
+        /// <summary>
+        /// 日绘图最大次数限制，默认 0 不限制
+        /// </summary>
+        public int DayDrawLimit { get; set; }
+
+        /// <summary>
+        /// 开启垂直领域
+        /// </summary>
+        public bool IsVerticalDomain { get; set; }
+
+        /// <summary>
+        /// 垂直领域 IDS
+        /// </summary>
+        public List<string> VerticalDomainIds { get; set; } = new List<string>();
+
+        /// <summary>
+        /// 子频道列表
+        /// </summary>
+        public List<string> SubChannels { get; set; } = new List<string>();
 
         /// <summary>
         /// 备注

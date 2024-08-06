@@ -1,6 +1,38 @@
 ﻿namespace Midjourney.Infrastructure
 {
     /// <summary>
+    /// 用户状态
+    /// </summary>
+    public enum EUserStatus
+    {
+        /// <summary>
+        /// 正常
+        /// </summary>
+        NORMAL = 0,
+
+        /// <summary>
+        /// 禁用
+        /// </summary>
+        DISABLED = 1
+    }
+
+    /// <summary>
+    /// 用户角色
+    /// </summary>
+    public enum EUserRole
+    {
+        /// <summary>
+        /// 普通用户
+        /// </summary>
+        USER = 0,
+
+        /// <summary>
+        /// 管理员
+        /// </summary>
+        ADMIN = 1,
+    }
+
+    /// <summary>
     /// Bot类型枚举 MID_JOURNEY | 枚举值: NIJI_JOURNEY
     /// </summary>
     public enum EBotType
@@ -208,22 +240,22 @@
         DELETE,
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         INTERACTION_CREATE,
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         INTERACTION_SUCCESS,
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         INTERACTION_IFRAME_MODAL_CREATE,
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         INTERACTION_MODAL_CREATE
     }

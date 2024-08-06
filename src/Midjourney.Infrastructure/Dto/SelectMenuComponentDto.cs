@@ -1,5 +1,4 @@
-﻿using Midjourney.Infrastructure.Domain;
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace Midjourney.Infrastructure.Dto
 {
@@ -78,7 +77,7 @@ namespace Midjourney.Infrastructure.Dto
         /// 提及的用户列表。
         /// </summary>
         [JsonPropertyName("mentions")]
-        public List<User> Mentions { get; set; } = new List<User>();
+        public List<InteractionUser> Mentions { get; set; } = new List<InteractionUser>();
 
         /// <summary>
         /// 提及的角色列表。
@@ -150,7 +149,7 @@ namespace Midjourney.Infrastructure.Dto
         /// 作者信息。
         /// </summary>
         [JsonPropertyName("author")]
-        public User Author { get; set; }
+        public InteractionUser Author { get; set; }
 
         /// <summary>
         /// 附件列表。
@@ -180,7 +179,7 @@ namespace Midjourney.Infrastructure.Dto
         /// 用户信息。
         /// </summary>
         [JsonPropertyName("user")]
-        public User User { get; set; }
+        public InteractionUser User { get; set; }
 
         /// <summary>
         /// 类型。
@@ -217,7 +216,7 @@ namespace Midjourney.Infrastructure.Dto
         /// 用户信息。
         /// </summary>
         [JsonPropertyName("user")]
-        public User User { get; set; }
+        public InteractionUser User { get; set; }
 
         /// <summary>
         /// 类型。
@@ -241,7 +240,7 @@ namespace Midjourney.Infrastructure.Dto
     /// <summary>
     /// 用户信息。
     /// </summary>
-    public class User
+    public class InteractionUser
     {
         /// <summary>
         /// 用户名。

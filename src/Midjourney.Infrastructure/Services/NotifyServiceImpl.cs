@@ -1,5 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
+using Midjourney.Infrastructure.Data;
 using System.Collections.Concurrent;
 using System.Text;
 using System.Text.Json;
@@ -25,14 +25,11 @@ namespace Midjourney.Infrastructure.Services
         private readonly SemaphoreSlim _semaphoreSlim;
         private readonly int _notifyPoolSize;
 
-        public NotifyServiceImpl(
-            IOptions<ProxyProperties> properties,
-            ILogger<NotifyServiceImpl> logger,
-            HttpClient httpClient)
+        public NotifyServiceImpl(ILogger<NotifyServiceImpl> logger,HttpClient httpClient)
         {
             _logger = logger;
             _httpClient = httpClient;
-            _notifyPoolSize = properties.Value.NotifyPoolSize;
+            _notifyPoolSize = GlobalConfiguration.Setting.NotifyPoolSize;
 
             var max = Math.Max(1, Math.Min(_notifyPoolSize, 12));
 

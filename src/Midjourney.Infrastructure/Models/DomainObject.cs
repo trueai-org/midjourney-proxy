@@ -3,7 +3,7 @@ using System.Runtime.Serialization;
 
 using JsonIgnoreAttribute = Newtonsoft.Json.JsonIgnoreAttribute;
 
-namespace Midjourney.Infrastructure.Domain
+namespace Midjourney.Infrastructure.Models
 {
     /// <summary>
     /// 基础领域对象类，支持扩展属性和线程同步操作。
@@ -124,7 +124,7 @@ namespace Midjourney.Infrastructure.Domain
         /// <returns></returns>
         public T Clone<T>()
         {
-            return (T)this.MemberwiseClone();
+            return (T)MemberwiseClone();
         }
     }
 }

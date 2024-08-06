@@ -1,4 +1,5 @@
 ﻿using LiteDB;
+using Midjourney.Infrastructure.Data;
 using System.Linq.Expressions;
 
 namespace Midjourney.Infrastructure.Services

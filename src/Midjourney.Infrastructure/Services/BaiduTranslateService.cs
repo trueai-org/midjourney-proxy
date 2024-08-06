@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
+﻿using Serilog;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -7,23 +6,22 @@ using System.Text.RegularExpressions;
 
 namespace Midjourney.Infrastructure.Services
 {
+    /// <summary>
+    /// 百度翻译服务
+    /// </summary>
     public class BaiduTranslateService : ITranslateService
     {
         private const string TRANSLATE_API = "https://fanyi-api.baidu.com/api/trans/vip/translate";
-        private readonly string appid;
-        private readonly string appSecret;
-        private readonly ILogger<BaiduTranslateService> logger;
-
-        public BaiduTranslateService(IOptions<ProxyProperties> translateConfig, ILogger<BaiduTranslateService> logger)
+        public BaiduTranslateService()
         {
-            this.appid = translateConfig.Value?.BaiduTranslate?.Appid;
-            this.appSecret = translateConfig.Value?.BaiduTranslate?.AppSecret;
-            this.logger = logger;
         }
 
         public string TranslateToEnglish(string prompt)
         {
-            if (string.IsNullOrWhiteSpace(this.appid) || string.IsNullOrWhiteSpace(this.appSecret))
+            var appid = GlobalConfiguration.Setting?.BaiduTranslate?.Appid;
+            var appSecret = GlobalConfiguration.Setting?.BaiduTranslate?.AppSecret;
+
+            if (string.IsNullOrWhiteSpace(appid) || string.IsNullOrWhiteSpace(appSecret))
             {
                 return prompt;
             }
@@ -34,13 +32,13 @@ namespace Midjourney.Infrastructure.Services
             }
 
             string salt = new Random().Next(10000, 99999).ToString();
-            string sign = ComputeMd5Hash(this.appid + prompt + salt + this.appSecret);
+            string sign = ComputeMd5Hash(appid + prompt + salt + appSecret);
 
             var body = new Dictionary<string, string>
             {
                 { "from", "zh" },
                 { "to", "en" },
-                { "appid", this.appid },
+                { "appid", appid },
                 { "salt", salt },
                 { "q", prompt },
                 { "sign", sign }
@@ -76,7 +74,7 @@ namespace Midjourney.Infrastructure.Services
             }
             catch (Exception e)
             {
-                logger.LogWarning("Failed to call Baidu Translate: {0}", e.Message);
+                Log.Warning(e, "Failed to call Baidu Translate");
             }
 
             return prompt;

@@ -1,16 +1,13 @@
 ﻿using LiteDB;
-using Midjourney.Infrastructure.Domain;
 using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.Util;
 using Serilog;
-using Swashbuckle.AspNetCore.Annotations;
 
-namespace Midjourney.Infrastructure
+namespace Midjourney.Infrastructure.Models
 {
     /// <summary>
     /// 任务类，表示一个任务的基本信息。
     /// </summary>
-    [SwaggerSchema("任务")]
     public class TaskInfo : DomainObject
     {
         public TaskInfo()
@@ -59,73 +56,61 @@ namespace Midjourney.Infrastructure
         /// <summary>
         /// 任务类型。
         /// </summary>
-        [SwaggerSchema("任务类型")]
         public TaskAction? Action { get; set; }
 
         /// <summary>
         /// 任务状态。
         /// </summary>
-        [SwaggerSchema("任务状态")]
         public TaskStatus? Status { get; set; }
 
         /// <summary>
         /// 提示词。
         /// </summary>
-        [SwaggerSchema("提示词")]
         public string Prompt { get; set; }
 
         /// <summary>
         /// 提示词（英文）。
         /// </summary>
-        [SwaggerSchema("提示词-英文")]
         public string PromptEn { get; set; }
 
         /// <summary>
         /// 任务描述。
         /// </summary>
-        [SwaggerSchema("任务描述")]
         public string Description { get; set; }
 
         /// <summary>
         /// 自定义参数。
         /// </summary>
-        [SwaggerSchema("自定义参数")]
         public string State { get; set; }
 
         /// <summary>
         /// 提交时间。
         /// </summary>
-        [SwaggerSchema("提交时间")]
         public long? SubmitTime { get; set; }
 
         /// <summary>
         /// 开始执行时间。
         /// </summary>
-        [SwaggerSchema("开始执行时间")]
         public long? StartTime { get; set; }
 
         /// <summary>
         /// 结束时间。
         /// </summary>
-        [SwaggerSchema("结束时间")]
         public long? FinishTime { get; set; }
 
         /// <summary>
         /// 图片URL。
         /// </summary>
-        [SwaggerSchema("图片URL")]
         public string ImageUrl { get; set; }
 
         /// <summary>
         /// 任务进度。
         /// </summary>
-        [SwaggerSchema("任务进度")]
         public string Progress { get; set; }
 
         /// <summary>
         /// 失败原因。
         /// </summary>
-        [SwaggerSchema("失败原因")]
         public string FailReason { get; set; }
 
         /// <summary>

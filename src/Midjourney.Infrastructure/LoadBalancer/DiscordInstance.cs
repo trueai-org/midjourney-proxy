@@ -1,5 +1,5 @@
 ﻿using Microsoft.Extensions.Caching.Memory;
-using Midjourney.Infrastructure.Domain;
+using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.Services;
 using Midjourney.Infrastructure.Util;
 using Newtonsoft.Json.Linq;

@@ -1,9 +1,10 @@
 ﻿using LiteDB;
+using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.Dto;
 using System.ComponentModel.DataAnnotations;
 using System.Text.RegularExpressions;
 
-namespace Midjourney.Infrastructure.Domain
+namespace Midjourney.Infrastructure.Models
 {
     /// <summary>
     /// Discord账号类。
@@ -183,18 +184,57 @@ namespace Midjourney.Infrastructure.Domain
         public string NijiSettingsMessageId { get; set; }
 
         /// <summary>
+        /// 开启 Blend 功能
+        /// </summary>
+        public bool IsBlend { get; set; } = true;
+
+        /// <summary>
+        /// 开启 Describe 功能
+        /// </summary>
+        public bool IsDescribe { get; set; } = true;
+
+        /// <summary>
+        /// 日绘图最大次数限制，默认 0 不限制
+        /// </summary>
+        public int DayDrawLimit { get; set; }
+
+        /// <summary>
+        /// 当日已绘图次数
+        /// </summary>
+        [BsonIgnore]
+        public int DayDrawCount { get; set; } = 0;
+
+        /// <summary>
+        /// 开启垂直领域
+        /// </summary>
+        public bool IsVerticalDomain { get; set; }
+
+        /// <summary>
+        /// 垂直领域 IDS
+        /// </summary>
+        public List<string> VerticalDomainIds { get; set; } = new List<string>();
+
+        /// <summary>
+        /// 子频道列表
+        /// </summary>
+        public List<string> SubChannels { get; set; } = new List<string>();
+
+        /// <summary>
         /// 执行中的任务数
         /// </summary>
+        [BsonIgnore]
         public int RunningCount { get; set; }
 
         /// <summary>
         /// 队列中的任务数
         /// </summary>
+        [BsonIgnore]
         public int QueueCount { get; set; }
 
         /// <summary>
         /// wss 是否运行中
         /// </summary>
+        [BsonIgnore]
         public bool Running { get; set; }
 
         /// <summary>
@@ -209,7 +249,7 @@ namespace Midjourney.Infrastructure.Domain
                     CustomId = c.CustomId?.ToString() ?? string.Empty,
                     Emoji = c.Emoji?.Name ?? string.Empty,
                     Label = c.Label ?? string.Empty,
-                    Style = (int?)c.Style ?? 0,
+                    Style = c.Style ?? 0,
                     Type = (int?)c.Type ?? 0,
                 };
             }).Where(c => c != null && !string.IsNullOrWhiteSpace(c.CustomId)).ToList();
@@ -232,7 +272,7 @@ namespace Midjourney.Infrastructure.Domain
                     CustomId = c.CustomId?.ToString() ?? string.Empty,
                     Emoji = c.Emoji?.Name ?? string.Empty,
                     Label = c.Label ?? string.Empty,
-                    Style = (int?)c.Style ?? 0,
+                    Style = c.Style ?? 0,
                     Type = (int?)c.Type ?? 0,
                 };
             }).Where(c => c != null && !string.IsNullOrWhiteSpace(c.CustomId)).ToList();

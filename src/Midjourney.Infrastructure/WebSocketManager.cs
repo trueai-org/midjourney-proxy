@@ -1,4 +1,4 @@
-﻿using Midjourney.Infrastructure.Domain;
+﻿using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.LoadBalancer;
 using Serilog;
 using System.Collections.Concurrent;

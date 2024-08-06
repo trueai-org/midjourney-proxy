@@ -12,10 +12,9 @@ namespace Midjourney.Infrastructure
         /// <summary>
         /// 初始化 DiscordHelper 类的新实例。
         /// </summary>
-        /// <param name="options">ProxyProperties 配置选项。</param>
-        public DiscordHelper(IOptions<ProxyProperties> options)
+        public DiscordHelper()
         {
-            _properties = options.Value;
+            _properties = GlobalConfiguration.Setting;
         }
 
         /// <summary>

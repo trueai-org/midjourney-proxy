@@ -1,4 +1,5 @@
-﻿using Midjourney.Infrastructure.Dto;
+﻿using Midjourney.Infrastructure.Data;
+using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.LoadBalancer;
 using Midjourney.Infrastructure.Util;
 using Serilog;
