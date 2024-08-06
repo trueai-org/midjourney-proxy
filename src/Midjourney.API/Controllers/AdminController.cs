@@ -8,6 +8,7 @@ using Midjourney.Infrastructure.Services;
 using Midjourney.Infrastructure.StandardTable;
 using System.Net;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace Midjourney.API.Controllers
 {
@@ -52,6 +53,83 @@ namespace Midjourney.API.Controllers
         }
 
         /// <summary>
+        /// 注册用户
+        /// </summary>
+        /// <param name="registerDto"></param>
+        /// <returns></returns>
+        /// <exception cref="LogicException"></exception>
+        [HttpPost("register")]
+        [AllowAnonymous]
+        public Result Register([FromBody] RegisterDto registerDto)
+        {
+            if (registerDto == null || string.IsNullOrWhiteSpace(registerDto.Email))
+            {
+                throw new LogicException("参数错误");
+            }
+
+            // 验证长度
+            if (registerDto.Email.Length < 5 || registerDto.Email.Length > 50)
+            {
+                throw new LogicException("邮箱长度错误");
+            }
+
+            var mail = registerDto.Email.Trim();
+
+            // 验证 email 格式
+            var isMatch = Regex.IsMatch(mail, @"^[\w-]+(\.[\w-]+)*@[\w-]+(\.[\w-]+)+$");
+            if (!isMatch)
+            {
+                throw new LogicException("邮箱格式错误");
+            }
+
+            // 判断是否开放注册
+            // 如果没有配置邮件服务，则不允许注册
+            if (GlobalConfiguration.Setting.EnableRegister != true
+                || string.IsNullOrWhiteSpace(GlobalConfiguration.Setting?.Smtp?.FromPassword))
+            {
+                throw new LogicException("注册已关闭");
+            }
+
+            // 每个IP每天只能注册一个账号
+            var ip = _workContext.GetIp();
+            var key = $"register:{ip}";
+            if (_memoryCache.TryGetValue(key, out _))
+            {
+                throw new LogicException("注册太频繁");
+            }
+
+            // 验证用户是否存在
+            var user = DbHelper.UserStore.Single(u => u.Email == mail);
+            if (user != null)
+            {
+                throw new LogicException("用户已存在");
+            }
+
+            user = new User
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                Role = EUserRole.USER,
+                Status = EUserStatus.NORMAL,
+                DayDrawLimit = GlobalConfiguration.Setting.RegisterUserDefaultDayLimit,
+                Email = mail,
+                RegisterIp = ip,
+                RegisterTime = DateTime.Now,
+                Token = Guid.NewGuid().ToString("N") + Guid.NewGuid().ToString("N"),
+                Name = mail.Split('@').FirstOrDefault()
+            };
+            DbHelper.UserStore.Add(user);
+
+            // 发送邮件
+            EmailJob.Instance.EmailSend(GlobalConfiguration.Setting.Smtp,
+                $"Midjourney Proxy 注册通知", $"您的登录密码为：{user.Token}");
+
+            // 设置缓存
+            _memoryCache.Set(key, true, TimeSpan.FromDays(1));
+
+            return Result.Ok();
+        }
+
+        /// <summary>
         /// 管理员登录
         /// </summary>
         /// <returns></returns>
@@ -61,6 +139,16 @@ namespace Midjourney.API.Controllers
         {
             // 如果 DEMO 模式，并且没有传入 token，则返回空 token
             if (GlobalConfiguration.IsDemoMode == true && string.IsNullOrWhiteSpace(token))
+            {
+                return Ok(new
+                {
+                    code = 1,
+                    apiSecret = "",
+                });
+            }
+
+            // 如果开启访客
+            if (string.IsNullOrWhiteSpace(token) && GlobalConfiguration.Setting.EnableGuest)
             {
                 return Ok(new
                 {
