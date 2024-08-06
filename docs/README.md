@@ -14,7 +14,7 @@
 
 [Midjourney公益群](https://qm.qq.com/q/k88clCkyMS)（QQ群：565908696）
 
-<img src="https://vip.123pan.cn/1816233029/8626602" alt="欢迎" width="360"/>
+<img src="https://raw.githubusercontent.com/trueai-org/midjourney-proxy/main/docs/screenshots/565908696.png" alt="欢迎" width="360"/>
 
 ## 在线预览
 
@@ -32,12 +32,12 @@
 
 ![欢迎](https://raw.githubusercontent.com/trueai-org/midjourney-proxy/main/docs/screenshots/ui1.png)
 
-![账号](./docs/screenshots/ui2.png)
+![账号](https://raw.githubusercontent.com/trueai-org/midjourney-proxy/main/docs/screenshots/ui2.png)
 
-![任务](./docs/screenshots/ui3.png)
+![任务](https://raw.githubusercontent.com/trueai-org/midjourney-proxy/main/docs/screenshots/ui3.png)
 
-![测试](./docs/screenshots/ui4.png)
+![测试](https://raw.githubusercontent.com/trueai-org/midjourney-proxy/main/docs/screenshots/ui4.png)
 
-![日志](./docs/screenshots/ui5.png)
+![日志](https://raw.githubusercontent.com/trueai-org/midjourney-proxy/main/docs/screenshots/ui5.png)
 
-![接口](./docs/screenshots/uiswagger.png)
+![接口](https://raw.githubusercontent.com/trueai-org/midjourney-proxy/main/docs/screenshots/uiswagger.png)

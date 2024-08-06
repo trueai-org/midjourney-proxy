@@ -12,9 +12,9 @@ The most feature-rich, secure, and memory-efficient (100MB+) Midjourney Proxy AP
 
 Due to the current incomplete documentation, there may be issues in use and deployment, welcome to join the communication group to discuss and solve problems together.
 
-[Midjourney Public Welfare Group](https://qm.qq.com/q/k88clCkyMS) (QQ Group: 565908696)
+[Midjourney QQ Group](https://qm.qq.com/q/k88clCkyMS) (QQ Group: 565908696)
 
-<img src="https://vip.123pan.cn/1816233029/8626602" alt="Welcome" width="360"/>
+<img src="https://raw.githubusercontent.com/trueai-org/midjourney-proxy/main/docs/screenshots/565908696.png" alt="Welcome" width="360"/>
 
 ## Online Preview
 
@@ -30,14 +30,14 @@ Public interface is in slow mode, free to use. The account pool is provided by s
 
 ## Preview Screenshots
 
-![Welcome](./docs/screenshots/ui1.png)
+![Welcome](https://raw.githubusercontent.com/trueai-org/midjourney-proxy/main/docs/screenshots/ui1.png)
 
-![Account](./docs/screenshots/ui2.png)
+![Account](https://raw.githubusercontent.com/trueai-org/midjourney-proxy/main/docs/screenshots/ui2.png)
 
-![Task](./docs/screenshots/ui3.png)
+![Task](https://raw.githubusercontent.com/trueai-org/midjourney-proxy/main/docs/screenshots/ui3.png)
 
-![Test](./docs/screenshots/ui4.png)
+![Test](https://raw.githubusercontent.com/trueai-org/midjourney-proxy/main/docs/screenshots/ui4.png)
 
-![Log](./docs/screenshots/ui5.png)
+![Log](https://raw.githubusercontent.com/trueai-org/midjourney-proxy/main/docs/screenshots/ui5.png)
 
-![Interface](./docs/screenshots/uiswagger.png)
+![Interface](https://raw.githubusercontent.com/trueai-org/midjourney-proxy/main/docs/screenshots/uiswagger.png)
