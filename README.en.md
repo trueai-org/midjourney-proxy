@@ -60,6 +60,16 @@ Due to the current documentation not being fully comprehensive, there may be iss
 - [x] CloudFlare automatic human verification, configure the verification server address (automatic verifier only supports Windows deployment)
 - [x] Support for work time period configuration, continuous 24-hour non-stop drawing may trigger warnings. It is recommended to rest for 6-8 hours, example: `09:10-23:55, 13:00-08:10`
 - [x] Built-in IP rate limiting, IP segment rate limiting, blacklist, whitelist, automatic blacklisting, and other features
+- [x] Daily drawing limit support; drawing will automatically stop when the limit is reached (BETA)
+- [x] Enable registration and guest access (BETA)
+- [x] Visual configuration functionality (BETA)
+- [ ] Configurable bot token; optional configuration, the service can function without a bot
+- [ ] Support for vertical classification of accounts; allow accounts to be configured with specific terms, each account specializing in a particular type of work, such as landscapes or portraits
+- [ ] Allow shared channels or sub-channels for drawing; even if an account is banned, previous drawings can continue in a sub-channel of a normal account; save permanent invite links and sub-channel links, support batch editing, can directly input invite links or shared channel addresses, and the system will automatically join and convert channels. Alternatively, achieve this by transferring ownership.
+- [ ] Solicit a video tutorial
+- [ ] Optimize command and status progress display
+- [ ] If there are pending tasks after the service restarts, they will be added to the execution queue
+- [ ] Support one-click migration from `mjplus` or other services to this service
 
 ## Online Preview
 
@@ -117,9 +127,11 @@ docker pull registry.cn-guangzhou.aliyuncs.com/trueai-org/midjourney-proxy
 # Public demo site startup configuration example
 
 # 1. Download and rename configuration file (example configuration)
+# Note: Version 3.x does not require a configuration file
 wget -O /root/mjopen/appsettings.Production.json https://raw.githubusercontent.com/trueai-org/midjourney-proxy/main/src/Midjourney.API/appsettings.json
 
 # Or use curl to download and rename configuration file (example configuration)
+# Note: Version 3.x does not require a configuration file
 curl -o /root/mjopen/appsettings.Production.json https://raw.githubusercontent.com/trueai-org/midjourney-proxy/main/src/Midjourney.API/appsettings.json
 
 # 2. Stop and remove old Docker containers
@@ -127,6 +139,7 @@ docker stop mjopen && docker rm mjopen
 
 # 3. Start a new Docker container
 # Please remove the DEMO variable during deployment, otherwise it will enter demonstration mode.
+# Note: Version 3.x does not require a configuration file
 docker run -m 1g --name mjopen -d --restart=always \
  -e DEMO=true \
  -p 8086:8080 --user root \
@@ -232,6 +245,13 @@ curl -o linux_install.sh https://raw.githubusercontent.com/trueai-org/midjourney
 - `/app/wwwroot` Static Files Directory
     - `/app/wwwroot/attachments` image Files Directory
     - `/app/wwwroot/ephemeral-attachments` describe spanwned image Files Directory
+
+#### Role Description
+
+- `User`: Only allowed to use the drawing interface, cannot log in to the backend.
+- `Administrator`: Can log in to the backend, view tasks, configurations, etc.
+
+> For version 3.x, this configuration is not needed. Please use the GUI for any modifications.
 
 ```json
 {
@@ -431,27 +451,21 @@ Add application to channel server (refer to screenshot)
 
 ## Roadmap
 
-- [ ] Publish a video tutorial
-- [ ] Make bot token an optional configuration, usable without configuration
-- [ ] Optimize commands and progress display
-- [ ] Optimize reminders when tasks and queues are full
-- [ ] Optimize potential issues with concurrent queues for shared accounts
-- [ ] Built-in vocabulary management, batch modification
-- [ ] Integrate official drawing API support
-- [ ] Add statistics dashboard, drawing statistics, visitor statistics
-- [ ] Built-in user system, registerable and manageable, rate limiting, maximum times, etc.
-- [ ] Integrate GPT translation
-- [ ] Add translation support for final prompts in Chinese
-- [ ] Support separate proxies for accounts
-- [ ] Enable registration, enable guest access
-- [ ] Multi-database support: MySQL, Sqlite, SqlServer, MongoDB, PostgeSQL, Redis, etc.
-- [ ] Payment integration support, support WeChat, Alipay, support drawing pricing strategies, etc.
-- [ ] Add announcement function
-- [ ] Add idle/relaxed mode for accounts to avoid high-frequency operations (In this mode, new drawings cannot be created, but other commands can still be executed. It can be configured for multiple time periods or scheduled strategies)
-- [ ] Handle seed values for text-to-image
+- [ ] Optimize notifications when tasks and queues are full
+- [ ] Address potential issues with concurrent queues for shared accounts
+- [ ] Integrated dictionary management with batch editing
+- [ ] Integration with official drawing API
+- [ ] Add statistics dashboard, including drawing statistics and visitor statistics
+- [ ] Built-in user system with registration and management capabilities, rate limiting, and maximum usage limits
+- [ ] Integrate GPT for translation
+- [ ] Add support for displaying final prompts with Chinese translations
+- [ ] Support for individual proxies for accounts
+- [ ] Multi-database support including MySQL, SQLite, SQL Server, MongoDB, PostgreSQL, Redis, etc.
+- [ ] Integration with payment systems, supporting WeChat, Alipay, and drawing pricing strategies
+- [ ] Add announcement functionality
+- [ ] Add "Relax Mode" for accounts to avoid high-frequency operations (in this mode, new drawings cannot be created, but other commands can still be executed; can be configured for multiple time periods or scheduled strategies)
+- [ ] Text generation from image seed value processing
 - [ ] Automatically read private messages
-- [ ] After service restart, if there are unfinished tasks, add them to the execution queue
-- [ ] Allow shared channels or sub-channels for drawing, even if the account is banned, the previous drawing can continue. The banned account's channel can be used as a sub-channel for normal accounts, save permanent invitation links, and sub-channel links, support batch modification, can directly input invitation links, or shared channel addresses, the system automatically joins the channel conversion. Or achieve this by transferring ownership.
 
 ## Support and Sponsorship
 
