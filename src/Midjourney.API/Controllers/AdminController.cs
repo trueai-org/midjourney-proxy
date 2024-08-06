@@ -155,27 +155,6 @@ namespace Midjourney.API.Controllers
         [HttpPost("login")]
         public ActionResult Login([FromBody] string token)
         {
-            // 兼容 admin token 为空时的情况
-            User user = null;
-            if (string.IsNullOrWhiteSpace(token))
-            {
-                user = DbHelper.UserStore.Single(u => u.Token == token && u.Id == Constants.ADMIN_USER_ID);
-                if (user != null && user.Role == EUserRole.ADMIN)
-                {
-                    // 更新最后登录时间
-                    user.LastLoginTime = DateTime.Now;
-                    user.LastLoginIp = _workContext.GetIp();
-
-                    DbHelper.UserStore.Update(user);
-
-                    return Ok(new
-                    {
-                        code = 1,
-                        apiSecret = user.Token,
-                    });
-                }
-            }
-
             // 如果 DEMO 模式，并且没有传入 token，则返回空 token
             if (GlobalConfiguration.IsDemoMode == true && string.IsNullOrWhiteSpace(token))
             {
@@ -196,7 +175,7 @@ namespace Midjourney.API.Controllers
                 });
             }
 
-            user = DbHelper.UserStore.Single(u => u.Token == token);
+            var user = DbHelper.UserStore.Single(u => u.Token == token);
             if (user == null)
             {
                 throw new LogicException("用户 Token 错误");
