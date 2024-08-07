@@ -77,7 +77,7 @@ namespace Midjourney.Infrastructure.Services
                 {
                     foreach (var domain in domains)
                     {
-                        if (domain.Value.Contains(prompt))
+                        if (domain.Value.Contains(prompt) || domain.Value.Contains($"{prompt}s"))
                         {
                             domainIds.Add(domain.Key);
                         }
