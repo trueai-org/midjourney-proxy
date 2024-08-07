@@ -223,6 +223,7 @@ namespace Midjourney.API
                             Sort = configAccount.Sort,
                             Interval = configAccount.Interval,
                             WorkTime = configAccount.WorkTime,
+                            FishingTime = configAccount.FishingTime,
 
                             SubChannels = configAccount.SubChannels,
                             IsBlend = configAccount.IsBlend,
@@ -364,6 +365,16 @@ namespace Midjourney.API
                 }
             }
 
+            // 验证 FishingTime
+            if (!string.IsNullOrEmpty(param.FishingTime))
+            {
+                var ts = param.FishingTime.ToTimeSlots();
+                if (ts.Count == 0)
+                {
+                    param.FishingTime = null;
+                }
+            }
+
             model.IsBlend = param.IsBlend;
             model.IsDescribe = param.IsDescribe;
             model.DayDrawLimit = param.DayDrawLimit;
@@ -371,6 +382,7 @@ namespace Midjourney.API
             model.VerticalDomainIds = param.VerticalDomainIds;
             model.SubChannels = param.SubChannels;
 
+            model.FishingTime = param.FishingTime;
             model.EnableNiji = param.EnableNiji;
             model.EnableMj = param.EnableMj;
             model.AllowModes = param.AllowModes;

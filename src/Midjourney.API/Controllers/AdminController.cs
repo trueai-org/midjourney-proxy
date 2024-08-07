@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Discord;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
 using Midjourney.Infrastructure.Data;
@@ -708,13 +709,6 @@ namespace Midjourney.API.Controllers
             var db = DbHelper.AccountStore;
             var data = db.GetAll().OrderBy(c => c.Sort).ThenBy(c => c.DateCreated).ToList();
 
-            // 当前时间转为 Unix 时间戳
-            // 今日 0 点 Unix 时间戳
-            var now = new DateTimeOffset(DateTime.Now.Date).ToUnixTimeMilliseconds();
-            var tasks = DbHelper.TaskStore.GetCollection().Query()
-                .Where(c => c.SubmitTime >= now)
-                .ToList(); ;
-
             foreach (var item in data)
             {
                 var inc = _loadBalancer.GetDiscordInstance(item.ChannelId);
@@ -722,8 +716,6 @@ namespace Midjourney.API.Controllers
                 item.RunningCount = inc?.GetRunningFutures().Count ?? 0;
                 item.QueueCount = inc?.GetQueueTasks().Count ?? 0;
                 item.Running = inc?.IsAlive ?? false;
-
-                item.DayDrawCount = tasks.Count(c => c.InstanceId == item.ChannelId);
 
                 if (_isAnonymous)
                 {

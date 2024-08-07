@@ -273,6 +273,11 @@ namespace Midjourney.Infrastructure
         public string WorkTime { get; set; }
 
         /// <summary>
+        /// 摸鱼时间段（只接收变化任务，不接收新的任务）
+        /// </summary>
+        public string FishingTime { get; set; }
+
+        /// <summary>
         /// 权重
         /// </summary>
         public int Weight { get; set; }

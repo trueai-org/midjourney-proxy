@@ -301,7 +301,7 @@ namespace Midjourney.Infrastructure
         }
 
         /// <summary>
-        /// 判断是否在工作时间内
+        /// 判断是否在工作时间内（如果没有值，则默认：true）
         /// </summary>
         /// <param name="dateTime"></param>
         /// <param name="input"></param>
@@ -312,6 +312,44 @@ namespace Midjourney.Infrastructure
             if (string.IsNullOrWhiteSpace(input))
             {
                 return true;
+            }
+
+            var ts = input.ToTimeSlots();
+            foreach (var slot in ts)
+            {
+                if (slot.Start <= slot.End)
+                {
+                    // 正常时间段：例如 09:00-17:00
+                    if (currentTime >= slot.Start && currentTime <= slot.End)
+                    {
+                        return true;
+                    }
+                }
+                else
+                {
+                    // 跨越午夜的时间段：例如 23:00-02:00
+                    if (currentTime >= slot.Start || currentTime <= slot.End)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// 判断是否处于摸鱼时间（如果没有值，则默认：false）
+        /// </summary>
+        /// <param name="dateTime"></param>
+        /// <param name="input"></param>
+        /// <returns></returns>
+        public static bool IsInFishTime(this DateTime dateTime, string input)
+        {
+            var currentTime = dateTime.TimeOfDay;
+            if (string.IsNullOrWhiteSpace(input))
+            {
+                return false;
             }
 
             var ts = input.ToTimeSlots();
