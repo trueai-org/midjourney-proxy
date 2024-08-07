@@ -710,7 +710,7 @@ namespace Midjourney.API.Controllers
 
             // 当前时间转为 Unix 时间戳
             // 今日 0 点 Unix 时间戳
-            var now = new DateTimeOffset(DateTime.UtcNow.Date).ToUnixTimeMilliseconds();
+            var now = new DateTimeOffset(DateTime.Now.Date).ToUnixTimeMilliseconds();
             var tasks = DbHelper.TaskStore.GetCollection().Query()
                 .Where(c => c.SubmitTime >= now)
                 .ToList(); ;

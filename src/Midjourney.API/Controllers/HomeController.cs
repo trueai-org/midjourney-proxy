@@ -39,8 +39,8 @@ namespace Midjourney.API.Controllers
                     IsDemoMode = GlobalConfiguration.IsDemoMode == true
                 };
 
-                var now = new DateTimeOffset(DateTime.UtcNow.Date).ToUnixTimeMilliseconds();
-                var yesterday = new DateTimeOffset(DateTime.UtcNow.Date.AddDays(-1)).ToUnixTimeMilliseconds();
+                var now = new DateTimeOffset(DateTime.Now.Date).ToUnixTimeMilliseconds();
+                var yesterday = new DateTimeOffset(DateTime.Now.Date.AddDays(-1)).ToUnixTimeMilliseconds();
 
                 dto.TodayDraw = (int)DbHelper.TaskStore.Count(x => x.SubmitTime >= now);
                 dto.YesterdayDraw = (int)DbHelper.TaskStore.Count(x => x.SubmitTime >= yesterday && x.SubmitTime < now);
