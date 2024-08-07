@@ -119,7 +119,7 @@ namespace Midjourney.Infrastructure.Dto
         /// 嵌入对象列表。
         /// </summary>
         [JsonPropertyName("embeds")]
-        public List<dynamic> Embeds { get; set; } = new List<dynamic>();
+        public List<EventDataEmbed> Embeds { get; set; } = new List<EventDataEmbed>();
 
         /// <summary>
         /// 编辑时间戳。
@@ -170,6 +170,67 @@ namespace Midjourney.Infrastructure.Dto
         public string GuildId { get; set; }
     }
 
+    public class EventDataEmbed
+    {
+        /// <inheritdoc/>
+        public dynamic Type { get; set; }
+
+        /// <inheritdoc/>
+        public string Description { get; set; }
+
+        /// <inheritdoc/>
+        public string Url { get; set; }
+
+        /// <inheritdoc/>
+        public string Title { get; set; }
+
+        /// <inheritdoc/>
+        public DateTimeOffset? Timestamp { get; set; }
+
+        /// <inheritdoc/>
+        public dynamic Color { get; set; }
+
+        /// <inheritdoc/>
+        public EventDataEmbedImage Image { get; set; }
+    }
+
+    public class EventDataEmbedImage
+    {
+        /// <summary>
+        ///     Gets the URL of the image.
+        /// </summary>
+        /// <returns>
+        ///     A string containing the URL of the image.
+        /// </returns>
+        public string Url { get; set; }
+
+        /// <summary>
+        ///     Gets a proxied URL of this image.
+        /// </summary>
+        /// <returns>
+        ///     A string containing the proxied URL of this image.
+        /// </returns>
+        public string ProxyUrl { get; set; }
+
+        /// <summary>
+        ///     Gets the height of this image.
+        /// </summary>
+        /// <returns>
+        ///     A <see cref="int"/> representing the height of this image if it can be retrieved; otherwise
+        ///     <see langword="null" />.
+        /// </returns>
+        public int? Height { get; set; }
+
+        /// <summary>
+        ///     Gets the width of this image.
+        /// </summary>
+        /// <returns>
+        ///     A <see cref="int"/> representing the width of this image if it can be retrieved; otherwise
+        ///     <see langword="null" />.
+        /// </returns>
+        public int? Width { get; set; }
+    }
+
     /// <summary>
     /// 交互元数据。
     /// </summary>
@@ -205,7 +266,6 @@ namespace Midjourney.Infrastructure.Dto
         [JsonPropertyName("authorizing_integration_owners")]
         public Dictionary<string, string> AuthorizingIntegrationOwners { get; set; }
     }
-
 
     /// <summary>
     /// 交互信息。

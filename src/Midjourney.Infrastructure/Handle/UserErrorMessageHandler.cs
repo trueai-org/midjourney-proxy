@@ -1,15 +1,16 @@
-﻿using Discord.WebSocket;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using Midjourney.Infrastructure.Data;
+using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.LoadBalancer;
 
 namespace Midjourney.Infrastructure.Handle
 {
-    public class BotErrorMessageHandler : BotMessageHandler
+    public class UserErrorMessageHandler : UserMessageHandler
     {
-        private readonly ILogger<BotErrorMessageHandler> _logger;
+        private readonly ILogger<UserErrorMessageHandler> _logger;
 
-        public BotErrorMessageHandler(DiscordLoadBalancer discordLoadBalancer, DiscordHelper discordHelper, ILogger<BotErrorMessageHandler> logger)
+        public UserErrorMessageHandler(DiscordLoadBalancer discordLoadBalancer,
+            DiscordHelper discordHelper, ILogger<UserErrorMessageHandler> logger)
             : base(discordLoadBalancer, discordHelper)
         {
             _logger = logger;
@@ -17,20 +18,21 @@ namespace Midjourney.Infrastructure.Handle
 
         public override int Order() => 2;
 
-        public override void Handle(IDiscordInstance instance, MessageType messageType, SocketMessage message)
+        public override void Handle(IDiscordInstance instance, MessageType messageType, EventData message)
         {
-            // 不需要处理，因为处理过了
+            // 不需要处理，因为已经处理了
             return;
 
+            /*
             var content = GetMessageContent(message);
             var msgId = GetMessageId(message);
             if (content.StartsWith("Failed"))
             {
                 var task = instance.GetRunningTaskByMessageId(msgId);
 
-                if (task == null && message is SocketUserMessage umsg && umsg != null && umsg.InteractionMetadata?.Id != null)
+                if (task == null && message.InteractionMetadata?.Id != null)
                 {
-                    task = instance.FindRunningTask(c => c.InteractionMetadataId == umsg.InteractionMetadata.Id.ToString()).FirstOrDefault();
+                    task = instance.FindRunningTask(c => c.InteractionMetadataId == message.InteractionMetadata.Id.ToString()).FirstOrDefault();
                 }
 
                 if (task != null)
@@ -69,9 +71,9 @@ namespace Midjourney.Infrastructure.Handle
                 _logger.LogError($"{instance.GetInstanceId} - MJ异常信息: {title}\n{description}\nfooter: {footerText}");
 
                 var taskInfo = FindTaskWhenError(instance, messageType, message);
-                if (taskInfo == null && message is SocketUserMessage umsg && umsg != null && umsg.InteractionMetadata?.Id != null)
+                if (taskInfo == null && message.InteractionMetadata?.Id != null)
                 {
-                    taskInfo = instance.FindRunningTask(c => c.InteractionMetadataId == umsg.InteractionMetadata.Id.ToString()).FirstOrDefault();
+                    taskInfo = instance.FindRunningTask(c => c.InteractionMetadataId == message.InteractionMetadata.Id.ToString()).FirstOrDefault();
                 }
 
                 if (taskInfo != null)
@@ -92,9 +94,9 @@ namespace Midjourney.Infrastructure.Handle
                     return;
 
                 var taskInfo = FindTaskWhenError(instance, messageType, message);
-                if (taskInfo == null && message is SocketUserMessage umsg && umsg != null && umsg.InteractionMetadata?.Id != null)
+                if (taskInfo == null && message.InteractionMetadata?.Id != null)
                 {
-                    taskInfo = instance.FindRunningTask(c => c.InteractionMetadataId == umsg.InteractionMetadata.Id.ToString()).FirstOrDefault();
+                    taskInfo = instance.FindRunningTask(c => c.InteractionMetadataId == message.InteractionMetadata.Id.ToString()).FirstOrDefault();
                 }
 
                 if (taskInfo != null)
@@ -111,9 +113,12 @@ namespace Midjourney.Infrastructure.Handle
                     taskInfo.Awake();
                 }
             }
+
+
+            */
         }
 
-        private TaskInfo FindTaskWhenError(IDiscordInstance instance, MessageType messageType, SocketMessage message)
+        private TaskInfo FindTaskWhenError(IDiscordInstance instance, MessageType messageType, EventData message)
         {
             string progressMessageId = messageType switch
             {

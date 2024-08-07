@@ -10,6 +10,7 @@ using Midjourney.Infrastructure.LoadBalancer;
 using Midjourney.Infrastructure.Util;
 using RestSharp;
 using Serilog;
+using System.Diagnostics.Metrics;
 using System.Net;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -54,6 +55,12 @@ namespace Midjourney.Infrastructure
 
         public async Task StartAsync()
         {
+            // 机器人 TOKEN 可选
+            if (string.IsNullOrWhiteSpace(Account.BotToken))
+            {
+                return;
+            }
+
             _client = new DiscordSocketClient(new DiscordSocketConfig
             {
                 //// How much logging do you want to see?
@@ -162,12 +169,16 @@ namespace Midjourney.Infrastructure
                 // MJ::Picread::Retry
                 else if (msg.Embeds.Count > 0 && msg.Author.IsBot && msg.Components.Count > 0 && msg.Components.First().Components.Any(x => x.CustomId.Contains("PicReader")))
                 {
-                    var em = msg.Embeds.FirstOrDefault();
-                    if (em != null && !string.IsNullOrWhiteSpace(em.Description))
+                    // 消息加锁处理
+                    LocalLock.TryLock($"lock_{msg.Id}", TimeSpan.FromSeconds(10), () =>
                     {
-                        var handler = _botMessageHandlers.FirstOrDefault(x => x.GetType() == typeof(BotDescribeSuccessHandler));
-                        handler?.Handle(_discordInstance, MessageType.CREATE, msg);
-                    }
+                        var em = msg.Embeds.FirstOrDefault();
+                        if (em != null && !string.IsNullOrWhiteSpace(em.Description))
+                        {
+                            var handler = _botMessageHandlers.FirstOrDefault(x => x.GetType() == typeof(BotDescribeSuccessHandler));
+                            handler?.Handle(_discordInstance, MessageType.CREATE, msg);
+                        }
+                    });
                 }
             }
             catch (Exception ex)
@@ -498,18 +509,18 @@ namespace Midjourney.Infrastructure
                 else if (metaName == "settings")
                 {
                     // settings 指令
-                    var eventData = data.Deserialize<EventData>();
-                    if (eventData != null && eventData.InteractionMetadata?.Name == "settings" && eventData.Components?.Count > 0)
+                    var eventDataMsg = data.Deserialize<EventData>();
+                    if (eventDataMsg != null && eventDataMsg.InteractionMetadata?.Name == "settings" && eventDataMsg.Components?.Count > 0)
                     {
                         if (applicationId == Constants.NIJI_APPLICATION_ID)
                         {
-                            Account.NijiComponents = eventData.Components;
+                            Account.NijiComponents = eventDataMsg.Components;
                             DbHelper.AccountStore.Update(Account);
                             _discordInstance.ClearAccountCache(Account.Id);
                         }
                         else if (applicationId == Constants.MJ_APPLICATION_ID)
                         {
-                            Account.Components = eventData.Components;
+                            Account.Components = eventDataMsg.Components;
                             DbHelper.AccountStore.Update(Account);
                             _discordInstance.ClearAccountCache(Account.Id);
                         }
@@ -922,12 +933,12 @@ namespace Midjourney.Infrastructure
                         else if (metaName == "settings" && data.TryGetProperty("components", out var components))
                         {
                             // settings 指令
-                            var eventData = data.Deserialize<EventData>();
-                            if (eventData != null && eventData.InteractionMetadata?.Name == "settings" && eventData.Components?.Count > 0)
+                            var eventDataMsg = data.Deserialize<EventData>();
+                            if (eventDataMsg != null && eventDataMsg.InteractionMetadata?.Name == "settings" && eventDataMsg.Components?.Count > 0)
                             {
                                 if (applicationId == Constants.NIJI_APPLICATION_ID)
                                 {
-                                    Account.NijiComponents = eventData.Components;
+                                    Account.NijiComponents = eventDataMsg.Components;
                                     Account.NijiSettingsMessageId = id;
 
                                     DbHelper.AccountStore.Update(Account);
@@ -935,7 +946,7 @@ namespace Midjourney.Infrastructure
                                 }
                                 else if (applicationId == Constants.MJ_APPLICATION_ID)
                                 {
-                                    Account.Components = eventData.Components;
+                                    Account.Components = eventDataMsg.Components;
                                     Account.SettingsMessageId = id;
 
                                     DbHelper.AccountStore.Update(Account);
@@ -1014,13 +1025,14 @@ namespace Midjourney.Infrastructure
                     }
                 }
 
+                var eventData = data.Deserialize<EventData>();
+
                 // 如果消息类型是 CREATE
                 // 则再次处理消息确认事件，确保消息的高可用
                 if (messageType == MessageType.CREATE)
                 {
                     Thread.Sleep(50);
 
-                    var eventData = data.Deserialize<EventData>();
                     if (eventData != null && eventData.ChannelId == Account.ChannelId)
                     {
                         foreach (var messageHandler in _userMessageHandlers.OrderBy(h => h.Order()))
@@ -1037,6 +1049,45 @@ namespace Midjourney.Infrastructure
                                 messageHandler.Handle(_discordInstance, messageType.Value, eventData);
                             });
                         }
+                    }
+                }
+                // describe 重新提交
+                // MJ::Picread::Retry
+                else if (eventData.Embeds.Count > 0 && eventData.Author.Bot == true && eventData.Components.Count > 0
+                    && eventData.Components.First().Components.Any(x => x.CustomId.Contains("PicReader")))
+                {
+                    // 消息加锁处理
+                    LocalLock.TryLock($"lock_{eventData.Id}", TimeSpan.FromSeconds(10), () =>
+                    {
+                        var em = eventData.Embeds.FirstOrDefault();
+                        if (em != null && !string.IsNullOrWhiteSpace(em.Description))
+                        {
+                            var handler = _userMessageHandlers.FirstOrDefault(x => x.GetType() == typeof(UserDescribeSuccessHandler));
+                            handler?.Handle(_discordInstance, MessageType.CREATE, eventData);
+                        }
+                    });
+                }
+                else
+                {
+                    if (!string.IsNullOrWhiteSpace(eventData.Content)
+                          && eventData.Content.Contains("%")
+                          && eventData.Author.Bot == true)
+                    {
+                        // 消息加锁处理
+                        LocalLock.TryLock($"lock_{eventData.Id}", TimeSpan.FromSeconds(10), () =>
+                        {
+                            var handler = _userMessageHandlers.FirstOrDefault(x => x.GetType() == typeof(UserStartAndProgressHandler));
+                            handler?.Handle(_discordInstance, MessageType.UPDATE, eventData);
+                        });
+                    }
+                    else if (eventData.InteractionMetadata?.Name == "describe")
+                    {
+                        // 消息加锁处理
+                        LocalLock.TryLock($"lock_{eventData.Id}", TimeSpan.FromSeconds(10), () =>
+                        {
+                            var handler = _userMessageHandlers.FirstOrDefault(x => x.GetType() == typeof(UserDescribeSuccessHandler));
+                            handler?.Handle(_discordInstance, MessageType.CREATE, eventData);
+                        });
                     }
                 }
             }
