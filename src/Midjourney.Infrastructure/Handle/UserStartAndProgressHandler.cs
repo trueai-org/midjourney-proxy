@@ -39,12 +39,12 @@ namespace Midjourney.Infrastructure.Handle
             {
                 // 任务开始
                 var task = instance.GetRunningTaskByMessageId(msgId);
-                if (task == null  && message.InteractionMetadata?.Id != null)
+                if (task == null && message.InteractionMetadata?.Id != null)
                 {
                     task = instance.FindRunningTask(c => c.InteractionMetadataId == message.InteractionMetadata.Id.ToString()).FirstOrDefault();
                 }
 
-                if (task == null || task.Status == TaskStatus.SUCCESS)
+                if (task == null || task.Status == TaskStatus.SUCCESS || task.Status == TaskStatus.FAILURE)
                 {
                     return;
                 }
@@ -77,7 +77,7 @@ namespace Midjourney.Infrastructure.Handle
                     task = instance.FindRunningTask(c => c.InteractionMetadataId == message.InteractionMetadata.Id.ToString()).FirstOrDefault();
                 }
 
-                if (task == null || task.Status == TaskStatus.SUCCESS)
+                if (task == null || task.Status == TaskStatus.SUCCESS || task.Status == TaskStatus.FAILURE)
                 {
                     return;
                 }
