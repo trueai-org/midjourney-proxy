@@ -172,25 +172,26 @@ namespace Midjourney.Infrastructure.Dto
 
     public class EventDataEmbed
     {
-        /// <inheritdoc/>
-        public dynamic Type { get; set; }
+        [JsonPropertyName("type")]
+        public string Type { get; set; }
 
-        /// <inheritdoc/>
+        [JsonPropertyName("description")]
         public string Description { get; set; }
 
-        /// <inheritdoc/>
-        public string Url { get; set; }
+        ///// <inheritdoc/>
+        //public string Url { get; set; }
+
+        ///// <inheritdoc/>
+        //public string Title { get; set; }
+
+        ///// <inheritdoc/>
+        //public DateTimeOffset? Timestamp { get; set; }
+
+        ///// <inheritdoc/>
+        //public dynamic Color { get; set; }
 
         /// <inheritdoc/>
-        public string Title { get; set; }
-
-        /// <inheritdoc/>
-        public DateTimeOffset? Timestamp { get; set; }
-
-        /// <inheritdoc/>
-        public dynamic Color { get; set; }
-
-        /// <inheritdoc/>
+        [JsonPropertyName("image")]
         public EventDataEmbedImage Image { get; set; }
     }
 
@@ -202,6 +203,7 @@ namespace Midjourney.Infrastructure.Dto
         /// <returns>
         ///     A string containing the URL of the image.
         /// </returns>
+        [JsonPropertyName("url")]
         public string Url { get; set; }
 
         /// <summary>
@@ -210,6 +212,7 @@ namespace Midjourney.Infrastructure.Dto
         /// <returns>
         ///     A string containing the proxied URL of this image.
         /// </returns>
+        [JsonPropertyName("proxy_url")]
         public string ProxyUrl { get; set; }
 
         /// <summary>
@@ -219,6 +222,7 @@ namespace Midjourney.Infrastructure.Dto
         ///     A <see cref="int"/> representing the height of this image if it can be retrieved; otherwise
         ///     <see langword="null" />.
         /// </returns>
+        [JsonPropertyName("height")]
         public int? Height { get; set; }
 
         /// <summary>
@@ -228,6 +232,7 @@ namespace Midjourney.Infrastructure.Dto
         ///     A <see cref="int"/> representing the width of this image if it can be retrieved; otherwise
         ///     <see langword="null" />.
         /// </returns>
+        [JsonPropertyName("width")]
         public int? Width { get; set; }
     }
 
