@@ -803,7 +803,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     return Message.Success();
                 }
 
-                _logger.Warning("Seed Http 请求执行失败 {@0}, {@1}, {@2}", url, response.StatusCode, response.Content);
+                _logger.Error("Seed Http 请求执行失败 {@0}, {@1}, {@2}", url, response.StatusCode, response.Content);
 
                 return Message.Of((int)response.StatusCode, "请求失败");
             }
@@ -1379,7 +1379,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     return Message.Success();
                 }
 
-                _logger.Warning("Http 请求执行失败 {@0}, {@1}, {@2}", paramsStr, response.StatusCode, response.Content);
+                _logger.Error("Http 请求执行失败 {@0}, {@1}, {@2}", paramsStr, response.StatusCode, response.Content);
 
                 return Message.Of((int)response.StatusCode, paramsStr.Substring(0, Math.Min(paramsStr.Length, 1000)));
             }

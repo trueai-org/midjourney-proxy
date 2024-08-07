@@ -2,6 +2,7 @@
 using Midjourney.Infrastructure.LoadBalancer;
 using Serilog;
 using System.Collections.Concurrent;
+using System.ComponentModel.Design.Serialization;
 using System.IO.Compression;
 using System.Net;
 using System.Net.WebSockets;
@@ -37,6 +38,8 @@ namespace Midjourney.Infrastructure
         private readonly BotMessageListener _botListener;
         private readonly WebProxy _webProxy;
         private readonly DiscordInstance _discordInstance;
+
+
 
         /// <summary>
         /// 压缩的消息
@@ -115,6 +118,13 @@ namespace Midjourney.Infrastructure
 
         private readonly SemaphoreSlim _stateLock;
 
+        /// <summary>
+        /// 消息队列
+        /// </summary>
+        private readonly ConcurrentQueue<JsonElement> _messageQueue = new ConcurrentQueue<JsonElement>();
+
+        private readonly Task _messageQueueTask;
+
         public WebSocketManager(
             DiscordHelper discordHelper,
             BotMessageListener userMessageListener,
@@ -128,6 +138,9 @@ namespace Midjourney.Infrastructure
 
             _logger = Log.Logger;
             _stateLock = new SemaphoreSlim(1, 1);
+
+            _messageQueueTask = new Task(MessageQueueDoWork, TaskCreationOptions.LongRunning);
+            _messageQueueTask.Start();
         }
 
         private DiscordAccount Account => _discordInstance?.Account;
@@ -632,6 +645,8 @@ namespace Midjourney.Infrastructure
             }
         }
 
+
+
         /// <summary>
         /// 收到消息
         /// </summary>
@@ -651,9 +666,32 @@ namespace Midjourney.Infrastructure
             }
             else
             {
+                _messageQueue.Enqueue(data);
+
                 _botListener.OnMessage(data);
             }
         }
+
+        private void MessageQueueDoWork()
+        {
+            while (true)
+            {
+                while (_messageQueue.TryDequeue(out var message))
+                {
+                    try
+                    {
+                        _botListener.OnMessage(message);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Error(ex, "处理消息队列时发生异常 {@0}", Account.ChannelId);
+                    }
+                }
+
+                Thread.Sleep(500);
+            }
+        }
+
 
         /// <summary>
         /// 创建授权信息
@@ -960,11 +998,27 @@ namespace Midjourney.Infrastructure
         /// </summary>
         public void Dispose()
         {
-            CloseSocket();
+            try
+            {
+                CloseSocket();
 
-            WebSocket?.Dispose();
-            _botListener?.Dispose();
-            _stateLock?.Dispose();
+                _messageQueue?.Clear();
+                _messageQueueTask?.Dispose();
+            }
+            catch 
+            {
+            }
+
+            try
+            {
+                WebSocket?.Dispose();
+                _botListener?.Dispose();
+                _stateLock?.Dispose();
+            }
+            catch 
+            {
+
+            }
         }
 
         /// <summary>
