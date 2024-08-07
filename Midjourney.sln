@@ -12,6 +12,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "doc", "doc", "{D2283666-695
 		docs\api.md = docs\api.md
 		CHANGELOG.md = CHANGELOG.md
 		docs\discord-params.md = docs\discord-params.md
+		scripts\docker-upgrade.sh = scripts\docker-upgrade.sh
 		README.en.md = README.en.md
 		README.md = README.md
 	EndProjectSection
