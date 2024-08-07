@@ -230,7 +230,7 @@ namespace Midjourney.Infrastructure
         /// <summary>
         /// 日绘图最大次数限制，默认 0 不限制
         /// </summary>
-        public int DayDrawLimit { get; set; }
+        public int DayDrawLimit { get; set; } = -1;
 
         /// <summary>
         /// 开启垂直领域
