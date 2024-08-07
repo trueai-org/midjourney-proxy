@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Caching.Memory;
+﻿using Discord;
+using Microsoft.Extensions.Caching.Memory;
 using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.Services;
 using Midjourney.Infrastructure.Util;
@@ -26,6 +27,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
         private readonly SemaphoreSlimLock _semaphoreSlimLock;
 
         private readonly Task _longTask;
+        private readonly Task _longTaskCache;
+
         private readonly CancellationTokenSource _longToken;
         private readonly ManualResetEvent _mre; // 信号
 
@@ -91,6 +94,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
             _longToken = new CancellationTokenSource();
             _longTask = new Task(Running, _longToken.Token, TaskCreationOptions.LongRunning);
             _longTask.Start();
+
+            _longTaskCache = new Task(RuningCache, _longToken.Token, TaskCreationOptions.LongRunning);
+            _longTaskCache.Start();
         }
 
         private DiscordAccount _account;
@@ -268,6 +274,43 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                 // 重新设置信号
                 _mre.Reset();
+            }
+        }
+
+        /// <summary>
+        /// 缓存处理
+        /// </summary>
+        private void RuningCache()
+        {
+            while (true)
+            {
+                if (_longToken.Token.IsCancellationRequested)
+                {
+                    // 清理资源（如果需要）
+                    break;
+                }
+
+                try
+                {
+                    // 当前时间转为 Unix 时间戳
+                    // 今日 0 点 Unix 时间戳
+                    var now = new DateTimeOffset(DateTime.Now.Date).ToUnixTimeMilliseconds();
+                    var count = DbHelper.TaskStore.GetCollection()
+                        .Query()
+                        .Where(c => c.SubmitTime >= now && c.InstanceId == Account.ChannelId)
+                        .Count();
+
+                    Account.DayDrawCount = count;
+
+                    DbHelper.AccountStore.Update(Account);
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error(ex, "RuningCache 异常");
+                }
+
+                // 每 2 分钟执行一次
+                Thread.Sleep(60 * 1000 * 2);
             }
         }
 
