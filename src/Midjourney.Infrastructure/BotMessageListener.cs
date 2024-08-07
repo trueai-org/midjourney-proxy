@@ -830,7 +830,9 @@ namespace Midjourney.Infrastructure
                                                 {
                                                     if (messageType == MessageType.CREATE)
                                                     {
-                                                        task.MessageId = id;
+                                                        // 不需要赋值
+                                                        //task.MessageId = id;
+
                                                         task.Description = $"{emTitle.GetString()}, {item.GetProperty("description").GetString()}";
 
                                                         if (!task.MessageIds.Contains(id))
@@ -955,7 +957,7 @@ namespace Midjourney.Infrastructure
                         {
                             // 设置 none 对应的任务 id
                             var task = _discordInstance.GetRunningTaskByNonce(nonce);
-                            if (task != null)
+                            if (task != null && task.Status != TaskStatus.SUCCESS)
                             {
                                 if (isPrivareChannel)
                                 {
@@ -975,7 +977,8 @@ namespace Midjourney.Infrastructure
                                         && data.TryGetProperty("custom_id", out var custom_id))
                                     {
                                         task.SetProperty(Constants.TASK_PROPERTY_IFRAME_MODAL_CREATE_CUSTOM_ID, custom_id.GetString());
-                                        task.MessageId = id;
+
+                                        //task.MessageId = id;
 
                                         if (!task.MessageIds.Contains(id))
                                         {
@@ -984,12 +987,26 @@ namespace Midjourney.Infrastructure
                                     }
                                     else
                                     {
-                                        task.MessageId = id;
+                                        //task.MessageId = id;
 
                                         if (!task.MessageIds.Contains(id))
                                         {
                                             task.MessageIds.Add(id);
                                         }
+                                    }
+
+                                    // 只有 CREATE 才会设置消息 id
+                                    if (messageType == MessageType.CREATE)
+                                    {
+                                        task.MessageId = id;
+                                    }
+
+                                    // 如果任务是 remix 自动提交任务
+                                    if (task.RemixAutoSubmit
+                                        && task.RemixModaling == true
+                                        && messageType == MessageType.INTERACTION_SUCCESS)
+                                    {
+                                        task.RemixModalMessageId = id;
                                     }
                                 }
                             }

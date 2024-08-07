@@ -302,7 +302,8 @@ namespace Midjourney.Infrastructure.Services
                         Prompt = prompt,
                         PromptEn = prompt,
                         Status = TaskStatus.NOT_START,
-                        Mode = task.Mode
+                        Mode = task.Mode,
+                        RemixAutoSubmit = true
                     };
 
                     subTask.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, discordInstance.GetInstanceId);
@@ -373,6 +374,8 @@ namespace Midjourney.Infrastructure.Services
                     if ((task.BotType == EBotType.MID_JOURNEY && discordInstance.Account.MjRemixOn)
                         || (task.BotType == EBotType.NIJI_JOURNEY && discordInstance.Account.NijiRemixOn))
                     {
+                        task.RemixAutoSubmit = true;
+
                         _taskStoreService.Save(task);
 
                         return SubmitModal(task, new SubmitModalDTO()
@@ -437,6 +440,8 @@ namespace Midjourney.Infrastructure.Services
                 var nonce = task.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default);
 
                 // 弹窗确认
+                task = discordInstance.GetRunningTask(task.Id);
+                task.RemixModaling = true;
                 var res = await discordInstance.ActionAsync(messageId, customId, messageFlags, nonce, task.BotType);
                 if (res.Code != ReturnCode.SUCCESS)
                 {
@@ -453,7 +458,7 @@ namespace Midjourney.Infrastructure.Services
                     Thread.Sleep(2500);
                     task = discordInstance.GetRunningTask(task.Id);
 
-                    if (string.IsNullOrWhiteSpace(task.MessageId) || string.IsNullOrWhiteSpace(task.InteractionMetadataId))
+                    if (string.IsNullOrWhiteSpace(task.RemixModalMessageId) || string.IsNullOrWhiteSpace(task.InteractionMetadataId))
                     {
                         if (sw.ElapsedMilliseconds > 300000)
                         {
@@ -461,7 +466,9 @@ namespace Midjourney.Infrastructure.Services
                         }
                     }
 
-                } while (string.IsNullOrWhiteSpace(task.MessageId) || string.IsNullOrWhiteSpace(task.InteractionMetadataId));
+                } while (string.IsNullOrWhiteSpace(task.RemixModalMessageId) || string.IsNullOrWhiteSpace(task.InteractionMetadataId));
+
+                task.RemixModaling = false;
 
                 // 自定义变焦
                 if (customId.StartsWith("MJ::CustomZoom::"))
@@ -470,7 +477,7 @@ namespace Midjourney.Infrastructure.Services
                     task.Nonce = nonce;
                     task.SetProperty(Constants.TASK_PROPERTY_NONCE, nonce);
 
-                    return await discordInstance.ZoomAsync(task, task.MessageId, customId, task.PromptEn, nonce, task.BotType);
+                    return await discordInstance.ZoomAsync(task, task.RemixModalMessageId, customId, task.PromptEn, nonce, task.BotType);
                 }
                 // 局部重绘
                 else if (customId.StartsWith("MJ::Inpaint::"))
@@ -485,7 +492,7 @@ namespace Midjourney.Infrastructure.Services
                     task.Nonce = nonce;
                     task.SetProperty(Constants.TASK_PROPERTY_NONCE, nonce);
 
-                    return await discordInstance.PicReaderAsync(task, task.MessageId, customId, task.PromptEn, nonce, task.BotType);
+                    return await discordInstance.PicReaderAsync(task, task.RemixModalMessageId, customId, task.PromptEn, nonce, task.BotType);
                 }
                 // Remix mode
                 else if (task.Action == TaskAction.VARIATION || task.Action == TaskAction.REROLL || task.Action == TaskAction.PAN)
@@ -614,7 +621,7 @@ namespace Midjourney.Infrastructure.Services
                         return Message.Failure("未知操作");
                     }
 
-                    return await discordInstance.RemixAsync(task, task.Action.Value, task.MessageId, modal,
+                    return await discordInstance.RemixAsync(task, task.Action.Value, task.RemixModalMessageId, modal,
                         customId, task.PromptEn, nonce, task.BotType);
                 }
                 else

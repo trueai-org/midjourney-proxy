@@ -49,6 +49,22 @@ namespace Midjourney.Infrastructure.Models
         public string MessageId { get; set; }
 
         /// <summary>
+        /// Remix 模式时，返回的消息 ID
+        /// Remix Modal 消息 ID
+        /// </summary>
+        public string RemixModalMessageId { get; set; }
+
+        /// <summary>
+        /// 表示是否为 Remix 自动提交任务
+        /// </summary>
+        public bool RemixAutoSubmit { get; set; }
+
+        /// <summary>
+        /// Remix 模式，处于弹窗模式中时
+        /// </summary>
+        public bool RemixModaling { get; set; }
+
+        /// <summary>
         /// 账号实例 ID = 账号渠道 ID
         /// </summary>
         public string InstanceId { get; set; }

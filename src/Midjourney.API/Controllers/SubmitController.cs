@@ -514,6 +514,9 @@ namespace Midjourney.API.Controllers
 
             task.PromptEn = promptEn;
 
+            // 提交 modal 指示为 true
+            task.RemixAutoSubmit = true;
+
             return Ok(_taskService.SubmitModal(task, actionDTO, dataUrl));
         }
 
