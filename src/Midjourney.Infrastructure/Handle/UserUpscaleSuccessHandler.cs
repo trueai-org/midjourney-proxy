@@ -23,6 +23,12 @@ namespace Midjourney.Infrastructure.Handle
 
         public override void Handle(IDiscordInstance instance, MessageType messageType, EventData message)
         {
+            // 跳过 Waiting to start 消息
+            if (!string.IsNullOrWhiteSpace(message.Content) && message.Content.Contains("(Waiting to start)"))
+            {
+                return;
+            }
+
             // 判断消息是否处理过了
             CacheHelper<string, bool>.TryAdd(message.Id.ToString(), false);
             if (CacheHelper<string, bool>.Get(message.Id.ToString()))

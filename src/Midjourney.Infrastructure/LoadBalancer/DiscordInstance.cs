@@ -805,11 +805,13 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                 _logger.Error("Seed Http 请求执行失败 {@0}, {@1}, {@2}", url, response.StatusCode, response.Content);
 
+
                 return Message.Of((int)response.StatusCode, "请求失败");
             }
             catch (HttpRequestException e)
             {
                 _logger.Error(e, "Seed Http 请求执行异常 {@0}", url);
+
                 return ConvertHttpRequestException(e);
             }
         }
@@ -1381,9 +1383,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                 _logger.Error("Http 请求执行失败 {@0}, {@1}, {@2}", paramsStr, response.StatusCode, response.Content);
 
-                var msg = response.StatusCode.GetDescription() + ", error: " + paramsStr.Substring(0, Math.Min(paramsStr.Length, 1000));
+                var error = $"{response.StatusCode}: {paramsStr.Substring(0, Math.Min(paramsStr.Length, 1000))}";
 
-                return Message.Of((int)response.StatusCode, msg);
+                return Message.Of((int)response.StatusCode, error);
             }
             catch (HttpRequestException e)
             {

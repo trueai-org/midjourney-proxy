@@ -62,6 +62,12 @@ namespace Midjourney.Infrastructure.Handle
 
         protected void FindAndFinishImageTask(IDiscordInstance instance, TaskAction action, string finalPrompt, EventData message)
         {
+            // 跳过 Waiting to start 消息
+            if (!string.IsNullOrWhiteSpace(message.Content) && message.Content.Contains("(Waiting to start)"))
+            {
+                return;
+            }
+
             // 判断消息是否处理过了
             CacheHelper<string, bool>.TryAdd(message.Id, false);
             if (CacheHelper<string, bool>.Get(message.Id))
