@@ -38,12 +38,18 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <returns>选择的实例。</returns>
         /// <param name="accountFilter"></param>
         /// <param name="isNewTask">是否过滤只接收新任务的实例</param>
-        public IDiscordInstance ChooseInstance(AccountFilter accountFilter = null, bool? isNewTask = null)
+        /// <param name="botType">过滤开启指定机器人的账号</param>
+        public IDiscordInstance ChooseInstance(
+            AccountFilter accountFilter = null,
+            bool? isNewTask = null,
+            EBotType? botType = null)
         {
             if (accountFilter == null)
             {
                 var list = GetAliveInstances()
                      .WhereIf(isNewTask == true, c => c.Account.IsAcceptNewTask == true)
+                     .WhereIf(botType == EBotType.NIJI_JOURNEY, c => c.Account.EnableNiji)
+                     .WhereIf(botType == EBotType.MID_JOURNEY, c => c.Account.EnableMj)
                      .ToList();
 
                 return _rule.Choose(list);
@@ -74,6 +80,10 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                          // 过滤只接收新任务的实例
                          .WhereIf(isNewTask == true, c => c.Account.IsAcceptNewTask == true)
+
+                         // 过滤开启 niji mj 的账号
+                         .WhereIf(botType == EBotType.NIJI_JOURNEY, c => c.Account.EnableNiji)
+                         .WhereIf(botType == EBotType.MID_JOURNEY, c => c.Account.EnableMj)
                          .ToList();
 
                 return _rule.Choose(list);

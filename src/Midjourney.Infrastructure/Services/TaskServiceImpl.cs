@@ -35,7 +35,11 @@ namespace Midjourney.Infrastructure.Services
         /// <returns></returns>
         public SubmitResultVO SubmitImagine(TaskInfo info, List<DataUrl> dataUrls)
         {
-            var instance = _discordLoadBalancer.ChooseInstance(info.AccountFilter, true);
+            var instance = _discordLoadBalancer.ChooseInstance(
+                info.AccountFilter,
+                true,
+                info.BotType);
+
             if (instance == null || !instance.Account.IsAcceptNewTask)
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
