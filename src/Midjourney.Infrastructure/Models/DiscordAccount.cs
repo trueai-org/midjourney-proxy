@@ -13,7 +13,6 @@ namespace Midjourney.Infrastructure.Models
     {
         public DiscordAccount()
         {
-
         }
 
         /// <summary>
@@ -148,9 +147,43 @@ namespace Midjourney.Infrastructure.Models
         public int Weight { get; set; }
 
         /// <summary>
-        /// 工作时间
+        /// 工作时间（非工作时间段，不接收任何任务）
         /// </summary>
         public string WorkTime { get; set; }
+
+        /// <summary>
+        /// 摸鱼时间段（只接收变化任务，不接收新的任务）
+        /// </summary>
+        public string FishingTime { get; set; }
+
+        /// <summary>
+        /// 表示是否接收新的任务
+        /// 1、处于工作时间段内
+        /// 2、处于非摸鱼时间段内
+        /// 3、没有超出最大任务限制
+        /// </summary>
+        [BsonIgnore]
+        public bool IsAcceptNewTask
+        {
+            get
+            {
+                if (string.IsNullOrWhiteSpace(WorkTime) && string.IsNullOrWhiteSpace(FishingTime))
+                {
+                    return true;
+                }
+
+                if (DateTime.Now.IsInWorkTime(WorkTime) && !DateTime.Now.IsInFishTime(FishingTime))
+                {
+                    if (DayDrawLimit <= -1 || DayDrawCount < DayDrawLimit)
+                    {
+                        return true;
+                    }
+                }
+
+                // 表示不接收新的任务
+                return false;
+            }
+        }
 
         /// <summary>
         /// 排序
@@ -209,9 +242,8 @@ namespace Midjourney.Infrastructure.Models
         public int DayDrawLimit { get; set; } = -1;
 
         /// <summary>
-        /// 当日已绘图次数
+        /// 当日已绘图次数（每 5 分钟自动刷新）
         /// </summary>
-        [BsonIgnore]
         public int DayDrawCount { get; set; } = 0;
 
         /// <summary>
