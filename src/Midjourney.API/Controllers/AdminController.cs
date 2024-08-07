@@ -1141,6 +1141,12 @@ namespace Midjourney.API.Controllers
                     model.BaiduTranslate.Appid = "****";
                     model.BaiduTranslate.AppSecret = "****";
                 }
+
+                if (model.Openai != null)
+                {
+                    model.Openai.GptApiUrl = "****";
+                    model.Openai.GptApiKey = "****";
+                }
             }
 
             return Result.Ok(model);

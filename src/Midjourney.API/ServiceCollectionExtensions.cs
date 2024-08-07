@@ -40,6 +40,7 @@ namespace Midjourney.API
 
             // 翻译服务
             services.AddSingleton<ITranslateService, BaiduTranslateService>();
+            services.AddSingleton<ITranslateService, GPTTranslateService>();
 
             // 存储服务
             // 内存
