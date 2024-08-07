@@ -253,7 +253,7 @@ namespace Midjourney.API
                         disInstance = _discordLoadBalancer.GetDiscordInstance(account.ChannelId);
 
                         // 判断是否在工作时间内
-                        var now = new DateTimeOffset(DateTime.UtcNow.Date).ToUnixTimeMilliseconds();
+                        var now = new DateTimeOffset(DateTime.Now.Date).ToUnixTimeMilliseconds();
                         var dayCount = DbHelper.TaskStore.GetCollection().Query()
                             .Where(c => c.InstanceId == account.ChannelId && c.SubmitTime >= now)
                             .Count();
