@@ -1,4 +1,4 @@
-# Midjourney Proxy
+# Midjourney Proxy <!-- {docsify-ignore-all} -->
 
 ## 介绍
 
