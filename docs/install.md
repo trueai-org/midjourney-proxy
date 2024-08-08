@@ -107,7 +107,7 @@ c. 启动方式1: sh run_app_osx.sh
 d. 启动方式2: chmod +x run_app_osx.sh && ./run_app_osx.sh
 ```
 
-## Linux 一键安装脚本（❤感谢 [@dbccccccc](https://github.com/dbccccccc)）
+## Linux 一键安装脚本
 
 ```bash
 # 方式1

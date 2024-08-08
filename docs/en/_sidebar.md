@@ -1,2 +1,2 @@
-* [Introduction](/)
-* [Install](/install/)
+* [Introduction](/en/)
+* [Install](/en/install)

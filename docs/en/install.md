@@ -1,4 +1,4 @@
-# Installation
+# Install
 
 ## Docker Version
 
