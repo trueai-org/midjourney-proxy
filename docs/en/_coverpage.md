@@ -1,6 +1,6 @@
-![logo](https://vip.123pan.cn/1816233029/mjproxy/logo.png)
+![logo](https://raw.githubusercontent.com/trueai-org/midjourney-proxy/main/docs/logo.png)
 
-# Midjourney Proxy <small>v2.8.23</small>
+# Midjourney Proxy <small>v3.0.x</small>
 
 > Using Midjourney AI drawing in API form
 
