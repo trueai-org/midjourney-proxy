@@ -327,6 +327,7 @@ curl -o linux_install.sh https://raw.githubusercontent.com/trueai-org/midjourney
     "Enable": false,
     "Whitelist": [], // 永久白名单 "127.0.0.1", "::1/10", "::1"
     "Blacklist": [], // 永久黑名单
+    // 0.0.0.0/32 单个 ip
     "IpRules": {
       // 限制 mj/submit 接口下的所有接口
       "*/mj/submit/*": {
@@ -337,6 +338,7 @@ curl -o linux_install.sh https://raw.githubusercontent.com/trueai-org/midjourney
         "86400": 120 // 每天最多访问 120 次
       }
     },
+    // 0.0.0.0/24 ip 段
     "IpRangeRules": {
       // 限制 mj/submit 接口下的所有接口
       "*/mj/submit/*": {
@@ -346,7 +348,11 @@ curl -o linux_install.sh https://raw.githubusercontent.com/trueai-org/midjourney
         "3600": 300, // 每 3600 秒最多访问 300 次
         "86400": 360 // 每天最多访问 360 次
       }
-    }
+    },
+    // 0.0.0.0/24 ip 段
+    "Ip24Rules": {},
+    // 0.0.0.0/16 ip 段
+    "Ip16Rules": {}
   },
   // IP 黑名单限流配置，触发后自动封锁 IP，支持封锁时间配置
   // 触发限流后，加入黑名单会返回 403 状态码
