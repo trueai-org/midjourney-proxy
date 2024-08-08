@@ -83,6 +83,11 @@ namespace Midjourney.Infrastructure.Models
         public string DisabledReason { get; set; }
 
         /// <summary>
+        /// 当前频道的永久邀请链接
+        /// </summary>
+        public string PermanentInvitationLink { get; set; }
+
+        /// <summary>
         /// 真人验证 hash url 创建时间
         /// </summary>
         public DateTime? CfHashCreated { get; set; }

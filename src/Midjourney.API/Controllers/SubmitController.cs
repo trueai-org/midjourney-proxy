@@ -540,6 +540,35 @@ namespace Midjourney.API.Controllers
                 UserId = user?.Id
             };
 
+            var now = new DateTimeOffset(DateTime.Now.Date).ToUnixTimeMilliseconds();
+
+            // 计算当前 ip 当日第几次绘图
+            // 如果不是白名单用户，则计算 ip 绘图限制
+            if (user == null || user.IsWhite != true)
+            {
+                var ipTodayDrawCount = (int)DbHelper.TaskStore.Count(x => x.SubmitTime >= now && x.ClientIp == _ip);
+                if (GlobalConfiguration.Setting.GuestDefaultDayLimit > 0)
+                {
+                    if (ipTodayDrawCount > GlobalConfiguration.Setting.GuestDefaultDayLimit)
+                    {
+                        throw new LogicException("今日绘图次数已达上限");
+                    }
+                }
+            }
+
+            // 计算当前用户当日第几次绘图
+            if (!string.IsNullOrWhiteSpace(user?.Id))
+            {
+                if (user.DayDrawLimit > 0)
+                {
+                    var userTodayDrawCount = (int)DbHelper.TaskStore.Count(x => x.SubmitTime >= now && x.UserId == user.Id);
+                    if (userTodayDrawCount > user.DayDrawLimit)
+                    {
+                        throw new LogicException("今日绘图次数已达上限");
+                    }
+                }
+            }
+
             if (_mode != null)
             {
                 task.AccountFilter ??= new AccountFilter();
