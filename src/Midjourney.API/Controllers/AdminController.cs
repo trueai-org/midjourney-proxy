@@ -1,5 +1,4 @@
-﻿using Discord;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
 using Midjourney.Infrastructure.Data;
@@ -1067,6 +1066,9 @@ namespace Midjourney.API.Controllers
             domain.UpdateTime = DateTime.Now;
 
             DbHelper.DomainStore.Save(domain);
+
+            _taskService.ClearDomainCache();
+
             return Result.Ok();
         }
 
@@ -1100,6 +1102,8 @@ namespace Midjourney.API.Controllers
             }
 
             DbHelper.DomainStore.Delete(id);
+
+            _taskService.ClearDomainCache();
 
             return Result.Ok();
         }

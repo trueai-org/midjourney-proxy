@@ -41,12 +41,16 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <param name="botType">过滤开启指定机器人的账号</param>
         /// <param name="blend">过滤支持 Blend 的账号</param>
         /// <param name="describe">过滤支持 Describe 的账号</param>
+        /// <param name="isDomain">过滤垂直领域的账号</param>
+        /// <param name="domainIds">过滤垂直领域 ID</param>
         public IDiscordInstance ChooseInstance(
             AccountFilter accountFilter = null,
             bool? isNewTask = null,
             EBotType? botType = null,
             bool? blend = null,
-            bool? describe = null)
+            bool? describe = null,
+            bool? isDomain = null,
+            List<string> domainIds = null)
         {
             if (accountFilter == null)
             {
@@ -56,6 +60,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
                      .WhereIf(isNewTask == true, c => c.Account.IsAcceptNewTask == true)
                      .WhereIf(botType == EBotType.NIJI_JOURNEY, c => c.Account.EnableNiji)
                      .WhereIf(botType == EBotType.MID_JOURNEY, c => c.Account.EnableMj)
+                     .WhereIf(isDomain == true && domainIds?.Count > 0, c => c.Account.IsVerticalDomain && c.Account.VerticalDomainIds.Any(x => domainIds.Contains(x)))
+                     .WhereIf(isDomain == false, c => c.Account.IsVerticalDomain != true)
                      .ToList();
 
                 return _rule.Choose(list);
@@ -93,6 +99,10 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                          .WhereIf(blend == true, c => c.Account.IsBlend)
                          .WhereIf(describe == true, c => c.Account.IsDescribe)
+
+                         // 领域过滤
+                         .WhereIf(isDomain == true && domainIds?.Count > 0, c => c.Account.IsVerticalDomain && c.Account.VerticalDomainIds.Any(x => domainIds.Contains(x)))
+                         .WhereIf(isDomain == false, c => c.Account.IsVerticalDomain != true)
                          .ToList();
 
                 return _rule.Choose(list);
@@ -112,7 +122,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         }
 
         /// <summary>
-        /// 获取指定ID的实例（不判断是否存活）
+        /// 获取指定ID的实例（必须是存活的）
         /// </summary>
         /// <param name="instanceId">实例ID。</param>
         /// <returns>实例。</returns>

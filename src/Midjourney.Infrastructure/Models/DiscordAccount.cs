@@ -104,9 +104,19 @@ namespace Midjourney.Infrastructure.Models
         public int CoreSize { get; set; } = 3;
 
         /// <summary>
-        /// 任务执行间隔时间（秒，默认：1.2s）。
+        /// 任务执行前间隔时间（秒，默认：1.2s）。
         /// </summary>
         public decimal Interval { get; set; } = 1.2m;
+
+        /// <summary>
+        /// 任务执行后最小间隔时间（秒，默认：1.2s）
+        /// </summary>
+        public decimal AfterIntervalMin { get; set; } = 1.2m;
+
+        /// <summary>
+        /// 任务执行后最大间隔时间（秒，默认：1.2s）
+        /// </summary>
+        public decimal AfterIntervalMax { get; set; } = 1.2m;
 
         /// <summary>
         /// 等待队列长度。

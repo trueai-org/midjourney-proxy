@@ -230,7 +230,7 @@ namespace Midjourney.Infrastructure
         /// <summary>
         /// 日绘图最大次数限制，默认 0 不限制
         /// </summary>
-        public int DayDrawLimit { get; set; }
+        public int DayDrawLimit { get; set; } = -1;
 
         /// <summary>
         /// 开启垂直领域
@@ -266,6 +266,16 @@ namespace Midjourney.Infrastructure
         /// 任务执行间隔时间（秒，默认：1.2s）。
         /// </summary>
         public decimal Interval { get; set; } = 1.2m;
+
+        /// <summary>
+        /// 任务执行后最小间隔时间（秒，默认：1.2s）
+        /// </summary>
+        public decimal AfterIntervalMin { get; set; } = 1.2m;
+
+        /// <summary>
+        /// 任务执行后最大间隔时间（秒，默认：1.2s）
+        /// </summary>
+        public decimal AfterIntervalMax { get; set; } = 1.2m;
 
         /// <summary>
         /// 工作时间

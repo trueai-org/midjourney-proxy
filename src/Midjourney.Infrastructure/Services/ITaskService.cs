@@ -8,6 +8,18 @@ namespace Midjourney.Infrastructure.Services
     public interface ITaskService
     {
         /// <summary>
+        /// 获取领域缓存
+        /// </summary>
+        /// <returns></returns>
+        public Dictionary<string, HashSet<string>> GetDomainCache();
+
+
+        /// <summary>
+        /// 清除领域缓存
+        /// </summary>
+        void ClearDomainCache();
+
+        /// <summary>
         /// 提交 Imagine 任务。
         /// </summary>
         /// <param name="task">任务对象。</param>
