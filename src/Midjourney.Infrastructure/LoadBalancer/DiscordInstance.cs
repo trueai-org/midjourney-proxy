@@ -477,8 +477,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                 while (info.Status == TaskStatus.SUBMITTED || info.Status == TaskStatus.IN_PROGRESS)
                 {
-                    await Task.Delay(100);
                     await AsyncSaveAndNotify(info);
+                    await Task.Delay(100);
 
                     if (sw.ElapsedMilliseconds > timeoutMin * 60 * 1000)
                     {
