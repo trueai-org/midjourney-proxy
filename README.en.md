@@ -8,6 +8,8 @@ Fully open-source without any partially open or closed source components, pull r
 
 The most feature-rich, secure, and memory-efficient (100MB+) Midjourney Proxy API~~
 
+Thank you all for your help and support. Many thanks to the people who have provided sponsorship and support for this project. I am deeply grateful!
+
 ## 交流群
 
 Due to the current documentation not being fully comprehensive, there may be issues with usage and deployment. You are welcome to join our discussion group to talk about and solve problems together.
@@ -52,24 +54,25 @@ Due to the current documentation not being fully comprehensive, there may be iss
 - [x] automatically simulate reading the unread messages if there are too many unread messages
 - [x] Support for PicReader and Picread commands for image-to-text regeneration, as well as batch image-to-text regeneration commands (no need for fast mode)
 - [x] Support for BOOKMARK and other commands
-- [x] Support for specifying instance drawing, filtering accounts for drawing at specific speeds, and filtering accounts for drawing in `remix` mode, etc. For details, refer to the Swagger `accountFilter` field
-- [x] Reverse generation of system task information based on job ID or image
-- [x] Support for account sorting, concurrency, queue numbers, maximum queue size, task execution intervals, and other configurations
-- [x] Support for client path specification, default address example: `https://{BASE_URL}/mj/submit/imagine`, `/mj-turbo/mj` for turbo mode, `/mj-relax/mj` for relax mode, `/mj-fast/mj` for fast mode, `/mj` without specifying the mode
-- [x] CloudFlare manual human verification, which triggers automatic account locking, and can be verified directly via the GUI or through email notification verification
-- [x] CloudFlare automatic human verification, configure the verification server address (automatic verifier only supports Windows deployment)
-- [x] Support for work time period configuration, continuous 24-hour non-stop drawing may trigger warnings. It is recommended to rest for 6-8 hours, example: `09:10-23:55, 13:00-08:10`
-- [x] Built-in IP rate limiting, IP segment rate limiting, blacklist, whitelist, automatic blacklisting, and other features
-- [x] Daily drawing limit support; drawing will automatically stop when the limit is reached (BETA)
-- [x] Enable registration and guest access (BETA)
-- [x] Visual configuration functionality (BETA)
-- [ ] Configurable bot token; optional configuration, the service can function without a bot
-- [ ] Support for vertical classification of accounts; allow accounts to be configured with specific terms, each account specializing in a particular type of work, such as landscapes or portraits
-- [ ] Allow shared channels or sub-channels for drawing; even if an account is banned, previous drawings can continue in a sub-channel of a normal account; save permanent invite links and sub-channel links, support batch editing, can directly input invite links or shared channel addresses, and the system will automatically join and convert channels. Alternatively, achieve this by transferring ownership.
-- [ ] Solicit a video tutorial
-- [ ] Optimize command and status progress display
-- [ ] If there are pending tasks after the service restarts, they will be added to the execution queue
-- [ ] Support one-click migration from `mjplus` or other services to this service
+- [x] Support for specifying instance drawings, filtering accounts by specified speed level, and filtering `remix` mode accounts. Refer to Swagger `accountFilter` field for details.
+- [x] Reverse generate system task information based on job id or image.
+- [x] Support account sorting, concurrency, queue numbers, maximum queue limits, and task execution intervals.
+- [x] Support for client path specification mode, default address example: https://{BASE_URL}/mj/submit/imagine. In turbo mode, use /mj-turbo/mj, in relax mode, use /mj-relax/mj, and in fast mode, use /mj-fast/mj. Without specifying mode, use /mj.
+- [x] CloudFlare manual human verification: lock account upon trigger, verify directly via GUI or notify via email for verification.
+- [x] CloudFlare automatic human verification: configure verification server address (automatic verifier supports Windows deployment only).
+- [x] Support for working hours configuration. Continuous operation for 24 hours might trigger warnings, recommend resting 8-10 hours. Example: `09:10-23:55, 13:00-08:10`.
+- [x] Built-in IP rate limiting, IP segment rate limiting, blacklists, whitelists, and automatic blacklisting functionalities.
+- [x] Daily drawing limit support, automatically stopping drawings upon exceeding the limit.
+- [x] Enable registration and guest access.
+- [x] Visual configuration functionality.
+- [x] Support for independent enabling of Swagger documentation.
+- [x] Configurable bot token (optional), can be used without a bot configuration.
+- [x] Optimizations for command and status progress display.
+- [x] Configure idle time (relax mode for accounts), to avoid high-frequency operations (no new drawings in this mode, other commands can still be executed, multiple time segments configuration supported).
+- [x] Support for vertical classification of accounts. Accounts can be configured for specific categories, e.g., landscapes only or portraits only.
+- [ ] Allow sharing drawings in shared channels or subchannels. If an account is banned, the previous drawings can be continued by making the banned account’s channel a subchannel of a regular account. Save permanent invite links and subchannel links, support batch modifications, direct input of invite links, or shared channel addresses for automatic channel join and conversion by the system. Ownership transfer can also be implemented for this purpose.
+- [ ] Solicit a video tutorial.
+- [ ] Support for `mjplus` or other service one-click migration to this service.
 
 ## Online Preview
 
@@ -105,6 +108,10 @@ Public interface is in slow mode, free to use. The account pool is provided by s
 ![API](./docs/screenshots/uiswagger.png)
 
 ## Recommended Clients
+
+- **ChatGPT-Midjourney**: <https://github.com/Licoy/ChatGPT-Midjourney>
+  - One-click setup for your very own ChatGPT+StabilityAI+Midjourney web service -> <https://chat-gpt-midjourney-96vk.vercel.app/#/mj>
+  - Open the website -> Settings -> Custom API -> Model (Midjourney) -> API URL -> <https://ai.trueai.org/mj>
 
 - **ChatGPT Web Midjourney Proxy**: <https://github.com/Dooy/chatgpt-web-midjourney-proxy> 
   - Visit <https://vercel.ddaiai.com> -> Settings -> MJ Drawing Interface URL -> <https://ai.trueai.org>
@@ -235,7 +242,7 @@ wget -N --no-check-certificate https://raw.githubusercontent.com/trueai-org/midj
 curl -o linux_install.sh https://raw.githubusercontent.com/trueai-org/midjourney-proxy/main/scripts/linux_install.sh && chmod +x linux_install.sh && bash linux_install.sh
 ```
 
-## Configuration Parameters
+## Configuration
 
 - `appsettings.json` default configuration
 - `appsettings.Production.json` production environment configuration
@@ -250,6 +257,10 @@ curl -o linux_install.sh https://raw.githubusercontent.com/trueai-org/midjourney
 
 - `User`: Only allowed to use the drawing interface, cannot log in to the backend.
 - `Administrator`: Can log in to the backend, view tasks, configurations, etc.
+
+#### Default User Instructions
+
+- When starting the site, if the `AdminToken` has not been set previously, the default admin token will be: `admin`
 
 > For version 3.x, this configuration is not needed. Please use the GUI for any modifications.
 
@@ -398,7 +409,7 @@ curl -o linux_install.sh https://raw.githubusercontent.com/trueai-org/midjourney
 
 ## CloudFlare Validator Deployment
  
-Windows deployment supportedonly (and supports TLS 1.3, system requirements are Windows 11 or Windows Server 2022). Since the CloudFlare validator requires the use of the Chrome browser, it needs to be deployed in a Windows environment. Deployment in a Linux environment would depend on many libraries, so Linux deployment is temporarily not supported.
+Windows deployment supported only (and supports TLS 1.3, system requirements are Windows 11 or Windows Server 2022). Since the CloudFlare validator requires the use of the Chrome browser, it needs to be deployed in a Windows environment. Deployment in a Linux environment would depend on many libraries, so Linux deployment is temporarily not supported.
 
 Note: Self-deployment requires providing the API Key for 2captcha.com, otherwise it cannot be used. Price: 1000 times/9 yuan, official website: <https://2captcha.cn/p/cloudflare-turnstile>
  
@@ -451,21 +462,22 @@ Add application to channel server (refer to screenshot)
 
 ## Roadmap
 
-- [ ] Optimize notifications when tasks and queues are full
+- [ ] Optimize notifications for when tasks and queues are full
 - [ ] Address potential issues with concurrent queues for shared accounts
-- [ ] Integrated dictionary management with batch editing
-- [ ] Integration with official drawing API
-- [ ] Add statistics dashboard, including drawing statistics and visitor statistics
-- [ ] Built-in user system with registration and management capabilities, rate limiting, and maximum usage limits
-- [ ] Integrate GPT for translation
-- [ ] Add support for displaying final prompts with Chinese translations
-- [ ] Support for individual proxies for accounts
-- [ ] Multi-database support including MySQL, SQLite, SQL Server, MongoDB, PostgreSQL, Redis, etc.
-- [ ] Integration with payment systems, supporting WeChat, Alipay, and drawing pricing strategies
-- [ ] Add announcement functionality
-- [ ] Add "Relax Mode" for accounts to avoid high-frequency operations (in this mode, new drawings cannot be created, but other commands can still be executed; can be configured for multiple time periods or scheduled strategies)
-- [ ] Text generation from image seed value processing
+- [ ] Built-in dictionary management with batch modification
+- [ ] Integrate official drawing API support
+- [ ] Add statistical panels, including drawing statistics and visitor statistics
+- [ ] Built-in user system with registration and management, including rate limits and maximum usage counts
+- [ ] Integrate GPT translation
+- [ ] Support for translating final prompts to Chinese
+- [ ] Support for individual account proxies
+- [ ] Multi-database support including MySQL, Sqlite, SqlServer, MongoDB, PostgreSQL, Redis, etc.
+- [ ] Integrate payment support including WeChat Pay and Alipay, and support for drawing pricing strategies
+- [ ] Add announcement feature
+- [ ] Handle seed value for generating captions from images
 - [ ] Automatically read private messages
+- [ ] Support for multi-account grouping and paginated account views
+- [ ] After service restart, add any pending tasks to the execution queue
 
 ## Support and Sponsorship
 
