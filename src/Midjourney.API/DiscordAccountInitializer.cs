@@ -174,7 +174,7 @@ namespace Midjourney.API
         /// <returns></returns>
         public async Task Initialize(params DiscordAccountConfig[] appends)
         {
-            var isLock = LocalLock.TryLock("Initialize", TimeSpan.FromSeconds(10), async () =>
+            var isLock = await AsyncLocalLock.TryLockAsync("Initialize", TimeSpan.FromSeconds(10), async () =>
             {
                 var setting = GlobalConfiguration.Setting;
                 var proxy = setting.Proxy;

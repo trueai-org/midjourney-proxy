@@ -44,6 +44,7 @@ namespace Midjourney.Captcha.API.Controllers
             {
                 await DoWork(request);
             });
+
             return Ok();
         }
 
@@ -57,8 +58,10 @@ namespace Midjourney.Captcha.API.Controllers
         {
             var lockKey = $"lock_{request.State}";
 
-            var isLock = LocalLock.TryLock(lockKey, TimeSpan.FromSeconds(10), async () =>
+            var isLock = await AsyncLocalLock.TryLockAsync(lockKey, TimeSpan.FromSeconds(3), async () =>
             {
+                Log.Information("CF 开始验证 {@0}", request);
+
                 // 如果 2 分钟内，有验证成功的通知，则不再执行
                 var successKey = $"{request.State}";
                 if (_memoryCache.TryGetValue<bool>(successKey, out var ok) && ok)

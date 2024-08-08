@@ -3,56 +3,50 @@
 namespace Midjourney.Infrastructure.Util
 {
     /// <summary>
-    /// 本地锁（不支持异步 async）
+    /// 异步本地锁
     /// </summary>
-    public static class LocalLock
+    public static class AsyncLocalLock
     {
-        private static readonly ConcurrentDictionary<string, object> _lockObjs = new();
+        private static readonly ConcurrentDictionary<string, SemaphoreSlim> _lockObjs = new();
 
         /// <summary>
-        /// 获取锁（不支持异步 async）
+        /// 获取锁
         /// </summary>
         /// <param name="key"></param>
         /// <param name="span"></param>
         /// <returns></returns>
-        private static bool LockEnter(string key, TimeSpan span)
+        private static async Task<bool> LockEnterAsync(string key, TimeSpan span)
         {
-            var obj = _lockObjs.GetOrAdd(key, new object());
-            if (Monitor.TryEnter(obj, span))
-            {
-                return true;
-            }
-            return false;
+            var semaphore = _lockObjs.GetOrAdd(key, new SemaphoreSlim(1, 1));
+            return await semaphore.WaitAsync(span);
         }
 
         /// <summary>
-        /// 退出锁（不支持异步 async）
+        /// 退出锁
         /// </summary>
         /// <param name="key"></param>
-        /// <returns></returns>
-        private static bool LockExit(string key)
+        private static void LockExit(string key)
         {
-            if (_lockObjs.TryGetValue(key, out object? obj) && obj != null)
+            if (_lockObjs.TryGetValue(key, out SemaphoreSlim? semaphore) && semaphore != null)
             {
-                Monitor.Exit(obj);
+                semaphore.Release();
             }
-            return true;
         }
 
         /// <summary>
-        /// 等待并获取锁（不支持异步 async）
+        /// 等待并获取锁
         /// </summary>
         /// <param name="resource"></param>
         /// <param name="expirationTime">等待锁超时时间，如果超时没有获取到锁，返回 false</param>
         /// <param name="action"></param>
         /// <returns></returns>
-        public static bool TryLock(string resource, TimeSpan expirationTime, Action action)
+        public static async Task<bool> TryLockAsync(string resource, TimeSpan expirationTime, Func<Task> action)
         {
-            if (LockEnter(resource, expirationTime))
+            if (await LockEnterAsync(resource, expirationTime))
             {
                 try
                 {
-                    action();
+                    await action();
                     return true;
                 }
                 finally
