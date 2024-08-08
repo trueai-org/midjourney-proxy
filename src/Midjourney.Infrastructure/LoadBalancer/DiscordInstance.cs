@@ -507,14 +507,18 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 //{
                 try
                 {
-                    var res = await ReadMessageAsync(info.MessageId);
-                    if (res.Code == ReturnCode.SUCCESS)
+                    // 成功才都消息
+                    if (info.Status == TaskStatus.SUCCESS)
                     {
-                        _logger.Debug("自动读消息成功 {@0} - {@1}", info.InstanceId, info.Id);
-                    }
-                    else
-                    {
-                        _logger.Warning("自动读消息失败 {@0} - {@1}", info.InstanceId, info.Id);
+                        var res = await ReadMessageAsync(info.MessageId);
+                        if (res.Code == ReturnCode.SUCCESS)
+                        {
+                            _logger.Debug("自动读消息成功 {@0} - {@1}", info.InstanceId, info.Id);
+                        }
+                        else
+                        {
+                            _logger.Warning("自动读消息失败 {@0} - {@1}", info.InstanceId, info.Id);
+                        }
                     }
                 }
                 catch (Exception ex)
