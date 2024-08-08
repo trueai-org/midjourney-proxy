@@ -26,14 +26,24 @@ namespace Midjourney.API
         /// 中间件执行逻辑，处理请求限流。
         /// </summary>
         /// <param name="context">HTTP 上下文。</param>
+        /// <param name="workContext"></param>
         /// <returns>异步任务。</returns>
-        public async Task InvokeAsync(HttpContext context)
+        public async Task InvokeAsync(HttpContext context, WorkContext workContext)
         {
             if (_ipRateOptions?.Enable != true && _ipBlackRateOptions?.Enable != true)
             {
                 await _next(context);
                 return;
             }
+
+            // 白名单用户不限流
+            var user = workContext.GetUser();
+            if (user != null && user.IsWhite)
+            {
+                await _next(context);
+                return;
+            }
+
             var clientIp = context.Request.GetIP();
 
             // 转为 /32

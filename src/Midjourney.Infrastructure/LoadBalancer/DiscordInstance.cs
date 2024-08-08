@@ -376,12 +376,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <returns>任务提交结果</returns>
         public SubmitResultVO SubmitTaskAsync(TaskInfo info, Func<Task<Message>> discordSubmit)
         {
-            // TODO : 限制提交频率
-            var ipLimitKey = $"limit:{info.ClientIp}";
-            var userLimitKey = $"limit:{info.UserId}";
-
-            //_cache.GetOrCreate("");
-
             // 在任务提交时，前面的的任务数量
             var currentWaitNumbers = _queueTasks.Count;
             if (Account.MaxQueueSize > 0 && currentWaitNumbers >= Account.MaxQueueSize)
@@ -507,14 +501,18 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 //{
                 try
                 {
-                    var res = await ReadMessageAsync(info.MessageId);
-                    if (res.Code == ReturnCode.SUCCESS)
+                    // 成功才都消息
+                    if (info.Status == TaskStatus.SUCCESS)
                     {
-                        _logger.Debug("自动读消息成功 {@0} - {@1}", info.InstanceId, info.Id);
-                    }
-                    else
-                    {
-                        _logger.Warning("自动读消息失败 {@0} - {@1}", info.InstanceId, info.Id);
+                        var res = await ReadMessageAsync(info.MessageId);
+                        if (res.Code == ReturnCode.SUCCESS)
+                        {
+                            _logger.Debug("自动读消息成功 {@0} - {@1}", info.InstanceId, info.Id);
+                        }
+                        else
+                        {
+                            _logger.Warning("自动读消息失败 {@0} - {@1}", info.InstanceId, info.Id);
+                        }
                     }
                 }
                 catch (Exception ex)

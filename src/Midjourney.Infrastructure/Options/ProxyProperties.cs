@@ -288,6 +288,11 @@ namespace Midjourney.Infrastructure
         public string FishingTime { get; set; }
 
         /// <summary>
+        /// 当前频道的永久邀请链接
+        /// </summary>
+        public string PermanentInvitationLink { get; set; }
+
+        /// <summary>
         /// 权重
         /// </summary>
         public int Weight { get; set; }

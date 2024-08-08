@@ -227,6 +227,7 @@ namespace Midjourney.API
                             AfterIntervalMin = configAccount.AfterIntervalMin,
                             WorkTime = configAccount.WorkTime,
                             FishingTime = configAccount.FishingTime,
+                            PermanentInvitationLink = configAccount.PermanentInvitationLink,
 
                             SubChannels = configAccount.SubChannels,
                             IsBlend = configAccount.IsBlend,
@@ -385,6 +386,7 @@ namespace Midjourney.API
             model.VerticalDomainIds = param.VerticalDomainIds;
             model.SubChannels = param.SubChannels;
 
+            model.PermanentInvitationLink = param.PermanentInvitationLink;
             model.FishingTime = param.FishingTime;
             model.EnableNiji = param.EnableNiji;
             model.EnableMj = param.EnableMj;
