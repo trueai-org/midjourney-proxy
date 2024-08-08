@@ -222,6 +222,9 @@ namespace Midjourney.API
                             Sponsor = configAccount.Sponsor,
                             Sort = configAccount.Sort,
                             Interval = configAccount.Interval,
+
+                            AfterIntervalMax = configAccount.AfterIntervalMax,
+                            AfterIntervalMin = configAccount.AfterIntervalMin,
                             WorkTime = configAccount.WorkTime,
                             FishingTime = configAccount.FishingTime,
 
@@ -388,6 +391,8 @@ namespace Midjourney.API
             model.AllowModes = param.AllowModes;
             model.WorkTime = param.WorkTime;
             model.Interval = param.Interval;
+            model.AfterIntervalMin = param.AfterIntervalMin;
+            model.AfterIntervalMax = param.AfterIntervalMax;
             model.Sort = param.Sort;
             model.Enable = param.Enable;
             model.PrivateChannelId = param.PrivateChannelId;

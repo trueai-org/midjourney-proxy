@@ -268,6 +268,16 @@ namespace Midjourney.Infrastructure
         public decimal Interval { get; set; } = 1.2m;
 
         /// <summary>
+        /// 任务执行后最小间隔时间（秒，默认：1.2s）
+        /// </summary>
+        public decimal AfterIntervalMin { get; set; } = 1.2m;
+
+        /// <summary>
+        /// 任务执行后最大间隔时间（秒，默认：1.2s）
+        /// </summary>
+        public decimal AfterIntervalMax { get; set; } = 1.2m;
+
+        /// <summary>
         /// 工作时间
         /// </summary>
         public string WorkTime { get; set; }

@@ -229,27 +229,39 @@ namespace Midjourney.Infrastructure.LoadBalancer
                         {
                             // 提交任务前间隔
                             // 当一个作业完成后，是否先等待一段时间再提交下一个作业
-                            var sp = interval - 1.2m;
-                            if (sp > 0)
-                            {
-                                Thread.Sleep((int)(sp * 1000));
-                            }
+                            Thread.Sleep((int)(interval * 1000));
+
 
                             // 从队列中移除任务，并开始执行
                             if (_queueTasks.TryDequeue(out info))
                             {
                                 _taskFutureMap[info.Item1.Id] = ExecuteTaskAsync(info.Item1, info.Item2);
 
+                                // 计算执行后的间隔
+                                var min = Account.AfterIntervalMin;
+                                var max = Account.AfterIntervalMax;
+
+                                // 计算 min ~ max随机数
+                                var afterInterval = 1200;
+                                if (max > min && min >= 1.2m)
+                                {
+                                    afterInterval = new Random().Next((int)(min * 1000), (int)(max * 1000));
+                                }
+                                else if (max == min && min >= 1.2m)
+                                {
+                                    afterInterval = (int)(min * 1000);
+                                }
+
                                 // 如果是图生文操作
                                 if (info.Item1.GetProperty<string>(Constants.TASK_PROPERTY_CUSTOM_ID, default)?.Contains("PicReader") == true)
                                 {
                                     // 批量任务操作提交间隔 1.2s + 6.8s
-                                    Thread.Sleep((int)(interval * 1000) + 6800);
+                                    Thread.Sleep(afterInterval + 6800);
                                 }
                                 else
                                 {
                                     // 队列提交间隔
-                                    Thread.Sleep((int)(interval * 1000));
+                                    Thread.Sleep(afterInterval);
                                 }
                             }
                         }
