@@ -1,30 +1,56 @@
-﻿using Midjourney.Infrastructure.Data;
+﻿using Microsoft.Extensions.Caching.Memory;
+using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.LoadBalancer;
 using Midjourney.Infrastructure.Util;
-using Serilog;
 using System.Diagnostics;
-using System.Threading.Tasks;
 
 namespace Midjourney.Infrastructure.Services
 {
     /// <summary>
-    /// 任务服务实现类，处理任务的具体操作。
+    /// 任务服务实现类，处理任务的具体操作
     /// </summary>
-    public class TaskServiceImpl : ITaskService
+    public class TaskService : ITaskService
     {
+        private readonly IMemoryCache _memoryCache;
         private readonly ITaskStoreService _taskStoreService;
         private readonly DiscordLoadBalancer _discordLoadBalancer;
-        private readonly ILogger _logger;
 
-        /// <summary>
-        /// 初始化 TaskServiceImpl 类的新实例。
-        /// </summary>
-        public TaskServiceImpl(ITaskStoreService taskStoreService, DiscordLoadBalancer discordLoadBalancer)
+        public TaskService(ITaskStoreService taskStoreService, DiscordLoadBalancer discordLoadBalancer, IMemoryCache memoryCache)
         {
+            _memoryCache = memoryCache;
             _taskStoreService = taskStoreService;
             _discordLoadBalancer = discordLoadBalancer;
-            _logger = Log.Logger;
+        }
+
+        /// <summary>
+        /// 获取领域缓存
+        /// </summary>
+        /// <returns></returns>
+        public Dictionary<string, HashSet<string>> GetDomainCache()
+        {
+            return _memoryCache.GetOrCreate("domains", c =>
+            {
+                c.SetAbsoluteExpiration(TimeSpan.FromMinutes(30));
+                var list = DbHelper.DomainStore.GetAll();
+
+                var dict = new Dictionary<string, HashSet<string>>();
+                foreach (var item in list)
+                {
+                    var keywords = item.Keywords.Where(c => !string.IsNullOrWhiteSpace(c)).Distinct().ToList();
+                    dict[item.Id] = new HashSet<string>(keywords);
+                }
+
+                return dict;
+            });
+        }
+
+        /// <summary>
+        /// 清除领域缓存
+        /// </summary>
+        public void ClearDomainCache()
+        {
+            _memoryCache.Remove("domains");
         }
 
         /// <summary>
@@ -35,10 +61,53 @@ namespace Midjourney.Infrastructure.Services
         /// <returns></returns>
         public SubmitResultVO SubmitImagine(TaskInfo info, List<DataUrl> dataUrls)
         {
-            var instance = _discordLoadBalancer.ChooseInstance(
-                info.AccountFilter,
-                true,
-                info.BotType);
+            // 判断是否开启垂直领域
+            var domainIds = new List<string>();
+            var isDomain = GlobalConfiguration.Setting.IsVerticalDomain;
+            if (isDomain)
+            {
+                // 对 Promat 分割为单个单词
+                // 以 ',' ' ' '.' '-' 为分隔符
+                // 并且过滤为空的字符串
+                var prompts = info.Prompt.Split(new char[] { ',', ' ', '.', '-' }).Select(c => c?.Trim())
+                    .Distinct().Where(c => !string.IsNullOrWhiteSpace(c)).ToList();
+
+                var domains = GetDomainCache();
+                foreach (var prompt in prompts)
+                {
+                    foreach (var domain in domains)
+                    {
+                        if (domain.Value.Contains(prompt) || domain.Value.Contains($"{prompt}s"))
+                        {
+                            domainIds.Add(domain.Key);
+                        }
+                    }
+                }
+
+                // 如果没有找到领域，则不使用领域账号
+                if (domainIds.Count == 0)
+                {
+                    isDomain = false;
+                }
+            }
+
+            var instance = _discordLoadBalancer.ChooseInstance(info.AccountFilter,
+                isNewTask: true,
+                botType: info.BotType,
+                isDomain: isDomain,
+                domainIds: domainIds);
+
+            if (instance == null || !instance.Account.IsAcceptNewTask)
+            {
+                if (isDomain && domainIds.Count > 0)
+                {
+                    // 说明没有获取到符合领域的账号，再次获取不带领域的账号
+                    instance = _discordLoadBalancer.ChooseInstance(info.AccountFilter,
+                        isNewTask: true,
+                        botType: info.BotType,
+                        isDomain: false);
+                }
+            }
 
             if (instance == null || !instance.Account.IsAcceptNewTask)
             {
@@ -86,7 +155,9 @@ namespace Midjourney.Infrastructure.Services
         /// <returns></returns>
         public SubmitResultVO ShowImagine(TaskInfo info)
         {
-            var instance = _discordLoadBalancer.ChooseInstance(info.AccountFilter);
+            var instance = _discordLoadBalancer.ChooseInstance(info.AccountFilter,
+                botType: info.BotType);
+
             if (instance == null)
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
@@ -157,7 +228,11 @@ namespace Midjourney.Infrastructure.Services
         /// <returns></returns>
         public SubmitResultVO SubmitDescribe(TaskInfo task, DataUrl dataUrl)
         {
-            var discordInstance = _discordLoadBalancer.ChooseInstance(task.AccountFilter, describe: true);
+            var discordInstance = _discordLoadBalancer.ChooseInstance(task.AccountFilter,
+                isNewTask: true,
+                botType: task.BotType,
+                describe: true);
+
             if (discordInstance == null)
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
@@ -188,7 +263,11 @@ namespace Midjourney.Infrastructure.Services
         /// <returns></returns>
         public SubmitResultVO SubmitBlend(TaskInfo task, List<DataUrl> dataUrls, BlendDimensions dimensions)
         {
-            var discordInstance = _discordLoadBalancer.ChooseInstance(task.AccountFilter, blend: true);
+            var discordInstance = _discordLoadBalancer.ChooseInstance(task.AccountFilter,
+                isNewTask: true,
+                botType: task.BotType,
+                blend: true);
+
             if (discordInstance == null)
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
@@ -469,7 +548,6 @@ namespace Midjourney.Infrastructure.Services
                             return Message.Of(ReturnCode.NOT_FOUND, "超时，未找到消息 ID");
                         }
                     }
-
                 } while (string.IsNullOrWhiteSpace(task.RemixModalMessageId) || string.IsNullOrWhiteSpace(task.InteractionMetadataId));
 
                 task.RemixModaling = false;
@@ -750,7 +828,7 @@ namespace Midjourney.Infrastructure.Services
                 throw new LogicException("无可用的账号实例");
             }
 
-            // 只有配置 NIJI 才请求     
+            // 只有配置 NIJI 才请求
             if (!string.IsNullOrWhiteSpace(discordInstance.Account.NijiBotChannelId))
             {
                 var res = await discordInstance.InfoAsync(SnowFlake.NextId(), EBotType.NIJI_JOURNEY);
@@ -768,7 +846,7 @@ namespace Midjourney.Infrastructure.Services
             }
             Thread.Sleep(2500);
 
-            // 只有配置 NIJI 才请求            
+            // 只有配置 NIJI 才请求
             if (!string.IsNullOrWhiteSpace(discordInstance.Account.NijiBotChannelId))
             {
                 var res2 = await discordInstance.SettingAsync(SnowFlake.NextId(), EBotType.NIJI_JOURNEY);
@@ -814,7 +892,6 @@ namespace Midjourney.Infrastructure.Services
 
             await InfoSetting(id);
         }
-
 
         /// <summary>
         /// 执行操作

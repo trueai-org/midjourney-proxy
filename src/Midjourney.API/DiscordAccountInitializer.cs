@@ -222,8 +222,12 @@ namespace Midjourney.API
                             Sponsor = configAccount.Sponsor,
                             Sort = configAccount.Sort,
                             Interval = configAccount.Interval,
+
+                            AfterIntervalMax = configAccount.AfterIntervalMax,
+                            AfterIntervalMin = configAccount.AfterIntervalMin,
                             WorkTime = configAccount.WorkTime,
                             FishingTime = configAccount.FishingTime,
+                            PermanentInvitationLink = configAccount.PermanentInvitationLink,
 
                             SubChannels = configAccount.SubChannels,
                             IsBlend = configAccount.IsBlend,
@@ -382,12 +386,15 @@ namespace Midjourney.API
             model.VerticalDomainIds = param.VerticalDomainIds;
             model.SubChannels = param.SubChannels;
 
+            model.PermanentInvitationLink = param.PermanentInvitationLink;
             model.FishingTime = param.FishingTime;
             model.EnableNiji = param.EnableNiji;
             model.EnableMj = param.EnableMj;
             model.AllowModes = param.AllowModes;
             model.WorkTime = param.WorkTime;
             model.Interval = param.Interval;
+            model.AfterIntervalMin = param.AfterIntervalMin;
+            model.AfterIntervalMax = param.AfterIntervalMax;
             model.Sort = param.Sort;
             model.Enable = param.Enable;
             model.PrivateChannelId = param.PrivateChannelId;

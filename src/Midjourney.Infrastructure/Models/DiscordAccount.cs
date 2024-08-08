@@ -83,6 +83,11 @@ namespace Midjourney.Infrastructure.Models
         public string DisabledReason { get; set; }
 
         /// <summary>
+        /// 当前频道的永久邀请链接
+        /// </summary>
+        public string PermanentInvitationLink { get; set; }
+
+        /// <summary>
         /// 真人验证 hash url 创建时间
         /// </summary>
         public DateTime? CfHashCreated { get; set; }
@@ -104,9 +109,19 @@ namespace Midjourney.Infrastructure.Models
         public int CoreSize { get; set; } = 3;
 
         /// <summary>
-        /// 任务执行间隔时间（秒，默认：1.2s）。
+        /// 任务执行前间隔时间（秒，默认：1.2s）。
         /// </summary>
         public decimal Interval { get; set; } = 1.2m;
+
+        /// <summary>
+        /// 任务执行后最小间隔时间（秒，默认：1.2s）
+        /// </summary>
+        public decimal AfterIntervalMin { get; set; } = 1.2m;
+
+        /// <summary>
+        /// 任务执行后最大间隔时间（秒，默认：1.2s）
+        /// </summary>
+        public decimal AfterIntervalMax { get; set; } = 1.2m;
 
         /// <summary>
         /// 等待队列长度。

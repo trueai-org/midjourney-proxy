@@ -83,7 +83,7 @@ namespace Midjourney.Infrastructure.Handle
                 }
             }
 
-            if (task == null || task.Status == TaskStatus.SUCCESS)
+            if (task == null || task.Status == TaskStatus.SUCCESS || task.Status == TaskStatus.FAILURE)
             {
                 return;
             }

@@ -78,7 +78,7 @@ namespace Midjourney.API
             services.AddSingleton<DiscordHelper>();
 
             // 任务服务
-            services.AddSingleton<ITaskService, TaskServiceImpl>();
+            services.AddSingleton<ITaskService, TaskService>();
         }
     }
 }

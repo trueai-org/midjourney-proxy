@@ -8,6 +8,11 @@ namespace Midjourney.Infrastructure.Models
     public class Setting : ProxyProperties
     {
         /// <summary>
+        /// 全局开启垂直领域
+        /// </summary>
+        public bool IsVerticalDomain { get; set; }
+
+        /// <summary>
         /// 启用 Swagger
         /// </summary>
         public bool EnableSwagger { get; set; }

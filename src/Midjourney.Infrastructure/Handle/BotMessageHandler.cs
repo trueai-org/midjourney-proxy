@@ -122,7 +122,7 @@ namespace Midjourney.Infrastructure.Handle
                 task = instance.FindRunningTask(c => c.BotType == botType && c.Action == TaskAction.SHOW && c.JobId == messageHash).OrderBy(c => c.StartTime).FirstOrDefault();
             }
 
-            if (task == null || task.Status == TaskStatus.SUCCESS)
+            if (task == null || task.Status == TaskStatus.SUCCESS || task.Status == TaskStatus.FAILURE)
             {
                 return;
             }
