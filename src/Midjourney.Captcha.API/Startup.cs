@@ -35,6 +35,9 @@ namespace Midjourney.Captcha.API
             }
             GlobalConfiguration.IsDemoMode = isDemoMode;
 
+            // 缓存
+            services.AddMemoryCache();
+
             services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
             // API 异常过滤器

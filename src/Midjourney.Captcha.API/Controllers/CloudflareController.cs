@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.Options;
@@ -17,11 +18,13 @@ namespace Midjourney.Captcha.API.Controllers
     [ApiController]
     public class CloudflareController : ControllerBase
     {
+        private readonly IMemoryCache _memoryCache;
         private readonly CaptchaOption _captchaOption;
 
-        public CloudflareController(IOptionsMonitor<CaptchaOption> optionsMonitor)
+        public CloudflareController(IOptionsMonitor<CaptchaOption> optionsMonitor, IMemoryCache memoryCache)
         {
             _captchaOption = optionsMonitor.CurrentValue;
+            _memoryCache = memoryCache;
         }
 
         /// <summary>
@@ -47,8 +50,24 @@ namespace Midjourney.Captcha.API.Controllers
         /// <exception cref="LogicException"></exception>
         private async Task DoWork(CaptchaVerfyRequest request)
         {
-            LocalLock.TryLock(request.Url, TimeSpan.FromSeconds(10), async () =>
+            // 如果 1 分钟内，有验证成功的通知，则不再执行
+            var successKey = $"{request.State}";
+            if (_memoryCache.TryGetValue<bool>(successKey, out var ok) && ok)
             {
+                Log.Information("CF 1 分钟内，验证已经成功，不再执行 {@0}", request);
+                return;
+            }
+
+            var isLock = LocalLock.TryLock(request.Url, TimeSpan.FromSeconds(10), async () =>
+            {
+                // 如果 10 分钟内，超过 3 次验证失败，则不再执行
+                var failKey = $"{request.State}_fail";
+                if (_memoryCache.TryGetValue<int>(failKey, out var failCount) && failCount >= 3)
+                {
+                    Log.Information("CF 10 分钟内，验证失败次数超过 3 次，不再执行 {@0}", request);
+                    return;
+                }
+
                 // 最终结果
                 var finSuccess = false;
                 try
@@ -66,7 +85,8 @@ namespace Midjourney.Captcha.API.Controllers
                     do
                     {
                         // 最多执行 3 次
-                        if (finSuccess || retry >= 3)
+                        retry++;
+                        if (finSuccess || retry > 3)
                         {
                             break;
                         }
@@ -111,6 +131,9 @@ namespace Midjourney.Captcha.API.Controllers
                                             finSuccess = true;
                                             request.Success = true;
                                             request.Message = "CF 自动验证成功";
+
+                                            // 标记验证成功
+                                            _memoryCache.Set(successKey, true, TimeSpan.FromMinutes(1));
 
                                             // 通过验证
                                             // 通知最多重试 3 次
@@ -161,7 +184,6 @@ namespace Midjourney.Captcha.API.Controllers
                             Log.Error(ex, "CF 链接生成执行异常 {@0}", request);
                         }
 
-                        retry++;
                         await Task.Delay(1000);
                     } while (true);
                 }
@@ -179,6 +201,17 @@ namespace Midjourney.Captcha.API.Controllers
                         {
                             request.Success = false;
                             request.Message = "CF 自动验证失败，请手动验证";
+
+                            // 验证失败计数 10 分钟内，最多 3 次
+                            if (_memoryCache.TryGetValue<int>(failKey, out var fc))
+                            {
+                                fc++;
+                                _memoryCache.Set(failKey, fc, TimeSpan.FromMinutes(10));
+                            }
+                            else
+                            {
+                                _memoryCache.Set(failKey, 1, TimeSpan.FromMinutes(10));
+                            }
 
                             // 通知服务器手动验证
                             // 通过验证
@@ -223,6 +256,10 @@ namespace Midjourney.Captcha.API.Controllers
                     }
                 }
             });
+            if (!isLock)
+            {
+                Log.Warning("CF 验证正在执行中，请稍后再试 {@0}", request);
+            }
 
             await Task.CompletedTask;
         }
