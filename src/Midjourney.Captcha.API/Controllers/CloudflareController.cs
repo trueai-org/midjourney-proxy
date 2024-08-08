@@ -35,6 +35,11 @@ namespace Midjourney.Captcha.API.Controllers
         [HttpPost("verify")]
         public ActionResult Validate([FromBody] CaptchaVerfyRequest request)
         {
+            if (string.IsNullOrWhiteSpace(request.State))
+            {
+                return BadRequest("State 不能为空");
+            }
+
             _ = Task.Run(async () =>
             {
                 await DoWork(request);
@@ -50,16 +55,18 @@ namespace Midjourney.Captcha.API.Controllers
         /// <exception cref="LogicException"></exception>
         private async Task DoWork(CaptchaVerfyRequest request)
         {
-            // 如果 1 分钟内，有验证成功的通知，则不再执行
-            var successKey = $"{request.State}";
-            if (_memoryCache.TryGetValue<bool>(successKey, out var ok) && ok)
-            {
-                Log.Information("CF 1 分钟内，验证已经成功，不再执行 {@0}", request);
-                return;
-            }
+            var lockKey = $"lock_{request.State}";
 
-            var isLock = LocalLock.TryLock(request.Url, TimeSpan.FromSeconds(10), async () =>
+            var isLock = LocalLock.TryLock(lockKey, TimeSpan.FromSeconds(10), async () =>
             {
+                // 如果 2 分钟内，有验证成功的通知，则不再执行
+                var successKey = $"{request.State}";
+                if (_memoryCache.TryGetValue<bool>(successKey, out var ok) && ok)
+                {
+                    Log.Information("CF 2 分钟内，验证已经成功，不再执行 {@0}", request);
+                    return;
+                }
+
                 // 如果 10 分钟内，超过 3 次验证失败，则不再执行
                 var failKey = $"{request.State}_fail";
                 if (_memoryCache.TryGetValue<int>(failKey, out var failCount) && failCount >= 3)
@@ -133,7 +140,7 @@ namespace Midjourney.Captcha.API.Controllers
                                             request.Message = "CF 自动验证成功";
 
                                             // 标记验证成功
-                                            _memoryCache.Set(successKey, true, TimeSpan.FromMinutes(1));
+                                            _memoryCache.Set(successKey, true, TimeSpan.FromMinutes(2));
 
                                             // 通过验证
                                             // 通知最多重试 3 次
