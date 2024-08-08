@@ -342,7 +342,7 @@ namespace Midjourney.Infrastructure
         /// <summary>
         /// 使用的模型.
         /// </summary>
-        public string Model { get; set; } = "gpt-3.5-turbo";
+        public string Model { get; set; } = "gpt-4o-mini";
 
         /// <summary>
         /// 返回结果的最大分词数.
