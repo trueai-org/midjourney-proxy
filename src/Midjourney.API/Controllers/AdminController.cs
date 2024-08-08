@@ -724,6 +724,8 @@ namespace Midjourney.API.Controllers
 
                     item.CfUrl = item.CfUrl?.Substring(0, item.CfUrl.Length / 2) + "****";
                     item.CfHashUrl = item.CfHashUrl?.Substring(0, item.CfHashUrl.Length / 2) + "****";
+
+                    item.PermanentInvitationLink = item.PermanentInvitationLink?.Substring(0, item.PermanentInvitationLink.Length / 2) + "****";
                 }
             }
 
