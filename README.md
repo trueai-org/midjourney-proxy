@@ -145,10 +145,8 @@ curl -o /root/mjopen/appsettings.Production.json https://raw.githubusercontent.c
 docker stop mjopen && docker rm mjopen
 
 # 3.启动新的 Docker 容器
-# 提示：部署请删除 DEMO 变量，否则会进入演示模式
 # 提示：3.x 版本无需配置文件
 docker run -m 1g --name mjopen -d --restart=always \
- -e DEMO=true \
  -p 8086:8080 --user root \
  -v /root/mjopen/logs:/app/logs:rw \
  -v /root/mjopen/data:/app/data:rw \
