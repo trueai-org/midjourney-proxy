@@ -100,19 +100,19 @@ namespace Midjourney.Captcha.API.Controllers
 
                         try
                         {
-                            WebProxy webProxy = null;
-                            var proxy = GlobalConfiguration.Setting.Proxy;
-                            if (!string.IsNullOrEmpty(proxy?.Host))
-                            {
-                                webProxy = new WebProxy(proxy.Host, proxy.Port ?? 80);
-                            }
-                            var hch = new HttpClientHandler
-                            {
-                                UseProxy = webProxy != null,
-                                Proxy = webProxy
-                            };
+                            //WebProxy webProxy = null;
+                            //var proxy = GlobalConfiguration.Setting?.Proxy;
+                            //if (!string.IsNullOrEmpty(proxy?.Host))
+                            //{
+                            //    webProxy = new WebProxy(proxy.Host, proxy.Port ?? 80);
+                            //}
+                            //var hch = new HttpClientHandler
+                            //{
+                            //    UseProxy = webProxy != null,
+                            //    Proxy = webProxy
+                            //};
 
-                            var httpClient = new HttpClient(hch)
+                            var httpClient = new HttpClient()
                             {
                                 Timeout = Timeout.InfiniteTimeSpan
                             };
