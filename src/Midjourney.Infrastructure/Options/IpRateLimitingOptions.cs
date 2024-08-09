@@ -70,22 +70,17 @@ namespace Midjourney.Infrastructure.Options
         }
 
         /// <summary>
-        /// IP 限流规则(0.0.0.0/32)
+        /// IP 限流规则 (0.0.0.0/32)
         /// </summary>
         public Dictionary<string, Dictionary<int, int>> IpRules { get; set; } = new Dictionary<string, Dictionary<int, int>>();
 
         /// <summary>
-        /// IP 段限流规则(0.0.0.0/24)
-        /// </summary>
-        public Dictionary<string, Dictionary<int, int>> IpRangeRules { get; set; } = new Dictionary<string, Dictionary<int, int>>();
-
-        /// <summary>
-        /// IP 段限流规则(0.0.0.0/24)
+        /// IP /24 段限流规则 (0.0.0.0/24)
         /// </summary>
         public Dictionary<string, Dictionary<int, int>> Ip24Rules { get; set; } = new Dictionary<string, Dictionary<int, int>>();
 
         /// <summary>
-        /// IP 段限流规则(0.0.0.0/24)
+        /// IP /16 段限流规则 (0.0.0.0/16)
         /// </summary>
         public Dictionary<string, Dictionary<int, int>> Ip16Rules { get; set; } = new Dictionary<string, Dictionary<int, int>>();
     }
