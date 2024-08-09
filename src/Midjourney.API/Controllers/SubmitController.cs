@@ -546,9 +546,9 @@ namespace Midjourney.API.Controllers
             // 如果不是白名单用户，则计算 ip 绘图限制
             if (user == null || user.IsWhite != true)
             {
-                var ipTodayDrawCount = (int)DbHelper.TaskStore.Count(x => x.SubmitTime >= now && x.ClientIp == _ip);
                 if (GlobalConfiguration.Setting.GuestDefaultDayLimit > 0)
                 {
+                    var ipTodayDrawCount = (int)DbHelper.TaskStore.Count(x => x.SubmitTime >= now && x.ClientIp == _ip);
                     if (ipTodayDrawCount > GlobalConfiguration.Setting.GuestDefaultDayLimit)
                     {
                         throw new LogicException("今日绘图次数已达上限");
