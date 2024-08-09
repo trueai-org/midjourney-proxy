@@ -39,10 +39,10 @@ namespace Midjourney.Infrastructure.Handle
             {
                 // 任务开始
                 var task = instance.GetRunningTaskByMessageId(msgId);
-                if (task == null && message.InteractionMetadata?.Id != null)
+                if (task == null && !string.IsNullOrWhiteSpace(message.InteractionMetadata?.Id))
                 {
                     task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) &&
-                    c.InteractionMetadataId == message.InteractionMetadata.Id.ToString()).FirstOrDefault();
+                    c.InteractionMetadataId == message.InteractionMetadata.Id).FirstOrDefault();
                 }
 
                 if (task == null || task.Status == TaskStatus.SUCCESS || task.Status == TaskStatus.FAILURE)
@@ -72,12 +72,15 @@ namespace Midjourney.Infrastructure.Handle
                 if (parseData.Status == "Stopped")
                     return;
 
-                var task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) &&
-                c.MessageId == msgId).FirstOrDefault();
-                if (task == null && message.InteractionMetadata?.Id != null)
+                var task = instance.FindRunningTask(c =>
+                (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED)
+                && c.MessageId == msgId).FirstOrDefault();
+
+                if (task == null && !string.IsNullOrWhiteSpace(message.InteractionMetadata?.Id))
                 {
-                    task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && 
-                    c.InteractionMetadataId == message.InteractionMetadata.Id.ToString()).FirstOrDefault();
+                    task = instance.FindRunningTask(c =>
+                    (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED)
+                    && c.InteractionMetadataId == message.InteractionMetadata.Id).FirstOrDefault();
                 }
 
                 if (task == null || task.Status == TaskStatus.SUCCESS || task.Status == TaskStatus.FAILURE)
