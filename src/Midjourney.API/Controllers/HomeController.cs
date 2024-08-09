@@ -27,7 +27,8 @@ namespace Midjourney.API.Controllers
         [HttpGet()]
         public Result<HomeDto> Info()
         {
-            var data = _memoryCache.GetOrCreate("HOME", c =>
+            var now = DateTime.Now.ToString("yyyyMMdd");
+            var data = _memoryCache.GetOrCreate($"{now}_home", c =>
             {
                 c.SetAbsoluteExpiration(TimeSpan.FromMinutes(10));
 

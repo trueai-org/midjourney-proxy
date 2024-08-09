@@ -84,11 +84,13 @@ namespace Midjourney.Infrastructure.Handle
             string imageUrl = GetImageUrl(message);
             string messageHash = discordHelper.GetMessageHash(imageUrl);
 
-            var task = instance.FindRunningTask(c => c.MessageId == msgId).FirstOrDefault();
+            var task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) &&
+            c.MessageId == msgId).FirstOrDefault();
 
             if (task == null && message.InteractionMetadata?.Id != null)
             {
-                task = instance.FindRunningTask(c => c.InteractionMetadataId == message.InteractionMetadata.Id.ToString()).FirstOrDefault();
+                task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) &&
+                c.InteractionMetadataId == message.InteractionMetadata.Id.ToString()).FirstOrDefault();
             }
 
             // 如果依然找不到任务，可能是 NIJI 任务
@@ -101,14 +103,16 @@ namespace Midjourney.Infrastructure.Handle
                 if (!string.IsNullOrWhiteSpace(prompt))
                 {
                     task = instance
-                        .FindRunningTask(c => c.BotType == botType && (c.PromptEn.FormatPrompt() == prompt || c.PromptEn.FormatPrompt().EndsWith(prompt) || prompt.StartsWith(c.PromptEn.FormatPrompt())))
+                        .FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) &&
+                        c.BotType == botType && (c.PromptEn.FormatPrompt() == prompt || c.PromptEn.FormatPrompt().EndsWith(prompt) || prompt.StartsWith(c.PromptEn.FormatPrompt())))
                         .OrderBy(c => c.StartTime).FirstOrDefault();
                 }
                 else
                 {
                     // 如果最终提示词为空，则可能是重绘、混图等任务
                     task = instance
-                        .FindRunningTask(c => c.BotType == botType && c.Action == action)
+                        .FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) &&
+                        c.BotType == botType && c.Action == action)
                         .OrderBy(c => c.StartTime).FirstOrDefault();
                 }
             }

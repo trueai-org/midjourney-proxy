@@ -176,8 +176,6 @@ namespace Midjourney.API
         {
             var isLock = await AsyncLocalLock.TryLockAsync("Initialize", TimeSpan.FromSeconds(10), async () =>
             {
-                var setting = GlobalConfiguration.Setting;
-                var proxy = setting.Proxy;
                 var db = DbHelper.AccountStore;
                 var accounts = db.GetAll().OrderBy(c => c.Sort).ToList();
 

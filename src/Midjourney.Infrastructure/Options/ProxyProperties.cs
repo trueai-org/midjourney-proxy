@@ -43,7 +43,6 @@ namespace Midjourney.Infrastructure
         /// <summary>
         /// OpenAI配置.
         /// </summary>
-        [BsonIgnore]
         public OpenaiConfig Openai { get; set; } = new OpenaiConfig();
 
         /// <summary>

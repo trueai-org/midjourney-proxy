@@ -1,5 +1,5 @@
-﻿using Microsoft.Extensions.Caching.Memory;
-using Midjourney.Infrastructure.Options;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Caching.Memory;
 using System.Net;
 
 namespace Midjourney.API
@@ -11,15 +11,11 @@ namespace Midjourney.API
     {
         private readonly RequestDelegate _next;
         private readonly IMemoryCache _cache;
-        private readonly IpRateLimitingOptions _ipRateOptions;
-        private readonly IpBlackRateLimitingOptions _ipBlackRateOptions;
 
         public RateLimitingMiddleware(RequestDelegate next, IMemoryCache cache)
         {
             _next = next;
             _cache = cache;
-            _ipRateOptions = GlobalConfiguration.Setting?.IpRateLimiting;
-            _ipBlackRateOptions = GlobalConfiguration.Setting?.IpBlackRateLimiting;
         }
 
         /// <summary>
@@ -30,15 +26,29 @@ namespace Midjourney.API
         /// <returns>异步任务。</returns>
         public async Task InvokeAsync(HttpContext context, WorkContext workContext)
         {
-            if (_ipRateOptions?.Enable != true && _ipBlackRateOptions?.Enable != true)
+            var ipRateOpt = GlobalConfiguration.Setting?.IpRateLimiting;
+            var ipBlackRateOpt = GlobalConfiguration.Setting?.IpBlackRateLimiting;
+
+            if (ipRateOpt?.Enable != true && ipBlackRateOpt?.Enable != true)
+            {
+                await _next(context);
+                return;
+            }
+
+            // 检查是否有 AllowAnonymous 特性
+            // 匿名 API 不限流
+            var endpoint = context.GetEndpoint();
+            var allowAnonymous = endpoint?.Metadata?.GetMetadata<IAllowAnonymous>() != null;
+            if (allowAnonymous)
             {
                 await _next(context);
                 return;
             }
 
             // 白名单用户不限流
+            // 管理员不限流
             var user = workContext.GetUser();
-            if (user != null && user.IsWhite)
+            if (user != null && (user.IsWhite || user.Role == EUserRole.ADMIN))
             {
                 await _next(context);
                 return;
@@ -53,24 +63,27 @@ namespace Midjourney.API
             var requestPath = context.Request.Path.ToString();
 
             // IP/IP 段限流
-            if (_ipRateOptions?.Enable == true)
+            if (ipRateOpt?.Enable == true)
             {
                 // 检查是否在白名单中
-                if (_ipRateOptions.WhitelistNetworks.Any(c => c.Contains(ipAddress)))
+                if (ipRateOpt.WhitelistNetworks.Any(c => c.Contains(ipAddress)))
                 {
                     await _next(context);
                     return;
                 }
 
                 // 检查是否在黑名单中
-                if (_ipRateOptions.BlacklistNetworks.Any(c => c.Contains(ipAddress)))
+                if (ipRateOpt.BlacklistNetworks.Any(c => c.Contains(ipAddress)))
                 {
                     context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
                     return;
                 }
 
                 // 检查普通限流规则
-                if (!CheckRateLimits(ipAddress, requestPath, _ipRateOptions.IpRules, _ipRateOptions.IpRangeRules))
+                if (!CheckRateLimits("rate_", ipAddress, requestPath,
+                    ipRateOpt.IpRules,
+                    ipRateOpt.Ip24Rules,
+                    ipRateOpt.Ip16Rules))
                 {
                     context.Response.StatusCode = (int)HttpStatusCode.TooManyRequests;
                     return;
@@ -78,28 +91,32 @@ namespace Midjourney.API
             }
 
             // IP/IP 段黑名单限流
-            if (_ipBlackRateOptions.Enable)
+            if (ipBlackRateOpt.Enable)
             {
                 // 检查是否在白名单中
-                if (_ipBlackRateOptions.WhitelistNetworks.Any(c => c.Contains(ipAddress)))
+                if (ipBlackRateOpt.WhitelistNetworks.Any(c => c.Contains(ipAddress)))
                 {
                     await _next(context);
                     return;
                 }
 
                 // 检查是否在黑名单中
-                if (_cache.TryGetValue($"BLACK_RATE_{ipAddress.Value}", out _) || _ipBlackRateOptions.BlacklistNetworks.Any(c => c.Contains(ipAddress)))
+                if (_cache.TryGetValue($"black_rate_{ipAddress.Value}", out _)
+                    || ipBlackRateOpt.BlacklistNetworks.Any(c => c.Contains(ipAddress)))
                 {
                     context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
                     return;
                 }
 
                 // 检查黑名单限流规则
-                if (!CheckRateLimits(ipAddress, requestPath, _ipBlackRateOptions.IpRules, _ipBlackRateOptions.IpRangeRules))
+                if (!CheckRateLimits("black_rate_", ipAddress, requestPath,
+                    ipBlackRateOpt.IpRules,
+                    ipBlackRateOpt.Ip24Rules,
+                    ipBlackRateOpt.Ip16Rules))
                 {
-                    _cache.Set($"BLACK_RATE_{ipAddress.Value}", 1, TimeSpan.FromMinutes(_ipBlackRateOptions.BlockTime));
+                    _cache.Set($"black_rate_{ipAddress.Value}", 1, TimeSpan.FromMinutes(ipBlackRateOpt.BlockTime));
 
-                    context.Response.StatusCode = (int)HttpStatusCode.TooManyRequests;
+                    context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
                     return;
                 }
             }
@@ -110,33 +127,55 @@ namespace Midjourney.API
         /// <summary>
         /// 检查指定 IP 地址的请求是否符合限流规则。
         /// </summary>
+        /// <param name="keyPrefix">key 前缀</param>
         /// <param name="ipAddress">请求的 IP 地址。</param>
         /// <param name="requestPath">请求路径。</param>
         /// <param name="ipRules">IP 限流规则。</param>
-        /// <param name="ipRangeRules">IP 段限流规则。</param>
+        /// <param name="ip24Rules">IP /24 段</param>
+        /// <param name="ip16Rules">IP /16 段</param>
         /// <returns>是否符合限流规则。</returns>
-        private bool CheckRateLimits(IPNetwork2 ipAddress, string requestPath, Dictionary<string, Dictionary<int, int>> ipRules, Dictionary<string, Dictionary<int, int>> ipRangeRules)
+        private bool CheckRateLimits(
+            string keyPrefix,
+            IPNetwork2 ipAddress,
+            string requestPath,
+            Dictionary<string, Dictionary<int, int>> ipRules,
+            Dictionary<string, Dictionary<int, int>> ip24Rules,
+            Dictionary<string, Dictionary<int, int>> ip16Rules)
         {
             // 检查 IP 规则
             foreach (var rule in ipRules)
             {
                 if (MatchesPath(requestPath, rule.Key))
                 {
-                    if (!ApplyRateLimits(ipAddress, rule.Key, rule.Value))
+                    if (!ApplyRateLimits(ipAddress, $"{keyPrefix}{rule.Key}", rule.Value))
                     {
                         return false;
                     }
                 }
             }
 
-            // 检查 IP 段规则
+            // 检查 IP 段规则 0.0.0.0/24
             // 将当前 ip 转为 ip 段 192.168.1.3/32 -> 192.168.1.0/24
-            var ipRange = IPNetwork2.Parse($"{ipAddress.Network}/24");
-            foreach (var rule in ipRangeRules)
+            var ip24 = IPNetwork2.Parse($"{ipAddress.Network}/24");
+            foreach (var rule in ip24Rules)
             {
                 if (MatchesPath(requestPath, rule.Key))
                 {
-                    if (!ApplyRateLimits(ipRange, rule.Key, rule.Value))
+                    if (!ApplyRateLimits(ip24, $"{keyPrefix}{rule.Key}", rule.Value))
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            // 检查 IP 段规则 0.0.0.0/16
+            // 将当前 ip 转为 ip 段 192.168.1.3/32 -> 192.168.0.0/16
+            var ip16 = IPNetwork2.Parse($"{ipAddress.Network}/16");
+            foreach (var rule in ip16Rules)
+            {
+                if (MatchesPath(requestPath, rule.Key))
+                {
+                    if (!ApplyRateLimits(ip16, $"{keyPrefix}{rule.Key}", rule.Value))
                     {
                         return false;
                     }
@@ -166,6 +205,7 @@ namespace Midjourney.API
                         return false;
                     }
                 }
+
                 _cache.Set(cacheKey, count + 1, limitTime);
             }
             return true;

@@ -44,10 +44,12 @@ namespace Midjourney.Infrastructure.Handle
                 {
                     var msgId = GetMessageId(message);
 
-                    var task = instance.FindRunningTask(c => c.MessageId == msgId).FirstOrDefault();
+                    var task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) &&
+                    c.MessageId == msgId).FirstOrDefault();
                     if (task == null && message.InteractionMetadata?.Id != null)
                     {
-                        task = instance.FindRunningTask(c => c.InteractionMetadataId == message.InteractionMetadata.Id.ToString()).FirstOrDefault();
+                        task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) &&
+                        c.InteractionMetadataId == message.InteractionMetadata.Id.ToString()).FirstOrDefault();
                     }
 
                     if (task == null || task.Status == TaskStatus.SUCCESS || task.Status == TaskStatus.FAILURE)

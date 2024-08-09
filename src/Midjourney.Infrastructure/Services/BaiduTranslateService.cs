@@ -92,7 +92,9 @@ namespace Midjourney.Infrastructure.Services
 
         public bool ContainsChinese(string prompt)
         {
-            string chinesePattern = @"[\u4e00-\u9fa5\u9fa6-\u9fef\U00020000-\U0002A6DF\U0002A700-\U0002B73F\U0002B740-\U0002B81F\U0002B820-\U0002CEAF\U0002F800-\U0002FA1F]";
+            // 匹配基本汉字区、扩展A区和部分扩展B区
+            string chinesePattern = @"[\u4e00-\u9fa5\u3400-\u4DBF]";
+
             return Regex.IsMatch(prompt, chinesePattern);
         }
     }

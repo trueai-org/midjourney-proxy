@@ -299,6 +299,14 @@ curl -o linux_install.sh https://raw.githubusercontent.com/trueai-org/midjourney
       "Port": 10809
     },
     "Accounts": [], // 账号池配置
+    "Openai": {
+      "GptApiUrl": "https://goapi.gptnb.ai/v1/chat/completions", // your_gpt_api_url
+      "GptApiKey": "", // your_gpt_api_key
+      "Timeout": "00:00:30",
+      "Model": "gpt-4o-mini",
+      "MaxTokens": 2048,
+      "Temperature": 0
+    },
     "BaiduTranslate": { // 百度翻译配置，默认可以为 null
       "Appid": "", // your_appid
       "AppSecret": "" // your_app_secret
@@ -339,7 +347,7 @@ curl -o linux_install.sh https://raw.githubusercontent.com/trueai-org/midjourney
       }
     },
     // 0.0.0.0/24 ip 段
-    "IpRangeRules": {
+    "Ip24Rules": {
       // 限制 mj/submit 接口下的所有接口
       "*/mj/submit/*": {
         "5": 10, // 每 5 秒 最多访问 10 次
@@ -349,8 +357,6 @@ curl -o linux_install.sh https://raw.githubusercontent.com/trueai-org/midjourney
         "86400": 360 // 每天最多访问 360 次
       }
     },
-    // 0.0.0.0/24 ip 段
-    "Ip24Rules": {},
     // 0.0.0.0/16 ip 段
     "Ip16Rules": {}
   },
@@ -368,7 +374,7 @@ curl -o linux_install.sh https://raw.githubusercontent.com/trueai-org/midjourney
         "60": 900
       }
     },
-    "IpRangeRules": {
+    "Ip24Rules": {
       "*/mj/*": {
         "1": 90,
         "60": 3000
