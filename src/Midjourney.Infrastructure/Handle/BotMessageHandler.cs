@@ -105,8 +105,10 @@ namespace Midjourney.Infrastructure.Handle
                 if (!string.IsNullOrWhiteSpace(prompt))
                 {
                     task = instance
-                        .FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) &&
-                        c.BotType == botType && !string.IsNullOrWhiteSpace(c.PromptEn)
+                        .FindRunningTask(c =>
+                        (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED)
+                        && c.BotType == botType
+                        && !string.IsNullOrWhiteSpace(c.PromptEn)
                         && (c.PromptEn.FormatPrompt() == prompt || c.PromptEn.FormatPrompt().EndsWith(prompt) || prompt.StartsWith(c.PromptEn.FormatPrompt())))
                         .OrderBy(c => c.StartTime).FirstOrDefault();
                 }

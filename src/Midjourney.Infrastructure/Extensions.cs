@@ -42,7 +42,7 @@ namespace Midjourney.Infrastructure
 
             str = GetPrimaryPrompt(str);
 
-            return Regex.Replace(str, @"<[^>]*>|https?://\S+|\s+", "").ToLower();
+            return Regex.Replace(str, @"<[^>]*>|https?://\S+|\s+|\p{P}", "").ToLower();
         }
 
         /// <summary>
