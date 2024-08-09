@@ -299,6 +299,14 @@ curl -o linux_install.sh https://raw.githubusercontent.com/trueai-org/midjourney
       "Port": 10809
     },
     "Accounts": [], // 账号池配置
+    "Openai": {
+      "GptApiUrl": "https://goapi.gptnb.ai/v1/chat/completions", // your_gpt_api_url
+      "GptApiKey": "", // your_gpt_api_key
+      "Timeout": "00:00:30",
+      "Model": "gpt-4o-mini",
+      "MaxTokens": 2048,
+      "Temperature": 0
+    },
     "BaiduTranslate": { // 百度翻译配置，默认可以为 null
       "Appid": "", // your_appid
       "AppSecret": "" // your_app_secret

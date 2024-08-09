@@ -39,8 +39,14 @@ namespace Midjourney.API
             services.AddSingleton<INotifyService, NotifyServiceImpl>();
 
             // 翻译服务
-            services.AddSingleton<ITranslateService, BaiduTranslateService>();
-            services.AddSingleton<ITranslateService, GPTTranslateService>();
+            if (config.TranslateWay == TranslateWay.GPT)
+            {
+                services.AddSingleton<ITranslateService, GPTTranslateService>();
+            }
+            else
+            {
+                services.AddSingleton<ITranslateService, BaiduTranslateService>();
+            }
 
             // 存储服务
             // 内存
