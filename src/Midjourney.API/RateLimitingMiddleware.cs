@@ -194,10 +194,15 @@ namespace Midjourney.API
         /// <returns>是否符合限流规则。</returns>
         private bool ApplyRateLimits(IPNetwork2 ipAddress, string requestPathKey, Dictionary<int, int> rateLimits)
         {
+            var now = DateTime.UtcNow;
+
             foreach (var limit in rateLimits)
             {
-                var cacheKey = $"RateLimiter:{ipAddress}:{requestPathKey}:{limit.Key}";
-                var limitTime = TimeSpan.FromSeconds(limit.Key);
+                var timeWindowSeconds = limit.Key;
+                var unit = now.Ticks / TimeSpan.TicksPerSecond / timeWindowSeconds;
+
+                var cacheKey = $"RateLimiter:{ipAddress}:{requestPathKey}:{unit}";
+
                 if (_cache.TryGetValue(cacheKey, out int count))
                 {
                     if (count >= limit.Value)
@@ -206,7 +211,7 @@ namespace Midjourney.API
                     }
                 }
 
-                _cache.Set(cacheKey, count + 1, limitTime);
+                _cache.Set(cacheKey, count + 1, TimeSpan.FromSeconds(timeWindowSeconds));
             }
             return true;
         }
