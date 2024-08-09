@@ -312,17 +312,20 @@ namespace Midjourney.Infrastructure.LoadBalancer
                         .Where(c => c.SubmitTime >= now && c.InstanceId == Account.ChannelId)
                         .Count();
 
-                    Account.DayDrawCount = count;
+                    if (Account.DayDrawCount != count)
+                    {
+                        Account.DayDrawCount = count;
 
-                    DbHelper.AccountStore.Update(Account);
+                        DbHelper.AccountStore.Update(Account);
+                    }
                 }
                 catch (Exception ex)
                 {
                     _logger.Error(ex, "RuningCache 异常");
                 }
 
-                // 每 2 分钟执行一次
-                Thread.Sleep(60 * 1000 * 2);
+                // 每 1 分钟执行一次
+                Thread.Sleep(60 * 1000 * 1);
             }
         }
 
