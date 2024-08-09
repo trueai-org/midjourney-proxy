@@ -667,8 +667,6 @@ namespace Midjourney.Infrastructure
             else
             {
                 _messageQueue.Enqueue(data);
-
-                _botListener.OnMessage(data);
             }
         }
 
@@ -688,7 +686,7 @@ namespace Midjourney.Infrastructure
                     }
                 }
 
-                Thread.Sleep(500);
+                Thread.Sleep(10);
             }
         }
 
@@ -1005,7 +1003,7 @@ namespace Midjourney.Infrastructure
                 _messageQueue?.Clear();
                 _messageQueueTask?.Dispose();
             }
-            catch 
+            catch
             {
             }
 
@@ -1015,7 +1013,7 @@ namespace Midjourney.Infrastructure
                 _botListener?.Dispose();
                 _stateLock?.Dispose();
             }
-            catch 
+            catch
             {
 
             }
