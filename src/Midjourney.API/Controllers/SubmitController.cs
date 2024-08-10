@@ -3,7 +3,6 @@ using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.Services;
 using Midjourney.Infrastructure.Util;
-using Org.BouncyCastle.Crypto.Modes.Gcm;
 using System.Net;
 using System.Text.RegularExpressions;
 
@@ -65,10 +64,9 @@ namespace Midjourney.API.Controllers
                 }
             }
 
-
             _ip = httpContextAccessor.HttpContext.Request.GetIP();
 
-            var mode = httpContextAccessor.HttpContext.Items["Mode"]?.ToString();
+            var mode = httpContextAccessor.HttpContext.Items["Mode"]?.ToString()?.ToLowerInvariant();
             if (!string.IsNullOrWhiteSpace(mode))
             {
                 _mode = mode switch
@@ -127,7 +125,8 @@ namespace Midjourney.API.Controllers
             task.BotType = GetBotType(imagineDTO.BotType);
             task.PromptEn = promptEn;
             task.Description = $"/imagine {prompt}";
-            task.AccountFilter = imagineDTO.AccountFilter;
+
+            NewTaskDoFilter(task, imagineDTO.AccountFilter);
 
             var data = _taskService.SubmitImagine(task, dataUrls);
             return Ok(data);
@@ -176,8 +175,9 @@ namespace Midjourney.API.Controllers
             task.Action = TaskAction.SHOW;
             task.BotType = GetBotType(imagineDTO.BotType);
             task.Description = $"/show {jobId}";
-            task.AccountFilter = imagineDTO.AccountFilter;
             task.JobId = jobId;
+
+            NewTaskDoFilter(task, imagineDTO.AccountFilter);
 
             var data = _taskService.ShowImagine(task);
             return Ok(data);
@@ -307,7 +307,8 @@ namespace Midjourney.API.Controllers
 
             string taskFileName = $"{task.Id}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
             task.Description = $"/describe {taskFileName}";
-            task.AccountFilter = describeDTO.AccountFilter;
+
+            NewTaskDoFilter(task, describeDTO.AccountFilter);
 
             return Ok(_taskService.SubmitDescribe(task, dataUrl));
         }
@@ -347,7 +348,9 @@ namespace Midjourney.API.Controllers
             task.BotType = GetBotType(blendDTO.BotType);
             task.Action = TaskAction.BLEND;
             task.Description = $"/blend {task.Id} {dataUrlList.Count}";
-            task.AccountFilter = blendDTO.AccountFilter;
+
+            NewTaskDoFilter(task, blendDTO.AccountFilter);
+
             return Ok(_taskService.SubmitBlend(task, dataUrlList, blendDTO.Dimensions.Value));
         }
 
@@ -572,16 +575,6 @@ namespace Midjourney.API.Controllers
                 }
             }
 
-            if (_mode != null)
-            {
-                task.AccountFilter ??= new AccountFilter();
-
-                if (!task.AccountFilter.Modes.Contains(_mode.Value))
-                {
-                    task.AccountFilter.Modes.Add(_mode.Value);
-                }
-            }
-
             var notifyHook = string.IsNullOrWhiteSpace(baseDTO.NotifyHook) ? _properties.NotifyHook : baseDTO.NotifyHook;
             task.SetProperty(Constants.TASK_PROPERTY_NOTIFY_HOOK, notifyHook);
 
@@ -591,6 +584,29 @@ namespace Midjourney.API.Controllers
             task.SetProperty(Constants.TASK_PROPERTY_NONCE, nonce);
 
             return task;
+        }
+
+        /// <summary>
+        /// 处理 account filter 和 mode
+        /// </summary>
+        /// <param name="task"></param>
+        /// <param name="accountFilter"></param>
+        private void NewTaskDoFilter(TaskInfo task, AccountFilter accountFilter)
+        {
+            task.AccountFilter = accountFilter;
+
+            if (_mode != null)
+            {
+                if (task.AccountFilter == null)
+                {
+                    task.AccountFilter = new AccountFilter();
+                }
+
+                if (!task.AccountFilter.Modes.Contains(_mode.Value))
+                {
+                    task.AccountFilter.Modes.Add(_mode.Value);
+                }
+            }
         }
 
         /// <summary>
