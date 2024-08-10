@@ -1,4 +1,5 @@
 ﻿using LiteDB;
+using Microsoft.Extensions.Hosting;
 using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.Dto;
 using System.ComponentModel.DataAnnotations;
@@ -275,6 +276,12 @@ namespace Midjourney.Infrastructure.Models
         /// 子频道列表
         /// </summary>
         public List<string> SubChannels { get; set; } = new List<string>();
+
+        /// <summary>
+        /// 子频道 ids 通过 SubChannels 计算得出
+        /// key: 频道 id, value: 服务器 id
+        /// </summary>
+        public Dictionary<string, string> SubChannelValues { get; set; } = new Dictionary<string, string>();
 
         /// <summary>
         /// 执行中的任务数

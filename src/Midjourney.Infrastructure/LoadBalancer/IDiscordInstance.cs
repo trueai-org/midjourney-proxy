@@ -53,7 +53,7 @@
         /// <param name="messageFlags"></param>
         /// <param name="nonce"></param>
         /// <returns></returns>
-        Task<Message> ActionAsync(string messageId, string customId, int messageFlags, string nonce, EBotType botType);
+        Task<Message> ActionAsync(string messageId, string customId, int messageFlags, string nonce, TaskInfo info);
 
         /// <summary>
         /// 图片 seed 值

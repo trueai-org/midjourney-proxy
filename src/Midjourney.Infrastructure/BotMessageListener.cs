@@ -531,8 +531,8 @@ namespace Midjourney.Infrastructure
                 var isPrivareChannel = false;
                 if (data.TryGetProperty("channel_id", out JsonElement channelIdElement))
                 {
-                    if (channelIdElement.GetString() == Account.PrivateChannelId
-                        || channelIdElement.GetString() == Account.NijiBotChannelId)
+                    var cid = channelIdElement.GetString();
+                    if (cid == Account.PrivateChannelId || cid == Account.NijiBotChannelId)
                     {
                         isPrivareChannel = true;
                     }
@@ -544,11 +544,15 @@ namespace Midjourney.Infrastructure
 
                     // 都不相同
                     // 如果有渠道 id，但不是当前渠道 id，则忽略
-                    if (channelIdElement.GetString() != Account.ChannelId
-                        && channelIdElement.GetString() != Account.PrivateChannelId
-                        && channelIdElement.GetString() != Account.NijiBotChannelId)
+                    if (cid != Account.ChannelId
+                        && cid != Account.PrivateChannelId
+                        && cid != Account.NijiBotChannelId)
                     {
-                        return;
+                        // 如果也不是子频道 id, 则忽略
+                        if (!Account.SubChannelValues.ContainsKey(cid))
+                        {
+                            return;
+                        }
                     }
                 }
 
@@ -1033,7 +1037,8 @@ namespace Midjourney.Infrastructure
                 {
                     Thread.Sleep(50);
 
-                    if (eventData != null && eventData.ChannelId == Account.ChannelId)
+                    if (eventData != null &&
+                        (eventData.ChannelId == Account.ChannelId || Account.SubChannelValues.ContainsKey(eventData.ChannelId)))
                     {
                         foreach (var messageHandler in _userMessageHandlers.OrderBy(h => h.Order()))
                         {

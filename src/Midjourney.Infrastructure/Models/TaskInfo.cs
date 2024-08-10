@@ -70,6 +70,11 @@ namespace Midjourney.Infrastructure.Models
         public string InstanceId { get; set; }
 
         /// <summary>
+        /// 子频道 ID
+        /// </summary>
+        public string SubInstanceId { get; set; }
+
+        /// <summary>
         /// 消息 ID
         /// 创建消息 ID -> 进度消息 ID -> 完成消息 ID
         /// </summary>

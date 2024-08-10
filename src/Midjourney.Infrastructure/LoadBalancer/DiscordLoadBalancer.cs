@@ -43,6 +43,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <param name="describe">过滤支持 Describe 的账号</param>
         /// <param name="isDomain">过滤垂直领域的账号</param>
         /// <param name="domainIds">过滤垂直领域 ID</param>
+        /// <param name="ids">指定 ids 账号</param>
         public IDiscordInstance ChooseInstance(
             AccountFilter accountFilter = null,
             bool? isNewTask = null,
@@ -50,7 +51,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
             bool? blend = null,
             bool? describe = null,
             bool? isDomain = null,
-            List<string> domainIds = null)
+            List<string> domainIds = null,
+            List<string> ids = null)
         {
             if (accountFilter == null)
             {
@@ -62,6 +64,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                      .WhereIf(botType == EBotType.MID_JOURNEY, c => c.Account.EnableMj)
                      .WhereIf(isDomain == true && domainIds?.Count > 0, c => c.Account.IsVerticalDomain && c.Account.VerticalDomainIds.Any(x => domainIds.Contains(x)))
                      .WhereIf(isDomain == false, c => c.Account.IsVerticalDomain != true)
+                     .WhereIf(ids?.Count > 0, c => ids.Contains(c.Account.ChannelId))
                      .ToList();
 
                 return _rule.Choose(list);
@@ -103,6 +106,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
                          // 领域过滤
                          .WhereIf(isDomain == true && domainIds?.Count > 0, c => c.Account.IsVerticalDomain && c.Account.VerticalDomainIds.Any(x => domainIds.Contains(x)))
                          .WhereIf(isDomain == false, c => c.Account.IsVerticalDomain != true)
+
+                         .WhereIf(ids?.Count > 0, c => ids.Contains(c.Account.ChannelId))
                          .ToList();
 
                 return _rule.Choose(list);

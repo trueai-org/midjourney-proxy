@@ -1,11 +1,10 @@
 ﻿using Microsoft.Extensions.Options;
 using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.LoadBalancer;
-using Midjourney.Infrastructure.Options;
 using Midjourney.Infrastructure.Services;
 using Midjourney.Infrastructure.Util;
 using Serilog;
-
+using System.Text.RegularExpressions;
 using ILogger = Serilog.ILogger;
 
 namespace Midjourney.API
@@ -237,6 +236,8 @@ namespace Midjourney.API
                             EnableNiji = configAccount.EnableNiji
                         };
 
+
+
                         db.Add(account);
                         accounts.Add(account);
                     }
@@ -266,6 +267,51 @@ namespace Midjourney.API
                         {
                             if (disInstance == null)
                             {
+                                // 启动前校验
+                                if (account.SubChannels.Count > 0)
+                                {
+                                    // https://discord.com/channels/1256526716130693201/1256526716130693204
+                                    // https://discord.com/channels/{guid}/{id}
+                                    // {guid} {id} 都是纯数字
+
+                                    var dic = new Dictionary<string, string>();
+                                    foreach (var item in account.SubChannels)
+                                    {
+                                        if (string.IsNullOrWhiteSpace(item) || !item.Contains("https://discord.com/channels"))
+                                        {
+                                            continue;
+                                        }
+
+                                        // {id} 作为 key, {guid} 作为 value
+                                        var fir = item.Split(',').Where(c => c.Contains("https://discord.com/channels")).FirstOrDefault();
+                                        if (fir == null)
+                                        {
+                                            continue;
+                                        }
+
+                                        var arr = fir.Split('/').Where(c => !string.IsNullOrWhiteSpace(c)).ToArray();
+                                        if (arr.Length < 5)
+                                        {
+                                            continue;
+                                        }
+
+                                        var guid = arr[3];
+                                        var id = arr[4];
+
+                                        dic[id] = guid;
+                                    }
+
+                                    account.SubChannelValues = dic;
+                                }
+                                else
+                                {
+                                    account.SubChannels.Clear();
+                                    account.SubChannelValues.Clear();
+                                }
+
+                                account.DayDrawCount = dayCount;
+                                db.Update(account);
+
                                 disInstance = await _discordAccountHelper.CreateDiscordInstance(account);
                                 instances.Add(disInstance);
                                 _discordLoadBalancer.AddInstance(disInstance);

@@ -3,6 +3,7 @@ using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.Services;
 using Midjourney.Infrastructure.Util;
+using Org.BouncyCastle.Crypto.Modes.Gcm;
 using System.Net;
 using System.Text.RegularExpressions;
 
@@ -376,9 +377,11 @@ namespace Midjourney.API.Controllers
             }
 
             var task = NewTask(actionDTO);
+
             task.InstanceId = targetTask.InstanceId;
             task.ParentId = targetTask.Id;
             task.BotType = targetTask.BotType;
+            task.SubInstanceId = targetTask.SubInstanceId;
 
             // 识别 mj action
 

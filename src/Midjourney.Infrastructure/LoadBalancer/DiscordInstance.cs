@@ -784,11 +784,30 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <param name="customId"></param>
         /// <param name="messageFlags"></param>
         /// <param name="nonce"></param>
-        /// <param name="botType"></param>
+        /// <param name="info"></param>
         /// <returns></returns>
-        public async Task<Message> ActionAsync(string messageId, string customId, int messageFlags, string nonce, EBotType botType)
+        public async Task<Message> ActionAsync(
+            string messageId,
+            string customId,
+            int messageFlags,
+            string nonce,
+            TaskInfo info)
         {
-            string paramsStr = ReplaceInteractionParams(_paramsMap["action"], nonce, botType)
+            var botType = info.BotType;
+
+            string guid = null;
+            string channelId = null;
+            if (!string.IsNullOrWhiteSpace(info.SubInstanceId))
+            {
+                if (Account.SubChannelValues.ContainsKey(info.SubInstanceId))
+                {
+                    guid = Account.SubChannelValues[info.SubInstanceId];
+                    channelId = info.SubInstanceId;
+                }
+            }
+
+            var paramsStr = ReplaceInteractionParams(_paramsMap["action"], nonce, botType,
+                guid, channelId)
                 .Replace("$message_id", messageId);
 
             var obj = JObject.Parse(paramsStr);
@@ -1288,17 +1307,19 @@ namespace Midjourney.Infrastructure.LoadBalancer
             return await PostJsonAndCheckStatusAsync(paramsJson.ToString());
         }
 
-        private string ReplaceInteractionParams(string paramsStr, string nonce)
+        private string ReplaceInteractionParams(string paramsStr, string nonce,
+            string guid = null, string channelId = null)
         {
-            return paramsStr.Replace("$guild_id", Account.GuildId)
-                .Replace("$channel_id", Account.ChannelId)
+            return paramsStr.Replace("$guild_id", guid ?? Account.GuildId)
+                .Replace("$channel_id", channelId ?? Account.ChannelId)
                 .Replace("$session_id", DefaultSessionId)
                 .Replace("$nonce", nonce);
         }
 
-        private string ReplaceInteractionParams(string paramsStr, string nonce, EBotType botType)
+        private string ReplaceInteractionParams(string paramsStr, string nonce, EBotType botType,
+            string guid = null, string channelId = null)
         {
-            var str = ReplaceInteractionParams(paramsStr, nonce);
+            var str = ReplaceInteractionParams(paramsStr, nonce, guid, channelId);
 
             if (botType == EBotType.NIJI_JOURNEY)
             {
