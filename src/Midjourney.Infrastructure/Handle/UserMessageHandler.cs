@@ -122,6 +122,20 @@ namespace Midjourney.Infrastructure.Handle
                 }
             }
 
+            // 如果依然找不到任务，保留 prompt link 进行匹配
+            if (task == null)
+            {
+                var prompt = finalPrompt.FormatPromptParam();
+                if (!string.IsNullOrWhiteSpace(prompt))
+                {
+                    task = instance
+                            .FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) &&
+                            c.BotType == botType && !string.IsNullOrWhiteSpace(c.PromptEn)
+                            && (c.PromptEn.FormatPromptParam() == prompt || c.PromptEn.FormatPromptParam().EndsWith(prompt) || prompt.StartsWith(c.PromptEn.FormatPromptParam())))
+                            .OrderBy(c => c.StartTime).FirstOrDefault();
+                }
+            }
+
             if (task == null || task.Status == TaskStatus.SUCCESS || task.Status == TaskStatus.FAILURE)
             {
                 return;

@@ -451,6 +451,10 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     return;
                 }
 
+                info.Status = TaskStatus.SUBMITTED;
+                info.Progress = "0%";
+                await AsyncSaveAndNotify(info);
+
                 var result = await discordSubmit();
 
                 // 判断当前实例是否可用
@@ -475,7 +479,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 info.Status = TaskStatus.SUBMITTED;
                 info.Progress = "0%";
 
-                await Task.Delay(1000);
+                await Task.Delay(500);
 
                 await AsyncSaveAndNotify(info);
 
@@ -580,6 +584,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
             return GetRunningTasks().Where(condition);
         }
 
+
+
         /// <summary>
         /// 根据ID获取正在运行的任务。
         /// </summary>
@@ -588,6 +594,16 @@ namespace Midjourney.Infrastructure.LoadBalancer
         public TaskInfo GetRunningTask(string id)
         {
             return GetRunningTasks().FirstOrDefault(t => id == t.Id);
+        }
+
+        /// <summary>
+        /// 根据 ID 获取历史任务
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        public TaskInfo GetTask(string id)
+        {
+            return _taskStoreService.Get(id);
         }
 
         /// <summary>

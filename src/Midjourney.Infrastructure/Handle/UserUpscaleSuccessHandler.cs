@@ -14,6 +14,7 @@ namespace Midjourney.Infrastructure.Handle
     {
         private const string CONTENT_REGEX_1 = "\\*\\*(.*)\\*\\* - Upscaled \\(.*?\\) by <@\\d+> \\((.*?)\\)";
         private const string CONTENT_REGEX_2 = "\\*\\*(.*)\\*\\* - Upscaled by <@\\d+> \\((.*?)\\)";
+
         private const string CONTENT_REGEX_U = "\\*\\*(.*)\\*\\* - Image #(\\d) <@\\d+>";
 
         public UserUpscaleSuccessHandler(DiscordLoadBalancer discordLoadBalancer, DiscordHelper discordHelper)
@@ -52,6 +53,13 @@ namespace Midjourney.Infrastructure.Handle
             }
         }
 
+        /// <summary>
+        /// 注意处理混图放大的情况，混图放大是没有提示词的
+        /// </summary>
+        /// <param name="instance"></param>
+        /// <param name="finalPrompt"></param>
+        /// <param name="index"></param>
+        /// <param name="message"></param>
         private void FindAndFinishUTask(IDiscordInstance instance, string finalPrompt, int index, EventData message)
         {
             string imageUrl = GetImageUrl(message);
@@ -82,14 +90,30 @@ namespace Midjourney.Infrastructure.Handle
                         && (c.PromptEn.FormatPrompt() == prompt || c.PromptEn.FormatPrompt().EndsWith(prompt) || prompt.StartsWith(c.PromptEn.FormatPrompt())))
                         .OrderBy(c => c.StartTime).FirstOrDefault();
                 }
-                else
+
+                // 有可能为 kong blend 时
+                //else
+                //{
+                //    // 放大时，提示词不可为空
+                //    return;
+                //}
+            }
+
+            // 如果依然找不到任务，保留 prompt link 进行匹配
+            if (task == null)
+            {
+                var prompt = finalPrompt.FormatPromptParam();
+                if (!string.IsNullOrWhiteSpace(prompt))
                 {
-                    // 放大时，提示词不可为空
-                    return;
+                    task = instance
+                            .FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) &&
+                            c.BotType == botType && !string.IsNullOrWhiteSpace(c.PromptEn)
+                            && (c.PromptEn.FormatPromptParam() == prompt || c.PromptEn.FormatPromptParam().EndsWith(prompt) || prompt.StartsWith(c.PromptEn.FormatPromptParam())))
+                            .OrderBy(c => c.StartTime).FirstOrDefault();
                 }
             }
 
-            if (task == null || task.Status == TaskStatus.SUCCESS)
+            if (task == null || task.Status == TaskStatus.SUCCESS || task.Status == TaskStatus.FAILURE)
             {
                 return;
             }
@@ -115,10 +139,16 @@ namespace Midjourney.Infrastructure.Handle
         {
             var parseData = ConvertUtils.ParseContent(content, CONTENT_REGEX_1)
                 ?? ConvertUtils.ParseContent(content, CONTENT_REGEX_2);
-            if (parseData != null) return parseData;
+            if (parseData != null)
+            {
+                return parseData;
+            }
 
             var matcher = Regex.Match(content, CONTENT_REGEX_U);
-            if (!matcher.Success) return null;
+            if (!matcher.Success)
+            {
+                return null;
+            }
 
             var uContentParseData = new UContentParseData
             {

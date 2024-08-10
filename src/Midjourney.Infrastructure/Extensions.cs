@@ -67,6 +67,36 @@ namespace Midjourney.Infrastructure
         }
 
         /// <summary>
+        /// 格式化只保留纯文本和链接（移除 -- 参数）
+        /// </summary>
+        /// <param name="prompt"></param>
+        /// <returns></returns>
+        public static string FormatPromptParam(this string prompt)
+        {
+            if (string.IsNullOrWhiteSpace(prompt))
+            {
+                return prompt;
+            }
+
+            // 移除 <url> , 例如: <https://www.baidu.com> a cute girl -> <https://www.baidu.com>acutegirl
+            // 移除 url, 例如: https://www.baiud.com a cute girl ->  https://www.baiud.comacutegirl
+            // 移除空白字符, 例如: a cute girl -> acutegirl
+
+            // 修复 -> v6.0 问题
+            // Interactiveinstallations,textlayout,interestingshapes,children.--ar1:1--v6.0--iw2
+            // Interactiveinstallations,textlayout,interestingshapes,children.--ar1: 1--v6--iw2
+
+            // 去除 -- 开头的参数
+            prompt = Regex.Replace(prompt, @"\x20+--[a-z]+.*$", string.Empty, RegexOptions.IgnoreCase);
+
+
+            // 替换多余的 <<link>> 为 <link>
+            // 针对 " -- " discord 会返回为空
+            prompt = prompt.Replace(" -- ", " ").Replace("  ", " ");
+            return Regex.Replace(prompt, @"\s+|\p{P}", "").ToLower();
+        }
+
+        /// <summary>
         /// 转为 url 路径
         /// 例如：由 E:\_backups\p00\3e4 -> _backups/p00/3e4
         /// </summary>

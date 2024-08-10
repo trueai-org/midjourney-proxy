@@ -79,10 +79,26 @@ namespace Midjourney.Infrastructure.Handle
                         && (c.PromptEn.FormatPrompt() == prompt || c.PromptEn.FormatPrompt().EndsWith(prompt) || prompt.StartsWith(c.PromptEn.FormatPrompt())))
                         .OrderBy(c => c.StartTime).FirstOrDefault();
                 }
-                else
+
+                // 有可能为 kong blend 时
+                //else
+                //{
+                //    // 放大时，提示词不可为空
+                //    return;
+                //}
+            }
+
+            // 如果依然找不到任务，保留 prompt link 进行匹配
+            if (task == null)
+            {
+                var prompt = finalPrompt.FormatPromptParam();
+                if (!string.IsNullOrWhiteSpace(prompt))
                 {
-                    // 放大时，提示词不可为空
-                    return;
+                    task = instance
+                            .FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) &&
+                            c.BotType == botType && !string.IsNullOrWhiteSpace(c.PromptEn)
+                            && (c.PromptEn.FormatPromptParam() == prompt || c.PromptEn.FormatPromptParam().EndsWith(prompt) || prompt.StartsWith(c.PromptEn.FormatPromptParam())))
+                            .OrderBy(c => c.StartTime).FirstOrDefault();
                 }
             }
 

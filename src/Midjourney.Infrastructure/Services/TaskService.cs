@@ -348,6 +348,13 @@ namespace Midjourney.Infrastructure.Services
             task.Prompt = targetTask.Prompt;
             task.PromptEn = targetTask.PromptEn;
 
+            // 但是如果父级任务是 blend 任务，可能 prompt 为空
+            if (string.IsNullOrWhiteSpace(task.PromptEn))
+            {
+                // 移除速度模式参数
+                task.PromptEn = targetTask.GetProperty<string>(Constants.TASK_PROPERTY_FINAL_PROMPT, default)?.Replace("--fast", "")?.Replace("--relax", "")?.Replace("--turbo", "")?.Trim();
+            }
+
             // 点击喜欢
             if (submitAction.CustomId.Contains("MJ::BOOKMARK"))
             {

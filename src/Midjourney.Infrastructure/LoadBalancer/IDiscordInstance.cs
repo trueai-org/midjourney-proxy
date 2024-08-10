@@ -276,6 +276,13 @@
         TaskInfo GetRunningTask(string id);
 
         /// <summary>
+        /// 根据 ID 获取历史任务
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        TaskInfo GetTask(string id);
+
+        /// <summary>
         /// 查询正在运行的任务
         /// </summary>
         /// <param name="nonce"></param>
