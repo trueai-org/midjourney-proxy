@@ -346,13 +346,15 @@ namespace Midjourney.Infrastructure.Services
 
             // 设置任务的提示信息 = 父级任务的提示信息
             task.Prompt = targetTask.Prompt;
-            task.PromptEn = targetTask.PromptEn;
+
+            // 上次的最终词作为变化的 prompt
+            // 移除速度模式参数
+            task.PromptEn = targetTask.GetProperty<string>(Constants.TASK_PROPERTY_FINAL_PROMPT, default)?.Replace("--fast", "")?.Replace("--relax", "")?.Replace("--turbo", "")?.Trim();
 
             // 但是如果父级任务是 blend 任务，可能 prompt 为空
             if (string.IsNullOrWhiteSpace(task.PromptEn))
             {
-                // 移除速度模式参数
-                task.PromptEn = targetTask.GetProperty<string>(Constants.TASK_PROPERTY_FINAL_PROMPT, default)?.Replace("--fast", "")?.Replace("--relax", "")?.Replace("--turbo", "")?.Trim();
+                task.PromptEn = targetTask.PromptEn;
             }
 
             // 点击喜欢
