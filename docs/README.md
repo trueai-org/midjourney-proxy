@@ -1,6 +1,4 @@
-# Midjourney Proxy
-
-## 介绍
+# 介绍 <!-- {docsify-ignore-all} -->
 
 代理 Midjourney 的 Discord 频道，实现 API 形式调用 AI 绘图，公益项目，提供绘图 API 免费使用。
 

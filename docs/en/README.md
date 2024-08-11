@@ -1,6 +1,4 @@
-# Midjourney Proxy
-
-## Introduction
+# Introduction <!-- {docsify-ignore-all} -->
 
 Proxy for Midjourney's Discord channels, enabling API-based AI drawing calls, a public benefit project offering free use of drawing APIs.
 
