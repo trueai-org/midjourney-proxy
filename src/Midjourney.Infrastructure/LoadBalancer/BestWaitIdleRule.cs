@@ -1,11 +1,12 @@
 ﻿namespace Midjourney.Infrastructure.LoadBalancer
 {
     /// <summary>
-    /// 最少等待空闲选择规则。
+    /// 最少等待空闲选择规则
+    /// 单例场景，不需要包装 Random 实例
     /// </summary>
     public class BestWaitIdleRule : IRule
     {
-        private static readonly ThreadLocal<Random> random = new ThreadLocal<Random>(() => new Random());
+        private static readonly Random random = new Random();
 
         /// <summary>
         /// 根据最少等待空闲规则选择一个 Discord 实例。
@@ -29,7 +30,7 @@
             if (idleCandidates != null)
             {
                 // 随机选择一个空闲实例
-                return idleCandidates.ElementAt(random.Value.Next(idleCandidates.Count()));
+                return idleCandidates.ElementAt(random.Next(idleCandidates.Count()));
             }
 
             // 如果没有空闲的实例，则选择 -> (当前队列数 + 执行中的数量) / 核心数, 最小的实例
@@ -41,7 +42,7 @@
             if (busyCandidates != null)
             {
                 // 随机选择一个繁忙实例
-                return busyCandidates.ElementAt(random.Value.Next(busyCandidates.Count()));
+                return busyCandidates.ElementAt(random.Next(busyCandidates.Count()));
             }
 
             return null;
