@@ -700,45 +700,46 @@ namespace Midjourney.API.Controllers
             return Result.Ok();
         }
 
-        ///// <summary>
-        ///// 获取所有账号信息
-        ///// </summary>
-        ///// <returns>所有Discord账号信息</returns>
-        //[HttpGet("accounts")]
-        //public ActionResult<List<DiscordAccount>> List()
-        //{
-        //    var db = DbHelper.AccountStore;
-        //    var data = db.GetAll().OrderBy(c => c.Sort).ThenBy(c => c.DateCreated).ToList();
+        /// <summary>
+        /// 获取所有账号信息（只返回启用账号）
+        /// </summary>
+        /// <returns>所有Discord账号信息</returns>
+        [HttpGet("accounts")]
+        public ActionResult<List<DiscordAccount>> List()
+        {
+            var list = DbHelper.AccountStore.GetCollection().Query().Where(c => c.Enable == true)
+                .ToList()
+                .OrderBy(c => c.Sort).ThenBy(c => c.DateCreated).ToList();
 
-        //    foreach (var item in data)
-        //    {
-        //        var inc = _loadBalancer.GetDiscordInstance(item.ChannelId);
+            foreach (var item in list)
+            {
+                var inc = _loadBalancer.GetDiscordInstance(item.ChannelId);
 
-        //        item.RunningCount = inc?.GetRunningFutures().Count ?? 0;
-        //        item.QueueCount = inc?.GetQueueTasks().Count ?? 0;
-        //        item.Running = inc?.IsAlive ?? false;
+                item.RunningCount = inc?.GetRunningFutures().Count ?? 0;
+                item.QueueCount = inc?.GetQueueTasks().Count ?? 0;
+                item.Running = inc?.IsAlive ?? false;
 
-        //        if (_isAnonymous)
-        //        {
-        //            // Token 加密
-        //            item.UserToken = item.UserToken?.Substring(0, item.UserToken.Length / 5) + "****";
-        //            item.BotToken = item.BotToken?.Substring(0, item.BotToken.Length / 5) + "****";
+                if (_isAnonymous)
+                {
+                    // Token 加密
+                    item.UserToken = item.UserToken?.Substring(0, item.UserToken.Length / 5) + "****";
+                    item.BotToken = item.BotToken?.Substring(0, item.BotToken.Length / 5) + "****";
 
-        //            item.CfUrl = item.CfUrl?.Substring(0, item.CfUrl.Length / 5) + "****";
-        //            item.CfHashUrl = item.CfHashUrl?.Substring(0, item.CfHashUrl.Length / 5) + "****";
+                    item.CfUrl = item.CfUrl?.Substring(0, item.CfUrl.Length / 5) + "****";
+                    item.CfHashUrl = item.CfHashUrl?.Substring(0, item.CfHashUrl.Length / 5) + "****";
 
-        //            item.PermanentInvitationLink = item.PermanentInvitationLink?.Substring(0, item.PermanentInvitationLink.Length / 2) + "****";
+                    item.PermanentInvitationLink = item.PermanentInvitationLink?.Substring(0, item.PermanentInvitationLink.Length / 2) + "****";
 
-        //            if (item.SubChannels.Count > 0)
-        //            {
-        //                // 加密
-        //                item.SubChannels = item.SubChannels.Select(c => "****" + c?.Substring(c.Length / 3)).ToList();
-        //            }
-        //        }
-        //    }
+                    if (item.SubChannels.Count > 0)
+                    {
+                        // 加密
+                        item.SubChannels = item.SubChannels.Select(c => "****" + c?.Substring(c.Length / 3)).ToList();
+                    }
+                }
+            }
 
-        //    return Ok(data);
-        //}
+            return Ok(list);
+        }
 
         /// <summary>
         /// 分页获取账号信息
