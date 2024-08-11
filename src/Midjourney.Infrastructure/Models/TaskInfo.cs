@@ -1,4 +1,4 @@
-﻿using LiteDB;
+﻿using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.Util;
 using Serilog;
@@ -9,6 +9,8 @@ namespace Midjourney.Infrastructure.Models
     /// <summary>
     /// 任务类，表示一个任务的基本信息。
     /// </summary>
+    [BsonCollection("task")]
+    [MongoDB.Bson.Serialization.Attributes.BsonIgnoreExtraElements]
     public class TaskInfo : DomainObject
     {
         public TaskInfo()
@@ -148,7 +150,8 @@ namespace Midjourney.Infrastructure.Models
         /// <summary>
         /// 任务的显示信息。
         /// </summary>
-        [BsonIgnore]
+        [LiteDB.BsonIgnore]
+        [MongoDB.Bson.Serialization.Attributes.BsonIgnore]
         public Dictionary<string, object> Displays
         {
             get

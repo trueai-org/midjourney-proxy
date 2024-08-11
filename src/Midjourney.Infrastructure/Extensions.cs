@@ -1,4 +1,6 @@
 ﻿using LiteDB;
+using Midjourney.Infrastructure.Data;
+using MongoDB.Driver.Linq;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Linq.Expressions;
@@ -247,6 +249,41 @@ namespace Midjourney.Infrastructure
             }
         }
 
+        /// <summary>
+        /// 根据多个条件动态添加查询条件，并支持排序和限制返回数量。
+        /// </summary>
+        /// <typeparam name="T">实体类型。</typeparam>
+        /// <param name="dataHelper">数据助手接口。</param>
+        /// <param name="orderBy">排序字段表达式。</param>
+        /// <param name="orderByAsc">是否升序排序。</param>
+        /// <param name="limit">返回的最大记录数。</param>
+        /// <param name="filters">一组条件表达式及其对应的布尔值。</param>
+        /// <returns>满足条件的实体列表。</returns>
+        public static List<T> WhereIf<T>(this IDataHelper<T> dataHelper, params (bool condition, Expression<Func<T, bool>> filter)[] filters) where T : IBaseId
+        {
+            // 获取所有数据的初始查询
+            var query = dataHelper.GetAll().AsQueryable();
+
+            // 动态应用条件
+            foreach (var (condition, filter) in filters)
+            {
+                if (condition)
+                {
+                    query = query.Where(filter);
+                }
+            }
+
+            //// 应用排序
+            //query = orderByAsc ? query.OrderBy(orderBy) : query.OrderByDescending(orderBy);
+
+            //// 应用限制
+            //if (limit > 0)
+            //{
+            //    query = query.Take(limit);
+            //}
+
+            return query.ToList();
+        }
 
         /// <summary>
         /// 查询条件扩展
@@ -270,6 +307,33 @@ namespace Midjourney.Infrastructure
         /// <param name="predicate"></param>
         /// <returns></returns>
         public static ILiteQueryable<T> WhereIf<T>(this ILiteQueryable<T> query, bool condition, Expression<Func<T, bool>> predicate)
+        {
+            return condition ? query.Where(predicate) : query;
+        }
+
+        /// <summary>
+        /// MongoDB 查询条件扩展方法。
+        /// 根据条件动态添加查询条件。
+        /// </summary>
+        /// <typeparam name="T">实体类型。</typeparam>
+        /// <param name="query">MongoDB 可查询对象。</param>
+        /// <param name="condition">条件布尔值，决定是否添加查询条件。</param>
+        /// <param name="predicate">要添加的查询条件表达式。</param>
+        /// <returns>带有可选条件的查询对象。</returns>
+        public static IMongoQueryable<T> WhereIf<T>(this IMongoQueryable<T> query, bool condition, Expression<Func<T, bool>> predicate)
+        {
+            return condition ? query.Where(predicate) : query;
+        }
+
+        /// <summary>
+        /// 查询条件扩展
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="query"></param>
+        /// <param name="condition"></param>
+        /// <param name="predicate"></param>
+        /// <returns></returns>
+        public static IQueryable<T> WhereIf<T>(this IQueryable<T> query, bool condition, Expression<Func<T, bool>> predicate)
         {
             return condition ? query.Where(predicate) : query;
         }

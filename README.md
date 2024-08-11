@@ -71,6 +71,7 @@
 - [x] 摸鱼时间配置，账号增加咸鱼模式/放松模式，避免高频作业（此模式下不可创建新的绘图，仍可以执行其他命令，可以配置为多个时间段等策略）
 - [x] 账号垂直分类支持，账号支持词条配置，每个账号只做某一类作品，例如：只做风景、只做人物
 - [x] 允许共享频道或子频道绘画，即便账号被封，也可以继续之前的绘画，将被封的账号频道作为正常账号的子频道即可，保存永久邀请链接，和子频道链接，支持批量修改。
+- [x] 多数据库支持本地数据库、MongoDB 等，如果你的任务数据超过 10万条，则建议使用 MongoDB 存储任务。
 
 ## 在线预览
 
@@ -266,6 +267,8 @@ curl -o linux_install.sh https://raw.githubusercontent.com/trueai-org/midjourney
   "UserToken": "", // 用户绘画令牌 token，可以用来访问绘画接口，可以不用设定
   "AdminToken": "", // 管理后台令牌 token，可以用来访问绘画接口和管理员账号等功能
   "mj": {
+    "MongoDefaultConnectionString": null, // MongoDB 连接字符串
+    "MongoDefaultDatabase": null, // MongoDB 数据库名称
     "AccountChooseRule": "BestWaitIdle", // BestWaitIdle | Random | Weight | Polling = 最佳空闲规则 | 随机 | 权重 | 轮询
     "Discord": { // Discord 配置，默认可以为 null
       "GuildId": "125652671***", // 服务器 ID
@@ -478,7 +481,7 @@ https://discord.com/oauth2/authorize?client_id=xxx&permissions=8&scope=bot
 - [ ] 接入官网绘图 API 支持
 - [ ] 最终提示词增加翻译中文显示支持
 - [ ] 账号支持单独的代理
-- [ ] 多数据库支持 MySQL、Sqlite、SqlServer、MongoDB、PostgeSQL、Redis 等
+- [ ] 多数据库支持 MySQL、Sqlite、SqlServer、PostgeSQL、Redis 等
 - [ ] 支付接入支持、支持微信、支付宝，支持绘图定价策略等
 - [ ] 增加公告功能
 - [ ] 图生文 seed 值处理

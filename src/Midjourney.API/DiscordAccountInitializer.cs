@@ -258,9 +258,7 @@ namespace Midjourney.API
 
                         // 判断是否在工作时间内
                         var now = new DateTimeOffset(DateTime.Now.Date).ToUnixTimeMilliseconds();
-                        var dayCount = DbHelper.TaskStore.GetCollection().Query()
-                            .Where(c => c.InstanceId == account.ChannelId && c.SubmitTime >= now)
-                            .Count();
+                        var dayCount = (int)TaskHelper.Instance.TaskStore.Count(c => c.InstanceId == account.ChannelId && c.SubmitTime >= now);
 
                         if (DateTime.Now.IsInWorkTime(account.WorkTime)
                         && (account.DayDrawLimit < 0 || dayCount < account.DayDrawLimit))

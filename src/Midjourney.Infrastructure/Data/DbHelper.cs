@@ -1,6 +1,4 @@
-﻿using Midjourney.Infrastructure.Services;
-
-namespace Midjourney.Infrastructure.Data
+﻿namespace Midjourney.Infrastructure.Data
 {
     /// <summary>
     /// 数据库帮助类。

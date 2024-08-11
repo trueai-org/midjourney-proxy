@@ -1,4 +1,4 @@
-﻿using Midjourney.Infrastructure.Services;
+﻿using Midjourney.Infrastructure.Data;
 using System.Runtime.Serialization;
 
 using JsonIgnoreAttribute = Newtonsoft.Json.JsonIgnoreAttribute;

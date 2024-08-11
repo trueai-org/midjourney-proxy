@@ -24,7 +24,7 @@ namespace Midjourney.API.Controllers
 
         public TaskController(
             ITaskStoreService taskStoreService,
-            DiscordLoadBalancer discordLoadBalancer, 
+            DiscordLoadBalancer discordLoadBalancer,
             ITaskService taskService,
             IHttpContextAccessor httpContextAccessor,
             WorkContext workContext)
@@ -138,7 +138,7 @@ namespace Midjourney.API.Controllers
         [HttpGet("list")]
         public ActionResult<List<TaskInfo>> List()
         {
-            var data = DbHelper.TaskStore.GetCollection().Query().OrderByDescending(t => t.SubmitTime).Limit(100).ToList();
+            var data = TaskHelper.Instance.TaskStore.Where(c => true, t => t.SubmitTime, false, 100).ToList();
             return Ok(data);
         }
 

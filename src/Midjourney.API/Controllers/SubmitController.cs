@@ -157,7 +157,7 @@ namespace Midjourney.API.Controllers
                 return BadRequest(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "job id 格式错误"));
             }
 
-            var model = DbHelper.TaskStore.GetCollection().Query().Where(c => c.JobId == jobId && c.Status == TaskStatus.SUCCESS).FirstOrDefault();
+            var model = TaskHelper.Instance.TaskStore.Where(c => c.JobId == jobId && c.Status == TaskStatus.SUCCESS).FirstOrDefault();
             if (model != null)
             {
                 var info = SubmitResultVO.Of(ReturnCode.SUCCESS, "提交成功", model.Id)
@@ -554,7 +554,7 @@ namespace Midjourney.API.Controllers
             {
                 if (GlobalConfiguration.Setting.GuestDefaultDayLimit > 0)
                 {
-                    var ipTodayDrawCount = (int)DbHelper.TaskStore.Count(x => x.SubmitTime >= now && x.ClientIp == _ip);
+                    var ipTodayDrawCount = (int)TaskHelper.Instance.TaskStore.Count(x => x.SubmitTime >= now && x.ClientIp == _ip);
                     if (ipTodayDrawCount > GlobalConfiguration.Setting.GuestDefaultDayLimit)
                     {
                         throw new LogicException("今日绘图次数已达上限");
@@ -567,7 +567,7 @@ namespace Midjourney.API.Controllers
             {
                 if (user.DayDrawLimit > 0)
                 {
-                    var userTodayDrawCount = (int)DbHelper.TaskStore.Count(x => x.SubmitTime >= now && x.UserId == user.Id);
+                    var userTodayDrawCount = (int)TaskHelper.Instance.TaskStore.Count(x => x.SubmitTime >= now && x.UserId == user.Id);
                     if (userTodayDrawCount > user.DayDrawLimit)
                     {
                         throw new LogicException("今日绘图次数已达上限");

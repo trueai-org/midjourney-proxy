@@ -1,4 +1,5 @@
-﻿using Midjourney.Infrastructure.Handle;
+﻿using Midjourney.Infrastructure.Data;
+using Midjourney.Infrastructure.Handle;
 using Midjourney.Infrastructure.LoadBalancer;
 using Midjourney.Infrastructure.Services;
 

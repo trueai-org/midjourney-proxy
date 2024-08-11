@@ -1,8 +1,8 @@
 ﻿using LiteDB;
-using Midjourney.Infrastructure.Data;
+using Midjourney.Infrastructure.Services;
 using System.Linq.Expressions;
 
-namespace Midjourney.Infrastructure.Services
+namespace Midjourney.Infrastructure.Data
 {
     public interface IBaseId
     {
@@ -16,17 +16,20 @@ namespace Midjourney.Infrastructure.Services
     {
         public void Save(TaskInfo task)
         {
-            DbHelper.TaskStore.Save(task);
+            //DbHelper.TaskStore.Save(task);
+            TaskHelper.Instance.TaskStore.Save(task);
         }
 
         public void Delete(string id)
         {
-            DbHelper.TaskStore.Delete(id);
+            //DbHelper.TaskStore.Delete(id);
+            TaskHelper.Instance.TaskStore.Delete(id);
         }
 
         public TaskInfo Get(string id)
         {
-            return DbHelper.TaskStore.Get(id);
+            //return DbHelper.TaskStore.Get(id);
+            return TaskHelper.Instance.TaskStore.Get(id);
         }
     }
 
@@ -34,7 +37,7 @@ namespace Midjourney.Infrastructure.Services
     /// LiteDB 数据库的泛型仓库类。
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public class LiteDBRepository<T> where T : IBaseId
+    public class LiteDBRepository<T> : IDataHelper<T> where T : IBaseId
     {
         private static readonly object _lock = new();
         private readonly LiteDatabase _db;
@@ -307,6 +310,20 @@ namespace Midjourney.Infrastructure.Services
         public List<T> List()
         {
             return _db.GetCollection<T>().Query().ToList();
+        }
+
+
+        public List<T> Where(Expression<Func<T, bool>> filter, Expression<Func<T, object>> orderBy, bool orderByAsc, int limit)
+        {
+            var query = _db.GetCollection<T>().Query();
+            if (orderByAsc)
+            {
+                return query.OrderBy(orderBy).Where(filter).Limit(limit).ToList();
+            }
+            else
+            {
+                return query.OrderByDescending(orderBy).Where(filter).Limit(limit).ToList();
+            }
         }
     }
 }

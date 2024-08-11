@@ -9,6 +9,22 @@ namespace Midjourney.Infrastructure
     public class ProxyProperties : DomainObject
     {
         /// <summary>
+        /// MongoDB 默认连接字符串
+        /// </summary>
+        public string MongoDefaultConnectionString { get; set; }
+
+        /// <summary>
+        /// MongoDB 默认数据库
+        /// </summary>
+        public string MongoDefaultDatabase { get; set; }
+
+        /// <summary>
+        /// 是否使用 MongoDB
+        /// </summary>
+        [BsonIgnore]
+        public bool IsMongo => !string.IsNullOrWhiteSpace(MongoDefaultConnectionString) && !string.IsNullOrWhiteSpace(MongoDefaultDatabase);
+
+        /// <summary>
         /// Discord账号选择规则.
         /// </summary>
         public AccountChooseRule AccountChooseRule { get; set; } = AccountChooseRule.BestWaitIdle;

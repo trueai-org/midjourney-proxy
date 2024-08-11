@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using LiteDB;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
 using Midjourney.Infrastructure.Data;
@@ -6,6 +7,7 @@ using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.LoadBalancer;
 using Midjourney.Infrastructure.Services;
 using Midjourney.Infrastructure.StandardTable;
+using MongoDB.Driver;
 using System.Net;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -484,7 +486,7 @@ namespace Midjourney.API.Controllers
                 if (!string.IsNullOrWhiteSpace(con))
                 {
                     // 解析
-                    var json = JsonSerializer.Deserialize<JsonElement>(con);
+                    var json = System.Text.Json.JsonSerializer.Deserialize<JsonElement>(con);
                     if (json.TryGetProperty("hash", out var h) && json.TryGetProperty("token", out var to))
                     {
                         var hashStr = h.GetString();
@@ -760,7 +762,32 @@ namespace Midjourney.API.Controllers
 
             var param = request.Search;
 
-            var query = DbHelper.TaskStore.GetCollection().Query()
+            // 这里使用原生查询，因为查询条件比较复杂
+            if (GlobalConfiguration.Setting.IsMongo)
+            {
+                var coll = MongoHelper.GetCollection<TaskInfo>().AsQueryable();
+                var query = coll
+                    .WhereIf(!string.IsNullOrWhiteSpace(param.Id), c => c.Id == param.Id || c.State == param.Id)
+                    .WhereIf(!string.IsNullOrWhiteSpace(param.InstanceId), c => c.InstanceId == param.InstanceId)
+                    .WhereIf(param.Status.HasValue, c => c.Status == param.Status)
+                    .WhereIf(param.Action.HasValue, c => c.Action == param.Action)
+                    .WhereIf(!string.IsNullOrWhiteSpace(param.FailReason), c => c.FailReason.Contains(param.FailReason))
+                    .WhereIf(!string.IsNullOrWhiteSpace(param.Description), c => c.Description.Contains(param.Description) || c.Prompt.Contains(param.Description) || c.PromptEn.Contains(param.Description));
+
+                var count = query.Count();
+                var list = query
+                    .OrderByDescending(c => c.SubmitTime)
+                    .Skip((page.Current - 1) * page.PageSize)
+                    .Take(page.PageSize)
+                    .ToList();
+
+                var data = list.ToTableResult(request.Pagination.Current, request.Pagination.PageSize, count);
+
+                return Ok(data);
+            }
+            else
+            {
+                var query = DbHelper.TaskStore.GetCollection().Query()
                 .WhereIf(!string.IsNullOrWhiteSpace(param.Id), c => c.Id == param.Id || c.State == param.Id)
                 .WhereIf(!string.IsNullOrWhiteSpace(param.InstanceId), c => c.InstanceId == param.InstanceId)
                 .WhereIf(param.Status.HasValue, c => c.Status == param.Status)
@@ -768,16 +795,17 @@ namespace Midjourney.API.Controllers
                 .WhereIf(!string.IsNullOrWhiteSpace(param.FailReason), c => c.FailReason.Contains(param.FailReason))
                 .WhereIf(!string.IsNullOrWhiteSpace(param.Description), c => c.Description.Contains(param.Description) || c.Prompt.Contains(param.Description) || c.PromptEn.Contains(param.Description));
 
-            var count = query.Count();
-            var list = query
-                .OrderByDescending(c => c.SubmitTime)
-                .Skip((page.Current - 1) * page.PageSize)
-                .Limit(page.PageSize)
-                .ToList();
+                var count = query.Count();
+                var list = query
+                    .OrderByDescending(c => c.SubmitTime)
+                    .Skip((page.Current - 1) * page.PageSize)
+                    .Limit(page.PageSize)
+                    .ToList();
 
-            var data = list.ToTableResult(request.Pagination.Current, request.Pagination.PageSize, count);
+                var data = list.ToTableResult(request.Pagination.Current, request.Pagination.PageSize, count);
 
-            return Ok(data);
+                return Ok(data);
+            }
         }
 
         /// <summary>
@@ -801,7 +829,7 @@ namespace Midjourney.API.Controllers
                 Thread.Sleep(1000);
             }
 
-            var task = DbHelper.TaskStore.Get(id);
+            var task = TaskHelper.Instance.TaskStore.Get(id);
             if (task != null)
             {
                 var ins = _loadBalancer.GetDiscordInstance(task.InstanceId);
@@ -816,7 +844,7 @@ namespace Midjourney.API.Controllers
                     }
                 }
 
-                DbHelper.TaskStore.Delete(id);
+                TaskHelper.Instance.TaskStore.Delete(id);
             }
 
             return Result.Ok();
