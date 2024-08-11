@@ -1179,6 +1179,11 @@ namespace Midjourney.API.Controllers
                     model.Openai.GptApiUrl = "****";
                     model.Openai.GptApiKey = "****";
                 }
+
+                if (!string.IsNullOrWhiteSpace(model.MongoDefaultConnectionString))
+                {
+                    model.MongoDefaultConnectionString = "****";
+                }
             }
 
             return Result.Ok(model);
