@@ -246,7 +246,7 @@ namespace Midjourney.API
                 var instances = _discordLoadBalancer.GetAllInstances();
                 foreach (var account in accounts)
                 {
-                    if (!account.Enable)
+                    if (account.Enable != true)
                     {
                         continue;
                     }

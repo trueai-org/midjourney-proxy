@@ -60,8 +60,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
                      .WhereIf(blend == true, c => c.Account.IsBlend)
                      .WhereIf(describe == true, c => c.Account.IsDescribe)
                      .WhereIf(isNewTask == true, c => c.Account.IsAcceptNewTask == true)
-                     .WhereIf(botType == EBotType.NIJI_JOURNEY, c => c.Account.EnableNiji)
-                     .WhereIf(botType == EBotType.MID_JOURNEY, c => c.Account.EnableMj)
+                     .WhereIf(botType == EBotType.NIJI_JOURNEY, c => c.Account.EnableNiji == true)
+                     .WhereIf(botType == EBotType.MID_JOURNEY, c => c.Account.EnableMj == true)
                      .WhereIf(isDomain == true && domainIds?.Count > 0, c => c.Account.IsVerticalDomain && c.Account.VerticalDomainIds.Any(x => domainIds.Contains(x)))
                      .WhereIf(isDomain == false, c => c.Account.IsVerticalDomain != true)
                      .WhereIf(ids?.Count > 0, c => ids.Contains(c.Account.ChannelId))
@@ -97,8 +97,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
                          .WhereIf(isNewTask == true, c => c.Account.IsAcceptNewTask == true)
 
                          // 过滤开启 niji mj 的账号
-                         .WhereIf(botType == EBotType.NIJI_JOURNEY, c => c.Account.EnableNiji)
-                         .WhereIf(botType == EBotType.MID_JOURNEY, c => c.Account.EnableMj)
+                         .WhereIf(botType == EBotType.NIJI_JOURNEY, c => c.Account.EnableNiji == true)
+                         .WhereIf(botType == EBotType.MID_JOURNEY, c => c.Account.EnableMj == true)
 
                          .WhereIf(blend == true, c => c.Account.IsBlend)
                          .WhereIf(describe == true, c => c.Account.IsDescribe)

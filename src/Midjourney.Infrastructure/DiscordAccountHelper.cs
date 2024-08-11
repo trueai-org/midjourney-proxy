@@ -88,9 +88,9 @@ namespace Midjourney.Infrastructure
                 _paramsMap,
                 webProxy);
 
-            if (account.Enable)
+            if (account.Enable == true)
             {
-              
+
                 var messageListener = new BotMessageListener(_discordHelper, webProxy);
 
                 // 用户 WebSocket 连接

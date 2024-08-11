@@ -60,18 +60,17 @@ namespace Midjourney.Infrastructure.Models
         /// <summary>
         /// 是否可用。
         /// </summary>
-        [Display(Name = "是否可用")]
-        public bool Enable { get; set; } = true;
+        public bool? Enable { get; set; }
 
         /// <summary>
         /// 开启 Midjourney 绘图
         /// </summary>
-        public bool EnableMj { get; set; } = true;
+        public bool? EnableMj { get; set; }
 
         /// <summary>
         /// 开启 Niji 绘图
         /// </summary>
-        public bool EnableNiji { get; set; } = true;
+        public bool? EnableNiji { get; set; }
 
         /// <summary>
         /// 是否锁定（暂时锁定，可能触发了人机验证）
