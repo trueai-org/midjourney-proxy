@@ -23,25 +23,5 @@
         /// <param name="id">任务ID。</param>
         /// <returns>任务实例。</returns>
         TaskInfo Get(string id);
-
-        /// <summary>
-        /// 列出所有任务。
-        /// </summary>
-        /// <returns>任务列表。</returns>
-        List<TaskInfo> List();
-
-        ///// <summary>
-        ///// 按条件列出任务。
-        ///// </summary>
-        ///// <param name="condition">任务条件。</param>
-        ///// <returns>任务列表。</returns>
-        //List<TaskInfo> List(TaskCondition condition);
-
-        ///// <summary>
-        ///// 按条件查找一个任务。
-        ///// </summary>
-        ///// <param name="condition">任务条件。</param>
-        ///// <returns>任务实例。</returns>
-        //TaskInfo FindOne(TaskCondition condition);
     }
 }

@@ -28,11 +28,6 @@ namespace Midjourney.Infrastructure.Services
         {
             return DbHelper.TaskStore.Get(id);
         }
-
-        public List<TaskInfo> List()
-        {
-            return DbHelper.TaskStore.List();
-        }
     }
 
     /// <summary>
