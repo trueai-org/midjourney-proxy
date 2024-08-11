@@ -52,6 +52,12 @@ namespace Midjourney.Infrastructure.Data
         List<T> GetAll();
 
         /// <summary>
+        /// 获取所有实体的 ID 列表。
+        /// </summary>
+        /// <returns></returns>
+        List<string> GetAllIds();
+
+        /// <summary>
         /// 根据 ID 获取实体。
         /// </summary>
         /// <param name="id">实体的 ID。</param>

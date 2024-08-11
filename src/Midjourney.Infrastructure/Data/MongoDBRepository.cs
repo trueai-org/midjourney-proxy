@@ -52,6 +52,16 @@ namespace Midjourney.Infrastructure.Data
             return _collection.Find(Builders<T>.Filter.Empty).ToList();
         }
 
+
+        /// <summary>
+        /// 获取所有实体的 ID 列表。
+        /// </summary>
+        /// <returns></returns>
+        public List<string> GetAllIds()
+        {
+            return _collection.Find(Builders<T>.Filter.Empty).Project(x => x.Id).ToList();
+        }
+
         public List<T> Where(Expression<Func<T, bool>> predicate)
         {
             return _collection.Find(predicate).ToList();

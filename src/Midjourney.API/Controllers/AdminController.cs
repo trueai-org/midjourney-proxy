@@ -673,7 +673,7 @@ namespace Midjourney.API.Controllers
             }
 
             // 不可修改频道 ID
-            if (id != param.ChannelId || param.GuildId != model.GuildId || param.ChannelId != model.ChannelId)
+            if (param.GuildId != model.GuildId || param.ChannelId != model.ChannelId)
             {
                 return Result.Fail("禁止修改频道 ID 和服务器 ID");
             }
@@ -751,6 +751,10 @@ namespace Midjourney.API.Controllers
         public ActionResult<StandardTableResult<DiscordAccount>> Accounts([FromBody] StandardTableParam<DiscordAccount> request)
         {
             var page = request.Pagination;
+            if (page.PageSize > 100)
+            {
+                page.PageSize = 100;
+            }
 
             // 演示模式 100 条
             if (_isAnonymous)
@@ -818,6 +822,10 @@ namespace Midjourney.API.Controllers
         public ActionResult<StandardTableResult<TaskInfo>> Tasks([FromBody] StandardTableParam<TaskInfo> request)
         {
             var page = request.Pagination;
+            if (page.PageSize > 100)
+            {
+                page.PageSize = 100;
+            }
 
             // 演示模式 100 条
             if (_isAnonymous)
@@ -1280,6 +1288,24 @@ namespace Midjourney.API.Controllers
 
             // 首页缓存
             _memoryCache.Remove("HOME");
+
+            return Result.Ok();
+        }
+
+        /// <summary>
+        /// MJ Plus 数据迁移（迁移账号数据和任务数据）
+        /// </summary>
+        /// <param name="dto"></param>
+        /// <returns></returns>
+        [HttpPost("mjplus-migration")]
+        public async Task<Result> MjPlusMigration([FromBody] MjPlusMigrationDto dto)
+        {
+            if (_isAnonymous)
+            {
+                return Result.Fail("演示模式，禁止操作");
+            }
+
+            await _taskService.MjPlusMigration(dto);
 
             return Result.Ok();
         }

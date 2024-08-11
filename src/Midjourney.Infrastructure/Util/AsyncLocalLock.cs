@@ -27,7 +27,7 @@ namespace Midjourney.Infrastructure.Util
         /// <param name="key"></param>
         private static void LockExit(string key)
         {
-            if (_lockObjs.TryGetValue(key, out SemaphoreSlim? semaphore) && semaphore != null)
+            if (_lockObjs.TryGetValue(key, out SemaphoreSlim semaphore) && semaphore != null)
             {
                 semaphore.Release();
             }
@@ -55,6 +55,20 @@ namespace Midjourney.Infrastructure.Util
                 }
             }
             return false;
+        }
+
+        /// <summary>
+        /// 判断指定的锁是否可用
+        /// </summary>
+        /// <param name="key"></param>
+        /// <returns></returns>
+        public static bool IsLockAvailable(string key)
+        {
+            if (_lockObjs.TryGetValue(key, out SemaphoreSlim semaphore) && semaphore != null)
+            {
+                return semaphore.CurrentCount > 0;
+            }
+            return true;
         }
     }
 }

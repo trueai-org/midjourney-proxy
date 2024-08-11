@@ -3,6 +3,10 @@ using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.LoadBalancer;
 using Midjourney.Infrastructure.Util;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using RestSharp;
+using Serilog;
 using System.Diagnostics;
 
 namespace Midjourney.Infrastructure.Services
@@ -987,6 +991,236 @@ namespace Midjourney.Infrastructure.Services
             Thread.Sleep(2000);
 
             await InfoSetting(id);
+        }
+
+        /// <summary>
+        /// MJ Plus 数据迁移
+        /// </summary>
+        /// <param name="dto"></param>
+        /// <returns></returns>
+        public async Task MjPlusMigration(MjPlusMigrationDto dto)
+        {
+            var key = "mjplus";
+            var islock = AsyncLocalLock.IsLockAvailable(key);
+            if (!islock)
+            {
+                throw new LogicException("迁移任务执行中...");
+            }
+
+            _ = Task.Run(async () =>
+            {
+                var isLock = await AsyncLocalLock.TryLockAsync("mjplus", TimeSpan.FromMilliseconds(3), async () =>
+                {
+                    try
+                    {
+                        // 账号迁移
+                        if (true)
+                        {
+                            var ids = DbHelper.AccountStore.GetAllIds().ToHashSet<string>();
+
+                            var path = "/mj/account/query";
+                            var pageNumber = 0;
+                            var pageSize = 100;
+                            var isLastPage = false;
+                            var sort = 0;
+
+                            while (!isLastPage)
+                            {
+                                var responseContent = await MjPlusPageData(dto, path, pageSize, pageNumber);
+                                var responseObject = JObject.Parse(responseContent);
+                                var contentArray = (JArray)responseObject["content"];
+
+                                if (contentArray.Count <= 0)
+                                {
+                                    break;
+                                }
+
+                                foreach (var item in contentArray)
+                                {
+                                    // 反序列化基础 JSON
+                                    var json = item.ToString();
+                                    var accountJson = JsonConvert.DeserializeObject<dynamic>(json);
+
+                                    // 创建
+                                    // 创建 DiscordAccount 实例
+                                    var acc = new DiscordAccount
+                                    {
+                                        Sponsor = "by mjplus",
+                                        DayDrawLimit = -1, // 默认值 -1
+
+                                        ChannelId = accountJson.channelId,
+                                        GuildId = accountJson.guildId,
+                                        PrivateChannelId = accountJson.mjBotChannelId,
+                                        NijiBotChannelId = accountJson.nijiBotChannelId,
+                                        UserToken = accountJson.userToken,
+                                        BotToken = null,
+                                        UserAgent = accountJson.userAgent,
+                                        Enable = accountJson.enable,
+                                        EnableMj = true,
+                                        EnableNiji = true,
+                                        CoreSize = accountJson.coreSize ?? 3, // 默认值 3
+                                        Interval = 1.2m, // 默认值 1.2
+                                        AfterIntervalMin = 1.2m, // 默认值 1.2
+                                        AfterIntervalMax = 1.2m, // 默认值 1.2
+                                        QueueSize = accountJson.queueSize ?? 10, // 默认值 10
+                                        MaxQueueSize = 100, // 默认值 100
+                                        TimeoutMinutes = accountJson.timeoutMinutes ?? 5, // 默认值 5
+                                        Remark = accountJson.remark,
+
+
+                                        DateCreated = DateTimeOffset.FromUnixTimeMilliseconds((long)accountJson.dateCreated).DateTime,
+                                        Weight = 1, // 假设 weight 来自 properties
+                                        WorkTime = null,
+                                        FishingTime = null,
+                                        Sort = ++sort,
+                                        RemixAutoSubmit = accountJson.remixAutoSubmit,
+                                        Mode = Enum.TryParse<GenerationSpeedMode>((string)accountJson.mode, out var mode) ? mode : (GenerationSpeedMode?)null,
+                                        AllowModes = new List<GenerationSpeedMode>(),
+                                        Components = new List<Component>(),
+                                        IsBlend = true, // 默认 true
+                                        IsDescribe = true, // 默认 true
+                                        IsVerticalDomain = false, // 默认 false
+                                        VerticalDomainIds = new List<string>(),
+                                        SubChannels = new List<string>(),
+                                        SubChannelValues = new Dictionary<string, string>(),
+
+                                        Id = accountJson.id,
+                                    };
+
+                                    if (!ids.Contains(acc.Id))
+                                    {
+                                        DbHelper.AccountStore.Add(acc);
+                                        ids.Add(acc.Id);
+                                    }
+                                }
+
+                                isLastPage = (bool)responseObject["last"];
+                                pageNumber++;
+
+                                Log.Information($"账号迁移进度, 第 {pageNumber} 页, 每页 {pageSize} 条, 已完成");
+                            }
+
+                            Log.Information("账号迁移完成");
+                        }
+
+
+                        // 任务迁移
+                        if (true)
+                        {
+                            var ids = TaskHelper.Instance.TaskStore.GetAllIds().ToHashSet<string>();
+
+                            var path = "/mj/task-admin/query";
+                            var pageNumber = 0;
+                            var pageSize = 100;
+                            var isLastPage = false;
+
+                            while (!isLastPage)
+                            {
+                                var responseContent = await MjPlusPageData(dto, path, pageSize, pageNumber);
+                                var responseObject = JObject.Parse(responseContent);
+                                var contentArray = (JArray)responseObject["content"];
+
+                                if (contentArray.Count <= 0)
+                                {
+                                    break;
+                                }
+
+                                foreach (var item in contentArray)
+                                {
+                                    // 反序列化基础 JSON
+                                    var json = item.ToString();
+                                    var jsonObject = JsonConvert.DeserializeObject<dynamic>(json);
+
+                                    // 创建 TaskInfo 实例
+                                    var taskInfo = new TaskInfo
+                                    {
+                                        FinishTime = jsonObject.finishTime,
+                                        PromptEn = jsonObject.promptEn,
+                                        Description = jsonObject.description,
+                                        SubmitTime = jsonObject.submitTime,
+                                        ImageUrl = jsonObject.imageUrl,
+                                        Action = Enum.TryParse<TaskAction>((string)jsonObject.action, out var action) ? action : (TaskAction?)null,
+                                        Progress = jsonObject.progress,
+                                        StartTime = jsonObject.startTime,
+                                        FailReason = jsonObject.failReason,
+                                        Id = jsonObject.id,
+                                        State = jsonObject.state,
+                                        Prompt = jsonObject.prompt,
+                                        Status = Enum.TryParse<TaskStatus>((string)jsonObject.status, out var status) ? status : (TaskStatus?)null,
+                                        Nonce = jsonObject.properties?.nonce,
+                                        MessageId = jsonObject.properties?.messageId,
+                                        BotType = Enum.TryParse<EBotType>((string)jsonObject.properties?.botType, out var botType) ? botType : EBotType.MID_JOURNEY,
+                                        InstanceId = jsonObject.properties?.discordInstanceId,
+                                        Buttons = JsonConvert.DeserializeObject<List<CustomComponentModel>>(JsonConvert.SerializeObject(jsonObject.buttons)),
+                                        Properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonConvert.SerializeObject(jsonObject.properties)),
+                                    };
+                                    taskInfo.InstanceId = taskInfo.GetProperty<string>(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, default);
+
+                                    if (!ids.Contains(taskInfo.Id))
+                                    {
+                                        TaskHelper.Instance.TaskStore.Add(taskInfo);
+                                        ids.Add(taskInfo.Id);
+                                    }
+                                }
+
+                                isLastPage = (bool)responseObject["last"];
+                                pageNumber++;
+
+                                Log.Information($"任务迁移进度, 第 {pageNumber} 页, 每页 {pageSize} 条, 已完成");
+                            }
+
+                            Log.Information("任务迁移完成");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Error(ex, "mjplus 迁移执行异常");
+                    }
+                });
+
+                if (!islock)
+                {
+                    Log.Warning("迁移任务执行中...");
+                }
+            });
+
+            await Task.CompletedTask;
+        }
+
+
+
+
+        /// <summary>
+        /// 获取分页数据
+        /// </summary>
+        /// <param name="dto"></param>
+        /// <param name="path"></param>
+        /// <param name="pageSize"></param>
+        /// <param name="pageNumber"></param>
+        /// <returns></returns>
+        private static async Task<string> MjPlusPageData(MjPlusMigrationDto dto, string path, int pageSize, int pageNumber)
+        {
+            var options = new RestClientOptions(dto.Host)
+            {
+                MaxTimeout = -1,
+            };
+            var client = new RestClient(options);
+            var request = new RestRequest(path, Method.Post);
+            request.AddHeader("Content-Type", "application/json");
+
+            if (!string.IsNullOrWhiteSpace(dto.ApiSecret))
+            {
+                request.AddHeader("mj-api-secret", dto.ApiSecret);
+            }
+            var body = new JObject
+            {
+                ["pageSize"] = pageSize,
+                ["pageNumber"] = pageNumber
+            }.ToString();
+
+            request.AddStringBody(body, DataFormat.Json);
+            var response = await client.ExecuteAsync(request);
+            return response.Content;
         }
     }
 }

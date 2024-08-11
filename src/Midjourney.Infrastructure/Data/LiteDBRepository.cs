@@ -158,6 +158,15 @@ namespace Midjourney.Infrastructure.Data
         }
 
         /// <summary>
+        /// 获取所有实体的 ID 列表。
+        /// </summary>
+        /// <returns></returns>
+        public List<string> GetAllIds()
+        {
+            return _db.GetCollection<T>().Query().Select(x => x.Id).ToList();
+        }
+
+        /// <summary>
         /// 根据实体ID获取实体。
         /// </summary>
         /// <param name="id">实体的ID。</param>
