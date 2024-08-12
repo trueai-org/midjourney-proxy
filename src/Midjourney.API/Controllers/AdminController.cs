@@ -1180,7 +1180,7 @@ namespace Midjourney.API.Controllers
             domain.UpdateTime = DateTime.Now;
 
             domain.Keywords = domain.Keywords.Where(c => !string.IsNullOrWhiteSpace(c))
-                .Select(c => c.Trim())
+                .Select(c => c.Trim().ToLower())
                 .Distinct()
                 .ToList();
 

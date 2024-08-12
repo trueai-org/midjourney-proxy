@@ -73,8 +73,10 @@ namespace Midjourney.Infrastructure.Services
                 // 对 Promat 分割为单个单词
                 // 以 ',' ' ' '.' '-' 为分隔符
                 // 并且过滤为空的字符串
-                var prompts = info.Prompt.Split(new char[] { ',', ' ', '.', '-' }).Select(c => c?.Trim())
-                    .Distinct().Where(c => !string.IsNullOrWhiteSpace(c)).ToList();
+                var prompts = info.Prompt.Split(new char[] { ',', ' ', '.', '-' })
+                    .Where(c => !string.IsNullOrWhiteSpace(c))
+                    .Select(c => c?.Trim()?.ToLower())
+                    .Distinct().ToList();
 
                 var domains = GetDomainCache();
                 foreach (var prompt in prompts)
