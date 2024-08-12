@@ -1179,6 +1179,11 @@ namespace Midjourney.API.Controllers
 
             domain.UpdateTime = DateTime.Now;
 
+            domain.Keywords = domain.Keywords.Where(c => !string.IsNullOrWhiteSpace(c))
+                .Select(c => c.Trim())
+                .Distinct()
+                .ToList();
+
             DbHelper.DomainStore.Save(domain);
 
             _taskService.ClearDomainCache();
