@@ -41,7 +41,7 @@ namespace Midjourney.Infrastructure.Services
                 var dict = new Dictionary<string, HashSet<string>>();
                 foreach (var item in list)
                 {
-                    var keywords = item.Keywords.Where(c => !string.IsNullOrWhiteSpace(c)).Distinct().ToList();
+                    var keywords = item.Keywords.Where(c => !string.IsNullOrWhiteSpace(c)).Select(c => c.Trim()).Distinct().ToList();
                     dict[item.Id] = new HashSet<string>(keywords);
                 }
 
