@@ -471,7 +471,7 @@ https://discord.com/oauth2/authorize?client_id=xxx&permissions=8&scope=bot
 
 ## MongoDB 配置
 
-> 如果你的任务量，未来可能超过 10 万，推荐 Docker 部署 MongoDB。
+> 如果你的任务量未来可能超过 10 万，推荐 Docker 部署 MongoDB。
 
 > 注意：切换 MongoDB 历史任务不会自动迁移。
 
