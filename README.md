@@ -469,6 +469,31 @@ https://discord.com/oauth2/authorize?client_id=xxx&permissions=8&scope=bot
 
 ![添加应用到频道服务器](./docs/screenshots/ItiWgaWIaX.png)
 
+## MongoDB 配置
+
+> 如果你的任务量，未来可能超过 10 万，推荐 Docker 部署 MongoDB。
+
+> 注意：切换 MongoDB 历史任务不会自动迁移。
+
+1. 启动容器 `xxx` 为你的密码
+2. 打开系统设置 -> 输入 MongoDB 连接字符串 `mongodb://mongoadmin:xxx@ip` 即可
+3. 填写 MongoDB 数据库名称 -> `mj` -> 保存
+4. 重启服务
+
+```bash
+# 启动容器
+docker run -d \
+  --name mjopen-mongo \
+  -p 27017:27017 \
+  -v /root/mjopen/mongo/data:/data/db \
+  --restart always \
+  -e MONGO_INITDB_ROOT_USERNAME=mongoadmin \
+  -e MONGO_INITDB_ROOT_PASSWORD=xxx \
+  mongo
+
+# 创建数据库（也可以通过 BT 创建数据库）（可选）
+```
+
 ## 相关文档
 1. [API接口说明](./docs/api.md)
 
