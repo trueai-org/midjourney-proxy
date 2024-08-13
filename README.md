@@ -89,8 +89,8 @@
 > CloudFlare 自动验证配置示例（免费自动过人机验证）
 
 ```json
-"CaptchaServer": "http://47.76.110.222:8081", // CloudFlare 自动验证器地址
-"CaptchaNotifyHook": "https://ai.trueai.org" // 通知回调，默认为你的域名
+"CaptchaServer": "http://47.76.110.222:8081", // 自动验证器地址
+"CaptchaNotifyHook": "https://ai.trueai.org" // 验证完成通知回调，默认为你的域名
 ```
 
 ## 预览截图
