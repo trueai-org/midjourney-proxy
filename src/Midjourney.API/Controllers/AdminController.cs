@@ -1227,6 +1227,110 @@ namespace Midjourney.API.Controllers
             return Result.Ok();
         }
 
+
+        /// <summary>
+        /// 违规词
+        /// </summary>
+        /// <param name="request"></param>
+        /// <returns></returns>
+        [HttpPost("banned-words")]
+        public ActionResult<StandardTableResult<BannedWord>> BannedWords([FromBody] StandardTableParam<BannedWord> request)
+        {
+            var page = request.Pagination;
+
+            var firstKeyword = request.Search.Keywords?.FirstOrDefault();
+            var param = request.Search;
+
+            var query = DbHelper.BannedWordStore.GetCollection().Query()
+                .WhereIf(!string.IsNullOrWhiteSpace(param.Id), c => c.Id == param.Id)
+                .WhereIf(!string.IsNullOrWhiteSpace(firstKeyword), c => c.Keywords.Contains(firstKeyword));
+
+            var count = query.Count();
+            var list = query
+                .OrderBy(c => c.Sort)
+                .Skip((page.Current - 1) * page.PageSize)
+                .Limit(page.PageSize)
+                .ToList();
+
+            var data = list.ToTableResult(request.Pagination.Current, request.Pagination.PageSize, count);
+
+            return Ok(data);
+        }
+
+        /// <summary>
+        /// 添加或编辑违规词
+        /// </summary>
+        /// <param name="param"></param>
+        /// <returns></returns>
+        /// <exception cref="LogicException"></exception>
+        [HttpPost("banned-word")]
+        public Result BannedWordAddOrEdit([FromBody] BannedWord param)
+        {
+            if (_isAnonymous)
+            {
+                return Result.Fail("演示模式，禁止操作");
+            }
+
+            if (string.IsNullOrWhiteSpace(param.Id))
+            {
+                param.Id = Guid.NewGuid().ToString();
+            }
+            else
+            {
+                var model = DbHelper.BannedWordStore.Get(param.Id);
+                if (model == null)
+                {
+                    throw new LogicException("违规词不存在");
+                }
+
+                model.CreateTime = model.CreateTime;
+            }
+
+            param.UpdateTime = DateTime.Now;
+
+            param.Keywords = param.Keywords.Where(c => !string.IsNullOrWhiteSpace(c))
+                .Select(c => c.Trim().ToLower())
+                .Distinct()
+                .ToList();
+
+            DbHelper.BannedWordStore.Save(param);
+
+            _taskService.ClearBannedWordsCache();
+
+            return Result.Ok();
+        }
+
+        /// <summary>
+        /// 删除违规词
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        [HttpDelete("banned-word/{id}")]
+        public Result BannedWordDelete(string id)
+        {
+            if (_isAnonymous)
+            {
+                return Result.Fail("演示模式，禁止操作");
+            }
+
+            var model = DbHelper.BannedWordStore.Get(id);
+            if (model == null)
+            {
+                throw new LogicException("违规词不存在");
+            }
+
+            if (model.Id == Constants.DEFAULT_BANNED_WORD_ID)
+            {
+                throw new LogicException("不能删除默认违规词");
+            }
+
+            DbHelper.BannedWordStore.Delete(id);
+
+            _taskService.ClearBannedWordsCache();
+
+            return Result.Ok();
+        }
+
         /// <summary>
         /// 获取系统配置
         /// </summary>

@@ -1,4 +1,5 @@
 ﻿using Midjourney.Infrastructure.Dto;
+using Midjourney.Infrastructure.Util;
 
 namespace Midjourney.Infrastructure.Services
 {
@@ -13,11 +14,28 @@ namespace Midjourney.Infrastructure.Services
         /// <returns></returns>
         public Dictionary<string, HashSet<string>> GetDomainCache();
 
-
         /// <summary>
         /// 清除领域缓存
         /// </summary>
         void ClearDomainCache();
+
+        /// <summary>
+        /// 违规词缓存
+        /// </summary>
+        /// <returns></returns>
+        Dictionary<string, HashSet<string>> GetBannedWordsCache();
+
+        /// <summary>
+        /// 清除违规词缓存
+        /// </summary>
+        void ClearBannedWordsCache();
+
+        /// <summary>
+        /// 验证违规词
+        /// </summary>
+        /// <param name="promptEn"></param>
+        /// <exception cref="BannedPromptException"></exception>
+        void CheckBanned(string promptEn);
 
         /// <summary>
         /// 提交 Imagine 任务。

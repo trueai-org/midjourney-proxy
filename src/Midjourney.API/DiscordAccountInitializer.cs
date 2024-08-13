@@ -3,8 +3,8 @@ using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.LoadBalancer;
 using Midjourney.Infrastructure.Services;
 using Midjourney.Infrastructure.Util;
+using MongoDB.Driver;
 using Serilog;
-using System.Text.RegularExpressions;
 using ILogger = Serilog.ILogger;
 
 namespace Midjourney.API
@@ -128,9 +128,81 @@ namespace Midjourney.API
                 DbHelper.DomainStore.Add(fullDomain);
             }
 
+            // 违规词
+            var bannedWord = DbHelper.BannedWordStore.Get(Constants.DEFAULT_BANNED_WORD_ID);
+            if (bannedWord == null)
+            {
+                bannedWord = new BannedWord
+                {
+                    Id = Constants.DEFAULT_BANNED_WORD_ID,
+                    Name = "默认违规词",
+                    Description = "",
+                    Sort = 0,
+                    Enable = true,
+                    Keywords = BannedPromptUtils.GetStrings()
+                };
+                DbHelper.BannedWordStore.Add(bannedWord);
+            }
+
+            // 自动迁移 task 数据
+            if (GlobalConfiguration.Setting.IsMongo && GlobalConfiguration.Setting.IsMongoAutoMigrate)
+            {
+                _ = Task.Run(() =>
+               {
+                   MongoAutoMigrate();
+               });
+            }
+
+
             _timer = new Timer(DoWork, null, TimeSpan.Zero, TimeSpan.FromMinutes(1));
 
             await Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// 自动迁移 task 数据
+        /// </summary>
+        public void MongoAutoMigrate()
+        {
+            try
+            {
+                LocalLock.TryLock("MongoAutoMigrate", TimeSpan.FromSeconds(10), () =>
+                {
+                    // 判断最后一条是否存在
+                    var success = 0;
+                    var last = DbHelper.TaskStore.GetCollection().Query().OrderByDescending(c => c.SubmitTime).FirstOrDefault();
+                    if (last != null)
+                    {
+                        var coll = MongoHelper.GetCollection<TaskInfo>();
+                        var lastMongo = coll.Find(c => c.Id == last.Id).FirstOrDefault();
+                        if (lastMongo == null)
+                        {
+                            // 迁移数据
+                            var taskIds = DbHelper.TaskStore.GetCollection().Query().Select(c => c.Id).ToList();
+                            foreach (var tid in taskIds)
+                            {
+                                var info = DbHelper.TaskStore.Get(tid);
+                                if (info != null)
+                                {
+                                    // 判断是否存在
+                                    var exist = coll.CountDocuments(c => c.Id == info.Id) > 0;
+                                    if (!exist)
+                                    {
+                                        coll.InsertOne(info);
+                                        success++;
+                                    }
+                                }
+                            }
+
+                            _logger.Information("MongoAutoMigrate success: {@0}", success);
+                        }
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "MongoAutoMigrate error");
+            }
         }
 
         private async void DoWork(object state)

@@ -25,6 +25,11 @@ namespace Midjourney.Infrastructure
         public bool IsMongo => !string.IsNullOrWhiteSpace(MongoDefaultConnectionString) && !string.IsNullOrWhiteSpace(MongoDefaultDatabase);
 
         /// <summary>
+        /// 是否启动本地数据自动迁移到 MongoDB
+        /// </summary>
+        public bool IsMongoAutoMigrate { get; set; }
+
+        /// <summary>
         /// Discord账号选择规则.
         /// </summary>
         public AccountChooseRule AccountChooseRule { get; set; } = AccountChooseRule.BestWaitIdle;

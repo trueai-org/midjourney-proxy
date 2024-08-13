@@ -37,6 +37,15 @@ namespace Midjourney.Infrastructure.Util
             BANNED_WORDS = lines.Where(line => !string.IsNullOrWhiteSpace(line)).ToList();
         }
 
+        /// <summary>
+        /// 获取禁用词列表
+        /// </summary>
+        /// <returns></returns>
+        public static List<string> GetStrings()
+        {
+            return BANNED_WORDS;
+        }
+
         public static void CheckBanned(string promptEn)
         {
             string finalPromptEn = promptEn.ToLower(CultureInfo.InvariantCulture);

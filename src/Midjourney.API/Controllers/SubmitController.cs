@@ -90,7 +90,7 @@ namespace Midjourney.API.Controllers
             string prompt = imagineDTO.Prompt;
             if (string.IsNullOrWhiteSpace(prompt))
             {
-                return BadRequest(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "prompt不能为空"));
+                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "prompt不能为空"));
             }
             prompt = prompt.Trim();
             var task = NewTask(imagineDTO);
@@ -100,11 +100,11 @@ namespace Midjourney.API.Controllers
             string promptEn = TranslatePrompt(prompt);
             try
             {
-                BannedPromptUtils.CheckBanned(promptEn);
+                _taskService.CheckBanned(promptEn);
             }
             catch (BannedPromptException e)
             {
-                return BadRequest(SubmitResultVO.Fail(ReturnCode.BANNED_PROMPT, "可能包含敏感词")
+                return Ok(SubmitResultVO.Fail(ReturnCode.BANNED_PROMPT, "可能包含敏感词")
                     .SetProperty("promptEn", promptEn)
                     .SetProperty("bannedWord", e.Message));
             }
@@ -119,7 +119,7 @@ namespace Midjourney.API.Controllers
             catch (Exception e)
             {
                 _logger.LogError(e, "base64格式转换异常");
-                return BadRequest(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "base64格式错误"));
+                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "base64格式错误"));
             }
 
             task.BotType = GetBotType(imagineDTO.BotType);
@@ -143,7 +143,7 @@ namespace Midjourney.API.Controllers
             string jobId = imagineDTO.JobId;
             if (string.IsNullOrWhiteSpace(jobId))
             {
-                return BadRequest(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "请填写 job id 或 url"));
+                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "请填写 job id 或 url"));
             }
             jobId = jobId.Trim();
 
@@ -154,7 +154,7 @@ namespace Midjourney.API.Controllers
 
             if (string.IsNullOrWhiteSpace(jobId))
             {
-                return BadRequest(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "job id 格式错误"));
+                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "job id 格式错误"));
             }
 
             var model = TaskHelper.Instance.TaskStore.Where(c => c.JobId == jobId && c.Status == TaskStatus.SUCCESS).FirstOrDefault();
@@ -167,7 +167,7 @@ namespace Midjourney.API.Controllers
 
             if (string.IsNullOrWhiteSpace(imagineDTO.AccountFilter?.InstanceId))
             {
-                return BadRequest(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "show 命令必须指定实例"));
+                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "show 命令必须指定实例"));
             }
 
             var task = NewTask(imagineDTO);
@@ -194,7 +194,7 @@ namespace Midjourney.API.Controllers
             var changeParams = ConvertUtils.ConvertChangeParams(simpleChangeDTO.Content);
             if (changeParams == null)
             {
-                return BadRequest(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "content参数错误"));
+                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "content 参数错误"));
             }
             var changeDTO = new SubmitChangeDTO
             {
@@ -217,11 +217,11 @@ namespace Midjourney.API.Controllers
         {
             if (string.IsNullOrWhiteSpace(changeDTO.TaskId))
             {
-                return BadRequest(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "taskId不能为空"));
+                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "taskId不能为空"));
             }
             if (!new[] { TaskAction.UPSCALE, TaskAction.VARIATION, TaskAction.REROLL }.Contains(changeDTO.Action))
             {
-                return BadRequest(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "action参数错误"));
+                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "action参数错误"));
             }
             string description = $"/up {changeDTO.TaskId}";
             if (changeDTO.Action == TaskAction.REROLL)
@@ -239,11 +239,11 @@ namespace Midjourney.API.Controllers
             }
             if (targetTask.Status != TaskStatus.SUCCESS)
             {
-                return BadRequest(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "关联任务状态错误"));
+                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "关联任务状态错误"));
             }
             if (!new[] { TaskAction.IMAGINE, TaskAction.VARIATION, TaskAction.REROLL, TaskAction.BLEND }.Contains(targetTask.Action.Value))
             {
-                return BadRequest(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "关联任务不允许执行变化"));
+                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "关联任务不允许执行变化"));
             }
             var task = NewTask(changeDTO);
 
@@ -287,7 +287,7 @@ namespace Midjourney.API.Controllers
         {
             if (string.IsNullOrWhiteSpace(describeDTO.Base64))
             {
-                return BadRequest(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "base64不能为空"));
+                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "base64不能为空"));
             }
 
             DataUrl dataUrl;
@@ -297,7 +297,7 @@ namespace Midjourney.API.Controllers
             }
             catch
             {
-                return BadRequest(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "base64格式错误"));
+                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "base64格式错误"));
             }
 
             var task = NewTask(describeDTO);
@@ -324,12 +324,12 @@ namespace Midjourney.API.Controllers
             List<string> base64Array = blendDTO.Base64Array;
             if (base64Array == null || base64Array.Count < 2 || base64Array.Count > 5)
             {
-                return BadRequest(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "base64List参数错误"));
+                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "base64List参数错误"));
             }
 
             if (blendDTO.Dimensions == null)
             {
-                return BadRequest(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "dimensions参数错误"));
+                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "dimensions参数错误"));
             }
 
             List<DataUrl> dataUrlList = new List<DataUrl>();
@@ -341,7 +341,7 @@ namespace Midjourney.API.Controllers
             {
                 _logger.LogError(e, "base64格式错误");
 
-                return BadRequest(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "base64格式错误"));
+                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "base64格式错误"));
             }
             var task = NewTask(blendDTO);
 
@@ -365,7 +365,7 @@ namespace Midjourney.API.Controllers
         {
             if (string.IsNullOrWhiteSpace(actionDTO.TaskId) || string.IsNullOrWhiteSpace(actionDTO.CustomId))
             {
-                return BadRequest(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "参数错误"));
+                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "参数错误"));
             }
 
             var targetTask = _taskStoreService.Get(actionDTO.TaskId);
@@ -376,7 +376,7 @@ namespace Midjourney.API.Controllers
 
             if (targetTask.Status != TaskStatus.SUCCESS)
             {
-                return BadRequest(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "关联任务状态错误"));
+                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "关联任务状态错误"));
             }
 
             var task = NewTask(actionDTO);
@@ -477,7 +477,7 @@ namespace Midjourney.API.Controllers
         {
             if (string.IsNullOrWhiteSpace(actionDTO.TaskId) || string.IsNullOrWhiteSpace(actionDTO.Prompt))
             {
-                return BadRequest(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "参数错误"));
+                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "参数错误"));
             }
 
             var targetTask = _taskStoreService.Get(actionDTO.TaskId);
@@ -492,11 +492,11 @@ namespace Midjourney.API.Controllers
             var promptEn = TranslatePrompt(prompt);
             try
             {
-                BannedPromptUtils.CheckBanned(promptEn);
+                _taskService.CheckBanned(promptEn);
             }
             catch (BannedPromptException e)
             {
-                return BadRequest(SubmitResultVO.Fail(ReturnCode.BANNED_PROMPT, "可能包含敏感词")
+                return Ok(SubmitResultVO.Fail(ReturnCode.BANNED_PROMPT, "可能包含敏感词")
                     .SetProperty("promptEn", promptEn)
                     .SetProperty("bannedWord", e.Message));
             }
@@ -510,7 +510,8 @@ namespace Midjourney.API.Controllers
             catch (Exception e)
             {
                 _logger.LogError(e, "base64格式转换异常");
-                return BadRequest(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "base64格式错误"));
+
+                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "base64格式错误"));
             }
 
             if (string.IsNullOrWhiteSpace(task.Prompt))

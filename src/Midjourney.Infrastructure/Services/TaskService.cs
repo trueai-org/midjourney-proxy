@@ -2,12 +2,15 @@
 using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.LoadBalancer;
+using Midjourney.Infrastructure.Models;
 using Midjourney.Infrastructure.Util;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using RestSharp;
 using Serilog;
 using System.Diagnostics;
+using System.Globalization;
+using System.Text.RegularExpressions;
 
 namespace Midjourney.Infrastructure.Services
 {
@@ -36,7 +39,7 @@ namespace Midjourney.Infrastructure.Services
             return _memoryCache.GetOrCreate("domains", c =>
             {
                 c.SetAbsoluteExpiration(TimeSpan.FromMinutes(30));
-                var list = DbHelper.DomainStore.GetAll();
+                var list = DbHelper.DomainStore.GetAll().Where(c => c.Enable);
 
                 var dict = new Dictionary<string, HashSet<string>>();
                 foreach (var item in list)
@@ -55,6 +58,62 @@ namespace Midjourney.Infrastructure.Services
         public void ClearDomainCache()
         {
             _memoryCache.Remove("domains");
+        }
+
+        /// <summary>
+        /// 违规词缓存
+        /// </summary>
+        /// <returns></returns>
+        public Dictionary<string, HashSet<string>> GetBannedWordsCache()
+        {
+            return _memoryCache.GetOrCreate("bannedWords", c =>
+            {
+                c.SetAbsoluteExpiration(TimeSpan.FromMinutes(30));
+                var list = DbHelper.BannedWordStore.GetAll().Where(c => c.Enable);
+
+                var dict = new Dictionary<string, HashSet<string>>();
+                foreach (var item in list)
+                {
+                    var keywords = item.Keywords.Where(c => !string.IsNullOrWhiteSpace(c)).Select(c => c.Trim()).Distinct().ToList();
+                    dict[item.Id] = new HashSet<string>(keywords);
+                }
+
+                return dict;
+            });
+        }
+
+        /// <summary>
+        /// 清除违规词缓存
+        /// </summary>
+        public void ClearBannedWordsCache()
+        {
+            _memoryCache.Remove("bannedWords");
+        }
+
+        /// <summary>
+        /// 验证违规词
+        /// </summary>
+        /// <param name="promptEn"></param>
+        /// <exception cref="BannedPromptException"></exception>
+        public void CheckBanned(string promptEn)
+        {
+            var finalPromptEn = promptEn.ToLower(CultureInfo.InvariantCulture);
+
+            var dic = GetBannedWordsCache();
+            foreach (var item in dic)
+            {
+                foreach (string word in item.Value)
+                {
+                    var regex = new Regex($"\\b{Regex.Escape(word)}\\b", RegexOptions.IgnoreCase);
+                    var match = regex.Match(finalPromptEn);
+                    if (match.Success)
+                    {
+                        int index = finalPromptEn.IndexOf(word, StringComparison.OrdinalIgnoreCase);
+
+                        throw new BannedPromptException(promptEn.Substring(index, word.Length));
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -1069,7 +1128,6 @@ namespace Midjourney.Infrastructure.Services
                                         TimeoutMinutes = accountJson.timeoutMinutes ?? 5, // 默认值 5
                                         Remark = accountJson.remark,
 
-
                                         DateCreated = DateTimeOffset.FromUnixTimeMilliseconds((long)accountJson.dateCreated).DateTime,
                                         Weight = 1, // 假设 weight 来自 properties
                                         WorkTime = null,
@@ -1104,7 +1162,6 @@ namespace Midjourney.Infrastructure.Services
 
                             Log.Information("账号迁移完成");
                         }
-
 
                         // 任务迁移
                         if (true)
@@ -1188,9 +1245,6 @@ namespace Midjourney.Infrastructure.Services
 
             await Task.CompletedTask;
         }
-
-
-
 
         /// <summary>
         /// 获取分页数据

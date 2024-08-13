@@ -30,6 +30,11 @@
         /// </summary>
         public const string DEFAULT_DOMAIN_FULL_ID = "full";
 
+        /// <summary>
+        /// 默认禁用词 ID
+        /// </summary>
+        public const string DEFAULT_BANNED_WORD_ID = "default";
+
         // -----------------
 
         /// <summary>
