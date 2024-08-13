@@ -83,14 +83,14 @@
 - 公益接口：<https://ai.trueai.org/mj>
 - 接口文档：<https://ai.trueai.org/swagger>
 - 接口密钥：`无`
-- CF 自动验证服务器地址：<http://47.76.110.222:8081>
-- CF 自动验证服务器文档：<http://47.76.110.222:8081/swagger>
+- CloudFlare 自动验证服务器地址：<http://47.76.110.222:8081>
+- CloudFlare 自动验证服务器文档：<http://47.76.110.222:8081/swagger>
 
-> CF 自动验证配置示例（免费自动过人机验证）
+> CloudFlare 自动验证配置示例（免费自动过人机验证）
 
 ```json
-"CaptchaServer": "http://47.76.110.222:8081", // CF 自动验证器地址
-"CaptchaNotifyHook": "https://ai.trueai.org" // 通知回调，默认为你的当前域名
+"CaptchaServer": "http://47.76.110.222:8081", // CloudFlare 自动验证器地址
+"CaptchaNotifyHook": "https://ai.trueai.org" // 通知回调，默认为你的域名
 ```
 
 ## 预览截图
