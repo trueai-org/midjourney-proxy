@@ -5,6 +5,7 @@ using Midjourney.Infrastructure.Services;
 using Midjourney.Infrastructure.Util;
 using MongoDB.Driver;
 using Serilog;
+
 using ILogger = Serilog.ILogger;
 
 namespace Midjourney.API
@@ -144,20 +145,88 @@ namespace Midjourney.API
                 DbHelper.BannedWordStore.Add(bannedWord);
             }
 
-            // 自动迁移 task 数据
-            if (GlobalConfiguration.Setting.IsMongo && GlobalConfiguration.Setting.IsMongoAutoMigrate)
+
+            if (GlobalConfiguration.Setting.IsMongo)
             {
                 _ = Task.Run(() =>
-               {
-                   MongoAutoMigrate();
-               });
-            }
+                {
+                    // 索引
+                    MongoIndexInit();
 
+                    // 自动迁移 task 数据
+                    if (GlobalConfiguration.Setting.IsMongoAutoMigrate)
+                    {
+                        MongoAutoMigrate();
+                    }
+                });
+            }
 
             _timer = new Timer(DoWork, null, TimeSpan.Zero, TimeSpan.FromMinutes(1));
 
             await Task.CompletedTask;
         }
+
+        /// <summary>
+        /// 初始化 mongodb 索引和最大数据限制
+        /// </summary>
+        public void MongoIndexInit()
+        {
+            try
+            {
+                if (!GlobalConfiguration.Setting.IsMongo)
+                {
+                    return;
+                }
+
+                LocalLock.TryLock("MongoIndexInit", TimeSpan.FromSeconds(10), () =>
+                {
+                    var database = MongoHelper.Instance;
+                    var collectionName = "task";
+                    var collectionExists = database.ListCollectionNames().ToList().Contains(collectionName);
+                    if (!collectionExists)
+                    {
+                        var options = new CreateCollectionOptions
+                        {
+                            Capped = true,
+                            MaxSize = 1024L * 1024L * 1024L * 1024L,  // 1 TB 的集合大小，实际上不受大小限制
+                            MaxDocuments = 1000000
+                        };
+                        database.CreateCollection("task", options);
+                    }
+
+                    var coll = MongoHelper.GetCollection<TaskInfo>();
+
+                    var index1 = new CreateIndexModel<TaskInfo>(Builders<TaskInfo>.IndexKeys.Descending(c => c.SubmitTime));
+                    coll.Indexes.CreateOne(index1);
+
+                    var index2 = new CreateIndexModel<TaskInfo>(Builders<TaskInfo>.IndexKeys.Ascending(c => c.PromptEn));
+                    coll.Indexes.CreateOne(index2);
+
+                    var index3 = new CreateIndexModel<TaskInfo>(Builders<TaskInfo>.IndexKeys.Descending(c => c.Prompt));
+                    coll.Indexes.CreateOne(index3);
+
+                    var index4 = new CreateIndexModel<TaskInfo>(Builders<TaskInfo>.IndexKeys.Ascending(c => c.InstanceId));
+                    coll.Indexes.CreateOne(index4);
+
+                    var index5 = new CreateIndexModel<TaskInfo>(Builders<TaskInfo>.IndexKeys.Ascending(c => c.Status));
+                    coll.Indexes.CreateOne(index5);
+
+                    var index6 = new CreateIndexModel<TaskInfo>(Builders<TaskInfo>.IndexKeys.Ascending(c => c.Action));
+                    coll.Indexes.CreateOne(index6);
+
+                    var index7 = new CreateIndexModel<TaskInfo>(Builders<TaskInfo>.IndexKeys.Ascending(c => c.Description));
+                    coll.Indexes.CreateOne(index7);
+
+                    var index8 = new CreateIndexModel<TaskInfo>(Builders<TaskInfo>.IndexKeys.Ascending(c => c.Description));
+                    coll.Indexes.CreateOne(index8);
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "初始化 mongodb 索引和最大数据限制异常");
+            }
+        }
+
 
         /// <summary>
         /// 自动迁移 task 数据
