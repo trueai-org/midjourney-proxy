@@ -474,7 +474,7 @@ https://discord.com/oauth2/authorize?client_id=xxx&permissions=8&scope=bot
 
 > 如果你的任务量未来可能超过 10 万，推荐 Docker 部署 MongoDB。
 
-> 注意：切换 MongoDB 历史任务不会自动迁移。
+> 注意：切换 MongoDB 历史任务可选择自动迁移。
 
 1. 启动容器 `xxx` 为你的密码
 2. 打开系统设置 -> 输入 MongoDB 连接字符串 `mongodb://mongoadmin:xxx@ip` 即可
