@@ -19,7 +19,7 @@ namespace Midjourney.Infrastructure
         public string MongoDefaultDatabase { get; set; }
 
         /// <summary>
-        /// 是否使用 MongoDB
+        /// 是否使用 
         /// </summary>
         [BsonIgnore]
         public bool IsMongo => !string.IsNullOrWhiteSpace(MongoDefaultConnectionString) && !string.IsNullOrWhiteSpace(MongoDefaultDatabase);
@@ -28,6 +28,11 @@ namespace Midjourney.Infrastructure
         /// 是否启动本地数据自动迁移到 MongoDB
         /// </summary>
         public bool IsMongoAutoMigrate { get; set; }
+
+        /// <summary>
+        /// 保存最大数据
+        /// </summary>
+        public int MaxCount { get; set; } = 500000;
 
         /// <summary>
         /// Discord账号选择规则.
@@ -206,6 +211,11 @@ namespace Midjourney.Infrastructure
         /// 开启 Niji 绘图
         /// </summary>
         public bool EnableNiji { get; set; } = true;
+
+        /// <summary>
+        /// 启用快速模式用完自动切换到慢速模式
+        /// </summary>
+        public bool EnableFastToRelax { get; set; }
 
         /// <summary>
         /// 并发数.

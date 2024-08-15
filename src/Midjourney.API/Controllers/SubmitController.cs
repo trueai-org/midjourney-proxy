@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.Dto;
+using Midjourney.Infrastructure.LoadBalancer;
 using Midjourney.Infrastructure.Services;
 using Midjourney.Infrastructure.Util;
 using System.Net;
@@ -29,6 +30,7 @@ namespace Midjourney.API.Controllers
         private readonly ILogger<SubmitController> _logger;
         private readonly string _ip;
 
+        private readonly DiscordLoadBalancer _discordLoadBalancer;
         private readonly GenerationSpeedMode? _mode;
         private readonly WorkContext _workContext;
 
@@ -39,7 +41,8 @@ namespace Midjourney.API.Controllers
             ILogger<SubmitController> logger,
             DiscordHelper discordHelper,
             IHttpContextAccessor httpContextAccessor,
-            WorkContext workContext)
+            WorkContext workContext,
+            DiscordLoadBalancer discordLoadBalancer)
         {
             _translateService = translateService;
             _taskStoreService = taskStoreService;
@@ -48,6 +51,7 @@ namespace Midjourney.API.Controllers
             _logger = logger;
             _discordHelper = discordHelper;
             _workContext = workContext;
+            _discordLoadBalancer = discordLoadBalancer;
 
             var user = _workContext.GetUser();
 
@@ -130,6 +134,79 @@ namespace Midjourney.API.Controllers
 
             var data = _taskService.SubmitImagine(task, dataUrls);
             return Ok(data);
+        }
+
+        ///// <summary>
+        ///// 同一个 url 1 小时内有效缓存
+        ///// </summary>
+        ///// <param name="imagineDTO"></param>
+        ///// <returns></returns>
+        //[HttpPost("upload-url")]
+        //public async Task<ActionResult<SubmitResultVO>> ImagineUrl([FromBody] SubmitUploadDto imagineDTO)
+        //{
+        //    var urlDic = new Dictionary<string, string>();
+
+        //    foreach (var url in imagineDTO.Urls)
+        //    {
+        //        var ff = new FileFetchHelper();
+        //        var res = await ff.FetchFileAsync(url);
+        //    }
+
+        //    return Ok();
+        //}
+
+        /// <summary>
+        /// 上传图片到 Discord
+        /// </summary>
+        /// <param name="imagineDTO"></param>
+        /// <returns></returns>
+        [HttpPost("upload-discord-images")]
+        public async Task<ActionResult<SubmitResultVO>> ImagineDiscordImages([FromBody] SubmitUploadDiscordDto imagineDTO)
+        {
+            var base64Array = imagineDTO.Base64Array ?? new List<string>();
+            if (base64Array.Count <= 0)
+            {
+                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "base64 参数错误"));
+            }
+
+            var dataUrls = new List<DataUrl>();
+            try
+            {
+                dataUrls = ConvertUtils.ConvertBase64Array(base64Array);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "base64格式转换异常");
+                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "base64格式错误"));
+            }
+
+            var instance = _discordLoadBalancer.ChooseInstance(imagineDTO.AccountFilter);
+            if (instance == null)
+            {
+                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "实例不存在或不可用"));
+            }
+
+            var imageUrls = new List<string>();
+            foreach (var dataUrl in dataUrls)
+            {
+                var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
+                var uploadResult = await instance.UploadAsync(taskFileName, dataUrl);
+                if (uploadResult.Code != ReturnCode.SUCCESS)
+                {
+                    return Ok(Message.Of(uploadResult.Code, uploadResult.Description));
+                }
+
+                var finalFileName = uploadResult.Description;
+                var sendImageResult = await instance.SendImageMessageAsync("upload image: " + finalFileName, finalFileName);
+                if (sendImageResult.Code != ReturnCode.SUCCESS)
+                {
+                    return Ok(Message.Of(sendImageResult.Code, sendImageResult.Description));
+                }
+                imageUrls.Add(sendImageResult.Description);
+            }
+
+            var info = SubmitResultVO.Of(ReturnCode.SUCCESS, "提交成功", imageUrls);
+            return Ok(info);
         }
 
         /// <summary>

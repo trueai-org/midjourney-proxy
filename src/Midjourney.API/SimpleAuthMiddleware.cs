@@ -51,7 +51,7 @@ namespace Midjourney.API
                 // 如果用户被禁用
                 if (user?.Status == EUserStatus.DISABLED)
                 {
-                    context.Response.StatusCode = 403;
+                    context.Response.StatusCode = 401;
                     await context.Response.WriteAsync("Forbidden: User is disabled.");
                     return;
                 }
@@ -61,7 +61,7 @@ namespace Midjourney.API
                 {
                     if (user?.Role != EUserRole.ADMIN)
                     {
-                        context.Response.StatusCode = 403;
+                        context.Response.StatusCode = 401;
                         await context.Response.WriteAsync("Forbidden: Admin access required.");
                         return;
                     }

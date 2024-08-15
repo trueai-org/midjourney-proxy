@@ -1,0 +1,281 @@
+﻿using MimeDetective;
+using System.Net;
+using System.Net.Http.Headers;
+
+namespace Midjourney.Infrastructure.Util
+{
+    /// <summary>
+    /// 文件抓取助手
+    /// 多种方案
+    /// 
+    /// 备选：https://github.com/samuelneff/MimeTypeMap
+    /// </summary>
+    public class FileFetchHelper
+    {
+        /// <summary>
+        /// 可抓取的文件文件后缀
+        /// </summary>
+        private string[] WHITE_EXTENSIONS = ["jpg", "png", "webp", "bmp", "gif", "pdf", "jpeg", "tiff", "svg", "heif", "heic"];
+
+        /// <summary>
+        /// 跳过的文件主机名
+        /// </summary>
+        private string[] WHITE_HOSTS = ["discordapp.com", "cdn.discordapp.com", "mj.run", "midjourney.com", "cdn.midjourney.com"];
+
+        private readonly HttpClient _httpClient;
+        private readonly long _maxFileSize;
+
+        /// <summary>
+        /// 文件抓取到本地
+        /// 默认：超时 15 分钟
+        /// </summary>
+        /// <param name="maxFileSize">默认最大文件大小为 128 MB</param>
+        public FileFetchHelper(long maxFileSize = 128 * 1024 * 1024)
+        {
+            WebProxy webProxy = null;
+            var proxy = GlobalConfiguration.Setting.Proxy;
+            if (!string.IsNullOrEmpty(proxy?.Host))
+            {
+                webProxy = new WebProxy(proxy.Host, proxy.Port ?? 80);
+            }
+            var hch = new HttpClientHandler
+            {
+                UseProxy = webProxy != null,
+                Proxy = webProxy
+            };
+            _httpClient = new HttpClient(hch)
+            {
+                Timeout = TimeSpan.FromMinutes(15),
+            };
+
+            _httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36");
+
+            _maxFileSize = maxFileSize;
+        }
+
+        /// <summary>
+        /// 异步获取文件
+        /// 如果不在白名单的后缀，则默认为 jpg
+        /// </summary>
+        /// <param name="url">https://mp-70570b1c-bf6a-40fe-9635-8e5c1901c65d.cdn.bspapp.com/temp/1723592564348_0.png</param>
+        /// <returns></returns>
+        public async Task<FetchFileResult> FetchFileAsync(string url)
+        {
+            if (string.IsNullOrWhiteSpace(url) || !Uri.IsWellFormedUriString(url, UriKind.Absolute))
+            {
+                return new FetchFileResult { Success = false, Msg = "Invalid URL" };
+            }
+
+            try
+            {
+                // 如果是白名单 host 则返回当前 url
+                var host = new Uri(url).Host;
+
+                // 官方域名不做转换
+                if (WHITE_HOSTS.Any(x => host.Contains(x)))
+                {
+                    return new FetchFileResult { Success = true, Msg = "White host" };
+                }
+
+                _httpClient.DefaultRequestHeaders.Host = host;
+
+                if (_maxFileSize > 0)
+                {
+                    _httpClient.DefaultRequestHeaders.Range = new RangeHeaderValue(0, _maxFileSize - 1);
+                }
+
+                var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    return new FetchFileResult { Success = false, Msg = $"Failed to fetch file. Status: {response.StatusCode}" };
+                }
+
+                var fileBytes = await response.Content.ReadAsByteArrayAsync();
+                if (fileBytes.Length >= _maxFileSize)
+                {
+                    return new FetchFileResult { Success = false, Msg = "File size exceeds limit." };
+                }
+
+                var contentType = response.Content.Headers.ContentType?.MediaType;
+                var fileName = GetFileNameFromUrlOrHeaders(url, response.Content.Headers);
+                var fileExtension = DetermineFileExtension(contentType, fileBytes, fileName);
+
+                return new FetchFileResult
+                {
+                    Success = true,
+                    FileName = fileName,
+                    FileBytes = fileBytes,
+                    ContentType = contentType,
+                    FileExtension = fileExtension
+                };
+            }
+            catch (Exception ex)
+            {
+                return new FetchFileResult { Success = false, Msg = $"Error fetching file: {ex.Message}" };
+            }
+        }
+
+        /// <summary>
+        /// 从 URL 或响应头获取文件名
+        /// </summary>
+        /// <param name="url"></param>
+        /// <param name="headers"></param>
+        /// <returns></returns>
+        private string GetFileNameFromUrlOrHeaders(string url, HttpContentHeaders headers)
+        {
+            var fileName = Path.GetFileName(new Uri(url).LocalPath);
+            if (string.IsNullOrWhiteSpace(fileName))
+            {
+                fileName = headers.ContentDisposition?.FileName?.Trim('"') ?? "unknown";
+            }
+
+            return fileName;
+        }
+
+        /// <summary>
+        /// 确定文件扩展名
+        /// </summary>
+        /// <param name="contentType"></param>
+        /// <param name="fileBytes"></param>
+        /// <param name="fileName"></param>
+        /// <returns></returns>
+        private string DetermineFileExtension(string contentType, byte[] fileBytes, string fileName)
+        {
+            contentType = contentType?.ToLowerInvariant();
+            fileName = fileName?.ToLowerInvariant();
+
+            var extension = string.Empty;
+
+            // 尝试从 MimeTypes 获取扩展名
+            if (!string.IsNullOrWhiteSpace(contentType))
+            {
+                extension = MimeTypes.GetMimeTypeExtensions(contentType)
+                    .Where(c => WHITE_EXTENSIONS.Contains(c))
+                    .FirstOrDefault();
+            }
+
+            // 使用 MimeKit + MimeDetective 根据文件内容推断 MIME 类型
+            if (string.IsNullOrEmpty(extension))
+            {
+                var inspector = new ContentInspectorBuilder()
+                {
+                    Definitions = MimeDetective.Definitions.Default.All()
+                }.Build();
+                var results = inspector.Inspect(fileBytes);
+                var mimeType = results.ByMimeType();
+                if (mimeType != null && mimeType.Length > 0)
+                {
+                    foreach (var item in mimeType)
+                    {
+                        if (MimeKit.MimeTypes.TryGetExtension(item.MimeType, out var ext) && WHITE_EXTENSIONS.Contains(ext?.Trim('.')))
+                        {
+                            extension = ext.Trim('.');
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // 使用 MimeKit 扩展名获取
+            if (string.IsNullOrWhiteSpace(extension) && !string.IsNullOrWhiteSpace(fileName))
+            {
+                var mimeType = MimeKit.MimeTypes.GetMimeType(fileName);
+                if (!string.IsNullOrWhiteSpace(mimeType))
+                {
+                    if (MimeKit.MimeTypes.TryGetExtension(mimeType, out var ext) && WHITE_EXTENSIONS.Contains(ext?.Trim('.')))
+                    {
+                        extension = ext;
+                    }
+                }
+            }
+
+            // 使用魔术数手动解析扩展名
+            if (string.IsNullOrEmpty(extension))
+            {
+                extension = GetFileExtensionFromMagicNumber(fileBytes);
+            }
+
+            // 使用文件名获取扩展名
+            if (string.IsNullOrEmpty(extension))
+            {
+                extension = Path.GetExtension(fileName);
+            }
+
+            if (!string.IsNullOrWhiteSpace(extension))
+            {
+                extension = extension.Trim('.');
+            }
+
+            return $".{(WHITE_EXTENSIONS.Contains(extension) ? extension : "jpg")}";
+        }
+
+        /// <summary>
+        /// 通过魔术数获取文件扩展名
+        /// </summary>
+        /// <param name="bytes"></param>
+        /// <returns></returns>
+        private string GetFileExtensionFromMagicNumber(byte[] bytes)
+        {
+            if (bytes.Length < 4)
+                return null;
+
+            // 检查文件头的前几个字节（魔术数）
+            if (bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47)
+                return CheckExtension("png");
+            if (bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF)
+                return CheckExtension("jpg");
+            if (bytes[0] == 0x47 && bytes[1] == 0x49 && bytes[2] == 0x46)
+                return CheckExtension("gif");
+            if (bytes[0] == 0x42 && bytes[1] == 0x4D)
+                return CheckExtension("bmp");
+            if ((bytes[0] == 0x49 && bytes[1] == 0x49 && bytes[2] == 0x2A && bytes[3] == 0x00) || (bytes[0] == 0x4D && bytes[1] == 0x4D && bytes[2] == 0x00 && bytes[3] == 0x2A))
+                return CheckExtension("tiff");
+            if (bytes.Length >= 12 && bytes[0] == 0x52 && bytes[1] == 0x49 && bytes[2] == 0x46 && bytes[3] == 0x46 && bytes[8] == 0x57 && bytes[9] == 0x45 && bytes[10] == 0x42 && bytes[11] == 0x50)
+                return CheckExtension("webp");
+            if (bytes.Length >= 6 && bytes[0] == 0x25 && bytes[1] == 0x50 && bytes[2] == 0x44 && bytes[3] == 0x46 && bytes[4] == 0x2D && bytes[5] == 0x31)
+                return CheckExtension("pdf");
+            if (bytes.Length >= 4 && bytes[0] == 0x3C && bytes[1] == 0x3F && bytes[2] == 0x78 && bytes[3] == 0x6D)
+                return CheckExtension("svg");
+            if (bytes.Length >= 12 && bytes[0] == 0x66 && bytes[1] == 0x74 && bytes[2] == 0x79 && bytes[3] == 0x70 && bytes[4] == 0x68 && bytes[5] == 0x65 && bytes[6] == 0x69 && bytes[7] == 0x63)
+                return CheckExtension("heic");
+            if (bytes.Length >= 12 && bytes[0] == 0x66 && bytes[1] == 0x74 && bytes[2] == 0x79 && bytes[3] == 0x70 && bytes[4] == 0x68 && bytes[5] == 0x65 && bytes[6] == 0x69 && bytes[7] == 0x66)
+                return CheckExtension("heif");
+
+            // 扩展其他类型的支持...
+
+            return null;
+        }
+
+        /// <summary>
+        /// 检查扩展名是否在白名单中
+        /// </summary>
+        /// <param name="extension"></param>
+        /// <returns></returns>
+        /// <exception cref="NotSupportedException"></exception>
+        private string CheckExtension(string extension)
+        {
+            if (WHITE_EXTENSIONS.Contains(extension))
+            {
+                return extension;
+            }
+
+            return null;
+        }
+    }
+
+    public class FetchFileResult
+    {
+        public bool Success { get; set; }
+
+        public string Msg { get; set; }
+
+        public string FileName { get; set; }
+
+        public byte[] FileBytes { get; set; }
+
+        public string ContentType { get; set; }
+
+        public string FileExtension { get; set; }
+    }
+}

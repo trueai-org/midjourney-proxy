@@ -145,7 +145,6 @@ namespace Midjourney.API
                 DbHelper.BannedWordStore.Add(bannedWord);
             }
 
-
             if (GlobalConfiguration.Setting.IsMongo)
             {
                 _ = Task.Run(() =>
@@ -180,19 +179,20 @@ namespace Midjourney.API
 
                 LocalLock.TryLock("MongoIndexInit", TimeSpan.FromSeconds(10), () =>
                 {
-                    var database = MongoHelper.Instance;
-                    var collectionName = "task";
-                    var collectionExists = database.ListCollectionNames().ToList().Contains(collectionName);
-                    if (!collectionExists)
-                    {
-                        var options = new CreateCollectionOptions
-                        {
-                            Capped = true,
-                            MaxSize = 1024L * 1024L * 1024L * 1024L,  // 1 TB 的集合大小，实际上不受大小限制
-                            MaxDocuments = 1000000
-                        };
-                        database.CreateCollection("task", options);
-                    }
+                    // 不能固定大小，因为无法修改数据
+                    //var database = MongoHelper.Instance;
+                    //var collectionName = "task";
+                    //var collectionExists = database.ListCollectionNames().ToList().Contains(collectionName);
+                    //if (!collectionExists)
+                    //{
+                    //    var options = new CreateCollectionOptions
+                    //    {
+                    //        Capped = true,
+                    //        MaxSize = 1024L * 1024L * 1024L * 1024L,  // 1 TB 的集合大小，实际上不受大小限制
+                    //        MaxDocuments = 1000000
+                    //    };
+                    //    database.CreateCollection("task", options);
+                    //}
 
                     var coll = MongoHelper.GetCollection<TaskInfo>();
 
@@ -226,7 +226,6 @@ namespace Midjourney.API
                 _logger.Error(ex, "初始化 mongodb 索引和最大数据限制异常");
             }
         }
-
 
         /// <summary>
         /// 自动迁移 task 数据
@@ -296,6 +295,8 @@ namespace Midjourney.API
 
                 await Initialize(configAccounts.ToArray());
 
+                CheckAndDeleteOldDocuments();
+
                 _logger.Information("例行检查完成");
             }
             catch (Exception ex)
@@ -305,6 +306,52 @@ namespace Midjourney.API
             finally
             {
                 _semaphoreSlim.Release();
+            }
+        }
+
+        /// <summary>
+        /// 检查并删除旧文档
+        /// </summary>
+        public static void CheckAndDeleteOldDocuments()
+        {
+            if (GlobalConfiguration.Setting.MaxCount <= 0)
+            {
+                return;
+            }
+
+            var maxCount = GlobalConfiguration.Setting.MaxCount;
+
+            // 如果超过 x 条，删除最早插入的数据
+            if (GlobalConfiguration.Setting.IsMongo)
+            {
+                var coll = MongoHelper.GetCollection<TaskInfo>();
+                var documentCount = coll.CountDocuments(Builders<TaskInfo>.Filter.Empty);
+                if (documentCount > maxCount)
+                {
+                    var documentsToDelete = documentCount - maxCount;
+                    var ids = coll.Find(c => true).SortBy(c => c.SubmitTime).Limit((int)documentsToDelete).Project(c => c.Id).ToList();
+                    if (ids.Any())
+                    {
+                        coll.DeleteMany(c => ids.Contains(c.Id));
+                    }
+                }
+            }
+            else
+            {
+                var documentCount = DbHelper.TaskStore.GetCollection().Query().Count();
+                if (documentCount > maxCount)
+                {
+                    var documentsToDelete = documentCount - maxCount;
+                    var ids = DbHelper.TaskStore.GetCollection().Query().OrderBy(c => c.SubmitTime)
+                        .Limit(documentsToDelete)
+                        .ToList()
+                        .Select(c => c.Id);
+
+                    if (ids.Any())
+                    {
+                        DbHelper.TaskStore.GetCollection().DeleteMany(c => ids.Contains(c.Id));
+                    }
+                }
             }
         }
 
@@ -374,10 +421,9 @@ namespace Midjourney.API
                             IsDescribe = configAccount.IsDescribe,
                             DayDrawLimit = configAccount.DayDrawLimit,
                             EnableMj = configAccount.EnableMj,
-                            EnableNiji = configAccount.EnableNiji
+                            EnableNiji = configAccount.EnableNiji,
+                            EnableFastToRelax = configAccount.EnableFastToRelax
                         };
-
-
 
                         db.Add(account);
                         accounts.Add(account);
@@ -535,7 +581,6 @@ namespace Midjourney.API
             model.CfHashUrl = null;
             model.CfUrl = null;
 
-
             // 验证 Interval
             if (param.Interval < 1.2m)
             {
@@ -562,6 +607,7 @@ namespace Midjourney.API
                 }
             }
 
+            model.EnableFastToRelax = param.EnableFastToRelax;
             model.IsBlend = param.IsBlend;
             model.IsDescribe = param.IsDescribe;
             model.DayDrawLimit = param.DayDrawLimit;
@@ -619,7 +665,6 @@ namespace Midjourney.API
             }
             catch
             {
-
             }
 
             UpdateAccount(account);
@@ -643,7 +688,6 @@ namespace Midjourney.API
             }
             catch
             {
-
             }
 
             var model = DbHelper.AccountStore.Get(id);

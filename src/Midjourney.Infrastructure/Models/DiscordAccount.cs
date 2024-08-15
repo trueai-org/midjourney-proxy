@@ -73,6 +73,11 @@ namespace Midjourney.Infrastructure.Models
         public bool? EnableNiji { get; set; }
 
         /// <summary>
+        /// 启用快速模式用完自动切换到慢速模式
+        /// </summary>
+        public bool? EnableFastToRelax { get; set; }
+
+        /// <summary>
         /// 是否锁定（暂时锁定，可能触发了人机验证）
         /// </summary>
         public bool Lock { get; set; }

@@ -56,14 +56,14 @@ namespace Midjourney.API.Controllers
             // 普通用户，无法登录管理后台，演示模式除外
             // 判断当前用户如果是普通用户
             // 并且不是匿名控制器时
-            if (user?.Role == EUserRole.USER)
+            if (user?.Role != EUserRole.ADMIN)
             {
                 var endpoint = context.HttpContext.GetEndpoint();
                 var allowAnonymous = endpoint?.Metadata?.GetMetadata<IAllowAnonymous>() != null;
                 if (!allowAnonymous && GlobalConfiguration.IsDemoMode != true)
                 {
-                    // 如果是普通用户, 并且不是匿名控制器，则返回 403
-                    context.HttpContext.Response.StatusCode = (int)HttpStatusCode.Forbidden;
+                    // 如果是普通用户, 并且不是匿名控制器，则返回 401
+                    context.HttpContext.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
                     context.HttpContext.Response.WriteAsync("Forbidden: User is not admin.");
                     return;
                 }
@@ -196,6 +196,12 @@ namespace Midjourney.API.Controllers
         [HttpPost("login")]
         public ActionResult Login([FromBody] string token)
         {
+            // 如果没有开启访客模式，则不允许匿名登录
+            if (GlobalConfiguration.IsDemoMode != true && string.IsNullOrWhiteSpace(token))
+            {
+                throw new LogicException("禁止登录");
+            }
+
             // 如果 DEMO 模式，并且没有传入 token，则返回空 token
             if (GlobalConfiguration.IsDemoMode == true && string.IsNullOrWhiteSpace(token))
             {
@@ -206,15 +212,15 @@ namespace Midjourney.API.Controllers
                 });
             }
 
-            // 如果开启访客
-            if (string.IsNullOrWhiteSpace(token) && GlobalConfiguration.Setting.EnableGuest)
-            {
-                return Ok(new
-                {
-                    code = 1,
-                    apiSecret = "",
-                });
-            }
+            //// 如果开启访客
+            //if (string.IsNullOrWhiteSpace(token) && GlobalConfiguration.Setting.EnableGuest)
+            //{
+            //    return Ok(new
+            //    {
+            //        code = 1,
+            //        apiSecret = "",
+            //    });
+            //}
 
             var user = DbHelper.UserStore.Single(u => u.Token == token);
             if (user == null)

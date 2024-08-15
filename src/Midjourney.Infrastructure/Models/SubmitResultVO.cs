@@ -23,7 +23,7 @@ namespace Midjourney.Infrastructure.Models
         /// 任务ID。
         /// </summary>
         [JsonProperty("result")]
-        public string Result { get; }
+        public dynamic Result { get; }
 
         /// <summary>
         /// 扩展字段。
@@ -31,7 +31,7 @@ namespace Midjourney.Infrastructure.Models
         [JsonProperty("properties")]
         public Dictionary<string, object> Properties { get; } = new Dictionary<string, object>();
 
-        private SubmitResultVO(int code, string description, string result = null)
+        private SubmitResultVO(int code, string description, dynamic result = null)
         {
             Code = code;
             Description = description;
@@ -70,6 +70,11 @@ namespace Midjourney.Infrastructure.Models
         /// 返回带自定义状态码、描述和任务ID的提交结果。
         /// </summary>
         public static SubmitResultVO Of(int code, string description, string result) => new SubmitResultVO(code, description, result);
+
+        /// <summary>
+        /// 返回带自定义状态码、描述和任务ID的提交结果。
+        /// </summary>
+        public static SubmitResultVO Of(int code, string description, List<string> result) => new SubmitResultVO(code, description, result);
 
         /// <summary>
         /// 返回失败的提交结果。
