@@ -13,19 +13,19 @@
 非常感谢赞助商和群友的帮助和支持，感谢诸多大佬对本项目提供了很多赞助和支持，万分感谢！
 
 <p>
-<a href="https://goapi.gptnb.ai" target="_blank">
+<a style="margin-right: 12px;display: inline-block;"style="margin-right: 12px;display: inline-block;" href="https://goapi.gptnb.ai" target="_blank">
 <img src="https://img.stqu.me/images/2023/06/26/favicon.png" style="width: 50px;border-radius: 4px;margin-right: 4px;">
 </a>
 
-<a href="https://d.goamzai.com" target="_blank">
+<a style="margin-right: 12px;display: inline-block;" href="https://d.goamzai.com" target="_blank">
 <img src="https://d.goamzai.com/logo.png" style="width: 50px;border-radius: 4px;margin-right: 4px;">
 </a>
 
-<a href="https://api.ephone.ai" target="_blank">
+<a style="margin-right: 12px;display: inline-block;" href="https://api.ephone.ai" target="_blank">
 <img src="https://api.iowen.cn/favicon/supernormal.com.png" alt="logo" style="width: 50px;border-radius: 4px;margin-right: 4px;">
 </a>
 
-<a href="https://api.mjdjourney.cn" target="_blank">
+<a style="margin-right: 12px;display: inline-block;" href="https://api.mjdjourney.cn" target="_blank">
 <img src="https://cdn.optiai.cn/file/upload/2024/08/05/1820477746069901312.png" alt="logo" style="width: 50px;border-radius: 4px;margin-right: 4px;">
 </a>
 </p>
