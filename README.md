@@ -10,9 +10,7 @@
 
 ## 赞助商
 
-非常感谢各位的帮助和支持，感谢诸多大佬对本项目提供了很多赞助和支持，万分感谢！
-
-非常感谢群友的支持和帮助和建议！
+非常感谢赞助商和群友的帮助和支持，感谢诸多大佬对本项目提供了很多赞助和支持，万分感谢！
 
 <p>
 <a href="https://goapi.gptnb.ai" target="_blank">
@@ -31,7 +29,6 @@
 <img src="https://cdn.optiai.cn/file/upload/2024/08/05/1820477746069901312.png" alt="logo" style="width: 50px;border-radius: 4px;margin-right: 4px;">
 </a>
 </p>
-
 
 ## 交流群
 
