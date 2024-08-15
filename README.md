@@ -12,9 +12,14 @@
 
 非常感谢各位的帮助和支持，感谢诸多大佬对本项目提供了很多赞助和支持，万分感谢！
 
-<a href="https://www.gptnb.com" align="center">
+<a href="https://goapi.gptnb.ai" align="center">
 <img src="https://img.stqu.me/images/2023/06/26/favicon.png" width="50px;"><br>
 <strong>GPTNB GOAPI</strong>
+</a>
+
+<a href="https://api.ephone.ai" target="_blank">
+<img src="https://api.iowen.cn/favicon/supernormal.com.png" alt="logo" style="width: 50px;border-radius: 4px;margin-right: 4px;">
+<strong>益丰 API</strong>
 </a>
 
 ## 交流群
