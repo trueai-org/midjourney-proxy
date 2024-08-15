@@ -74,7 +74,7 @@ namespace Midjourney.Infrastructure.Util
                 // 官方域名不做转换
                 if (WHITE_HOSTS.Any(x => host.Contains(x)))
                 {
-                    return new FetchFileResult { Success = true, Msg = "White host" };
+                    return new FetchFileResult { Success = true, Url = url, Msg = "White host" };
                 }
 
                 _httpClient.DefaultRequestHeaders.Host = host;
@@ -100,6 +100,15 @@ namespace Midjourney.Infrastructure.Util
                 var contentType = response.Content.Headers.ContentType?.MediaType;
                 var fileName = GetFileNameFromUrlOrHeaders(url, response.Content.Headers);
                 var fileExtension = DetermineFileExtension(contentType, fileBytes, fileName);
+
+                fileName = $"{Guid.NewGuid()}{fileExtension}";
+
+                // 再根据扩展名获取 MIME 类型
+                var mm = MimeKit.MimeTypes.GetMimeType(fileName);
+                if (!string.IsNullOrWhiteSpace(mm))
+                {
+                    contentType = mm;
+                }
 
                 return new FetchFileResult
                 {
@@ -277,5 +286,7 @@ namespace Midjourney.Infrastructure.Util
         public string ContentType { get; set; }
 
         public string FileExtension { get; set; }
+
+        public string Url { get; set; }
     }
 }

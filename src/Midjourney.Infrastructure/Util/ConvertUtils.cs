@@ -16,9 +16,32 @@ namespace Midjourney.Infrastructure.Util
         /// </summary>
         private const string CONTENT_REGEX_ACTION = @"\*\*(.*?)\*\* - (.*?)<@(\d+)> \((.*?)\)";
 
+
+        /// <summary>
+        /// 匹配完整的 prompt 内容
+        /// </summary>
+        private const string CONTENT_FULL = @"\*\*(.*)\*\*";
+
         public static ContentParseData ParseContent(string content)
         {
             return ParseContent(content, CONTENT_REGEX);
+        }
+
+        /// <summary>
+        /// 获取完整的 prompt 内容
+        /// </summary>
+        /// <param name="content"></param>
+        /// <returns></returns>
+        public static string GetFullPrompt(string content)
+        {
+            if (string.IsNullOrWhiteSpace(content))
+            {
+                return content;
+            }
+
+            // 获取 **...** 中的内容
+            var matcher = Regex.Match(content, CONTENT_FULL);
+            return matcher.Success ? matcher.Groups[1].Value : content;
         }
 
         public static ContentParseData ParseContent(string content, string regex)

@@ -1,5 +1,4 @@
-﻿using Discord;
-using Microsoft.Extensions.Caching.Memory;
+﻿using Microsoft.Extensions.Caching.Memory;
 using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.Services;
 using Midjourney.Infrastructure.Util;
@@ -10,6 +9,7 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace Midjourney.Infrastructure.LoadBalancer
 {
@@ -1180,6 +1180,80 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
             //// 处理转义字符引号等
             //return prompt.Replace("\\\"", "\"").Replace("\\'", "'").Replace("\\\\", "\\");
+
+            prompt = FormatUrls(prompt).ConfigureAwait(false).GetAwaiter().GetResult();
+
+            return prompt;
+        }
+
+
+
+        /// <summary>
+        /// 对 prompt 中含有 url 的进行转换为官方 url 处理
+        /// 同一个 url 1 小时内有效缓存
+        /// </summary>
+        /// <param name="prompt"></param>
+        /// <returns></returns>
+        public async Task<string> FormatUrls(string prompt)
+        {
+            if (string.IsNullOrWhiteSpace(prompt))
+            {
+                return prompt;
+            }
+
+            // 使用正则提取所有的 url
+            var urls = Regex.Matches(prompt, @"(https?|ftp|file)://[-A-Za-z0-9+&@#/%?=~_|!:,.;]+[-A-Za-z0-9+&@#/%=~_|]")
+                .Select(c => c.Value).Distinct().ToList();
+
+            if (urls?.Count > 0)
+            {
+                var urlDic = new Dictionary<string, string>();
+                foreach (var url in urls)
+                {
+                    // url 缓存默认 24 小时有效
+                    var okUrl = await _cache.GetOrCreateAsync($"tmp:{url}", async entry =>
+                    {
+                        entry.AbsoluteExpiration = DateTimeOffset.Now.AddHours(24);
+
+                        var ff = new FileFetchHelper();
+                        var res = await ff.FetchFileAsync(url);
+                        if (res.Success && !string.IsNullOrWhiteSpace(res.Url))
+                        {
+                            return res.Url;
+                        }
+                        else if (res.Success && res.FileBytes.Length > 0)
+                        {
+                            // 上传到 Discord 服务器
+                            var uploadResult = await UploadAsync(res.FileName, new DataUrl(res.ContentType, res.FileBytes));
+
+                            if (uploadResult.Code != ReturnCode.SUCCESS)
+                            {
+                                throw new LogicException(uploadResult.Code, uploadResult.Description);
+                            }
+
+                            var finalFileName = uploadResult.Description;
+                            var sendImageResult = await SendImageMessageAsync("upload image: " + finalFileName, finalFileName);
+                            if (sendImageResult.Code != ReturnCode.SUCCESS)
+                            {
+                                throw new LogicException(sendImageResult.Code, sendImageResult.Description);
+                            }
+
+                            return sendImageResult.Description;
+                        }
+
+                        throw new LogicException($"解析链接失败 {url}, {res?.Msg}");
+                    });
+
+                    urlDic[url] = okUrl;
+                }
+
+
+                // 替换 url
+                foreach (var item in urlDic)
+                {
+                    prompt = prompt.Replace(item.Key, item.Value);
+                }
+            }
 
             return prompt;
         }

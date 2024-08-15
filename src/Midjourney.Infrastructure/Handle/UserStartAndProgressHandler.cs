@@ -35,14 +35,32 @@ namespace Midjourney.Infrastructure.Handle
             var content = GetMessageContent(message);
             var parseData = ConvertUtils.ParseContent(content);
 
+
             if (messageType == MessageType.CREATE && !string.IsNullOrWhiteSpace(msgId))
             {
+                var fullPrompt = GetFullPrompt(message);
+
                 // 任务开始
                 var task = instance.GetRunningTaskByMessageId(msgId);
                 if (task == null && !string.IsNullOrWhiteSpace(message.InteractionMetadata?.Id))
                 {
-                    task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) &&
-                    c.InteractionMetadataId == message.InteractionMetadata.Id).FirstOrDefault();
+                    task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && c.InteractionMetadataId == message.InteractionMetadata.Id).FirstOrDefault();
+
+                    // 如果通过 meta id 找到任务，但是 full prompt 为空，则更新 full prompt
+                    if (task != null && string.IsNullOrWhiteSpace(task.PromptFull))
+                    {
+                        task.PromptFull = fullPrompt;
+                    }
+                }
+
+                var botType = GetBotType(message);
+                if (task == null)
+                {
+                    if (!string.IsNullOrWhiteSpace(fullPrompt))
+                    {
+                        task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && c.BotType == botType && c.PromptFull == fullPrompt)
+                        .OrderBy(c => c.StartTime).FirstOrDefault();
+                    }
                 }
 
                 if (task == null || task.Status == TaskStatus.SUCCESS || task.Status == TaskStatus.FAILURE)
@@ -50,7 +68,7 @@ namespace Midjourney.Infrastructure.Handle
                     return;
                 }
 
-                task.MessageId = msgId;
+                //task.MessageId = msgId;
 
                 if (!task.MessageIds.Contains(msgId))
                     task.MessageIds.Add(msgId);
@@ -72,15 +90,28 @@ namespace Midjourney.Infrastructure.Handle
                 if (parseData.Status == "Stopped")
                     return;
 
-                var task = instance.FindRunningTask(c =>
-                (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED)
-                && c.MessageId == msgId).FirstOrDefault();
+                var fullPrompt = GetFullPrompt(message);
 
+                var task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && c.MessageId == msgId).FirstOrDefault();
                 if (task == null && !string.IsNullOrWhiteSpace(message.InteractionMetadata?.Id))
                 {
-                    task = instance.FindRunningTask(c =>
-                    (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED)
-                    && c.InteractionMetadataId == message.InteractionMetadata.Id).FirstOrDefault();
+                    task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && c.InteractionMetadataId == message.InteractionMetadata.Id).FirstOrDefault();
+
+                    // 如果通过 meta id 找到任务，但是 full prompt 为空，则更新 full prompt
+                    if (task != null && string.IsNullOrWhiteSpace(task.PromptFull))
+                    {
+                        task.PromptFull = fullPrompt;
+                    }
+                }
+
+                var botType = GetBotType(message);
+                if (task == null)
+                {
+                    if (!string.IsNullOrWhiteSpace(fullPrompt))
+                    {
+                        task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && c.BotType == botType && c.PromptFull == fullPrompt)
+                        .OrderBy(c => c.StartTime).FirstOrDefault();
+                    }
                 }
 
                 if (task == null || task.Status == TaskStatus.SUCCESS || task.Status == TaskStatus.FAILURE)
@@ -88,7 +119,7 @@ namespace Midjourney.Infrastructure.Handle
                     return;
                 }
 
-                task.MessageId = msgId;
+                //task.MessageId = msgId;
 
                 if (!task.MessageIds.Contains(msgId))
                     task.MessageIds.Add(msgId);

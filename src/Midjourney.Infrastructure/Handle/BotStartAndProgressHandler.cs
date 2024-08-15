@@ -39,10 +39,27 @@ namespace Midjourney.Infrastructure.Handle
             {
                 // 任务开始
                 var task = instance.GetRunningTaskByMessageId(msgId);
+                var fullPrompt = GetFullPrompt(message);
+
                 if (task == null && message is SocketUserMessage umsg && umsg != null && umsg.InteractionMetadata?.Id != null)
                 {
-                    task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) &&
-                    c.InteractionMetadataId == umsg.InteractionMetadata.Id.ToString()).FirstOrDefault();
+                    task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && c.InteractionMetadataId == umsg.InteractionMetadata.Id.ToString()).FirstOrDefault();
+
+                    // 如果通过 meta id 找到任务，但是 full prompt 为空，则更新 full prompt
+                    if (task != null && string.IsNullOrWhiteSpace(task.PromptFull))
+                    {
+                        task.PromptFull = fullPrompt;
+                    }
+                }
+
+                var botType = GetBotType(message);
+                if (task == null)
+                {
+                    if (!string.IsNullOrWhiteSpace(fullPrompt))
+                    {
+                        task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && c.BotType == botType && c.PromptFull == fullPrompt)
+                        .OrderBy(c => c.StartTime).FirstOrDefault();
+                    }
                 }
 
                 if (task == null || task.Status == TaskStatus.SUCCESS || task.Status == TaskStatus.FAILURE)
@@ -50,7 +67,7 @@ namespace Midjourney.Infrastructure.Handle
                     return;
                 }
 
-                task.MessageId = msgId;
+                //task.MessageId = msgId;
 
                 if (!task.MessageIds.Contains(msgId))
                     task.MessageIds.Add(msgId);
@@ -80,12 +97,23 @@ namespace Midjourney.Infrastructure.Handle
                     c.InteractionMetadataId == umsg.InteractionMetadata.Id.ToString()).FirstOrDefault();
                 }
 
+                var botType = GetBotType(message);
+                if (task == null)
+                {
+                    var fullPrompt = GetFullPrompt(message);
+                    if (!string.IsNullOrWhiteSpace(fullPrompt))
+                    {
+                        task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && c.BotType == botType && c.PromptFull == fullPrompt)
+                        .OrderBy(c => c.StartTime).FirstOrDefault();
+                    }
+                }
+
                 if (task == null || task.Status == TaskStatus.SUCCESS || task.Status == TaskStatus.FAILURE)
                 {
                     return;
                 }
 
-                task.MessageId = msgId;
+                //task.MessageId = msgId;
 
                 if (!task.MessageIds.Contains(msgId))
                     task.MessageIds.Add(msgId);

@@ -972,7 +972,7 @@ namespace Midjourney.Infrastructure
                         {
                             // 设置 none 对应的任务 id
                             var task = _discordInstance.GetRunningTaskByNonce(nonce);
-                            if (task != null && task.Status != TaskStatus.SUCCESS)
+                            if (task != null && task.Status != TaskStatus.SUCCESS && task.Status != TaskStatus.FAILURE)
                             {
                                 if (isPrivareChannel)
                                 {
@@ -1014,6 +1014,15 @@ namespace Midjourney.Infrastructure
                                     if (messageType == MessageType.CREATE)
                                     {
                                         task.MessageId = id;
+
+                                        // 设置 prompt 完整词
+                                        if (!string.IsNullOrWhiteSpace(contentStr) && contentStr.Contains("(Waiting to start)"))
+                                        {
+                                            if (string.IsNullOrWhiteSpace(task.PromptFull))
+                                            {
+                                                task.PromptFull = ConvertUtils.GetFullPrompt(contentStr);
+                                            }
+                                        }
                                     }
 
                                     // 如果任务是 remix 自动提交任务

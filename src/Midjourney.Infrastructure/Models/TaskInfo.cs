@@ -103,6 +103,11 @@ namespace Midjourney.Infrastructure.Models
         public string PromptEn { get; set; }
 
         /// <summary>
+        /// 提示词（由 mj 返回的完整提示词）
+        /// </summary>
+        public string PromptFull { get; set; }
+
+        /// <summary>
         /// 任务描述。
         /// </summary>
         public string Description { get; set; }

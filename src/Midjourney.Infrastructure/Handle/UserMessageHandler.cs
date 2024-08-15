@@ -29,6 +29,11 @@ namespace Midjourney.Infrastructure.Handle
             return message.Content;
         }
 
+        protected string GetFullPrompt(EventData message)
+        {
+            return ConvertUtils.GetFullPrompt(message.Content);
+        }
+
         protected string GetMessageId(EventData message)
         {
             return message.Id.ToString();
@@ -80,24 +85,37 @@ namespace Midjourney.Infrastructure.Handle
                 return;
 
             var msgId = GetMessageId(message);
+            var fullPrompt = GetFullPrompt(message);
 
             string imageUrl = GetImageUrl(message);
             string messageHash = discordHelper.GetMessageHash(imageUrl);
 
-            var task = instance.FindRunningTask(c =>
-            (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED)
-            && c.MessageId == msgId).FirstOrDefault();
-
+            var task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && c.MessageId == msgId).FirstOrDefault();
             if (task == null && !string.IsNullOrWhiteSpace(message.InteractionMetadata?.Id))
             {
-                task = instance.FindRunningTask(c =>
-                (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED)
-                && c.InteractionMetadataId == message.InteractionMetadata.Id).FirstOrDefault();
+                task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && c.InteractionMetadataId == message.InteractionMetadata.Id).FirstOrDefault();
+
+                // 如果通过 meta id 找到任务，但是 full prompt 为空，则更新 full prompt
+                if (task != null && string.IsNullOrWhiteSpace(task.PromptFull))
+                {
+                    task.PromptFull = fullPrompt;
+                }
             }
 
             // 如果依然找不到任务，可能是 NIJI 任务
             // 不判断 && botType == EBotType.NIJI_JOURNEY
             var botType = GetBotType(message);
+
+            // 优先使用 full prompt 进行匹配
+            if (task == null)
+            {
+                if (!string.IsNullOrWhiteSpace(fullPrompt))
+                {
+                    task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && c.BotType == botType && c.PromptFull == fullPrompt)
+                    .OrderBy(c => c.StartTime).FirstOrDefault();
+                }
+            }
+
             if (task == null)
             {
                 var prompt = finalPrompt.FormatPrompt();
@@ -121,6 +139,7 @@ namespace Midjourney.Infrastructure.Handle
                         .OrderBy(c => c.StartTime).FirstOrDefault();
                 }
             }
+
 
             // 如果依然找不到任务，保留 prompt link 进行匹配
             if (task == null)

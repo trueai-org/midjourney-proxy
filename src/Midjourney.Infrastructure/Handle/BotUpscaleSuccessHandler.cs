@@ -55,18 +55,32 @@ namespace Midjourney.Infrastructure.Handle
             string messageHash = discordHelper.GetMessageHash(imageUrl);
 
             var msgId = GetMessageId(message);
-            var task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) &&
-            c.MessageId == msgId).FirstOrDefault();
+            var fullPrompt = GetFullPrompt(message);
+            var task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && c.MessageId == msgId).FirstOrDefault();
 
             if (task == null && message is SocketUserMessage umsg && umsg != null && umsg.InteractionMetadata?.Id != null)
             {
-                task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) &&
-                c.InteractionMetadataId == umsg.InteractionMetadata.Id.ToString()).FirstOrDefault();
+                task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && c.InteractionMetadataId == umsg.InteractionMetadata.Id.ToString()).FirstOrDefault();
+
+                // 如果通过 meta id 找到任务，但是 full prompt 为空，则更新 full prompt
+                if (task != null && string.IsNullOrWhiteSpace(task.PromptFull))
+                {
+                    task.PromptFull = fullPrompt;
+                }
             }
 
             // 如果依然找不到任务，可能是 NIJI 任务
             // 不判断 && botType == EBotType.NIJI_JOURNEY
             var botType = GetBotType(message);
+            if (task == null)
+            {
+                if (!string.IsNullOrWhiteSpace(fullPrompt))
+                {
+                    task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && c.BotType == botType && c.PromptFull == fullPrompt)
+                    .OrderBy(c => c.StartTime).FirstOrDefault();
+                }
+            }
+
             if (task == null)
             {
                 var prompt = finalPrompt.FormatPrompt();

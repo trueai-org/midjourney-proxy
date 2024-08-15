@@ -136,25 +136,6 @@ namespace Midjourney.API.Controllers
             return Ok(data);
         }
 
-        ///// <summary>
-        ///// 同一个 url 1 小时内有效缓存
-        ///// </summary>
-        ///// <param name="imagineDTO"></param>
-        ///// <returns></returns>
-        //[HttpPost("upload-url")]
-        //public async Task<ActionResult<SubmitResultVO>> ImagineUrl([FromBody] SubmitUploadDto imagineDTO)
-        //{
-        //    var urlDic = new Dictionary<string, string>();
-
-        //    foreach (var url in imagineDTO.Urls)
-        //    {
-        //        var ff = new FileFetchHelper();
-        //        var res = await ff.FetchFileAsync(url);
-        //    }
-
-        //    return Ok();
-        //}
-
         /// <summary>
         /// 上传图片到 Discord
         /// </summary>
