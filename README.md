@@ -8,7 +8,14 @@
 
 功能最全、最安全、占用内存最小（100MB+）的 Midjourney Proxy API ~~
 
+## 赞助商
+
 非常感谢各位的帮助和支持，感谢诸多大佬对本项目提供了很多赞助和支持，万分感谢！
+
+<a href="https://www.gptnb.com" align="center">
+<img src="https://img.stqu.me/images/2023/06/26/favicon.png" width="50px;"><br>
+<strong>GPTNB GOAPI</strong>
+</a>
 
 ## 交流群
 
@@ -17,6 +24,7 @@
 [Midjourney公益群](https://qm.qq.com/q/k88clCkyMS)（QQ群：565908696）
 
 <img src="./docs/screenshots/565908696.png" alt="欢迎" width="360"/>
+
 
 ## 主要功能
 
