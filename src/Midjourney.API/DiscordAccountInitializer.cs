@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Options;
 using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.LoadBalancer;
 using Midjourney.Infrastructure.Services;
@@ -23,15 +24,18 @@ namespace Midjourney.API
         private readonly ILogger _logger;
         private readonly IConfiguration _configuration;
 
+        private readonly IMemoryCache _memoryCache;
         private readonly SemaphoreSlim _semaphoreSlim = new(1, 1);
         private Timer _timer;
+
 
         public DiscordAccountInitializer(
             DiscordLoadBalancer discordLoadBalancer,
             DiscordAccountHelper discordAccountHelper,
             IConfiguration configuration,
             IOptions<ProxyProperties> options,
-            ITaskService taskService)
+            ITaskService taskService,
+            IMemoryCache memoryCache)
         {
             _discordLoadBalancer = discordLoadBalancer;
             _discordAccountHelper = discordAccountHelper;
@@ -39,6 +43,7 @@ namespace Midjourney.API
             _taskService = taskService;
             _configuration = configuration;
             _logger = Log.Logger;
+            _memoryCache = memoryCache;
         }
 
         /// <summary>
@@ -361,7 +366,7 @@ namespace Midjourney.API
         /// <returns></returns>
         public async Task Initialize(params DiscordAccountConfig[] appends)
         {
-            var isLock = await AsyncLocalLock.TryLockAsync("Initialize", TimeSpan.FromSeconds(10), async () =>
+            var isLock = await AsyncLocalLock.TryLockAsync("Initialize:all", TimeSpan.FromSeconds(10), async () =>
             {
                 var db = DbHelper.AccountStore;
                 var accounts = db.GetAll().OrderBy(c => c.Sort).ToList();
@@ -378,77 +383,70 @@ namespace Midjourney.API
                     var account = accounts.FirstOrDefault(c => c.ChannelId == configAccount.ChannelId);
                     if (account == null)
                     {
-                        if (configAccount.Interval < 1.2m)
-                        {
-                            configAccount.Interval = 1.2m;
-                        }
-
-                        account = new DiscordAccount
-                        {
-                            Id = configAccount.ChannelId,
-                            ChannelId = configAccount.ChannelId,
-
-                            GuildId = configAccount.GuildId,
-                            UserToken = configAccount.UserToken,
-                            UserAgent = string.IsNullOrEmpty(configAccount.UserAgent) ? Constants.DEFAULT_DISCORD_USER_AGENT : configAccount.UserAgent,
-                            Enable = configAccount.Enable,
-                            CoreSize = configAccount.CoreSize,
-                            QueueSize = configAccount.QueueSize,
-                            BotToken = configAccount.BotToken,
-                            TimeoutMinutes = configAccount.TimeoutMinutes,
-                            PrivateChannelId = configAccount.PrivateChannelId,
-                            NijiBotChannelId = configAccount.NijiBotChannelId,
-                            MaxQueueSize = configAccount.MaxQueueSize,
-                            Mode = configAccount.Mode,
-                            AllowModes = configAccount.AllowModes,
-                            Weight = configAccount.Weight,
-                            Remark = configAccount.Remark,
-                            RemixAutoSubmit = configAccount.RemixAutoSubmit,
-                            Sponsor = configAccount.Sponsor,
-                            Sort = configAccount.Sort,
-                            Interval = configAccount.Interval,
-
-                            AfterIntervalMax = configAccount.AfterIntervalMax,
-                            AfterIntervalMin = configAccount.AfterIntervalMin,
-                            WorkTime = configAccount.WorkTime,
-                            FishingTime = configAccount.FishingTime,
-                            PermanentInvitationLink = configAccount.PermanentInvitationLink,
-
-                            SubChannels = configAccount.SubChannels,
-                            IsBlend = configAccount.IsBlend,
-                            VerticalDomainIds = configAccount.VerticalDomainIds,
-                            IsVerticalDomain = configAccount.IsVerticalDomain,
-                            IsDescribe = configAccount.IsDescribe,
-                            DayDrawLimit = configAccount.DayDrawLimit,
-                            EnableMj = configAccount.EnableMj,
-                            EnableNiji = configAccount.EnableNiji,
-                            EnableFastToRelax = configAccount.EnableFastToRelax
-                        };
+                        account = DiscordAccount.Create(configAccount);
 
                         db.Add(account);
                         accounts.Add(account);
                     }
                 }
 
-                var instances = _discordLoadBalancer.GetAllInstances();
                 foreach (var account in accounts)
                 {
-                    if (account.Enable != true)
-                    {
-                        continue;
-                    }
-
-                    IDiscordInstance disInstance = null;
                     try
                     {
-                        disInstance = _discordLoadBalancer.GetDiscordInstance(account.ChannelId);
+                        await StartCheckAccount(account);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Error(ex, "Account({@0}) init fail, disabled: {@1}", account.GetDisplay(), ex.Message);
 
-                        // 判断是否在工作时间内
-                        var now = new DateTimeOffset(DateTime.Now.Date).ToUnixTimeMilliseconds();
-                        var dayCount = (int)TaskHelper.Instance.TaskStore.Count(c => c.InstanceId == account.ChannelId && c.SubmitTime >= now);
+                        account.Enable = false;
+                        account.DisabledReason = "初始化失败";
 
-                        if (DateTime.Now.IsInWorkTime(account.WorkTime)
-                        && (account.DayDrawLimit < 0 || dayCount < account.DayDrawLimit))
+                        db.Update(account);
+                    }
+                }
+
+                var enableInstanceIds = _discordLoadBalancer.GetAllInstances()
+                .Where(instance => instance.IsAlive)
+                .Select(instance => instance.GetInstanceId)
+                .ToHashSet();
+
+                _logger.Information("当前可用账号数 [{@0}] - {@1}", enableInstanceIds.Count, string.Join(", ", enableInstanceIds));
+            });
+            if (!isLock)
+            {
+                throw new LogicException("初始化中，请稍后重拾");
+            }
+
+            await Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// 检查并启动连接
+        /// </summary>
+        public async Task StartCheckAccount(DiscordAccount account)
+        {
+            if (account == null || account.Enable != true)
+            {
+                return;
+            }
+
+            var isLock = await AsyncLocalLock.TryLockAsync($"Initialize:{account.Id}", TimeSpan.FromSeconds(5), async () =>
+            {
+                var db = DbHelper.AccountStore;
+                IDiscordInstance disInstance = null;
+                try
+                {
+                    disInstance = _discordLoadBalancer.GetDiscordInstance(account.ChannelId);
+
+                    // 判断是否在工作时间内
+                    var now = new DateTimeOffset(DateTime.Now.Date).ToUnixTimeMilliseconds();
+                    var dayCount = (int)TaskHelper.Instance.TaskStore.Count(c => c.InstanceId == account.ChannelId && c.SubmitTime >= now);
+
+                    if (DateTime.Now.IsInWorkTime(account.WorkTime))
+                    {
+                        if (account.DayDrawLimit < 0 || dayCount < account.DayDrawLimit)
                         {
                             if (disInstance == null)
                             {
@@ -494,11 +492,22 @@ namespace Midjourney.API
                                     account.SubChannelValues.Clear();
                                 }
 
+                                // 快速时长校验
+                                // 如果 fastTime <= 0.1，则标记为快速用完
+                                var fastTime = account.FastTimeRemaining?.ToString()?.Split('/')?.FirstOrDefault()?.Trim();
+                                if (!string.IsNullOrWhiteSpace(fastTime) && double.TryParse(fastTime, out var ftime) && ftime <= 0.1)
+                                {
+                                    account.FastExhausted = true;
+                                }
+                                else
+                                {
+                                    account.FastExhausted = false;
+                                }
+
                                 account.DayDrawCount = dayCount;
                                 db.Update(account);
 
                                 disInstance = await _discordAccountHelper.CreateDiscordInstance(account);
-                                instances.Add(disInstance);
                                 _discordLoadBalancer.AddInstance(disInstance);
 
                                 // 这里应该等待初始化完成，并获取用户信息验证，获取用户成功后设置为可用状态
@@ -509,36 +518,84 @@ namespace Midjourney.API
                                 await _taskService.InfoSetting(account.ChannelId);
                             }
                         }
-                        else
-                        {
-                            // 非工作时间内，如果存在实例则释放
-                            if (disInstance != null)
-                            {
-                                _discordLoadBalancer.RemoveInstance(disInstance);
 
-                                disInstance.Dispose();
+                        // 快速用完时
+                        if (disInstance?.Account != null && disInstance.Account.FastExhausted)
+                        {
+                            // 每 3~6 小时，和启动时检查账号快速用量是否用完了
+                            if (disInstance.Account.InfoUpdated == null || disInstance.Account.InfoUpdated.Value.AddMinutes(5) < DateTime.Now)
+                            {
+                                // 检查账号快速用量是否用完了
+                                // 随机 3~6 小时，执行一次
+
+                                var key = $"fast_exhausted_{account.ChannelId}";
+                                await _memoryCache.GetOrCreateAsync(key, async c =>
+                                {
+                                    try
+                                    {
+                                        // 随机 3~6 小时
+                                        var random = new Random();
+                                        var minutes = random.Next(180, 360);
+                                        c.SetAbsoluteExpiration(TimeSpan.FromMinutes(minutes));
+
+                                        await _taskService.InfoSetting(account.ChannelId);
+
+                                        return true;
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        _logger.Error(ex, "同步 info 异常 {@0}", account.ChannelId);
+                                    }
+
+                                    return false;
+                                });
+                            }
+
+                            // 判断 info 检查时间是否在 5 分钟内
+                            if (disInstance.Account.InfoUpdated != null && disInstance.Account.InfoUpdated.Value.AddMinutes(5) >= DateTime.Now)
+                            {
+                                // 提取 fastime
+                                // 如果检查完之后，快速超过 1 小时，则标记为快速未用完
+                                var fastTime = disInstance.Account.FastTimeRemaining?.ToString()?.Split('/')?.FirstOrDefault()?.Trim();
+                                if (!string.IsNullOrWhiteSpace(fastTime) && double.TryParse(fastTime, out var ftime) && ftime >= 1)
+                                {
+                                    // 标记未用完快速
+                                    disInstance.Account.FastExhausted = false;
+                                    db.Update(disInstance.Account);
+
+                                    disInstance.ClearAccountCache(account.Id);
+
+                                    _logger.Information("Account({@0}) fast exhausted, reset", account.ChannelId);
+                                }
                             }
                         }
                     }
-                    catch (Exception ex)
+                    else
                     {
-                        _logger.Error("Account({@0}) init fail, disabled: {@1}", account.GetDisplay(), ex.Message);
+                        // 非工作时间内，如果存在实例则释放
+                        if (disInstance != null)
+                        {
+                            _discordLoadBalancer.RemoveInstance(disInstance);
 
-                        account.Enable = false;
-                        account.DisabledReason = "初始化失败";
-
-                        db.Update(account);
-
-                        disInstance?.ClearAccountCache(account.Id);
+                            disInstance.Dispose();
+                        }
                     }
                 }
+                catch (Exception ex)
+                {
+                    _logger.Error("Account({@0}) init fail, disabled: {@1}", account.GetDisplay(), ex.Message);
 
-                var enableInstanceIds = instances.Where(instance => instance.IsAlive)
-                    .Select(instance => instance.GetInstanceId)
-                    .ToHashSet();
+                    account.Enable = false;
+                    account.DisabledReason = "初始化失败";
 
-                _logger.Information("当前可用账号数 [{@0}] - {@1}", enableInstanceIds.Count, string.Join(", ", enableInstanceIds));
+                    db.Update(account);
+
+                    disInstance?.ClearAccountCache(account.Id);
+
+                    disInstance = null;
+                }
             });
+
             if (!isLock)
             {
                 throw new LogicException("初始化中，请稍后重拾");
@@ -669,7 +726,7 @@ namespace Midjourney.API
 
             UpdateAccount(account);
 
-            await Initialize();
+            await StartCheckAccount(account);
         }
 
         /// <summary>

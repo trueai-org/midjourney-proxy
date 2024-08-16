@@ -78,6 +78,11 @@ namespace Midjourney.Infrastructure.Models
         public bool? EnableFastToRelax { get; set; }
 
         /// <summary>
+        /// 表示快速模式是否已经用完了
+        /// </summary>
+        public bool FastExhausted { get; set; }
+
+        /// <summary>
         /// 是否锁定（暂时锁定，可能触发了人机验证）
         /// </summary>
         public bool Lock { get; set; }
@@ -160,6 +165,11 @@ namespace Midjourney.Infrastructure.Models
         /// 添加时间
         /// </summary>
         public DateTime DateCreated { get; set; } = DateTime.Now;
+
+        /// <summary>
+        /// mj info 更新时间
+        /// </summary>
+        public DateTime? InfoUpdated { get; set; }
 
         /// <summary>
         /// 权重
@@ -441,6 +451,61 @@ namespace Midjourney.Infrastructure.Models
         public string GetDisplay()
         {
             return ChannelId;
+        }
+
+        /// <summary>
+        /// 创建 Discord 账号。
+        /// </summary>
+        /// <param name="configAccount"></param>
+        /// <returns></returns>
+        public static DiscordAccount Create(DiscordAccountConfig configAccount)
+        {
+            if (configAccount.Interval < 1.2m)
+            {
+                configAccount.Interval = 1.2m;
+            }
+
+            return new DiscordAccount
+            {
+                Id = Guid.NewGuid().ToString(),
+                ChannelId = configAccount.ChannelId,
+
+                GuildId = configAccount.GuildId,
+                UserToken = configAccount.UserToken,
+                UserAgent = string.IsNullOrEmpty(configAccount.UserAgent) ? Constants.DEFAULT_DISCORD_USER_AGENT : configAccount.UserAgent,
+                Enable = configAccount.Enable,
+                CoreSize = configAccount.CoreSize,
+                QueueSize = configAccount.QueueSize,
+                BotToken = configAccount.BotToken,
+                TimeoutMinutes = configAccount.TimeoutMinutes,
+                PrivateChannelId = configAccount.PrivateChannelId,
+                NijiBotChannelId = configAccount.NijiBotChannelId,
+                MaxQueueSize = configAccount.MaxQueueSize,
+                Mode = configAccount.Mode,
+                AllowModes = configAccount.AllowModes,
+                Weight = configAccount.Weight,
+                Remark = configAccount.Remark,
+                RemixAutoSubmit = configAccount.RemixAutoSubmit,
+                Sponsor = configAccount.Sponsor,
+                Sort = configAccount.Sort,
+                Interval = configAccount.Interval,
+
+                AfterIntervalMax = configAccount.AfterIntervalMax,
+                AfterIntervalMin = configAccount.AfterIntervalMin,
+                WorkTime = configAccount.WorkTime,
+                FishingTime = configAccount.FishingTime,
+                PermanentInvitationLink = configAccount.PermanentInvitationLink,
+
+                SubChannels = configAccount.SubChannels,
+                IsBlend = configAccount.IsBlend,
+                VerticalDomainIds = configAccount.VerticalDomainIds,
+                IsVerticalDomain = configAccount.IsVerticalDomain,
+                IsDescribe = configAccount.IsDescribe,
+                DayDrawLimit = configAccount.DayDrawLimit,
+                EnableMj = configAccount.EnableMj,
+                EnableNiji = configAccount.EnableNiji,
+                EnableFastToRelax = configAccount.EnableFastToRelax
+            };
         }
     }
 }

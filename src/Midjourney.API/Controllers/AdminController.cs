@@ -616,13 +616,19 @@ namespace Midjourney.API.Controllers
                 return Result.Fail("演示模式，禁止操作");
             }
 
-            var model = DbHelper.AccountStore.Get(accountConfig.ChannelId);
+            var model = DbHelper.AccountStore.GetCollection().Query()
+                .Where(c => c.ChannelId == accountConfig.ChannelId).FirstOrDefault();
+
             if (model != null)
             {
                 throw new LogicException("渠道已存在");
             }
 
-            await _discordAccountInitializer.Initialize(accountConfig);
+            var account = DiscordAccount.Create(accountConfig);
+            DbHelper.AccountStore.Add(account);
+
+            await _discordAccountInitializer.StartCheckAccount(account);
+
             return Result.Ok();
         }
 

@@ -738,11 +738,10 @@ namespace Midjourney.Infrastructure
                                         }
                                     }
                                     // fast 用量已经使用完了
-                                    // TODO 可以改为慢速模式
                                     else if (title == "Credits exhausted")
                                     {
                                         // 你的处理逻辑
-                                        _logger.Warning($"账号 {Account.GetDisplay()} 用量已经用完, 自动禁用账号");
+                                        _logger.Information($"账号 {Account.GetDisplay()} 用量已经用完");
 
                                         var task = _discordInstance.FindRunningTask(c => c.MessageId == id).FirstOrDefault();
                                         if (task == null && !string.IsNullOrWhiteSpace(metaId))
@@ -755,31 +754,47 @@ namespace Midjourney.Infrastructure
                                             task.Fail("账号用量已经用完");
                                         }
 
-                                        // 5s 后禁用账号
-                                        Task.Run(() =>
+                                        // 标记快速模式已经用完了
+                                        Account.FastExhausted = true;
+                                        DbHelper.AccountStore.Save(Account);
+                                        _discordInstance?.ClearAccountCache(Account.Id);
+
+                                        // 如果开启自动切换慢速模式
+                                        if (Account.EnableFastToRelax == true)
                                         {
-                                            try
+
+                                        }
+                                        else
+                                        {
+                                            // 你的处理逻辑
+                                            _logger.Warning($"账号 {Account.GetDisplay()} 用量已经用完, 自动禁用账号");
+
+                                            // 5s 后禁用账号
+                                            Task.Run(() =>
                                             {
-                                                Thread.Sleep(5 * 1000);
+                                                try
+                                                {
+                                                    Thread.Sleep(5 * 1000);
 
-                                                // 保存
-                                                Account.Enable = false;
-                                                Account.DisabledReason = "账号用量已经用完";
+                                                    // 保存
+                                                    Account.Enable = false;
+                                                    Account.DisabledReason = "账号用量已经用完";
 
-                                                DbHelper.AccountStore.Save(Account);
-                                                _discordInstance?.ClearAccountCache(Account.Id);
-                                                _discordInstance?.Dispose();
+                                                    DbHelper.AccountStore.Save(Account);
+                                                    _discordInstance?.ClearAccountCache(Account.Id);
+                                                    _discordInstance?.Dispose();
 
 
-                                                // 发送邮件
-                                                EmailJob.Instance.EmailSend(_properties.Smtp, $"MJ账号禁用通知-{Account.ChannelId}",
-                                                    $"{Account.ChannelId}, {Account.DisabledReason}");
-                                            }
-                                            catch (Exception ex)
-                                            {
-                                                Log.Error(ex, "账号用量已经用完, 禁用账号异常 {@0}", Account.ChannelId);
-                                            }
-                                        });
+                                                    // 发送邮件
+                                                    EmailJob.Instance.EmailSend(_properties.Smtp, $"MJ账号禁用通知-{Account.ChannelId}",
+                                                        $"{Account.ChannelId}, {Account.DisabledReason}");
+                                                }
+                                                catch (Exception ex)
+                                                {
+                                                    Log.Error(ex, "账号用量已经用完, 禁用账号异常 {@0}", Account.ChannelId);
+                                                }
+                                            });
+                                        }
 
                                         return;
                                     }
@@ -925,6 +940,8 @@ namespace Midjourney.Infrastructure
                                             }
 
                                             var db = DbHelper.AccountStore;
+                                            Account.InfoUpdated = DateTime.Now;
+
                                             db.Update(Account);
                                             _discordInstance?.ClearAccountCache(Account.Id);
                                         }
