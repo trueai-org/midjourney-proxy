@@ -1383,6 +1383,12 @@ namespace Midjourney.API.Controllers
                 {
                     model.MongoDefaultConnectionString = "****";
                 }
+
+                if (model.AliyunOss != null)
+                {
+                    model.AliyunOss.AccessKeyId = "****";
+                    model.AliyunOss.AccessKeySecret = "****";
+                }
             }
 
             return Result.Ok(model);
