@@ -1,5 +1,6 @@
 ﻿using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.Dto;
+using Midjourney.Infrastructure.Services;
 using Midjourney.Infrastructure.Util;
 using Serilog;
 using System.Net;
@@ -138,6 +139,11 @@ namespace Midjourney.Infrastructure.Models
         public string ImageUrl { get; set; }
 
         /// <summary>
+        /// 缩略图 url
+        /// </summary>
+        public string ThumbnailUrl { get; set; }
+
+        /// <summary>
         /// 任务进度。
         /// </summary>
         public string Progress { get; set; }
@@ -228,15 +234,73 @@ namespace Midjourney.Infrastructure.Models
         {
             try
             {
+                // 如果启用了阿里云 OSS
+                if (GlobalConfiguration.Setting?.AliyunOss?.Enable == true)
+                {
+                    // 本地锁
+                    LocalLock.TryLock($"download:{ImageUrl}", TimeSpan.FromSeconds(10), () =>
+                    {
+                        var opt = GlobalConfiguration.Setting.AliyunOss;
+                        customCdn = opt.CustomCdn;
+
+                        // 如果不是以自定义 cdn 加速域名开头
+                        if (string.IsNullOrWhiteSpace(customCdn) || !ImageUrl.StartsWith(customCdn))
+                        {
+                            // 创建保存路径
+                            var uri = new Uri(ImageUrl);
+                            var localPath = uri.AbsolutePath.TrimStart('/');
+
+                            // 如果路径是 ephemeral-attachments 或 attachments 才处理
+                            if (localPath.StartsWith("ephemeral-attachments") || localPath.StartsWith("attachments"))
+                            {
+                                var oss = new AliyunOssStorageService();
+
+                                WebProxy webProxy = null;
+                                var proxy = GlobalConfiguration.Setting.Proxy;
+                                if (!string.IsNullOrEmpty(proxy?.Host))
+                                {
+                                    webProxy = new WebProxy(proxy.Host, proxy.Port ?? 80);
+                                }
+                                var hch = new HttpClientHandler
+                                {
+                                    UseProxy = webProxy != null,
+                                    Proxy = webProxy
+                                };
+
+                                // 下载图片并保存
+                                using (HttpClient client = new HttpClient(hch))
+                                {
+                                    var response = client.GetAsync(ImageUrl).Result;
+                                    response.EnsureSuccessStatusCode();
+                                    var stream = response.Content.ReadAsStreamAsync().Result;
+
+                                    var mm = MimeKit.MimeTypes.GetMimeType(Path.GetFileName(localPath));
+                                    if (string.IsNullOrWhiteSpace(mm))
+                                    {
+                                        mm = "image/png";
+                                    }
+
+                                    oss.SaveAsync(stream, localPath, mm);
+                                }
+
+                                // 替换 url
+                                var url = $"{customCdn?.Trim()?.Trim('/')}/{localPath}{uri?.Query}";
+
+                                ImageUrl = url.ToStyle(opt.ImageStyle);
+                                ThumbnailUrl = url.ToStyle(opt.ThumbnailImageStyle);
+                            }
+                        }
+                    });
+                }
                 // https://cdn.discordapp.com/attachments/1265095688782614602/1266300100989161584/03ytbus_LOGO_design_A_warrior_frog_Muscles_like_Popeye_Freehand_06857373-4fd9-403d-a5df-c2f27f9be269.png?ex=66a4a55e&is=66a353de&hm=c597e9d6d128c493df27a4d0ae41204655ab73f7e885878fc1876a8057a7999f&
                 // 将图片保存到本地，并替换 url，并且保持原 url和参数
                 // 默认保存根目录为 /wwwroot
                 // 保存图片
                 // 如果处理过了，则不再处理
-                if (downloadToLocal && !string.IsNullOrWhiteSpace(ImageUrl))
+                else if (downloadToLocal && !string.IsNullOrWhiteSpace(ImageUrl))
                 {
                     // 本地锁
-                    LocalLock.TryLock(ImageUrl, TimeSpan.FromSeconds(10), () =>
+                    LocalLock.TryLock($"download:{ImageUrl}", TimeSpan.FromSeconds(10), () =>
                     {
                         // 如果不是以自定义 cdn 加速域名开头
                         if (string.IsNullOrWhiteSpace(customCdn) || !ImageUrl.StartsWith(customCdn))

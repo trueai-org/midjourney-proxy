@@ -19,7 +19,7 @@ namespace Midjourney.Infrastructure
         public string MongoDefaultDatabase { get; set; }
 
         /// <summary>
-        /// 是否使用 
+        /// 是否使用
         /// </summary>
         [BsonIgnore]
         public bool IsMongo => !string.IsNullOrWhiteSpace(MongoDefaultConnectionString) && !string.IsNullOrWhiteSpace(MongoDefaultDatabase);
@@ -100,6 +100,11 @@ namespace Midjourney.Infrastructure
         /// CF 验证通知地址（验证通过后的回调通知，默认就是你的当前域名）
         /// </summary>
         public string CaptchaNotifyHook { get; set; }
+
+        /// <summary>
+        /// 阿里云存储配置
+        /// </summary>
+        public AliyunOssOptions AliyunOss { get; set; } = new AliyunOssOptions();
     }
 
     /// <summary>
@@ -178,16 +183,16 @@ namespace Midjourney.Infrastructure
 
         /// <summary>
         /// 机器人 Token
-        /// 
+        ///
         /// 1. 创建应用
         /// https://discord.com/developers/applications
-        /// 
+        ///
         /// 2. 设置应用权限（确保拥有读取内容权限）
         /// [Bot] 设置 -> 全部开启
-        /// 
+        ///
         /// 3. 添加应用到频道服务器
         /// https://discord.com/oauth2/authorize?client_id=xxx&permissions=8&scope=bot
-        /// 
+        ///
         /// 4. 复制或重置 Bot Token
         /// </summary>
         public string BotToken { get; set; }
@@ -440,5 +445,62 @@ namespace Midjourney.Infrastructure
         /// 自定义 CDN 加速地址
         /// </summary>
         public string CustomCdn { get; set; }
+    }
+
+    /// <summary>
+    /// 阿里云 OSS 配置
+    /// <see cref="https://help.aliyun.com/document_detail/31947.html"/>
+    /// </summary>
+    public class AliyunOssOptions
+    {
+        /// <summary>
+        /// 是否可用
+        /// </summary>
+        public bool Enable { get; set; }
+
+        /// <summary>
+        /// 启动本地图片自动迁移
+        /// </summary>
+        public bool EnableAutoMigrate { get; set; }
+
+        /// <summary>
+        /// 存储空间是您用于存储对象（Object）的容器，所有的对象都必须隶属于某个存储空间。
+        /// </summary>
+        public string BucketName { get; set; }
+
+        /// <summary>
+        /// 地域表示 OSS 的数据中心所在物理位置。
+        /// </summary>
+        public string Region { get; set; }
+
+        /// <summary>
+        /// AccessKeyId用于标识用户，AccessKeySecret是用户用于加密签名字符串和OSS用来验证签名字符串的密钥，其中AccessKeySecret 必须保密。
+        /// </summary>
+        public string AccessKeyId { get; set; }
+
+        /// <summary>
+        /// AccessKeyId用于标识用户，AccessKeySecret是用户用于加密签名字符串和OSS用来验证签名字符串的密钥，其中AccessKeySecret 必须保密。
+        /// </summary>
+        public string AccessKeySecret { get; set; }
+
+        /// <summary>
+        /// Endpoint 表示OSS对外服务的访问域名。
+        /// </summary>
+        public string Endpoint { get; set; }
+
+        /// <summary>
+        /// 阿里云加速域名，可用于图片加速和图片审核使用
+        /// </summary>
+        public string CustomCdn { get; set; }
+
+        /// <summary>
+        /// 阿里云 OSS 默认图片样式
+        /// </summary>
+        public string ImageStyle { get; set; }
+
+        /// <summary>
+        /// 阿里云 OSS 默认缩略图图片样式 x-oss-process=style/w320
+        /// </summary>
+        public string ThumbnailImageStyle { get; set; }
     }
 }

@@ -4,8 +4,8 @@ using MongoDB.Driver.Linq;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Linq.Expressions;
+using System.Net;
 using System.Text.RegularExpressions;
-using static Org.BouncyCastle.Math.EC.ECCurve;
 
 namespace Midjourney.Infrastructure
 {
@@ -468,6 +468,34 @@ namespace Midjourney.Infrastructure
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// URL 添加处理样式
+        /// </summary>
+        /// <param name="url"></param>
+        /// <param name="style"></param>
+        /// <returns></returns>
+        public static string ToStyle(this string url, string style)
+        {
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                return url;
+            }
+
+            url = WebUtility.HtmlDecode(url);
+
+            if (string.IsNullOrWhiteSpace(style))
+            {
+                return url;
+            }
+
+            if (url.IndexOf('?') > 0)
+            {
+                return url + "&" + style;
+            }
+
+            return url + "?" + style;
         }
     }
 
