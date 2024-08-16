@@ -84,7 +84,7 @@
 - [x] 内置违禁词管理，支持多词条分组
 - [x] prompt 中非官方链接自动转为官方链接，允许国内或自定义参考链接，以避免触发验证等问题。
 - [x] 支持快速模式时长用完时，自动切换到慢速模式，可自定义开启，当购买快速时长或到期续订时将会自动恢复。
-- [x] 支持阿里云存储、支持自定义 cdn。
+- [x] 支持图片存储到阿里云 OSS，支持自定义 CDN，支持自定义样式，支持缩略图（推荐使用 OSS，与源站分离，加载更快）
 
 ## 在线预览
 
@@ -428,6 +428,22 @@ curl -o linux_install.sh https://raw.githubusercontent.com/trueai-org/midjourney
   },
   "AllowedHosts": "*",
   "urls": "http://*:8080" // 默认端口
+}
+```
+
+#### 阿里云 OSS 配置项
+
+```json
+{
+  "enable": true,
+  "bucketName": "mjopen",
+  "region": null,
+  "accessKeyId": "LTAIa***",
+  "accessKeySecret": "QGqO7***",
+  "endpoint": "oss-cn-hongkong-internal.aliyuncs.com",
+  "customCdn": "https://mjcdn.googlec.cc",
+  "imageStyle": "x-oss-process=style/webp",
+  "thumbnailImageStyle": "x-oss-process=style/w200"
 }
 ```
 
