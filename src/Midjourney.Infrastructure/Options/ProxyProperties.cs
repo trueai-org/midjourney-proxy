@@ -458,10 +458,10 @@ namespace Midjourney.Infrastructure
         /// </summary>
         public bool Enable { get; set; }
 
-        /// <summary>
-        /// 启动本地图片自动迁移
-        /// </summary>
-        public bool EnableAutoMigrate { get; set; }
+        ///// <summary>
+        ///// 启动本地图片自动迁移，待定
+        ///// </summary>
+        //public bool EnableAutoMigrate { get; set; }
 
         /// <summary>
         /// 存储空间是您用于存储对象（Object）的容器，所有的对象都必须隶属于某个存储空间。
