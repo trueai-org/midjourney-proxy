@@ -71,7 +71,8 @@ namespace Midjourney.Infrastructure.Handle
                         task.MessageIds.Add(msgId);
 
                     task.SetProperty(Constants.MJ_MESSAGE_HANDLED, true);
-              
+                    task.SetProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, desc);
+
                     FinishTask(task, message);
                     task.Awake();
                 }
