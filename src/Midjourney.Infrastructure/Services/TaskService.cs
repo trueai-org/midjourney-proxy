@@ -627,9 +627,9 @@ namespace Midjourney.Infrastructure.Services
                 task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_ID, targetTask.MessageId);
                 task.SetProperty(Constants.TASK_PROPERTY_FLAGS, messageFlags);
 
-                // 如果开启了 remix 自动提交
                 if (discordInstance.Account.RemixAutoSubmit)
                 {
+                    // 如果开启了 remix 自动提交
                     // 并且已开启 remix 模式
                     if ((task.BotType == EBotType.MID_JOURNEY && discordInstance.Account.MjRemixOn)
                         || (task.BotType == EBotType.NIJI_JOURNEY && discordInstance.Account.NijiRemixOn))
@@ -645,11 +645,6 @@ namespace Midjourney.Infrastructure.Services
                             Prompt = targetTask.PromptEn,
                             State = submitAction.State
                         });
-                    }
-                    else
-                    {
-                        // 说明没有开启对应的模式绘图
-                        return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "未开启对应的模式绘图");
                     }
                 }
                 else
@@ -667,11 +662,6 @@ namespace Midjourney.Infrastructure.Services
                         return SubmitResultVO.Of(ReturnCode.EXISTED, "Waiting for window confirm", task.Id)
                             .SetProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, task.PromptEn)
                             .SetProperty(Constants.TASK_PROPERTY_REMIX, true);
-                    }
-                    else
-                    {
-                        // 说明没有开启对应的模式绘图
-                        return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "未开启对应的模式绘图");
                     }
                 }
             }
