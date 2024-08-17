@@ -190,9 +190,18 @@ namespace Midjourney.Infrastructure.Dto
         ///// <inheritdoc/>
         //public dynamic Color { get; set; }
 
-        /// <inheritdoc/>
+  
         [JsonPropertyName("image")]
         public EventDataEmbedImage Image { get; set; }
+
+        [JsonPropertyName("footer")]
+        public EventDataEmbedFooter Footer { get; set; }
+    }
+
+    public class EventDataEmbedFooter
+    {
+        [JsonPropertyName("text")]
+        public string Text { get; set; }
     }
 
     public class EventDataEmbedImage

@@ -1120,6 +1120,17 @@ namespace Midjourney.Infrastructure
                             handler?.Handle(_discordInstance, MessageType.CREATE, eventData);
                         });
                     }
+                    else if (eventData.InteractionMetadata?.Name == "shorten"
+                        // shorten show details -> PromptAnalyzerExtended
+                        || eventData.Embeds?.FirstOrDefault()?.Footer?.Text.Contains("Click on a button to imagine one of the shortened prompts") == true)
+                    {
+                        // 消息加锁处理
+                        LocalLock.TryLock($"lock_{eventData.Id}", TimeSpan.FromSeconds(10), () =>
+                        {
+                            var handler = _userMessageHandlers.FirstOrDefault(x => x.GetType() == typeof(UserShortenSuccessHandler));
+                            handler?.Handle(_discordInstance, MessageType.CREATE, eventData);
+                        });
+                    }
                 }
             }
             catch (Exception ex)

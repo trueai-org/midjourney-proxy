@@ -267,6 +267,11 @@ namespace Midjourney.Infrastructure.Models
         public bool IsDescribe { get; set; } = true;
 
         /// <summary>
+        /// 开启 Shoren 功能
+        /// </summary>
+        public bool IsShorten { get; set; } = true;
+
+        /// <summary>
         /// 日绘图最大次数限制，默认 -1 不限制
         /// </summary>
         public int DayDrawLimit { get; set; } = -1;
@@ -501,6 +506,7 @@ namespace Midjourney.Infrastructure.Models
                 VerticalDomainIds = configAccount.VerticalDomainIds,
                 IsVerticalDomain = configAccount.IsVerticalDomain,
                 IsDescribe = configAccount.IsDescribe,
+                IsShorten = configAccount.IsShorten,
                 DayDrawLimit = configAccount.DayDrawLimit,
                 EnableMj = configAccount.EnableMj,
                 EnableNiji = configAccount.EnableNiji,

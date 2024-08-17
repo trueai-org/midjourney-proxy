@@ -372,6 +372,42 @@ namespace Midjourney.API.Controllers
         }
 
         /// <summary>
+        /// 上传一个较长的提示词，mj 可以返回一组简要的提示词
+        /// </summary>
+        /// <param name="dto"></param>
+        /// <returns></returns>
+        [HttpPost("shorten")]
+        public ActionResult<SubmitResultVO> Shorten([FromBody] SubmitImagineDTO dto)
+        {
+            var task = NewTask(dto);
+
+            task.BotType = GetBotType(dto.BotType);
+            task.Action = TaskAction.SHORTEN;
+
+            var prompt = dto.Prompt;
+            task.Prompt = prompt;
+
+            var promptEn = TranslatePrompt(prompt);
+            try
+            {
+                _taskService.CheckBanned(promptEn);
+            }
+            catch (BannedPromptException e)
+            {
+                return Ok(SubmitResultVO.Fail(ReturnCode.BANNED_PROMPT, "可能包含敏感词")
+                    .SetProperty("promptEn", promptEn)
+                    .SetProperty("bannedWord", e.Message));
+            }
+
+            task.PromptEn = promptEn;
+            task.Description = $"/shorten {prompt}";
+
+            NewTaskDoFilter(task, dto.AccountFilter);
+
+            return Ok(_taskService.ShortenAsync(task));
+        }
+
+        /// <summary>
         /// 提交Blend任务
         /// </summary>
         /// <param name="blendDTO">提交Blend任务的DTO</param>

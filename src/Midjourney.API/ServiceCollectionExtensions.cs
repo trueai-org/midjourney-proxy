@@ -36,6 +36,9 @@ namespace Midjourney.API
             services.AddTransient<UserMessageHandler, UserStartAndProgressHandler>();
             services.AddTransient<UserMessageHandler, UserRerollSuccessHandler>();
 
+            services.AddTransient<UserMessageHandler, UserShortenSuccessHandler>();
+
+
             // 通知服务
             services.AddSingleton<INotifyService, NotifyServiceImpl>();
 

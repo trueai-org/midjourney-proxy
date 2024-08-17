@@ -52,13 +52,15 @@ namespace Midjourney.Infrastructure.LoadBalancer
             bool? describe = null,
             bool? isDomain = null,
             List<string> domainIds = null,
-            List<string> ids = null)
+            List<string> ids = null,
+            bool? shorten = null)
         {
             if (accountFilter == null)
             {
                 var list = GetAliveInstances()
                      .WhereIf(blend == true, c => c.Account.IsBlend)
                      .WhereIf(describe == true, c => c.Account.IsDescribe)
+                     .WhereIf(shorten == true, c => c.Account.IsShorten)
                      .WhereIf(isNewTask == true, c => c.Account.IsAcceptNewTask == true)
                      .WhereIf(botType == EBotType.NIJI_JOURNEY, c => c.Account.EnableNiji == true)
                      .WhereIf(botType == EBotType.MID_JOURNEY, c => c.Account.EnableMj == true)
@@ -102,6 +104,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                          .WhereIf(blend == true, c => c.Account.IsBlend)
                          .WhereIf(describe == true, c => c.Account.IsDescribe)
+                         .WhereIf(shorten == true, c => c.Account.IsShorten)
 
                          // 领域过滤
                          .WhereIf(isDomain == true && domainIds?.Count > 0, c => c.Account.IsVerticalDomain && c.Account.VerticalDomainIds.Any(x => domainIds.Contains(x)))

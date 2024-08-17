@@ -1,5 +1,4 @@
-﻿using Discord.WebSocket;
-using Midjourney.Infrastructure.Data;
+﻿using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.LoadBalancer;
 using Midjourney.Infrastructure.Util;
@@ -8,19 +7,25 @@ using Serilog;
 namespace Midjourney.Infrastructure.Handle
 {
     /// <summary>
-    /// 图生文完成处理程序。
+    /// prompt 分析
     /// </summary>
-    public class UserDescribeSuccessHandler : UserMessageHandler
+    public class UserShortenSuccessHandler : UserMessageHandler
     {
-        public UserDescribeSuccessHandler(DiscordLoadBalancer discordLoadBalancer, DiscordHelper discordHelper)
+        public UserShortenSuccessHandler(DiscordLoadBalancer discordLoadBalancer, DiscordHelper discordHelper)
         : base(discordLoadBalancer, discordHelper)
         {
         }
 
-        public override int Order() => 88888;
+        public override int Order() => 68888;
 
         public override void Handle(IDiscordInstance instance, MessageType messageType, EventData message)
         {
+            if (message.InteractionMetadata?.Name != "shorten"
+                && message.Embeds?.FirstOrDefault()?.Footer?.Text.Contains("Click on a button to imagine one of the shortened prompts") != true)
+            {
+                return;
+            }
+
             // 跳过 Waiting to start 消息
             if (!string.IsNullOrWhiteSpace(message.Content) && message.Content.Contains("(Waiting to start)"))
             {
@@ -39,41 +44,34 @@ namespace Midjourney.Infrastructure.Handle
                 && message.Author.Bot == true
                 && message.Author.Username.Contains("journey Bot", StringComparison.OrdinalIgnoreCase))
             {
-                // 图生文完成
-                if (message.Embeds.Count > 0 && !string.IsNullOrWhiteSpace(message.Embeds.FirstOrDefault()?.Image?.Url))
+                // 分析 prompt 完成
+                if (message.Embeds.Count > 0)
                 {
                     var msgId = GetMessageId(message);
 
                     var task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && c.MessageId == msgId).FirstOrDefault();
+
                     if (task == null && !string.IsNullOrWhiteSpace(message.InteractionMetadata?.Id))
                     {
                         task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) &&
                         c.InteractionMetadataId == message.InteractionMetadata.Id).FirstOrDefault();
                     }
 
-                    if (task == null )
+                    if (task == null)
                     {
                         return;
                     }
 
-                    var imageUrl = message.Embeds.First().Image?.Url;
-                    var messageHash = discordHelper.GetMessageHash(imageUrl);
+                    var desc = message.Embeds.First().Description;
 
-                    var finalPrompt = message.Embeds.First().Description;
-
-                    task.PromptEn = finalPrompt;
+                    task.Description = desc;
                     task.MessageId = msgId;
 
                     if (!task.MessageIds.Contains(msgId))
                         task.MessageIds.Add(msgId);
 
                     task.SetProperty(Constants.MJ_MESSAGE_HANDLED, true);
-                    task.SetProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, finalPrompt);
-                    task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_HASH, messageHash);
-
-                    task.ImageUrl = imageUrl;
-                    task.JobId = messageHash;
-
+              
                     FinishTask(task, message);
                     task.Awake();
                 }

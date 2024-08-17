@@ -947,7 +947,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
             string paramsStr = ReplaceInteractionParams(_paramsMap["picreader"], nonce, botType)
                 .Replace("$message_id", messageId)
-                //.Replace("$prompt", prompt)
                 .Replace("$index", index);
 
             var obj = JObject.Parse(paramsStr);
@@ -974,7 +973,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
             string paramsStr = ReplaceInteractionParams(_paramsMap["remix"], nonce, botType)
                 .Replace("$message_id", messageId)
-                //.Replace("$prompt", prompt)
                 .Replace("$custom_id", customId)
                 .Replace("$modal", modal);
 
@@ -1356,6 +1354,27 @@ namespace Midjourney.Infrastructure.LoadBalancer
             string paramsStr = ReplaceInteractionParams(json, nonce)
                 .Replace("$file_name", fileName)
                 .Replace("$final_file_name", finalFileName);
+            return await PostJsonAndCheckStatusAsync(paramsStr);
+        }
+
+        /// <summary>
+        /// 上传一个较长的提示词，mj 可以返回一组简要的提示词
+        /// </summary>
+        /// <param name="prompt"></param>
+        /// <param name="nonce"></param>
+        /// <param name="botType"></param>
+        /// <returns></returns>
+        public async Task<Message> ShortenAsync(TaskInfo info, string prompt, string nonce, EBotType botType)
+        {
+            var json = botType == EBotType.NIJI_JOURNEY ? _paramsMap["shortenniji"] : _paramsMap["shorten"];
+            var paramsStr = ReplaceInteractionParams(json, nonce);
+
+            prompt = GetPrompt(prompt, info);
+
+            var obj = JObject.Parse(paramsStr);
+            obj["data"]["options"][0]["value"] = prompt;
+            paramsStr = obj.ToString();
+
             return await PostJsonAndCheckStatusAsync(paramsStr);
         }
 

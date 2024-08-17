@@ -235,7 +235,7 @@ namespace Midjourney.Infrastructure.Models
             try
             {
                 // 如果启用了阿里云 OSS
-                if (GlobalConfiguration.Setting?.AliyunOss?.Enable == true)
+                if (GlobalConfiguration.Setting?.AliyunOss?.Enable == true && !string.IsNullOrWhiteSpace(ImageUrl))
                 {
                     // 本地锁
                     LocalLock.TryLock($"download:{ImageUrl}", TimeSpan.FromSeconds(10), () =>

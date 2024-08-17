@@ -64,9 +64,13 @@
 		<Content Remove="Resources\mime.types" />
 		<Content Remove="Resources\words.txt" />
 		<Content Remove="Resources\wordsfull.txt" />
+		<Content Remove="Resources\ApiParams\shorten.json" />
+		<Content Remove="Resources\ApiParams\shortenniji.json" />
 	</ItemGroup>
 
 	<ItemGroup>
+		<EmbeddedResource Include="Resources\ApiParams\shortenniji.json" />
+		<EmbeddedResource Include="Resources\ApiParams\shorten.json" />
 		<EmbeddedResource Include="Resources\ApiParams\remix.json" />
 		<EmbeddedResource Include="Resources\ApiParams\blendniji.json" />
 		<EmbeddedResource Include="Resources\ApiParams\describeniji.json" />

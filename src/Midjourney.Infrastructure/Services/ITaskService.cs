@@ -93,6 +93,13 @@ namespace Midjourney.Infrastructure.Services
         SubmitResultVO SubmitDescribe(TaskInfo task, DataUrl dataUrl);
 
         /// <summary>
+        /// 上传一个较长的提示词，mj 可以返回一组简要的提示词
+        /// </summary>
+        /// <param name="task"></param>
+        /// <returns></returns>
+        SubmitResultVO ShortenAsync(TaskInfo task);
+
+        /// <summary>
         /// 提交混合任务。
         /// </summary>
         /// <param name="task">任务对象。</param>

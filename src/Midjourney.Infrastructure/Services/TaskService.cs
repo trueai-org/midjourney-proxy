@@ -320,6 +320,31 @@ namespace Midjourney.Infrastructure.Services
         }
 
         /// <summary>
+        /// 上传一个较长的提示词，mj 可以返回一组简要的提示词
+        /// </summary>
+        /// <param name="task"></param>
+        /// <returns></returns>
+        public SubmitResultVO ShortenAsync(TaskInfo task)
+        {
+            var discordInstance = _discordLoadBalancer.ChooseInstance(task.AccountFilter,
+                isNewTask: true,
+                botType: task.BotType,
+                shorten: true);
+
+            if (discordInstance == null)
+            {
+                return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
+            }
+            task.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, discordInstance.GetInstanceId);
+            task.InstanceId = discordInstance.GetInstanceId;
+
+            return discordInstance.SubmitTaskAsync(task, async () =>
+            {
+                return await discordInstance.ShortenAsync(task, task.PromptEn, task.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default), task.BotType);
+            });
+        }
+
+        /// <summary>
         /// 提交混合任务
         /// </summary>
         /// <param name="task"></param>
@@ -546,6 +571,56 @@ namespace Midjourney.Infrastructure.Services
                     .SetProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, task.PromptEn)
                     .SetProperty(Constants.TASK_PROPERTY_REMIX, true);
             }
+            // prompt shorten -> 生图
+            else if (submitAction.CustomId.StartsWith("MJ::Job::PromptAnalyzer::"))
+            {
+                var index = int.Parse(submitAction.CustomId.Split("::").LastOrDefault().Trim());
+                var si = targetTask.Description.IndexOf("Shortened prompts");
+                if (si >= 0)
+                {
+                    var pre = targetTask.Description.Substring(si).Trim().Split('\n')
+                     .Where(c => !string.IsNullOrWhiteSpace(c)).ToArray()[index].Trim();
+
+                    var prompt = pre.Substring(pre.IndexOf(' ')).Trim();
+
+                    task.Status = TaskStatus.MODAL;
+                    task.Prompt = prompt;
+                    task.PromptEn = prompt;
+
+                    task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_ID, targetTask.MessageId);
+                    task.SetProperty(Constants.TASK_PROPERTY_FLAGS, messageFlags);
+
+                    // 如果开启了 remix 自动提交
+                    if (discordInstance.Account.RemixAutoSubmit)
+                    {
+                        task.RemixAutoSubmit = true;
+                        _taskStoreService.Save(task);
+
+                        return SubmitModal(task, new SubmitModalDTO()
+                        {
+                            TaskId = task.Id,
+                            NotifyHook = submitAction.NotifyHook,
+                            Prompt = targetTask.PromptEn,
+                            State = submitAction.State
+                        });
+
+                    }
+                    else
+                    {
+                        _taskStoreService.Save(task);
+
+                        // 状态码为 21
+                        // 重绘、自定义变焦始终 remix 为true
+                        return SubmitResultVO.Of(ReturnCode.EXISTED, "Waiting for window confirm", task.Id)
+                            .SetProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, task.PromptEn)
+                            .SetProperty(Constants.TASK_PROPERTY_REMIX, true);
+                    }
+                }
+                else
+                {
+                    return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "未找到 Shortened prompts");
+                }
+            }
             // REMIX 处理
             else if (task.Action == TaskAction.PAN || task.Action == TaskAction.VARIATION || task.Action == TaskAction.REROLL)
             {
@@ -571,6 +646,11 @@ namespace Midjourney.Infrastructure.Services
                             State = submitAction.State
                         });
                     }
+                    else
+                    {
+                        // 说明没有开启对应的模式绘图
+                        return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "未开启对应的模式绘图");
+                    }
                 }
                 else
                 {
@@ -587,6 +667,11 @@ namespace Midjourney.Infrastructure.Services
                         return SubmitResultVO.Of(ReturnCode.EXISTED, "Waiting for window confirm", task.Id)
                             .SetProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, task.PromptEn)
                             .SetProperty(Constants.TASK_PROPERTY_REMIX, true);
+                    }
+                    else
+                    {
+                        // 说明没有开启对应的模式绘图
+                        return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "未开启对应的模式绘图");
                     }
                 }
             }
@@ -681,6 +766,9 @@ namespace Midjourney.Infrastructure.Services
                     }
                 } while (string.IsNullOrWhiteSpace(task.RemixModalMessageId) || string.IsNullOrWhiteSpace(task.InteractionMetadataId));
 
+                // 等待 1.2s
+                Thread.Sleep(1200);
+
                 task.RemixModaling = false;
 
                 // 自定义变焦
@@ -706,6 +794,21 @@ namespace Midjourney.Infrastructure.Services
                     task.SetProperty(Constants.TASK_PROPERTY_NONCE, nonce);
 
                     return await discordInstance.PicReaderAsync(task, task.RemixModalMessageId, customId, task.PromptEn, nonce, task.BotType);
+                }
+                // prompt shorten -> 生图
+                else if (customId.StartsWith("MJ::Job::PromptAnalyzer::"))
+                {
+                    nonce = SnowFlake.NextId();
+                    task.Nonce = nonce;
+                    task.SetProperty(Constants.TASK_PROPERTY_NONCE, nonce);
+
+
+                    // MJ::ImagineModal::1265485889606516808
+                    customId = $"MJ::ImagineModal::{messageId}";
+                    var modal = "MJ::ImagineModal::new_prompt";
+
+                    return await discordInstance.RemixAsync(task, task.Action.Value, task.RemixModalMessageId, modal,
+                        customId, task.PromptEn, nonce, task.BotType);
                 }
                 // Remix mode
                 else if (task.Action == TaskAction.VARIATION || task.Action == TaskAction.REROLL || task.Action == TaskAction.PAN)
@@ -1140,6 +1243,7 @@ namespace Midjourney.Infrastructure.Services
                                         IsBlend = true, // 默认 true
                                         IsDescribe = true, // 默认 true
                                         IsVerticalDomain = false, // 默认 false
+                                        IsShorten = true,
                                         VerticalDomainIds = new List<string>(),
                                         SubChannels = new List<string>(),
                                         SubChannelValues = new Dictionary<string, string>(),

@@ -263,6 +263,11 @@ namespace Midjourney.Infrastructure
         public bool IsDescribe { get; set; } = true;
 
         /// <summary>
+        /// 开启 Shoren 功能
+        /// </summary>
+        public bool IsShorten { get; set; } = true;
+
+        /// <summary>
         /// 日绘图最大次数限制，默认 0 不限制
         /// </summary>
         public int DayDrawLimit { get; set; } = -1;

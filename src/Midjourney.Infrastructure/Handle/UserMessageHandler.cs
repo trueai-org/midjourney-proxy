@@ -180,7 +180,7 @@ namespace Midjourney.Infrastructure.Handle
 
         protected void FinishTask(TaskInfo task, EventData message)
         {
-            task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_ID, message.Id.ToString());
+            task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_ID, message.Id);
             task.SetProperty(Constants.TASK_PROPERTY_FLAGS, Convert.ToInt32(message.Flags));
             task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_HASH, discordHelper.GetMessageHash(task.ImageUrl));
 
@@ -189,7 +189,7 @@ namespace Midjourney.Infrastructure.Handle
                 {
                     return new CustomComponentModel
                     {
-                        CustomId = btn.CustomId?.ToString() ?? string.Empty,
+                        CustomId = btn.CustomId ?? string.Empty,
                         Emoji = btn.Emoji?.Name ?? string.Empty,
                         Label = btn.Label ?? string.Empty,
                         Style = (int?)btn.Style ?? 0,
@@ -201,10 +201,12 @@ namespace Midjourney.Infrastructure.Handle
             {
                 task.Description = "Submit success";
             }
+
             if (string.IsNullOrWhiteSpace(task.FailReason))
             {
                 task.FailReason = "";
             }
+
             if (string.IsNullOrWhiteSpace(task.State))
             {
                 task.State = "";

@@ -667,6 +667,7 @@ namespace Midjourney.API
             model.EnableFastToRelax = param.EnableFastToRelax;
             model.IsBlend = param.IsBlend;
             model.IsDescribe = param.IsDescribe;
+            model.IsShorten = param.IsShorten;
             model.DayDrawLimit = param.DayDrawLimit;
             model.IsVerticalDomain = param.IsVerticalDomain;
             model.VerticalDomainIds = param.VerticalDomainIds;

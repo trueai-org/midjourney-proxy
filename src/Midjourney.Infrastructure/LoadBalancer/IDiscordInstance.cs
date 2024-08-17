@@ -162,6 +162,15 @@
         Task<Message> DescribeAsync(string finalFileName, string nonce, EBotType botType);
 
         /// <summary>
+        /// 上传一个较长的提示词，mj 可以返回一组简要的提示词
+        /// </summary>
+        /// <param name="prompt"></param>
+        /// <param name="nonce"></param>
+        /// <param name="botType"></param>
+        /// <returns></returns>
+        Task<Message> ShortenAsync(TaskInfo info, string prompt, string nonce, EBotType botType);
+
+        /// <summary>
         /// 提交混合任务。
         /// </summary>
         /// <param name="finalFileNames">最终文件名列表。</param>

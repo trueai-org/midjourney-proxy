@@ -216,7 +216,10 @@
         /// </summary>
         SHOW,
 
-        //SHORTEN
+        /// <summary>
+        /// prompt 简短指令
+        /// </summary>
+        SHORTEN
     }
 
     /// <summary>
