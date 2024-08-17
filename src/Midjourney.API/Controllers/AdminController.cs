@@ -8,6 +8,7 @@ using Midjourney.Infrastructure.LoadBalancer;
 using Midjourney.Infrastructure.Services;
 using Midjourney.Infrastructure.StandardTable;
 using MongoDB.Driver;
+using Serilog;
 using System.Net;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -274,34 +275,58 @@ namespace Midjourney.API.Controllers
         {
             if (!string.IsNullOrWhiteSpace(request.State) && !string.IsNullOrWhiteSpace(request.Url))
             {
-                var item = DbHelper.AccountStore.Get(request.State);
-                if (item != null && item.CfHashUrl == request.Url && item.Lock)
+                var item = DbHelper.AccountStore.GetCollection().Query()
+                    .Where(c => c.ChannelId == request.State)
+                    .FirstOrDefault();
+
+                if (item != null && item.Lock)
                 {
-                    if (request.Success)
+                    var secret = GlobalConfiguration.Setting.CaptchaNotifySecret;
+                    if (string.IsNullOrWhiteSpace(secret) || secret == request.Secret)
                     {
-                        item.Lock = false;
-                        item.CfHashUrl = null;
-                        item.CfHashCreated = null;
-                        item.CfUrl = null;
-                        item.DisabledReason = null;
+                        // 10 分钟之内有效
+                        if (item.CfHashCreated != null && (DateTime.Now - item.CfHashCreated.Value).TotalMinutes > 10)
+                        {
+                            if (request.Success)
+                            {
+                                request.Success = false;
+                                request.Message = "CF 验证过期，超过 10 分钟";
+                            }
+                        }
+
+                        if (request.Success)
+                        {
+                            item.Lock = false;
+                            item.CfHashUrl = null;
+                            item.CfHashCreated = null;
+                            item.CfUrl = null;
+                            item.DisabledReason = null;
+                        }
+                        else
+                        {
+                            // 更新验证失败原因
+                            item.DisabledReason = request.Message;
+                        }
+
+                        // 更新账号信息
+                        DbHelper.AccountStore.Update(item);
+
+                        // 清空缓存
+                        var inc = _loadBalancer.GetDiscordInstance(item.ChannelId);
+                        inc?.ClearAccountCache(item.Id);
+
+                        if (!request.Success)
+                        {
+                            // 发送邮件
+                            EmailJob.Instance.EmailSend(_properties.Smtp, $"CF自动真人验证失败-{item.ChannelId}", $"CF自动真人验证失败-{item.ChannelId}, 请手动验证");
+                        }
                     }
                     else
                     {
-                        // 更新验证失败原因
-                        item.DisabledReason = request.Message;
-                    }
+                        // 签名错误
+                        Log.Warning("验证通知签名验证失败 {@0}", request);
 
-                    // 更新账号信息
-                    DbHelper.AccountStore.Update(item);
-
-                    // 清空缓存
-                    var inc = _loadBalancer.GetDiscordInstance(item.ChannelId);
-                    inc?.ClearAccountCache(item.Id);
-
-                    if (!request.Success)
-                    {
-                        // 发送邮件
-                        EmailJob.Instance.EmailSend(_properties.Smtp, $"CF自动真人验证失败-{item.ChannelId}", $"CF自动真人验证失败-{item.ChannelId}, 请手动验证");
+                        return Ok();
                     }
                 }
             }
@@ -1238,7 +1263,6 @@ namespace Midjourney.API.Controllers
 
             return Result.Ok();
         }
-
 
         /// <summary>
         /// 违规词

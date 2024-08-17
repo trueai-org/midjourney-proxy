@@ -102,6 +102,11 @@ namespace Midjourney.Infrastructure
         public string CaptchaNotifyHook { get; set; }
 
         /// <summary>
+        /// CF 验证通知回调的密钥，防止篡改
+        /// </summary>
+        public string CaptchaNotifySecret { get; set; }
+
+        /// <summary>
         /// 阿里云存储配置
         /// </summary>
         public AliyunOssOptions AliyunOss { get; set; } = new AliyunOssOptions();

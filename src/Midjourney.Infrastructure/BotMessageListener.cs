@@ -312,7 +312,8 @@ namespace Midjourney.Infrastructure
                                                     {
                                                         Url = hashUrl,
                                                         State = Account.ChannelId,
-                                                        NotifyHook = _properties.CaptchaNotifyHook
+                                                        NotifyHook = _properties.CaptchaNotifyHook,
+                                                        Secret = _properties.CaptchaNotifySecret
                                                     };
                                                     var json = Newtonsoft.Json.JsonConvert.SerializeObject(body);
                                                     request.AddJsonBody(json);

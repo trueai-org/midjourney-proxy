@@ -52,6 +52,7 @@ namespace Midjourney.API
                     AccountChooseRule = configOpt.AccountChooseRule,
                     BaiduTranslate = configOpt.BaiduTranslate,
                     CaptchaNotifyHook = configOpt.CaptchaNotifyHook,
+                    CaptchaNotifySecret = configOpt.CaptchaNotifySecret,
                     CaptchaServer = configOpt.CaptchaServer,
                     NgDiscord = configOpt.NgDiscord,
                     NotifyHook = configOpt.NotifyHook,

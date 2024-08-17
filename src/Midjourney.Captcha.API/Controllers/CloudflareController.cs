@@ -141,7 +141,7 @@ namespace Midjourney.Captcha.API.Controllers
                                             finSuccess = true;
                                             request.Success = true;
                                             request.Message = "CF 自动验证成功";
-
+                                            
                                             // 标记验证成功
                                             _memoryCache.Set(successKey, true, TimeSpan.FromMinutes(2));
 
