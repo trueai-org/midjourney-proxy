@@ -409,7 +409,7 @@ namespace Midjourney.API
 
                 var enableInstanceIds = _discordLoadBalancer.GetAllInstances()
                 .Where(instance => instance.IsAlive)
-                .Select(instance => instance.GetInstanceId)
+                .Select(instance => instance.ChannelId)
                 .ToHashSet();
 
                 _logger.Information("当前可用账号数 [{@0}] - {@1}", enableInstanceIds.Count, string.Join(", ", enableInstanceIds));
@@ -515,7 +515,7 @@ namespace Midjourney.API
                                 await Task.Delay(1000 * 5);
 
                                 // 启动后执行 info setting 操作
-                                await _taskService.InfoSetting(account.ChannelId);
+                                await _taskService.InfoSetting(account.Id);
                             }
                         }
 
@@ -538,7 +538,7 @@ namespace Midjourney.API
                                         var minutes = random.Next(180, 360);
                                         c.SetAbsoluteExpiration(TimeSpan.FromMinutes(minutes));
 
-                                        await _taskService.InfoSetting(account.ChannelId);
+                                        await _taskService.InfoSetting(account.Id);
 
                                         return true;
                                     }
@@ -736,21 +736,23 @@ namespace Midjourney.API
         /// <param name="id"></param>
         public void DeleteAccount(string id)
         {
-            try
-            {
-                var disInstance = _discordLoadBalancer.GetDiscordInstance(id);
-                if (disInstance != null)
-                {
-                    disInstance.Dispose();
-                }
-            }
-            catch
-            {
-            }
-
             var model = DbHelper.AccountStore.Get(id);
+
             if (model != null)
             {
+                try
+                {
+                    var disInstance = _discordLoadBalancer.GetDiscordInstance(model.ChannelId);
+                    if (disInstance != null)
+                    {
+                        disInstance.Dispose();
+                    }
+                }
+                catch
+                {
+
+                }
+
                 DbHelper.AccountStore.Delete(id);
             }
         }

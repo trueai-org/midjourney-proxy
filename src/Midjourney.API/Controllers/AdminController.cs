@@ -703,6 +703,11 @@ namespace Midjourney.API.Controllers
                 return Result.Fail("演示模式，禁止操作");
             }
 
+            if (id != param.Id)
+            {
+                throw new LogicException("参数错误");
+            }
+
             var model = DbHelper.AccountStore.Get(param.Id);
             if (model == null)
             {

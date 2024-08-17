@@ -68,7 +68,7 @@ namespace Midjourney.Infrastructure.Models
         public bool RemixModaling { get; set; }
 
         /// <summary>
-        /// 账号实例 ID = 账号渠道 ID
+        /// 账号实例 ID = 账号渠道 ID = ChannelId
         /// </summary>
         public string InstanceId { get; set; }
 

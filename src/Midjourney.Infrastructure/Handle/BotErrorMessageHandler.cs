@@ -62,11 +62,11 @@ namespace Midjourney.Infrastructure.Handle
 
             if (color == 16239475)
             {
-                _logger.LogWarning($"{instance.GetInstanceId} - MJ警告信息: {title}\n{description}\nfooter: {footerText}");
+                _logger.LogWarning($"{instance.ChannelId} - MJ警告信息: {title}\n{description}\nfooter: {footerText}");
             }
             else if (color == 16711680)
             {
-                _logger.LogError($"{instance.GetInstanceId} - MJ异常信息: {title}\n{description}\nfooter: {footerText}");
+                _logger.LogError($"{instance.ChannelId} - MJ异常信息: {title}\n{description}\nfooter: {footerText}");
 
                 var taskInfo = FindTaskWhenError(instance, messageType, message);
                 if (taskInfo == null && message is SocketUserMessage umsg && umsg != null && umsg.InteractionMetadata?.Id != null)
@@ -104,7 +104,7 @@ namespace Midjourney.Infrastructure.Handle
                     if (!taskInfo.MessageIds.Contains(msgId))
                         taskInfo.MessageIds.Add(msgId);
 
-                    _logger.LogWarning($"{instance.GetInstanceId} - MJ可能的异常信息: {title}\n{description}\nfooter: {footerText}");
+                    _logger.LogWarning($"{instance.ChannelId} - MJ可能的异常信息: {title}\n{description}\nfooter: {footerText}");
 
                     taskInfo.SetProperty(Constants.MJ_MESSAGE_HANDLED, true);
                     taskInfo.Fail($"[{title}] {description}");

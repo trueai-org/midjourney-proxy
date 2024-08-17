@@ -215,10 +215,10 @@
         DiscordAccount Account { get; }
 
         /// <summary>
-        /// 获取实例ID。
+        /// 获取实例ID/渠道ID
         /// </summary>
-        /// <returns>实例ID。</returns>
-        string GetInstanceId { get; }
+        /// <returns>实例ID</returns>
+        string ChannelId { get; }
 
         /// <summary>
         /// 判断实例是否存活。

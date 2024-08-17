@@ -110,7 +110,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// 获取实例ID。
         /// </summary>
         /// <returns>实例ID</returns>
-        public string GetInstanceId => _account.ChannelId;
+        public string ChannelId => Account.ChannelId;
 
         /// <summary>
         /// 获取Discord账号信息。
@@ -121,7 +121,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
             get
             {
                 // 缓存 3 分钟
-                _account = _cache.GetOrCreate(_account.Id, (c) =>
+                _account = _cache.GetOrCreate($"account:{_account.Id}", (c) =>
                 {
                     c.SetAbsoluteExpiration(TimeSpan.FromMinutes(3));
 
@@ -138,7 +138,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <param name="id"></param>
         public void ClearAccountCache(string id)
         {
-            _cache.Remove(id);
+            _cache.Remove($"account:{id}");
         }
 
         /// <summary>
@@ -381,10 +381,10 @@ namespace Midjourney.Infrastructure.LoadBalancer
             if (Account.MaxQueueSize > 0 && currentWaitNumbers >= Account.MaxQueueSize)
             {
                 return SubmitResultVO.Fail(ReturnCode.FAILURE, "提交失败，队列已满，请稍后重试")
-                    .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, GetInstanceId);
+                    .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, ChannelId);
             }
 
-            info.InstanceId = GetInstanceId;
+            info.InstanceId = ChannelId;
             _taskStoreService.Save(info);
 
             try
@@ -406,13 +406,13 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 if (currentWaitNumbers == 0)
                 {
                     return SubmitResultVO.Of(ReturnCode.SUCCESS, "提交成功", info.Id)
-                        .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, GetInstanceId);
+                        .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, ChannelId);
                 }
                 else
                 {
                     return SubmitResultVO.Of(ReturnCode.IN_QUEUE, $"排队中，前面还有{currentWaitNumbers}个任务", info.Id)
                         .SetProperty("numberOfQueues", currentWaitNumbers)
-                        .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, GetInstanceId);
+                        .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, ChannelId);
                 }
             }
             catch (Exception e)
@@ -422,7 +422,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 _taskStoreService.Delete(info.Id);
 
                 return SubmitResultVO.Fail(ReturnCode.FAILURE, "提交失败，系统异常")
-                    .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, GetInstanceId);
+                    .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, ChannelId);
             }
         }
 
