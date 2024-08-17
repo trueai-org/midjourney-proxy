@@ -1413,6 +1413,8 @@ namespace Midjourney.API.Controllers
                     model.AliyunOss.AccessKeyId = "****";
                     model.AliyunOss.AccessKeySecret = "****";
                 }
+
+                model.CaptchaNotifySecret = "****";
             }
 
             return Result.Ok(model);
