@@ -525,6 +525,29 @@ docker run -d \
 # 创建数据库（也可以通过 BT 创建数据库）（可选）
 ```
 
+## 换脸配置
+
+- 打开官网注册并复制 Token: https://replicate.com/codeplugtech/face-swap
+
+```json
+{
+  "token": "****",
+  "enableFaceSwap": true,
+  "faceSwapVersion": "278a81e7ebb22db98bcba54de985d22cc1abeead2754eb1f2af717247be69b34",
+  "faceSwapCoreSize": 3,
+  "faceSwapQueueSize": 10,
+  "faceSwapTimeoutMinutes": 10,
+  "enableVideoFaceSwap": true,
+  "videoFaceSwapVersion": "104b4a39315349db50880757bc8c1c996c5309e3aa11286b0a3c84dab81fd440",
+  "videoFaceSwapCoreSize": 3,
+  "videoFaceSwapQueueSize": 10,
+  "videoFaceSwapTimeoutMinutes": 30,
+  "maxFileSize": 10485760,
+  "webhook": null,
+  "webhookEventsFilter": []
+}
+```
+
 ## 相关文档
 
 1. [API接口说明](./docs/api.md)
@@ -538,7 +561,6 @@ docker run -d \
 
 ## 路线图
 
-- [ ] 换脸支持
 - [ ] 支持腾讯云存储等
 - [ ] 支持通过 openai 分析 prompt 词条，然后分配到领域账号，更加智能。通过 shorten 分析 prompt 词条，并分配到领域。
 - [ ] 征集视频教程（B 站、Youtube、抖音等都可以）
@@ -553,6 +575,7 @@ docker run -d \
 - [ ] 多账号分组支持
 - [ ] 服务重启后，如果有未启动的任务，则加入到执行的队列中
 - [ ] 子频道自动化支持，可直接输入邀请链接，或共享频道地址，系统自动加入频道转换。或者通过转交所有权实现。
+- [ ] 通过 discord www.picsi.ai 换脸支持
 
 ## 支持与赞助
 
