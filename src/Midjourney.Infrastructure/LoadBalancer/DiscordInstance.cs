@@ -1604,9 +1604,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, ex.Message);
+                _logger.Error(ex, ex.Message ?? "未知错误");
 
-                return Message.Of((int)e.StatusCode, e.Message.Substring(0, Math.Min(e.Message.Length, 100)));
+                return Message.Of((int)e.StatusCode, e.Message?.Substring(0, Math.Min(e.Message.Length, 100)) ?? "未知错误");
             }
         }
     }

@@ -45,7 +45,12 @@
         /// <summary>
         /// Niji
         /// </summary>
-        NIJI_JOURNEY
+        NIJI_JOURNEY,
+
+        /// <summary>
+        /// 换脸
+        /// </summary>
+        INSIGHT_FACE
     }
 
     /// <summary>
@@ -219,7 +224,18 @@
         /// <summary>
         /// prompt 简短指令
         /// </summary>
-        SHORTEN
+        SHORTEN,
+
+        /// <summary>
+        /// 换脸任务
+        /// = FACE_SWAP
+        /// </summary>
+        SWAP_FACE,
+
+        /// <summary>
+        /// 视频换脸任务
+        /// </summary>
+        SWAP_VIDEO_FACE
     }
 
     /// <summary>

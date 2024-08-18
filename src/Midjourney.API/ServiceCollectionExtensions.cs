@@ -39,6 +39,10 @@ namespace Midjourney.API
             services.AddTransient<UserMessageHandler, UserShortenSuccessHandler>();
 
 
+            // 换脸服务
+            services.AddSingleton<FaceSwapInstance>();
+            services.AddSingleton<VideoFaceSwapInstance>();
+
             // 通知服务
             services.AddSingleton<INotifyService, NotifyServiceImpl>();
 

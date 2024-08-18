@@ -1419,6 +1419,11 @@ namespace Midjourney.API.Controllers
                     model.AliyunOss.AccessKeySecret = "****";
                 }
 
+                if (model.Replicate != null)
+                {
+                    model.Replicate.Token = "****";
+                }
+
                 model.CaptchaNotifySecret = "****";
             }
 

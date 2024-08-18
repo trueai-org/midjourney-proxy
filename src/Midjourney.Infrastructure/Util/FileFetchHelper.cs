@@ -15,7 +15,7 @@ namespace Midjourney.Infrastructure.Util
         /// <summary>
         /// 可抓取的文件文件后缀
         /// </summary>
-        private string[] WHITE_EXTENSIONS = ["jpg", "png", "webp", "bmp", "gif", "pdf", "jpeg", "tiff", "svg", "heif", "heic"];
+        private string[] WHITE_EXTENSIONS = ["jpg", "png", "webp", "bmp", "gif", "pdf", "jpeg", "tiff", "svg", "heif", "heic", "mp4"];
 
         /// <summary>
         /// 跳过的文件主机名
@@ -149,7 +149,7 @@ namespace Midjourney.Infrastructure.Util
         /// <param name="fileBytes"></param>
         /// <param name="fileName"></param>
         /// <returns></returns>
-        private string DetermineFileExtension(string contentType, byte[] fileBytes, string fileName)
+        public string DetermineFileExtension(string contentType, byte[] fileBytes, string fileName)
         {
             contentType = contentType?.ToLowerInvariant();
             fileName = fileName?.ToLowerInvariant();
@@ -220,6 +220,16 @@ namespace Midjourney.Infrastructure.Util
         }
 
         /// <summary>
+        /// 获取 MIME 类型
+        /// </summary>
+        /// <param name="fileName"></param>
+        /// <returns></returns>
+        public string GetMimeType(string fileName)
+        {
+            return MimeKit.MimeTypes.GetMimeType(fileName);
+        }
+
+        /// <summary>
         /// 通过魔术数获取文件扩展名
         /// </summary>
         /// <param name="bytes"></param>
@@ -270,6 +280,30 @@ namespace Midjourney.Infrastructure.Util
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// 获取 url 链接文件大小
+        /// </summary>
+        /// <param name="url"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        public async Task<long> GetFileSizeAsync(string url)
+        {
+            // 发送一个 HEAD 请求
+            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Head, url);
+            HttpResponseMessage response = await _httpClient.SendAsync(request);
+
+            if (response.IsSuccessStatusCode)
+            {
+                // 获取 Content-Length 头部
+                if (response.Content.Headers.ContentLength.HasValue)
+                {
+                    return response.Content.Headers.ContentLength.Value;
+                }
+            }
+
+            throw new Exception("Unable to retrieve file size.");
         }
     }
 

@@ -2,6 +2,7 @@
 using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.Services;
 using Midjourney.Infrastructure.Util;
+using MimeDetective.Storage.Xml.v2;
 using Serilog;
 using System.Net;
 
@@ -208,6 +209,21 @@ namespace Midjourney.Infrastructure.Models
         public string JobId { get; set; }
 
         /// <summary>
+        /// 是否为 replicate 任务
+        /// </summary>
+        public bool IsReplicate { get; set; }
+
+        /// <summary>
+        /// 人脸源图片
+        /// </summary>
+        public string ReplicateSource { get; set; }
+
+        /// <summary>
+        /// 目标图片/目标视频
+        /// </summary>
+        public string ReplicateTarget { get; set; }
+
+        /// <summary>
         /// 当前绘画客户端指定的速度模式
         /// </summary>
         public GenerationSpeedMode? Mode { get; set; }
@@ -251,8 +267,14 @@ namespace Midjourney.Infrastructure.Models
                             var localPath = uri.AbsolutePath.TrimStart('/');
 
                             // 如果路径是 ephemeral-attachments 或 attachments 才处理
-                            if (localPath.StartsWith("ephemeral-attachments") || localPath.StartsWith("attachments"))
+                            if (localPath.StartsWith("ephemeral-attachments") || localPath.StartsWith("attachments") || IsReplicate)
                             {
+                                // 换脸放到附件中
+                                if (IsReplicate)
+                                {
+                                    localPath = $"attachments/{localPath}";
+                                }
+
                                 var oss = new AliyunOssStorageService();
 
                                 WebProxy webProxy = null;
@@ -287,7 +309,15 @@ namespace Midjourney.Infrastructure.Models
                                 var url = $"{customCdn?.Trim()?.Trim('/')}/{localPath}{uri?.Query}";
 
                                 ImageUrl = url.ToStyle(opt.ImageStyle);
-                                ThumbnailUrl = url.ToStyle(opt.ThumbnailImageStyle);
+
+                                if (Action != TaskAction.SWAP_VIDEO_FACE)
+                                {
+                                    ThumbnailUrl = url.ToStyle(opt.ThumbnailImageStyle);
+                                }
+                                else
+                                {
+                                    ThumbnailUrl = url.ToStyle(opt.VideoSnapshotStyle);
+                                }
                             }
                         }
                     });
@@ -310,8 +340,14 @@ namespace Midjourney.Infrastructure.Models
                             var localPath = uri.AbsolutePath.TrimStart('/');
 
                             // 如果路径是 ephemeral-attachments 或 attachments 才处理
-                            if (localPath.StartsWith("ephemeral-attachments") || localPath.StartsWith("attachments"))
+                            if (localPath.StartsWith("ephemeral-attachments") || localPath.StartsWith("attachments") || IsReplicate)
                             {
+                                // 换脸放到附件中
+                                if (IsReplicate)
+                                {
+                                    localPath = $"attachments/{localPath}";
+                                }
+
                                 var savePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", localPath);
                                 var directoryPath = Path.GetDirectoryName(savePath);
 

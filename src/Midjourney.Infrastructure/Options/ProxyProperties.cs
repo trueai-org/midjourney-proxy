@@ -110,6 +110,11 @@ namespace Midjourney.Infrastructure
         /// 阿里云存储配置
         /// </summary>
         public AliyunOssOptions AliyunOss { get; set; } = new AliyunOssOptions();
+
+        /// <summary>
+        /// 换脸配置
+        /// </summary>
+        public ReplicateOptions Replicate { get; set; } = new ReplicateOptions();
     }
 
     /// <summary>
@@ -512,5 +517,105 @@ namespace Midjourney.Infrastructure
         /// 阿里云 OSS 默认缩略图图片样式 x-oss-process=style/w320
         /// </summary>
         public string ThumbnailImageStyle { get; set; }
+
+        /// <summary>
+        /// 阿里云 OSS 视频截帧
+        /// x-oss-process=video/snapshot,t_6000,f_jpg,w_400,m_fast
+        /// </summary>
+        public string VideoSnapshotStyle { get; set; }
+    }
+
+    /// <summary>
+    /// 基于 replicate 平台进行换脸等业务
+    /// https://replicate.com/omniedgeio/face-swap
+    /// https://replicate.com/codeplugtech/face-swap
+    /// https://github.com/tzktz/face-swap?tab=readme-ov-file
+    ///
+    /// 其他参考：
+    /// https://huggingface.co/spaces/tonyassi/video-face-swap
+    /// https://huggingface.co/spaces/felixrosberg/face-swap
+    /// https://felixrosberg-face-swap.hf.space/
+    /// 
+    /// Picsi.Ai
+    /// https://www.picsi.ai/faceswap
+    /// </summary>
+    public class ReplicateOptions
+    {
+        /// <summary>
+        /// REPLICATE_API_TOKEN
+        /// </summary>
+        public string Token { get; set; }
+
+        /// <summary>
+        /// 启用换脸
+        /// </summary>
+        public bool EnableFaceSwap { get; set; }
+
+        /// <summary>
+        /// 换脸版本
+        /// 默认（$0.002/次）：https://replicate.com/codeplugtech/face-swap -> 278a81e7ebb22db98bcba54de985d22cc1abeead2754eb1f2af717247be69b34
+        /// 快速（$0.019/次）：https://replicate.com/omniedgeio/face-swap -> d28faa318942bf3f1cbed9714def03594f99b3c69b2eb279c39fc60993cee9ac
+        /// </summary>
+        public string FaceSwapVersion { get; set; } = "278a81e7ebb22db98bcba54de985d22cc1abeead2754eb1f2af717247be69b34";
+
+        /// <summary>
+        /// 换脸并发数
+        /// </summary>
+        public int FaceSwapCoreSize { get; set; } = 3;
+
+        /// <summary>
+        /// 换脸等待队列长度。
+        /// </summary>
+        public int FaceSwapQueueSize { get; set; } = 10;
+
+        /// <summary>
+        /// 换脸任务超时
+        /// </summary>
+        public int FaceSwapTimeoutMinutes { get; set; } = 10;
+
+        /// <summary>
+        /// 启用视频换脸
+        /// </summary>
+        public bool EnableVideoFaceSwap { get; set; }
+
+        /// <summary>
+        /// 视频换脸模型版本
+        /// https://replicate.com/xrunda/hello
+        /// </summary>
+        public string VideoFaceSwapVersion { get; set; } = "104b4a39315349db50880757bc8c1c996c5309e3aa11286b0a3c84dab81fd440";
+
+        /// <summary>
+        /// 视频换脸并发数
+        /// </summary>
+        public int VideoFaceSwapCoreSize { get; set; } = 3;
+
+        /// <summary>
+        /// 视频换脸等待队列长度。
+        /// </summary>
+        public int VideoFaceSwapQueueSize { get; set; } = 10;
+
+        /// <summary>
+        /// 视频换脸任务超时
+        /// </summary>
+        public int VideoFaceSwapTimeoutMinutes { get; set; } = 30;
+
+        /// <summary>
+        /// 最大文件大小限制
+        /// </summary>
+        public long MaxFileSize { get; set; } = 10 * 1024 * 1024;
+
+        /// <summary>
+        /// 回调通知
+        /// </summary>
+        public string Webhook { get; set; }
+
+        /// <summary>
+        /// 回调通知事件过滤
+        /// start：预测开始时立即
+        /// output：每次预测都会产生一个输出（请注意，预测可以产生多个输出）
+        /// logs：每次日志输出都是由预测生成的
+        /// completed：当预测达到终止状态（成功/取消/失败）时
+        /// </summary>
+        public string[] WebhookEventsFilter { get; set; } = [];
     }
 }
