@@ -308,14 +308,14 @@ namespace Midjourney.Infrastructure.Models
                                 // 替换 url
                                 var url = $"{customCdn?.Trim()?.Trim('/')}/{localPath}{uri?.Query}";
 
-                                ImageUrl = url.ToStyle(opt.ImageStyle);
-
                                 if (Action != TaskAction.SWAP_VIDEO_FACE)
                                 {
+                                    ImageUrl = url.ToStyle(opt.ImageStyle);
                                     ThumbnailUrl = url.ToStyle(opt.ThumbnailImageStyle);
                                 }
                                 else
                                 {
+                                    ImageUrl = url;
                                     ThumbnailUrl = url.ToStyle(opt.VideoSnapshotStyle);
                                 }
                             }
