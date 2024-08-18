@@ -45,6 +45,11 @@ namespace Midjourney.Infrastructure.LoadBalancer
         // 使用 MemoryCache 实例来存储缓存数据
         private readonly MemoryCache _cache = new MemoryCache(new MemoryCacheOptions());
 
+        /// <summary>
+        /// 表示是否已释放资源
+        /// </summary>
+        private bool _isDispose = false;
+
 
         public DiscordInstance(
             DiscordAccount account,
@@ -640,6 +645,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
         {
             try
             {
+                _isDispose = true;
+
+
                 BotMessageListener?.Dispose();
                 WebSocketManager?.Dispose();
 

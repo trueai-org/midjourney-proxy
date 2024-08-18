@@ -1,5 +1,6 @@
 ﻿using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.LoadBalancer;
+using Midjourney.Infrastructure.Util;
 using Serilog;
 using System.Collections.Concurrent;
 using System.ComponentModel.Design.Serialization;
@@ -39,7 +40,10 @@ namespace Midjourney.Infrastructure
         private readonly WebProxy _webProxy;
         private readonly DiscordInstance _discordInstance;
 
-
+        /// <summary>
+        /// 表示是否已释放资源
+        /// </summary>
+        private bool _isDispose = false;
 
         /// <summary>
         /// 压缩的消息
@@ -150,10 +154,17 @@ namespace Midjourney.Infrastructure
         /// </summary>
         /// <param name="reconnect"></param>
         /// <returns></returns>
-        public async Task StartAsync(bool reconnect = false)
+        public async Task<bool> StartAsync(bool reconnect = false)
         {
             try
             {
+                // 如果资源已释放则，不再处理
+                // 或者账号已禁用
+                if (_isDispose || Account?.Enable != true)
+                {
+                    return false;
+                }
+
                 // 保证处于创建的实例只有1个
                 while (true)
                 {
@@ -164,7 +175,7 @@ namespace Midjourney.Infrastructure
                     }
 
                     _logger.Information($"取消处理, 未获取到锁, 重连: {reconnect}, {Account.Id}");
-                    return;
+                    return false;
                 }
 
                 // 关闭现有连接并取消相关任务
@@ -210,6 +221,8 @@ namespace Midjourney.Infrastructure
                 _receiveTask = ReceiveMessagesAsync(_receiveTokenSource.Token);
 
                 _logger.Information("用户 WebSocket 连接已建立 {@0}", Account.ChannelId);
+
+                return true;
             }
             catch (Exception ex)
             {
@@ -221,6 +234,8 @@ namespace Midjourney.Infrastructure
             {
                 _stateLock.Release();
             }
+
+            return false;
         }
 
         /// <summary>
@@ -764,17 +779,17 @@ namespace Midjourney.Infrastructure
 
             if (code >= 4000)
             {
-                _logger.Warning("用户无法重新连接， 由 {0}({1}) 关闭 {2}, 尝试新连接... ", code, reason, Account.Id);
+                _logger.Warning("用户无法重新连接， 由 {0}({1}) 关闭 {2}, 尝试新连接... ", code, reason, Account.ChannelId);
                 TryNewConnect();
             }
             else if (code == 2001)
             {
-                _logger.Warning("用户由 {0}({1}) 关闭, 尝试重新连接... {2}", code, reason, Account.Id);
+                _logger.Warning("用户由 {0}({1}) 关闭, 尝试重新连接... {2}", code, reason, Account.ChannelId);
                 TryReconnect();
             }
             else
             {
-                _logger.Warning("用户由 {0}({1}) 关闭, 尝试新连接... {2}", code, reason, Account.Id);
+                _logger.Warning("用户由 {0}({1}) 关闭, 尝试新连接... {2}", code, reason, Account.ChannelId);
                 TryNewConnect();
             }
         }
@@ -786,14 +801,20 @@ namespace Midjourney.Infrastructure
         {
             try
             {
-                StartAsync(true).Wait();
+                var success = StartAsync(true).ConfigureAwait(false).GetAwaiter().GetResult();
+                if (!success)
+                {
+                    _logger.Warning("用户重新连接失败 {@0}，尝试新连接", Account.ChannelId);
+
+                    Thread.Sleep(1000);
+                    TryNewConnect();
+                }
             }
             catch (Exception e)
             {
-                _logger.Warning(e, "用户重新连接失败 {@0}，尝试新连接", Account.ChannelId);
+                _logger.Warning(e, "用户重新连接异常 {@0}，尝试新连接", Account.ChannelId);
 
                 Thread.Sleep(1000);
-
                 TryNewConnect();
             }
         }
@@ -803,26 +824,37 @@ namespace Midjourney.Infrastructure
         /// </summary>
         private void TryNewConnect()
         {
-            for (int i = 1; i <= CONNECT_RETRY_LIMIT; i++)
+            var isLock = LocalLock.TryLock("TryNewConnect", TimeSpan.FromSeconds(3), () =>
             {
-                try
+                for (int i = 1; i <= CONNECT_RETRY_LIMIT; i++)
                 {
-                    StartAsync(false).Wait();
-                    return;
+                    try
+                    {
+                        var success = StartAsync(false).ConfigureAwait(false).GetAwaiter().GetResult();
+                        if (success)
+                        {
+                            return;
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.Warning(e, "用户新连接失败, 第 {@0} 次, {@1}", i, Account.ChannelId);
+
+                        Thread.Sleep(5000);
+                    }
                 }
-                catch (Exception e)
+
+                if (WebSocket == null || WebSocket.State != WebSocketState.Open)
                 {
-                    _logger.Warning(e, "用户新连接失败, 第 {@0} 次, {@1}", i, Account.ChannelId);
+                    _logger.Error("由于无法重新连接，自动禁用账号");
 
-                    Thread.Sleep(5000);
+                    DisableAccount("由于无法重新连接，自动禁用账号");
                 }
-            }
+            });
 
-            if (WebSocket == null || WebSocket.State != WebSocketState.Open)
+            if (!isLock)
             {
-                _logger.Error("由于无法重新连接，自动禁用账号");
-
-                DisableAccount("由于无法重新连接，自动禁用账号");
+                _logger.Warning("新的连接作业正在执行中，禁止重复执行");
             }
         }
 
@@ -998,6 +1030,8 @@ namespace Midjourney.Infrastructure
         {
             try
             {
+                _isDispose = true;
+
                 CloseSocket();
 
                 _messageQueue?.Clear();
@@ -1011,7 +1045,9 @@ namespace Midjourney.Infrastructure
             {
                 WebSocket?.Dispose();
                 _botListener?.Dispose();
-                _stateLock?.Dispose();
+
+                // 锁不需要释放
+                //_stateLock?.Dispose();
             }
             catch
             {
