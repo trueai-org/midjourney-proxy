@@ -43,13 +43,12 @@ fi
 
 # 运行新的容器
 echo "启动新的容器 ${CONTAINER_NAME}..."
-docker run -m 1g --name ${CONTAINER_NAME} -d --restart=always \
+docker run --name ${CONTAINER_NAME} -d --restart=always \
  -p 8086:8080 --user root \
  -v /root/mjopen/logs:/app/logs:rw \
  -v /root/mjopen/data:/app/data:rw \
  -v /root/mjopen/attachments:/app/wwwroot/attachments:rw \
  -v /root/mjopen/ephemeral-attachments:/app/wwwroot/ephemeral-attachments:rw \
- -v /root/mjopen/appsettings.Production.json:/app/appsettings.Production.json:ro \
  -e TZ=Asia/Shanghai \
  -v /etc/localtime:/etc/localtime:ro \
  -v /etc/timezone:/etc/timezone:ro \
