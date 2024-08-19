@@ -61,6 +61,11 @@ namespace Midjourney.Infrastructure
         public const string DISCORD_UPLOAD_URL = "https://discord-attachments-uploads-prd.storage.googleapis.com";
 
         /// <summary>
+        /// 身份验证地址如果 200 则是正常
+        /// </summary>
+        public const string DISCORD_VAL_URL = "https://discord.com/api/v9/users/@me/billing/country-code";
+
+        /// <summary>
         /// 获取 Discord 服务器 URL。
         /// </summary>
         /// <returns>Discord 服务器 URL。</returns>

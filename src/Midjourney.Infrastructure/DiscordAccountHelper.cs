@@ -15,11 +15,11 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Additional Terms:
-// This software shall not be used for any illegal activities. 
+// This software shall not be used for any illegal activities.
 // Users must comply with all applicable laws and regulations,
-// particularly those related to image and video processing. 
+// particularly those related to image and video processing.
 // The use of this software for any form of illegal face swapping,
-// invasion of privacy, or any other unlawful purposes is strictly prohibited. 
+// invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.Handle;
@@ -27,6 +27,7 @@ using Midjourney.Infrastructure.LoadBalancer;
 using Midjourney.Infrastructure.Services;
 using System.Net;
 using System.Reflection;
+using System.Text.Json;
 
 namespace Midjourney.Infrastructure
 {
@@ -113,7 +114,6 @@ namespace Midjourney.Infrastructure
 
             if (account.Enable == true)
             {
-
                 var messageListener = new BotMessageListener(_discordHelper, webProxy);
 
                 // 用户 WebSocket 连接
@@ -135,6 +135,60 @@ namespace Midjourney.Infrastructure
             }
 
             return discordInstance;
+        }
+
+        /// <summary>
+        /// 验证账号是否可用
+        /// </summary>
+        /// <param name="account"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        public async Task<bool> ValidateAccount(DiscordAccount account)
+        {
+            if (string.IsNullOrWhiteSpace(account.UserAgent))
+            {
+                account.UserAgent = Constants.DEFAULT_DISCORD_USER_AGENT;
+            }
+
+            WebProxy webProxy = null;
+            if (!string.IsNullOrEmpty(_properties.Proxy?.Host))
+            {
+                webProxy = new WebProxy(_properties.Proxy.Host, _properties.Proxy.Port ?? 80);
+            }
+
+            var hch = new HttpClientHandler
+            {
+                UseProxy = webProxy != null,
+                Proxy = webProxy
+            };
+
+            var client = new HttpClient(hch)
+            {
+                Timeout = TimeSpan.FromMinutes(10),
+            };
+
+            var request = new HttpRequestMessage(HttpMethod.Get, DiscordHelper.DISCORD_VAL_URL);
+            request.Headers.Add("Authorization", account.UserToken);
+            request.Headers.Add("User-Agent", account.UserAgent);
+
+            var response = await client.SendAsync(request);
+            var json = await response.Content.ReadAsStringAsync();
+            if (response.StatusCode == HttpStatusCode.OK)
+            {
+                return true;
+            }
+
+            //{
+            //    "message": "执行此操作需要先验证您的账号。",
+            //    "code": 40002
+            //}
+            var data = JsonDocument.Parse(json).RootElement;
+            if (data.TryGetProperty("message", out var message))
+            {
+                throw new Exception(message.GetString() ?? "账号验证异常");
+            }
+
+            return false;
         }
     }
 }

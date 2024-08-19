@@ -23,6 +23,7 @@
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
+using Midjourney.Infrastructure;
 using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.LoadBalancer;
 using Midjourney.Infrastructure.Services;
@@ -530,6 +531,13 @@ namespace Midjourney.API
                                 account.DayDrawCount = dayCount;
                                 db.Update(account);
 
+                                // 连接前先判断账号是否正常
+                                var success = await _discordAccountHelper.ValidateAccount(account);
+                                if (!success)
+                                {
+                                    throw new Exception("账号不可用");
+                                }
+
                                 disInstance = await _discordAccountHelper.CreateDiscordInstance(account);
                                 _discordLoadBalancer.AddInstance(disInstance);
 
@@ -606,15 +614,14 @@ namespace Midjourney.API
                 }
                 catch (Exception ex)
                 {
-                    _logger.Error("Account({@0}) init fail, disabled: {@1}", account.GetDisplay(), ex.Message);
+                    _logger.Error(ex, "Account({@0}) init fail, disabled: {@1}", account.ChannelId, ex.Message);
 
                     account.Enable = false;
-                    account.DisabledReason = "初始化失败";
+                    account.DisabledReason = ex.Message ?? "初始化失败";
 
                     db.Update(account);
 
                     disInstance?.ClearAccountCache(account.Id);
-
                     disInstance = null;
                 }
             });
