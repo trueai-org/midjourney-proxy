@@ -303,6 +303,11 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <returns></returns>
         private async Task ExecuteTaskAsync(TaskInfo info)
         {
+            var source = info.ReplicateSource;
+            var target = info.ReplicateTarget;
+
+            var localSource = source;
+            var localTarget = target;
             try
             {
                 var repl = GlobalConfiguration.Setting.Replicate;
@@ -325,7 +330,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 info.Progress = "0%";
                 await AsyncSaveAndNotify(info);
 
-                var source = info.ReplicateSource;
                 if (!source.StartsWith("http", StringComparison.OrdinalIgnoreCase))
                 {
                     // 非网络链接，说明是本地文件
@@ -369,7 +373,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     }
                 }
 
-                var target = info.ReplicateTarget;
                 if (!target.StartsWith("http", StringComparison.OrdinalIgnoreCase))
                 {
                     // 非网络链接，说明是本地文件
@@ -445,6 +448,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     return;
                 }
 
+                info.ReplicateSource = source;
+                info.ReplicateTarget = target;
                 info.StartTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
                 info.Status = TaskStatus.SUBMITTED;
                 info.Progress = "0%";
@@ -552,14 +557,14 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                 SaveAndNotify(info);
 
-                if (File.Exists(info.ReplicateSource))
+                if (File.Exists(localSource))
                 {
-                    File.Delete(info.ReplicateSource);
+                    File.Delete(localSource);
                 }
 
-                if (File.Exists(info.ReplicateTarget))
+                if (File.Exists(localTarget))
                 {
-                    File.Delete(info.ReplicateTarget);
+                    File.Delete(localTarget);
                 }
             }
         }
