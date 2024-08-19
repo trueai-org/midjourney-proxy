@@ -145,6 +145,15 @@
 **注意：一定确认映射文件和路径不要出错⚠⚠**
 
 ```bash
+# 推荐使用一键升级脚本
+# 1.首次下载（下载后可以编辑此脚本，进行自定义配置，例如：路径、端口、内存等配置，默认8086端口）
+wget -O docker-upgrade.sh https://raw.githubusercontent.com/trueai-org/midjourney-proxy/main/scripts/docker-upgrade.sh && bash docker-upgrade.sh
+
+# 2.更新升级（以后升级只需要执行此脚本即可）
+sh docker-upgrade.sh
+```
+
+```bash
 # 阿里云镜像（推荐国内使用）
 docker pull registry.cn-guangzhou.aliyuncs.com/trueai-org/midjourney-proxy
 
