@@ -185,12 +185,13 @@ namespace Midjourney.API
                     {
                         MongoAutoMigrate();
                     }
-                }
 
-                var oss = GlobalConfiguration.Setting.AliyunOss;
-                if (oss?.Enable == true && oss?.IsAutoMigrationLocalFile == true)
-                {
-                    AutoMigrationLocalFileToOss();
+
+                    var oss = GlobalConfiguration.Setting.AliyunOss;
+                    if (oss?.Enable == true && oss?.IsAutoMigrationLocalFile == true)
+                    {
+                        AutoMigrationLocalFileToOss();
+                    }
                 }
             });
 
@@ -318,11 +319,13 @@ namespace Midjourney.API
                 {
                     var oss = GlobalConfiguration.Setting.AliyunOss;
                     var dis = GlobalConfiguration.Setting.NgDiscord;
-                    var db = DbHelper.TaskStore;
+                    var coll = MongoHelper.GetCollection<TaskInfo>();
                     var cdn = dis.CustomCdn;
 
                     // 并且开启了本地域名
-                    if (oss?.Enable == true && oss?.IsAutoMigrationLocalFile == true && !string.IsNullOrWhiteSpace(cdn))
+                    // 并且已经开了 mongodb
+                    var isMongo = GlobalConfiguration.Setting.IsMongo;
+                    if (oss?.Enable == true && oss?.IsAutoMigrationLocalFile == true && !string.IsNullOrWhiteSpace(cdn) && isMongo)
                     {
                         var localPath1 = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "attachments");
                         var localPath2 = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "ephemeral-attachments");
@@ -339,8 +342,7 @@ namespace Midjourney.API
                                     {
                                         var fileName = Path.GetFileName(fileFullPath);
 
-                                        var model = db.GetCollection().Query().Where(c => c.ImageUrl.StartsWith(cdn) && c.ImageUrl.Contains(fileName))
-                                        .FirstOrDefault();
+                                        var model = coll.Find(c => c.ImageUrl.StartsWith(cdn) && c.ImageUrl.Contains(fileName)).FirstOrDefault();
                                         if (model != null)
                                         {
                                             // 创建保存路径
@@ -372,7 +374,7 @@ namespace Midjourney.API
                                                 model.ImageUrl = url;
                                                 model.ThumbnailUrl = url.ToStyle(oss.VideoSnapshotStyle);
                                             }
-                                            db.Update(model);
+                                            coll.ReplaceOne(c => c.Id == model.Id, model);
 
                                             stream.Close();
 

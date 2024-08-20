@@ -21,6 +21,8 @@
 // The use of this software for any form of illegal face swapping,
 // invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
+
+using Microsoft.Extensions.Caching.Memory;
 using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.Handle;
 using Midjourney.Infrastructure.LoadBalancer;
@@ -38,18 +40,22 @@ namespace Midjourney.Infrastructure
     {
         private readonly DiscordHelper _discordHelper;
         private readonly ProxyProperties _properties;
+
         private readonly ITaskStoreService _taskStoreService;
+        private readonly INotifyService _notifyService;
+
         private readonly IEnumerable<BotMessageHandler> _botMessageHandlers;
         private readonly IEnumerable<UserMessageHandler> _userMessageHandlers;
         private readonly Dictionary<string, string> _paramsMap;
-        private readonly INotifyService _notifyService;
+        private readonly IMemoryCache _memoryCache;
 
         public DiscordAccountHelper(
             DiscordHelper discordHelper,
             ITaskStoreService taskStoreService,
             IEnumerable<BotMessageHandler> messageHandlers,
             INotifyService notifyService,
-            IEnumerable<UserMessageHandler> userMessageHandlers)
+            IEnumerable<UserMessageHandler> userMessageHandlers,
+            IMemoryCache memoryCache)
         {
             _properties = GlobalConfiguration.Setting;
             _discordHelper = discordHelper;
@@ -57,6 +63,7 @@ namespace Midjourney.Infrastructure
             _notifyService = notifyService;
             _botMessageHandlers = messageHandlers;
             _userMessageHandlers = userMessageHandlers;
+            _memoryCache = memoryCache;
 
             var paramsMap = new Dictionary<string, string>();
             var assembly = Assembly.GetExecutingAssembly();
@@ -121,7 +128,8 @@ namespace Midjourney.Infrastructure
                     _discordHelper,
                     messageListener,
                     webProxy,
-                    discordInstance);
+                    discordInstance,
+                    _memoryCache);
 
                 await webSocket.StartAsync();
 

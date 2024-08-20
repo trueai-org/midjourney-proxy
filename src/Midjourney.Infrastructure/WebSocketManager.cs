@@ -21,12 +21,13 @@
 // The use of this software for any form of illegal face swapping,
 // invasion of privacy, or any other unlawful purposes is strictly prohibited. 
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
+
+using Microsoft.Extensions.Caching.Memory;
 using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.LoadBalancer;
 using Midjourney.Infrastructure.Util;
 using Serilog;
 using System.Collections.Concurrent;
-using System.ComponentModel.Design.Serialization;
 using System.IO.Compression;
 using System.Net;
 using System.Net.WebSockets;
@@ -152,16 +153,20 @@ namespace Midjourney.Infrastructure
 
         private readonly Task _messageQueueTask;
 
+        private readonly IMemoryCache _memoryCache;
+
         public WebSocketManager(
             DiscordHelper discordHelper,
             BotMessageListener userMessageListener,
             WebProxy webProxy,
-            DiscordInstance discordInstanceImpl)
+            DiscordInstance discordInstanceImpl,
+            IMemoryCache memoryCache)
         {
             _botListener = userMessageListener;
             _discordHelper = discordHelper;
             _webProxy = webProxy;
             _discordInstance = discordInstanceImpl;
+            _memoryCache = memoryCache;
 
             _logger = Log.Logger;
             _stateLock = new SemaphoreSlim(1, 1);
@@ -853,6 +858,17 @@ namespace Midjourney.Infrastructure
                 {
                     try
                     {
+                        // 如果 5 分钟内失败次数超过限制，则禁用账号
+                        var ncKey = $"TryNewConnect_{Account.ChannelId}";
+                        _memoryCache.TryGetValue(ncKey, out int count);
+                        if (count > CONNECT_RETRY_LIMIT)
+                        {
+                            _logger.Warning("新的连接失败次数超过限制，禁用账号");
+                            DisableAccount("新的连接失败次数超过限制，禁用账号");
+                            return;
+                        }
+                        _memoryCache.Set(ncKey, count + 1, TimeSpan.FromMinutes(5));
+
                         var success = StartAsync(false).ConfigureAwait(false).GetAwaiter().GetResult();
                         if (success)
                         {
