@@ -21,6 +21,7 @@
 // The use of this software for any form of illegal face swapping,
 // invasion of privacy, or any other unlawful purposes is strictly prohibited. 
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
+
 using Microsoft.Extensions.Caching.Memory;
 using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.Services;
@@ -448,10 +449,19 @@ namespace Midjourney.Infrastructure.LoadBalancer
                             var customCdn = _discordHelper.GetCustomCdn();
                             var toLocal = _discordHelper.GetSaveToLocal();
 
-                            info.ImageUrl = res.Output;
-                            info.Success(customCdn, toLocal);
-                            SaveAndNotify(info);
-                            return;
+                            if (res.Output is string output && !string.IsNullOrEmpty(output))
+                            {
+                                info.ImageUrl = output;
+                                info.Success(customCdn, toLocal);
+                                SaveAndNotify(info);
+                                return;
+                            }
+                            else
+                            {
+                                info.Fail($"执行失败返回内容为空 {res?.Urls?.Get}");
+                                SaveAndNotify(info);
+                                return;
+                            }
                         }
                         else if (res?.Status == "processing")
                         {
