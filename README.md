@@ -155,6 +155,7 @@
 - [抖音 Midjourney API Docker 部署视频教程](https://www.douyin.com/video/7405107738868501771)
 
 ```bash
+# 自动安装并启动
 # 推荐使用一键升级脚本
 # 1.首次下载（下载后可以编辑此脚本，进行自定义配置，例如：路径、端口、内存等配置，默认8086端口）
 wget -O docker-upgrade.sh https://raw.githubusercontent.com/trueai-org/midjourney-proxy/main/scripts/docker-upgrade.sh && bash docker-upgrade.sh
@@ -164,6 +165,7 @@ sh docker-upgrade.sh
 ```
 
 ```bash
+# 手动安装并启动
 # 阿里云镜像（推荐国内使用）
 docker pull registry.cn-guangzhou.aliyuncs.com/trueai-org/midjourney-proxy
 
