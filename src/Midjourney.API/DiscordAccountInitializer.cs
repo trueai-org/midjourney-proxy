@@ -15,15 +15,15 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Additional Terms:
-// This software shall not be used for any illegal activities. 
+// This software shall not be used for any illegal activities.
 // Users must comply with all applicable laws and regulations,
-// particularly those related to image and video processing. 
+// particularly those related to image and video processing.
 // The use of this software for any form of illegal face swapping,
-// invasion of privacy, or any other unlawful purposes is strictly prohibited. 
+// invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
+
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
-using Midjourney.Infrastructure;
 using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.LoadBalancer;
 using Midjourney.Infrastructure.Services;
@@ -51,7 +51,6 @@ namespace Midjourney.API
         private readonly IMemoryCache _memoryCache;
         private readonly SemaphoreSlim _semaphoreSlim = new(1, 1);
         private Timer _timer;
-
 
         public DiscordAccountInitializer(
             DiscordLoadBalancer discordLoadBalancer,
@@ -174,9 +173,9 @@ namespace Midjourney.API
                 DbHelper.BannedWordStore.Add(bannedWord);
             }
 
-            if (GlobalConfiguration.Setting.IsMongo)
+            _ = Task.Run(() =>
             {
-                _ = Task.Run(() =>
+                if (GlobalConfiguration.Setting.IsMongo)
                 {
                     // 索引
                     MongoIndexInit();
@@ -186,8 +185,14 @@ namespace Midjourney.API
                     {
                         MongoAutoMigrate();
                     }
-                });
-            }
+                }
+
+                var oss = GlobalConfiguration.Setting.AliyunOss;
+                if (oss?.Enable == true && oss?.IsAutoMigrationLocalFile == true)
+                {
+                    AutoMigrationLocalFileToOss();
+                }
+            });
 
             _timer = new Timer(DoWork, null, TimeSpan.Zero, TimeSpan.FromMinutes(1));
 
@@ -299,6 +304,93 @@ namespace Midjourney.API
             catch (Exception ex)
             {
                 _logger.Error(ex, "MongoAutoMigrate error");
+            }
+        }
+
+        /// <summary>
+        /// 自动迁移本地文件到 oss
+        /// </summary>
+        public void AutoMigrationLocalFileToOss()
+        {
+            try
+            {
+                LocalLock.TryLock("AutoMigrationLocalFileToOss", TimeSpan.FromSeconds(10), () =>
+                {
+                    var oss = GlobalConfiguration.Setting.AliyunOss;
+                    var dis = GlobalConfiguration.Setting.NgDiscord;
+                    var db = DbHelper.TaskStore;
+                    var cdn = dis.CustomCdn;
+
+                    // 并且开启了本地域名
+                    if (oss?.Enable == true && oss?.IsAutoMigrationLocalFile == true && !string.IsNullOrWhiteSpace(cdn))
+                    {
+                        var localPath1 = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "attachments");
+                        var localPath2 = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "ephemeral-attachments");
+                        var paths = new List<string> { localPath1, localPath2 };
+                        var process = 0;
+                        foreach (var dir in paths)
+                        {
+                            if (Directory.Exists(dir))
+                            {
+                                var files = Directory.GetFiles(dir, "*.*", SearchOption.AllDirectories);
+                                foreach (var fileFullPath in files)
+                                {
+                                    var fileName = Path.GetFileName(fileFullPath);
+
+                                    var model = db.GetCollection().Query().Where(c => c.ImageUrl.StartsWith(cdn) && c.ImageUrl.Contains(fileName))
+                                    .FirstOrDefault();
+                                    if (model != null)
+                                    {
+                                        // 创建保存路径
+                                        var uri = new Uri(model.ImageUrl);
+                                        var localPath = uri.AbsolutePath.TrimStart('/');
+
+                                        var stream = File.OpenRead(fileFullPath);
+                                        var ossService = new AliyunOssStorageService();
+
+                                        var mm = MimeKit.MimeTypes.GetMimeType(Path.GetFileName(localPath));
+                                        if (string.IsNullOrWhiteSpace(mm))
+                                        {
+                                            mm = "image/png";
+                                        }
+
+                                        var result = ossService.SaveAsync(stream, localPath, mm);
+
+                                        // 替换 url
+                                        var aliCdn = oss.CustomCdn;
+                                        var url = $"{aliCdn?.Trim()?.Trim('/')}/{localPath}{uri?.Query}";
+
+                                        if (model.Action != TaskAction.SWAP_VIDEO_FACE)
+                                        {
+                                            model.ImageUrl = url.ToStyle(oss.ImageStyle);
+                                            model.ThumbnailUrl = url.ToStyle(oss.ThumbnailImageStyle);
+                                        }
+                                        else
+                                        {
+                                            model.ImageUrl = url;
+                                            model.ThumbnailUrl = url.ToStyle(oss.VideoSnapshotStyle);
+                                        }
+                                        db.Update(model);
+
+                                        stream.Close();
+
+                                        // 删除
+                                        File.Delete(fileFullPath);
+
+                                        process++;
+                                        Log.Information("文件已自动迁移到阿里云 {@0}, {@1}", process, fileFullPath);
+                                    }
+                                }
+
+                                Log.Information("文件已自动迁移到阿里云完成 {@0}", process);
+                            }
+                        }
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "AutoMigrationLocalFileToOss error");
             }
         }
 
@@ -780,7 +872,6 @@ namespace Midjourney.API
                 }
                 catch
                 {
-
                 }
 
                 DbHelper.AccountStore.Delete(id);

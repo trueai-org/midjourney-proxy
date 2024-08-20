@@ -21,6 +21,7 @@
 // The use of this software for any form of illegal face swapping,
 // invasion of privacy, or any other unlawful purposes is strictly prohibited. 
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
+
 using LiteDB;
 using Midjourney.Infrastructure.Data;
 
@@ -546,6 +547,11 @@ namespace Midjourney.Infrastructure
         /// x-oss-process=video/snapshot,t_6000,f_jpg,w_400,m_fast
         /// </summary>
         public string VideoSnapshotStyle { get; set; }
+
+        /// <summary>
+        /// 开启自动迁移本地文件到阿里云支持
+        /// </summary>
+        public bool IsAutoMigrationLocalFile { get; set; }
     }
 
     /// <summary>
