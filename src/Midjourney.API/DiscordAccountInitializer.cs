@@ -335,50 +335,57 @@ namespace Midjourney.API
                                 var files = Directory.GetFiles(dir, "*.*", SearchOption.AllDirectories);
                                 foreach (var fileFullPath in files)
                                 {
-                                    var fileName = Path.GetFileName(fileFullPath);
-
-                                    var model = db.GetCollection().Query().Where(c => c.ImageUrl.StartsWith(cdn) && c.ImageUrl.Contains(fileName))
-                                    .FirstOrDefault();
-                                    if (model != null)
+                                    try
                                     {
-                                        // 创建保存路径
-                                        var uri = new Uri(model.ImageUrl);
-                                        var localPath = uri.AbsolutePath.TrimStart('/');
+                                        var fileName = Path.GetFileName(fileFullPath);
 
-                                        var stream = File.OpenRead(fileFullPath);
-                                        var ossService = new AliyunOssStorageService();
-
-                                        var mm = MimeKit.MimeTypes.GetMimeType(Path.GetFileName(localPath));
-                                        if (string.IsNullOrWhiteSpace(mm))
+                                        var model = db.GetCollection().Query().Where(c => c.ImageUrl.StartsWith(cdn) && c.ImageUrl.Contains(fileName))
+                                        .FirstOrDefault();
+                                        if (model != null)
                                         {
-                                            mm = "image/png";
+                                            // 创建保存路径
+                                            var uri = new Uri(model.ImageUrl);
+                                            var localPath = uri.AbsolutePath.TrimStart('/');
+
+                                            var stream = File.OpenRead(fileFullPath);
+                                            var ossService = new AliyunOssStorageService();
+
+                                            var mm = MimeKit.MimeTypes.GetMimeType(Path.GetFileName(localPath));
+                                            if (string.IsNullOrWhiteSpace(mm))
+                                            {
+                                                mm = "image/png";
+                                            }
+
+                                            var result = ossService.SaveAsync(stream, localPath, mm);
+
+                                            // 替换 url
+                                            var aliCdn = oss.CustomCdn;
+                                            var url = $"{aliCdn?.Trim()?.Trim('/')}/{localPath}{uri?.Query}";
+
+                                            if (model.Action != TaskAction.SWAP_VIDEO_FACE)
+                                            {
+                                                model.ImageUrl = url.ToStyle(oss.ImageStyle);
+                                                model.ThumbnailUrl = url.ToStyle(oss.ThumbnailImageStyle);
+                                            }
+                                            else
+                                            {
+                                                model.ImageUrl = url;
+                                                model.ThumbnailUrl = url.ToStyle(oss.VideoSnapshotStyle);
+                                            }
+                                            db.Update(model);
+
+                                            stream.Close();
+
+                                            // 删除
+                                            File.Delete(fileFullPath);
+
+                                            process++;
+                                            Log.Information("文件已自动迁移到阿里云 {@0}, {@1}", process, fileFullPath);
                                         }
-
-                                        var result = ossService.SaveAsync(stream, localPath, mm);
-
-                                        // 替换 url
-                                        var aliCdn = oss.CustomCdn;
-                                        var url = $"{aliCdn?.Trim()?.Trim('/')}/{localPath}{uri?.Query}";
-
-                                        if (model.Action != TaskAction.SWAP_VIDEO_FACE)
-                                        {
-                                            model.ImageUrl = url.ToStyle(oss.ImageStyle);
-                                            model.ThumbnailUrl = url.ToStyle(oss.ThumbnailImageStyle);
-                                        }
-                                        else
-                                        {
-                                            model.ImageUrl = url;
-                                            model.ThumbnailUrl = url.ToStyle(oss.VideoSnapshotStyle);
-                                        }
-                                        db.Update(model);
-
-                                        stream.Close();
-
-                                        // 删除
-                                        File.Delete(fileFullPath);
-
-                                        process++;
-                                        Log.Information("文件已自动迁移到阿里云 {@0}, {@1}", process, fileFullPath);
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        Log.Error(ex, "文件已自动迁移到阿里云异常 {@0}", fileFullPath);
                                     }
                                 }
 
