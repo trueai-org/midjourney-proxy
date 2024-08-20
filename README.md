@@ -22,7 +22,7 @@
 ## 教程
 
 - [Bilibili Midjourney API Docker 部署视频教程](https://www.bilibili.com/video/BV1NQpQezEu4/)
-- [抖音 Midjourney API Docker 部署视频教程](https://www.douyin.com/video/7405036020560858422)
+- [抖音 Midjourney API Docker 部署视频教程](https://www.douyin.com/video/7405107738868501771)
 
 > 提示：Windows 平台直接下载启动即可，详情参考下方说明。
 
@@ -152,7 +152,7 @@
 **注意：一定确认映射文件和路径不要出错⚠⚠**
 
 - [Bilibili Midjourney API Docker 部署视频教程](https://www.bilibili.com/video/BV1NQpQezEu4/)
-- [抖音 Midjourney API Docker 部署视频教程](https://www.douyin.com/video/7405036020560858422)
+- [抖音 Midjourney API Docker 部署视频教程](https://www.douyin.com/video/7405107738868501771)
 
 ```bash
 # 推荐使用一键升级脚本

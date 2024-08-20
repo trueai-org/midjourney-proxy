@@ -53,7 +53,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// 获取存活的实例。
         /// </summary>
         /// <returns>存活的实例列表。</returns>
-        public List<IDiscordInstance> GetAliveInstances() => _instances.Where(instance => instance.IsAlive).ToList();
+        public List<IDiscordInstance> GetAliveInstances() => _instances.Where(instance => instance?.IsAlive == true).ToList();
 
         /// <summary>
         /// 选择一个实例。
