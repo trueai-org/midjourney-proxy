@@ -144,6 +144,9 @@
 
 **注意：一定确认映射文件和路径不要出错⚠⚠**
 
+- Bilibili：[Midjourney API Docker 部署教程](https://www.bilibili.com/video/BV1NQpQezEu4/)
+- 抖音：[Midjourney API Docker 部署教程](https://www.douyin.com/video/7405036020560858422)
+
 ```bash
 # 推荐使用一键升级脚本
 # 1.首次下载（下载后可以编辑此脚本，进行自定义配置，例如：路径、端口、内存等配置，默认8086端口）
@@ -574,7 +577,6 @@ docker run -d \
 
 - [ ] 支持腾讯云存储等
 - [ ] 支持通过 openai 分析 prompt 词条，然后分配到领域账号，更加智能。通过 shorten 分析 prompt 词条，并分配到领域。
-- [ ] 征集视频教程（B 站、Youtube、抖音等都可以）
 - [ ] 接入官网绘图 API 支持
 - [ ] 最终提示词增加翻译中文显示支持
 - [ ] 账号支持单独的代理
