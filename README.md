@@ -19,6 +19,13 @@
 <a href="https://api.ephone.ai" target="_blank"><img src="https://api.iowen.cn/favicon/supernormal.com.png" style="width: 60px;"></a>
 <a href="https://api.mjdjourney.cn" target="_blank"><img src="https://cdn.optiai.cn/file/upload/2024/08/05/1820477746069901312.png" style="width: 60px;"></a>
 
+## 教程
+
+- [Bilibili Midjourney API Docker 部署视频教程](https://www.bilibili.com/video/BV1NQpQezEu4/)
+- [抖音 Midjourney API Docker 部署视频教程](https://www.douyin.com/video/7405036020560858422)
+
+> 提示：Windows 平台直接下载启动即可，详情参考下方说明。
+
 ## 交流群
 
 由于目前文档不是很完善，使用上和部署上可能会有问题，欢迎加入交流群，一起讨论和解决问题。
@@ -144,8 +151,8 @@
 
 **注意：一定确认映射文件和路径不要出错⚠⚠**
 
-- Bilibili：[Midjourney API Docker 部署教程](https://www.bilibili.com/video/BV1NQpQezEu4/)
-- 抖音：[Midjourney API Docker 部署教程](https://www.douyin.com/video/7405036020560858422)
+- [Bilibili Midjourney API Docker 部署视频教程](https://www.bilibili.com/video/BV1NQpQezEu4/)
+- [抖音 Midjourney API Docker 部署视频教程](https://www.douyin.com/video/7405036020560858422)
 
 ```bash
 # 推荐使用一键升级脚本
