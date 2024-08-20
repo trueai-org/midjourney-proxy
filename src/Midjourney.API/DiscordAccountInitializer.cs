@@ -252,7 +252,7 @@ namespace Midjourney.API
                     var index7 = new CreateIndexModel<TaskInfo>(Builders<TaskInfo>.IndexKeys.Ascending(c => c.Description));
                     coll.Indexes.CreateOne(index7);
 
-                    var index8 = new CreateIndexModel<TaskInfo>(Builders<TaskInfo>.IndexKeys.Ascending(c => c.Description));
+                    var index8 = new CreateIndexModel<TaskInfo>(Builders<TaskInfo>.IndexKeys.Ascending(c => c.ImageUrl));
                     coll.Indexes.CreateOne(index8);
                 });
             }
@@ -320,12 +320,14 @@ namespace Midjourney.API
                     var oss = GlobalConfiguration.Setting.AliyunOss;
                     var dis = GlobalConfiguration.Setting.NgDiscord;
                     var coll = MongoHelper.GetCollection<TaskInfo>();
-                    var cdn = dis.CustomCdn;
+
+                    var localCdn = dis.CustomCdn;
+                    var aliCdn = oss.CustomCdn;
 
                     // 并且开启了本地域名
                     // 并且已经开了 mongodb
                     var isMongo = GlobalConfiguration.Setting.IsMongo;
-                    if (oss?.Enable == true && oss?.IsAutoMigrationLocalFile == true && !string.IsNullOrWhiteSpace(cdn) && isMongo)
+                    if (oss?.Enable == true && oss?.IsAutoMigrationLocalFile == true && !string.IsNullOrWhiteSpace(localCdn) && isMongo)
                     {
                         var localPath1 = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "attachments");
                         var localPath2 = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "ephemeral-attachments");
@@ -342,7 +344,7 @@ namespace Midjourney.API
                                     {
                                         var fileName = Path.GetFileName(fileFullPath);
 
-                                        var model = coll.Find(c => c.ImageUrl.StartsWith(cdn) && c.ImageUrl.Contains(fileName)).FirstOrDefault();
+                                        var model = coll.Find(c => c.ImageUrl.StartsWith(localCdn) && c.ImageUrl.Contains(fileName)).FirstOrDefault();
                                         if (model != null)
                                         {
                                             // 创建保存路径
@@ -361,7 +363,7 @@ namespace Midjourney.API
                                             var result = ossService.SaveAsync(stream, localPath, mm);
 
                                             // 替换 url
-                                            var aliCdn = oss.CustomCdn;
+
                                             var url = $"{aliCdn?.Trim()?.Trim('/')}/{localPath}{uri?.Query}";
 
                                             if (model.Action != TaskAction.SWAP_VIDEO_FACE)
@@ -390,8 +392,25 @@ namespace Midjourney.API
                                         Log.Error(ex, "文件已自动迁移到阿里云异常 {@0}", fileFullPath);
                                     }
                                 }
+                            }
 
-                                Log.Information("文件已自动迁移到阿里云完成 {@0}", process);
+                            Log.Information("文件已自动迁移到阿里云完成 {@0}", process);
+
+                            // 二次临时修复，如果本地数据库是阿里云，但是 mongodb 不是阿里云，则将本地的 url 赋值到 mongodb
+                            var localDb = DbHelper.TaskStore;
+                            var localList = localDb.GetAll();
+                            foreach (var localItem in localList)
+                            {
+                                if (localItem.ImageUrl?.StartsWith(aliCdn) == true)
+                                {
+                                    var model = coll.Find(c => c.Id == localItem.Id).FirstOrDefault();
+                                    if (model != null && localItem.ImageUrl != model.ImageUrl)
+                                    {
+                                        model.ImageUrl = localItem.ImageUrl;
+                                        model.ThumbnailUrl = localItem.ThumbnailUrl;
+                                        coll.ReplaceOne(c => c.Id == model.Id, model);
+                                    }
+                                }
                             }
                         }
                     }
