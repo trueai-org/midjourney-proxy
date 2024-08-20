@@ -363,7 +363,6 @@ namespace Midjourney.API
                                             var result = ossService.SaveAsync(stream, localPath, mm);
 
                                             // 替换 url
-
                                             var url = $"{aliCdn?.Trim()?.Trim('/')}/{localPath}{uri?.Query}";
 
                                             if (model.Action != TaskAction.SWAP_VIDEO_FACE)
@@ -397,21 +396,21 @@ namespace Midjourney.API
                             Log.Information("文件已自动迁移到阿里云完成 {@0}", process);
 
                             // 二次临时修复，如果本地数据库是阿里云，但是 mongodb 不是阿里云，则将本地的 url 赋值到 mongodb
-                            var localDb = DbHelper.TaskStore;
-                            var localList = localDb.GetAll();
-                            foreach (var localItem in localList)
-                            {
-                                if (localItem.ImageUrl?.StartsWith(aliCdn) == true)
-                                {
-                                    var model = coll.Find(c => c.Id == localItem.Id).FirstOrDefault();
-                                    if (model != null && localItem.ImageUrl != model.ImageUrl)
-                                    {
-                                        model.ImageUrl = localItem.ImageUrl;
-                                        model.ThumbnailUrl = localItem.ThumbnailUrl;
-                                        coll.ReplaceOne(c => c.Id == model.Id, model);
-                                    }
-                                }
-                            }
+                            //var localDb = DbHelper.TaskStore;
+                            //var localList = localDb.GetAll();
+                            //foreach (var localItem in localList)
+                            //{
+                            //    if (localItem.ImageUrl?.StartsWith(aliCdn) == true)
+                            //    {
+                            //        var model = coll.Find(c => c.Id == localItem.Id).FirstOrDefault();
+                            //        if (model != null && localItem.ImageUrl != model.ImageUrl)
+                            //        {
+                            //            model.ImageUrl = localItem.ImageUrl;
+                            //            model.ThumbnailUrl = localItem.ThumbnailUrl;
+                            //            coll.ReplaceOne(c => c.Id == model.Id, model);
+                            //        }
+                            //    }
+                            //}
                         }
                     }
                 });
