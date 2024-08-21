@@ -2,7 +2,7 @@
 
 **中文** | [English](README.en.md)
 
-代理 Midjourney 的 Discord 频道，实现 API 形式调用 AI 绘图，支持图片、视频一键换脸，公益项目，提供免费 API 绘图。
+代理 Midjourney 的 Discord 频道，通过 API 绘图，支持图片、视频一键换脸，公益项目，提供免费 API 绘图。
 
 如果觉得项目不错，欢迎帮助点个 `Star`，万分谢谢！
 
