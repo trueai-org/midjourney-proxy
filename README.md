@@ -111,7 +111,6 @@
 
 ### 快速启动
 
-
 > Docker 版本
 
 - [Bilibili Midjourney API Docker 部署视频教程](https://www.bilibili.com/video/BV1NQpQezEu4/)
@@ -223,7 +222,7 @@ curl -o linux_install.sh https://raw.githubusercontent.com/trueai-org/midjourney
 
 ## 参数配置
 
-[跟多配置参数说明](./docs/appsettings.md)
+[更多配置参数文档](./docs/appsettings.md)
 
 - `appsettings.json` 默认配置
 - `appsettings.Production.json` 生产环境配置
