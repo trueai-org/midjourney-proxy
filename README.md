@@ -1,4 +1,4 @@
-# Midjourney Proxy
+# Midjourney API
 
 **中文** | [English](README.en.md)
 
