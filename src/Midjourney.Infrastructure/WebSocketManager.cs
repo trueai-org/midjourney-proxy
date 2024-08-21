@@ -917,6 +917,13 @@ namespace Midjourney.Infrastructure
             {
                 _logger.Error(ex, "禁用账号失败 {@0}", Account.ChannelId);
             }
+            finally
+            {
+                // 邮件通知
+                var smtp = GlobalConfiguration.Setting?.Smtp;
+                EmailJob.Instance.EmailSend(smtp, $"MJ账号禁用通知-{Account.ChannelId}",
+                    $"{Account.ChannelId}, {Account.DisabledReason}");
+            }
         }
 
         /// <summary>
