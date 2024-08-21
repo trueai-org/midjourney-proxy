@@ -2,22 +2,17 @@
 
 **中文** | [English](README.en.md)
 
-代理 Midjourney 的 Discord 频道，实现 API 形式调用 AI 绘图，支持图片、视频一键换脸，公益项目，提供绘图 API 免费使用。
-
-完全开源，不会存在部分开源或部分闭源，欢迎 PR。
-
-功能最全、最安全、占用内存最小（100MB+）的 Midjourney Proxy API ~~
+代理 Midjourney 的 Discord 频道，实现 API 形式调用 AI 绘图，支持图片、视频一键换脸，公益项目，提供免费 API 绘图。
 
 如果觉得项目不错，欢迎帮助点个 `Star`，万分谢谢！
 
 ## 交流群
 
-由于目前文档不是很完善，使用上和部署上可能会有问题，欢迎加入交流群，一起讨论和解决问题。
+如果使用上和部署上有什么疑问，欢迎加入交流群，一起讨论和解决问题。
 
 [Midjourney公益群](https://qm.qq.com/q/k88clCkyMS)（QQ群：565908696）
 
 <img src="./docs/screenshots/565908696.png" alt="欢迎" width="360"/>
-
 
 ## 主要功能
 
