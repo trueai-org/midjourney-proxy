@@ -10,22 +10,6 @@
 
 如果觉得项目不错，欢迎帮助点个 `Star`，万分谢谢！
 
-## 赞助商
-
-非常感谢赞助商和群友的帮助和支持，万分感谢！
-
-<a href="https://goapi.gptnb.ai"><img src="https://img.stqu.me/images/2023/06/26/favicon.png" style="width: 60px;"></a>
-<a href="https://d.goamzai.com" target="_blank"><img src="https://d.goamzai.com/logo.png" style="width: 60px;"></a>
-<a href="https://api.ephone.ai" target="_blank"><img src="https://api.iowen.cn/favicon/supernormal.com.png" style="width: 60px;"></a>
-<a href="https://api.mjdjourney.cn" target="_blank"><img src="https://cdn.optiai.cn/file/upload/2024/08/05/1820477746069901312.png" style="width: 60px;"></a>
-
-## 教程
-
-- [Bilibili Midjourney API Docker 部署视频教程](https://www.bilibili.com/video/BV1NQpQezEu4/)
-- [抖音 Midjourney API Docker 部署视频教程](https://www.douyin.com/video/7405107738868501771)
-
-> 提示：Windows 平台直接下载启动即可，详情参考下方说明。
-
 ## 交流群
 
 由于目前文档不是很完善，使用上和部署上可能会有问题，欢迎加入交流群，一起讨论和解决问题。
@@ -142,6 +126,13 @@
 
 - **GoAmzAI**: <https://github.com/Licoy/GoAmzAI>
   -	打开后台 -> 绘画管理 -> 新增 -> MJ 绘画接口地址 -> <https://ai.trueai.org/mj>
+
+## 教程
+
+- [Bilibili Midjourney API Docker 部署视频教程](https://www.bilibili.com/video/BV1NQpQezEu4/)
+- [抖音 Midjourney API Docker 部署视频教程](https://www.douyin.com/video/7405107738868501771)
+
+> 提示：Windows 平台直接下载启动即可，详情参考下方说明。
 
 ## 安装与使用
 
@@ -603,6 +594,15 @@ docker run -d \
 
 - 如果觉得这个项目对您有所帮助，请帮忙点个 Star⭐
 - 您也可以提供暂时空闲的绘画公益账号（赞助 1 个慢速队列），支持此项目的发展😀
+
+## 赞助商
+
+非常感谢赞助商和群友的帮助和支持，万分感谢！
+
+<a href="https://goapi.gptnb.ai"><img src="https://img.stqu.me/images/2023/06/26/favicon.png" style="width: 60px;"></a>
+<a href="https://d.goamzai.com" target="_blank"><img src="https://d.goamzai.com/logo.png" style="width: 60px;"></a>
+<a href="https://api.ephone.ai" target="_blank"><img src="https://api.iowen.cn/favicon/supernormal.com.png" style="width: 60px;"></a>
+<a href="https://api.mjdjourney.cn" target="_blank"><img src="https://cdn.optiai.cn/file/upload/2024/08/05/1820477746069901312.png" style="width: 60px;"></a>
 
 ## 安全协议
 
