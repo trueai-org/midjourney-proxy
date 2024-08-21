@@ -187,7 +187,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// 获取队列中的任务列表。
         /// </summary>
         /// <returns>队列中的任务列表</returns>
-        public List<TaskInfo> GetQueueTasks() => new List<TaskInfo>(_queueTasks.Select(c => c.Item1));
+        public List<TaskInfo> GetQueueTasks() => new List<TaskInfo>(_queueTasks.Select(c => c.Item1) ?? []);
 
         public BotMessageListener BotMessageListener { get; set; }
 

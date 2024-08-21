@@ -53,7 +53,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// 获取存活的实例。
         /// </summary>
         /// <returns>存活的实例列表。</returns>
-        public List<IDiscordInstance> GetAliveInstances() => _instances.Where(instance => instance?.IsAlive == true).ToList();
+        public List<IDiscordInstance> GetAliveInstances() =>
+            _instances.Where(c => c != null && c.IsAlive == true).Where(c => c != null).ToList() ?? new List<IDiscordInstance>();
 
         /// <summary>
         /// 选择一个实例。
@@ -188,10 +189,20 @@ namespace Midjourney.Infrastructure.LoadBalancer
         public List<TaskInfo> GetQueueTasks()
         {
             var tasks = new List<TaskInfo>();
-            foreach (var instance in GetAliveInstances())
+
+            var ins = GetAliveInstances();
+            if (ins?.Count > 0)
             {
-                tasks.AddRange(instance.GetQueueTasks());
+                foreach (var instance in ins)
+                {
+                    var ts = instance.GetQueueTasks();
+                    if (ts?.Count > 0)
+                    {
+                        tasks.AddRange(ts);
+                    }
+                }
             }
+
             return tasks;
         }
 
