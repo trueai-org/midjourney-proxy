@@ -2,7 +2,7 @@
 
 **中文** | [English](README.en.md)
 
-代理 Midjourney 的 Discord 频道，通过 API 绘图，支持图片、视频一键换脸，公益项目，提供免费 API 绘图。
+代理 Midjourney 的 Discord 频道，通过 API 绘图，支持图片、视频一键换脸，公益项目，提供免费绘图接口。
 
 如果觉得项目不错，欢迎帮助点个 `Star`，万分谢谢！
 
@@ -89,26 +89,9 @@
 - CloudFlare 自动验证服务器地址：<http://47.76.110.222:8081>
 - CloudFlare 自动验证服务器文档：<http://47.76.110.222:8081/swagger>
 
-> CloudFlare 自动验证配置示例（免费自动过人机验证）
-
-```json
-"CaptchaServer": "http://47.76.110.222:8081", // 自动验证器地址
-"CaptchaNotifyHook": "https://ai.trueai.org" // 验证完成通知回调，默认为你的域名
-```
-
 ## 预览截图
 
-![欢迎](./docs/screenshots/ui1.png)
-
-![账号](./docs/screenshots/ui2.png)
-
-![任务](./docs/screenshots/ui3.png)
-
-![测试](./docs/screenshots/ui4.png)
-
-![日志](./docs/screenshots/ui5.png)
-
-![接口](./docs/screenshots/uiswagger.png)
+![绘图](./docs/screenshots/ui9.png)
 
 ## 客户端推荐
 
@@ -122,23 +105,19 @@
 - **GoAmzAI**: <https://github.com/Licoy/GoAmzAI>
   -	打开后台 -> 绘画管理 -> 新增 -> MJ 绘画接口地址 -> <https://ai.trueai.org/mj>
 
-## 教程
-
-- [Bilibili Midjourney API Docker 部署视频教程](https://www.bilibili.com/video/BV1NQpQezEu4/)
-- [抖音 Midjourney API Docker 部署视频教程](https://www.douyin.com/video/7405107738868501771)
+## 安装与使用
 
 > 提示：Windows 平台直接下载启动即可，详情参考下方说明。
 
-## 安装与使用
-
 ### 快速启动
+
 
 > Docker 版本
 
-**注意：一定确认映射文件和路径不要出错⚠⚠**
-
 - [Bilibili Midjourney API Docker 部署视频教程](https://www.bilibili.com/video/BV1NQpQezEu4/)
 - [抖音 Midjourney API Docker 部署视频教程](https://www.douyin.com/video/7405107738868501771)
+
+注意：一定确认映射文件和路径不要出错⚠
 
 ```bash
 # 自动安装并启动
@@ -458,8 +437,19 @@ curl -o linux_install.sh https://raw.githubusercontent.com/trueai-org/midjourney
   "thumbnailImageStyle": "x-oss-process=style/w200"
 }
 ```
+## CloudFlare 人机验证
 
-## CloudFlare 验证器部署
+免费自动过人机验证，CloudFlare 自动验证配置示例。
+
+- `CaptchaServer` 验证器地址
+- `CaptchaNotifyHook` 验证完成通知回调，默认为你的域名
+
+```json
+"CaptchaServer": "http://47.76.110.222:8081",
+"CaptchaNotifyHook": "https://ai.trueai.org"
+```
+
+## CloudFlare 验证器
 
 仅支持 Windows 部署（并且支持 TLS 1.3，系统要求 Windows11 或 Windows Server 2022），由于 CloudFlare 验证器需要使用到 Chrome 浏览器，所以需要在 Windows 环境下部署，而在 Linux 环境下部署会依赖很多库，所以暂时不支持 Linux 部署。
 
@@ -485,29 +475,7 @@ curl -o linux_install.sh https://raw.githubusercontent.com/trueai-org/midjourney
 
 本项目利用 Discord 机器人 Token 连接 wss，可以获取错误信息和完整功能，确保消息的高可用性等问题。
 
-```
-1. 创建应用
-https://discord.com/developers/applications
-
-2. 设置应用权限（确保拥有读取内容权限，参考截图）
-[Bot] 设置 -> 全部开启
-
-3. 添加应用到频道服务器（参考截图）
-
-client_id 可以在应用详情页找到，为 APPLICATION ID
-
-https://discord.com/oauth2/authorize?client_id=xxx&permissions=8&scope=bot
-
-4. 复制或重置 Bot Token 到配置文件
-```
-
-设置应用权限（确保拥有读取内容权限，参考截图）
-
-![设置应用权限](./docs/screenshots/gjODn5Nplq.png)
-
-添加应用到频道服务器（参考截图）
-
-![添加应用到频道服务器](./docs/screenshots/ItiWgaWIaX.png)
+[机器人 Token 配置教程](./docs/api.md)
 
 ## MongoDB 配置
 
@@ -556,10 +524,6 @@ docker run -d \
   "webhookEventsFilter": []
 }
 ```
-
-## 相关文档
-
-1. [API接口说明](./docs/api.md)
 
 ## 作图频繁预防警告
 
