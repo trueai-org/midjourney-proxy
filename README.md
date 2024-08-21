@@ -223,6 +223,8 @@ curl -o linux_install.sh https://raw.githubusercontent.com/trueai-org/midjourney
 
 ## 参数配置
 
+[跟多配置参数说明](./docs/appsettings.md)
+
 - `appsettings.json` 默认配置
 - `appsettings.Production.json` 生产环境配置
 - `/app/data` 数据目录，存放账号、任务等数据
