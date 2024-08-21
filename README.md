@@ -134,7 +134,7 @@
 ## 客户端推荐
 
 - **ChatGPT-Midjourney**: <https://github.com/Licoy/ChatGPT-Midjourney>
-  - 一键拥有你自己的 ChatGPT+StabilityAI+Midjourney 网页服务 -> <https://chat-gpt-midjourney-96vk.vercel.app/#/mj>
+  - 一键拥有你自己的 ChatGPT+StabilityAI+Midjourney 网页服务 -> <https://aidemo.xiazai.zip/#/mj>
   - 打开网站 -> 设置 -> 自定义接口 -> 模型(Midjourney) -> 接口地址 -> <https://ai.trueai.org/mj>
 
 - **ChatGPT Web Midjourney Proxy**: <https://github.com/Dooy/chatgpt-web-midjourney-proxy> 
