@@ -353,6 +353,11 @@ namespace Midjourney.Infrastructure
         {
             try
             {
+                if (WebSocket == null)
+                {
+                    return;
+                }
+
                 while (WebSocket.State == WebSocketState.Open && !cancellationToken.IsCancellationRequested)
                 {
                     WebSocketReceiveResult result;

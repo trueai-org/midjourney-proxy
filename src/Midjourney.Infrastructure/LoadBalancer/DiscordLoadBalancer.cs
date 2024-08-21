@@ -21,6 +21,7 @@
 // The use of this software for any form of illegal face swapping,
 // invasion of privacy, or any other unlawful purposes is strictly prohibited. 
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
+
 using Midjourney.Infrastructure.Dto;
 
 namespace Midjourney.Infrastructure.LoadBalancer
@@ -54,7 +55,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// </summary>
         /// <returns>存活的实例列表。</returns>
         public List<IDiscordInstance> GetAliveInstances() =>
-            _instances.Where(c => c != null && c.IsAlive == true).Where(c => c != null).ToList() ?? new List<IDiscordInstance>();
+            _instances.Where(c => c != null && c.IsAlive == true).Where(c => c != null).ToList() ?? [];
 
         /// <summary>
         /// 选择一个实例。

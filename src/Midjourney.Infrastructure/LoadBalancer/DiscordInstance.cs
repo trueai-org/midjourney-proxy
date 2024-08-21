@@ -174,7 +174,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// 判断实例是否存活
         /// </summary>
         /// <returns>是否存活</returns>
-        public bool IsAlive => Account?.Enable == true
+        public bool IsAlive => Account != null
+            && WebSocketManager != null
+            && Account?.Enable == true
             && WebSocketManager?.Running == true
             && Account?.Lock != true;
 
