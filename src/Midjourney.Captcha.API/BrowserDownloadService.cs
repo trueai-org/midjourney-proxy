@@ -21,7 +21,6 @@
 // The use of this software for any form of illegal face swapping,
 // invasion of privacy, or any other unlawful purposes is strictly prohibited. 
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
-using PuppeteerSharp;
 
 namespace Midjourney.Captcha.API
 {
@@ -39,6 +38,8 @@ namespace Midjourney.Captcha.API
             _logger.LogInformation("正在下载浏览器...");
             await CloudflareHelper.DownloadBrowser();
             _logger.LogInformation("浏览器下载完成");
+
+            _logger.LogInformation("服务运行中...");
         }
 
         public Task StopAsync(CancellationToken cancellationToken)
