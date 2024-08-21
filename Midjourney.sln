@@ -10,6 +10,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "doc", "doc", "{D2283666-6952-4C0C-AF8C-CAC635CBD68D}"
 	ProjectSection(SolutionItems) = preProject
 		docs\api.md = docs\api.md
+		docs\appsettings.md = docs\appsettings.md
 		CHANGELOG.md = CHANGELOG.md
 		docs\discord-bot.md = docs\discord-bot.md
 		docs\discord-params.md = docs\discord-params.md
