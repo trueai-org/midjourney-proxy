@@ -21,6 +21,7 @@
 // The use of this software for any form of illegal face swapping,
 // invasion of privacy, or any other unlawful purposes is strictly prohibited. 
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
+
 using Discord.WebSocket;
 using Midjourney.Infrastructure.LoadBalancer;
 using Midjourney.Infrastructure.Util;
@@ -38,7 +39,7 @@ namespace Midjourney.Infrastructure.Handle
 
         public override int Order() => 99999;
 
-        public override void Handle(IDiscordInstance instance, MessageType messageType, SocketMessage message)
+        public override void Handle(DiscordInstance instance, MessageType messageType, SocketMessage message)
         {
             var content = GetMessageContent(message);
             var parseData = GetParseData(content);

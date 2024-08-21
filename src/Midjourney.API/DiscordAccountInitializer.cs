@@ -578,7 +578,7 @@ namespace Midjourney.API
             var isLock = await AsyncLocalLock.TryLockAsync($"Initialize:{account.Id}", TimeSpan.FromSeconds(5), async () =>
             {
                 var db = DbHelper.AccountStore;
-                IDiscordInstance disInstance = null;
+                Infrastructure.LoadBalancer.DiscordInstance disInstance = null;
                 try
                 {
                     disInstance = _discordLoadBalancer.GetDiscordInstance(account.ChannelId);
@@ -658,7 +658,7 @@ namespace Midjourney.API
                                 }
 
                                 disInstance = await _discordAccountHelper.CreateDiscordInstance(account);
-                                _discordLoadBalancer.AddInstance(disInstance);
+                                _discordLoadBalancer.AddInstance((Infrastructure.LoadBalancer.DiscordInstance)disInstance);
 
                                 // 这里应该等待初始化完成，并获取用户信息验证，获取用户成功后设置为可用状态
                                 // 多账号启动时，等待一段时间再启动下一个账号
@@ -673,7 +673,7 @@ namespace Midjourney.API
                         if (disInstance?.Account != null && disInstance.Account.FastExhausted)
                         {
                             // 每 3~6 小时，和启动时检查账号快速用量是否用完了
-                            if (disInstance.Account.InfoUpdated == null || disInstance.Account.InfoUpdated.Value.AddMinutes(5) < DateTime.Now)
+                            if (disInstance.Account.InfoUpdated == null || disInstance.Account.InfoUpdated.Value.AddMinutes((double)5) < DateTime.Now)
                             {
                                 // 检查账号快速用量是否用完了
                                 // 随机 3~6 小时，执行一次
@@ -702,16 +702,16 @@ namespace Midjourney.API
                             }
 
                             // 判断 info 检查时间是否在 5 分钟内
-                            if (disInstance.Account.InfoUpdated != null && disInstance.Account.InfoUpdated.Value.AddMinutes(5) >= DateTime.Now)
+                            if (disInstance.Account.InfoUpdated != null && disInstance.Account.InfoUpdated.Value.AddMinutes((double)5) >= DateTime.Now)
                             {
                                 // 提取 fastime
                                 // 如果检查完之后，快速超过 1 小时，则标记为快速未用完
-                                var fastTime = disInstance.Account.FastTimeRemaining?.ToString()?.Split('/')?.FirstOrDefault()?.Trim();
-                                if (!string.IsNullOrWhiteSpace(fastTime) && double.TryParse(fastTime, out var ftime) && ftime >= 1)
+                                var fastTime = disInstance.Account.FastTimeRemaining?.ToString()?.Split('/')?.FirstOrDefault<string>()?.Trim();
+                                if (!string.IsNullOrWhiteSpace((string)fastTime) && double.TryParse((string)fastTime, out var ftime) && ftime >= 1)
                                 {
                                     // 标记未用完快速
                                     disInstance.Account.FastExhausted = false;
-                                    db.Update(disInstance.Account);
+                                    db.Update((DiscordAccount)disInstance.Account);
 
                                     disInstance.ClearAccountCache(account.Id);
 
@@ -725,7 +725,7 @@ namespace Midjourney.API
                         // 非工作时间内，如果存在实例则释放
                         if (disInstance != null)
                         {
-                            _discordLoadBalancer.RemoveInstance(disInstance);
+                            _discordLoadBalancer.RemoveInstance((Infrastructure.LoadBalancer.DiscordInstance)disInstance);
 
                             disInstance.Dispose();
                         }

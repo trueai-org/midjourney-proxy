@@ -93,7 +93,7 @@ namespace Midjourney.Infrastructure
         /// <param name="account">Discord账号信息。</param>
         /// <returns>Discord实例。</returns>
         /// <exception cref="ArgumentException">当guildId, channelId或userToken为空时抛出。</exception>
-        public async Task<IDiscordInstance> CreateDiscordInstance(DiscordAccount account)
+        public async Task<DiscordInstance> CreateDiscordInstance(DiscordAccount account)
         {
             if (string.IsNullOrWhiteSpace(account.GuildId) || string.IsNullOrWhiteSpace(account.ChannelId) || string.IsNullOrWhiteSpace(account.UserToken))
             {
@@ -112,7 +112,9 @@ namespace Midjourney.Infrastructure
                 webProxy = new WebProxy(_properties.Proxy.Host, _properties.Proxy.Port ?? 80);
             }
 
-            var discordInstance = new DiscordInstance(account,
+            var discordInstance = new DiscordInstance(
+                _memoryCache,
+                account,
                 _taskStoreService,
                 _notifyService,
                 _discordHelper,

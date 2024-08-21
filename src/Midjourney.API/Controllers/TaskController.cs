@@ -21,6 +21,7 @@
 // The use of this software for any form of illegal face swapping,
 // invasion of privacy, or any other unlawful purposes is strictly prohibited. 
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
+
 using Microsoft.AspNetCore.Mvc;
 using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.Dto;
@@ -41,8 +42,9 @@ namespace Midjourney.API.Controllers
     public class TaskController : ControllerBase
     {
         private readonly ITaskStoreService _taskStoreService;
-        private readonly DiscordLoadBalancer _discordLoadBalancer;
         private readonly ITaskService _taskService;
+
+        private readonly DiscordLoadBalancer _discordLoadBalancer;
         private readonly WorkContext _workContext;
 
         public TaskController(

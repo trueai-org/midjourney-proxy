@@ -41,7 +41,7 @@ namespace Midjourney.Infrastructure.Handle
         {
         }
 
-        public override void Handle(IDiscordInstance instance, MessageType messageType, SocketMessage message)
+        public override void Handle(DiscordInstance instance, MessageType messageType, SocketMessage message)
         {
             // 跳过 Waiting to start 消息
             if (!string.IsNullOrWhiteSpace(message.Content) && message.Content.Contains("(Waiting to start)"))
@@ -72,7 +72,7 @@ namespace Midjourney.Infrastructure.Handle
             }
         }
 
-        private void FindAndFinishUTask(IDiscordInstance instance, string finalPrompt, int index, SocketMessage message)
+        private void FindAndFinishUTask(DiscordInstance instance, string finalPrompt, int index, SocketMessage message)
         {
             string imageUrl = GetImageUrl(message);
             string messageHash = discordHelper.GetMessageHash(imageUrl);

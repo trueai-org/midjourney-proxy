@@ -40,7 +40,7 @@ namespace Midjourney.Infrastructure.Handle
 
         public override int Order() => 2;
 
-        public override void Handle(IDiscordInstance instance, MessageType messageType, SocketMessage message)
+        public override void Handle(DiscordInstance instance, MessageType messageType, SocketMessage message)
         {
             // 不需要处理，因为处理过了
             return;
@@ -136,7 +136,7 @@ namespace Midjourney.Infrastructure.Handle
             }
         }
 
-        private TaskInfo FindTaskWhenError(IDiscordInstance instance, MessageType messageType, SocketMessage message)
+        private TaskInfo FindTaskWhenError(DiscordInstance instance, MessageType messageType, SocketMessage message)
         {
             string progressMessageId = messageType switch
             {

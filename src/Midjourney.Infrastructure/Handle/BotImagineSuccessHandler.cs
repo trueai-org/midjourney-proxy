@@ -38,7 +38,7 @@ namespace Midjourney.Infrastructure.Handle
 
         public override int Order() => 101;
 
-        public override void Handle(IDiscordInstance instance, MessageType messageType, SocketMessage message)
+        public override void Handle(DiscordInstance instance, MessageType messageType, SocketMessage message)
         {
             var content = GetMessageContent(message);
             var parseData = ConvertUtils.ParseContent(content, CONTENT_REGEX);

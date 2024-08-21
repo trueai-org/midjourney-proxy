@@ -38,7 +38,7 @@ namespace Midjourney.Infrastructure.Handle
 
         public override int Order() => 90;
 
-        public override void Handle(IDiscordInstance instance, MessageType messageType, EventData message)
+        public override void Handle(DiscordInstance instance, MessageType messageType, EventData message)
         {
             // 跳过 Waiting to start 消息
             if (!string.IsNullOrWhiteSpace(message.Content) && message.Content.Contains("(Waiting to start)"))

@@ -44,7 +44,7 @@ namespace Midjourney.Infrastructure.Handle
             this.discordHelper = discordHelper;
         }
 
-        public abstract void Handle(IDiscordInstance instance, MessageType messageType, SocketMessage message);
+        public abstract void Handle(DiscordInstance instance, MessageType messageType, SocketMessage message);
 
         public virtual int Order() => 100;
 
@@ -89,7 +89,7 @@ namespace Midjourney.Infrastructure.Handle
             return botType;
         }
 
-        protected void FindAndFinishImageTask(IDiscordInstance instance, TaskAction action, string finalPrompt, SocketMessage message)
+        protected void FindAndFinishImageTask(DiscordInstance instance, TaskAction action, string finalPrompt, SocketMessage message)
         {
             // 跳过 Waiting to start 消息
             if (!string.IsNullOrWhiteSpace(message.Content) && message.Content.Contains("(Waiting to start)"))

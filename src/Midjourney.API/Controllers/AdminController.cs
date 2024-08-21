@@ -15,12 +15,13 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Additional Terms:
-// This software shall not be used for any illegal activities. 
+// This software shall not be used for any illegal activities.
 // Users must comply with all applicable laws and regulations,
-// particularly those related to image and video processing. 
+// particularly those related to image and video processing.
 // The use of this software for any form of illegal face swapping,
-// invasion of privacy, or any other unlawful purposes is strictly prohibited. 
+// invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
+
 using LiteDB;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -46,6 +47,7 @@ namespace Midjourney.API.Controllers
     [Route("mj/admin")]
     public class AdminController : ControllerBase
     {
+        private readonly IMemoryCache _memoryCache;
         private readonly ITaskService _taskService;
 
         // 是否匿名用户
@@ -54,7 +56,6 @@ namespace Midjourney.API.Controllers
         private readonly DiscordLoadBalancer _loadBalancer;
         private readonly DiscordAccountInitializer _discordAccountInitializer;
         private readonly ProxyProperties _properties;
-        private readonly IMemoryCache _memoryCache;
         private readonly WorkContext _workContext;
 
         public AdminController(

@@ -41,7 +41,7 @@ namespace Midjourney.Infrastructure.Handle
 
         public override int Order() => 88888;
 
-        public override void Handle(IDiscordInstance instance, MessageType messageType, SocketMessage message)
+        public override void Handle(DiscordInstance instance, MessageType messageType, SocketMessage message)
         {
             // 跳过 Waiting to start 消息
             if (!string.IsNullOrWhiteSpace(message.Content) && message.Content.Contains("(Waiting to start)"))

@@ -15,17 +15,17 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Additional Terms:
-// This software shall not be used for any illegal activities. 
+// This software shall not be used for any illegal activities.
 // Users must comply with all applicable laws and regulations,
-// particularly those related to image and video processing. 
+// particularly those related to image and video processing.
 // The use of this software for any form of illegal face swapping,
-// invasion of privacy, or any other unlawful purposes is strictly prohibited. 
+// invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
+
 using Microsoft.Extensions.Caching.Memory;
 using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.LoadBalancer;
-using Midjourney.Infrastructure.Models;
 using Midjourney.Infrastructure.Util;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -626,7 +626,6 @@ namespace Midjourney.Infrastructure.Services
                             Prompt = targetTask.PromptEn,
                             State = submitAction.State
                         });
-
                     }
                     else
                     {
@@ -814,7 +813,6 @@ namespace Midjourney.Infrastructure.Services
                     nonce = SnowFlake.NextId();
                     task.Nonce = nonce;
                     task.SetProperty(Constants.TASK_PROPERTY_NONCE, nonce);
-
 
                     // MJ::ImagineModal::1265485889606516808
                     customId = $"MJ::ImagineModal::{messageId}";

@@ -21,6 +21,7 @@
 // The use of this software for any form of illegal face swapping,
 // invasion of privacy, or any other unlawful purposes is strictly prohibited. 
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
@@ -38,6 +39,7 @@ namespace Midjourney.API.Controllers
     public class HomeController : ControllerBase
     {
         private readonly IMemoryCache _memoryCache;
+
         public HomeController(IMemoryCache memoryCache)
         {
             _memoryCache = memoryCache;

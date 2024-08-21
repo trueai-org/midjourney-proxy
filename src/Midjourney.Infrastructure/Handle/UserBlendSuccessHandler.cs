@@ -44,7 +44,7 @@ namespace Midjourney.Infrastructure.Handle
 
         public override int Order() => 99998;
 
-        public override void Handle(IDiscordInstance instance, MessageType messageType, EventData message)
+        public override void Handle(DiscordInstance instance, MessageType messageType, EventData message)
         {
             var content = GetMessageContent(message);
             var parseData = GetParseData(content);

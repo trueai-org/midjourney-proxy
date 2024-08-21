@@ -15,11 +15,11 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Additional Terms:
-// This software shall not be used for any illegal activities. 
+// This software shall not be used for any illegal activities.
 // Users must comply with all applicable laws and regulations,
-// particularly those related to image and video processing. 
+// particularly those related to image and video processing.
 // The use of this software for any form of illegal face swapping,
-// invasion of privacy, or any other unlawful purposes is strictly prohibited. 
+// invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
 using Midjourney.Infrastructure.Dto;
@@ -32,29 +32,24 @@ namespace Midjourney.Infrastructure.LoadBalancer
     public class DiscordLoadBalancer
     {
         private readonly IRule _rule;
-        private readonly HashSet<IDiscordInstance> _instances;
+        private readonly HashSet<DiscordInstance> _instances = [];
 
-        /// <summary>
-        /// 初始化 DiscordLoadBalancer 类的新实例。
-        /// </summary>
-        /// <param name="rule">负载均衡规则。</param>
         public DiscordLoadBalancer(IRule rule)
         {
             _rule = rule;
-            _instances = new HashSet<IDiscordInstance>();
         }
 
         /// <summary>
         /// 获取所有实例。
         /// </summary>
         /// <returns>所有实例列表。</returns>
-        public List<IDiscordInstance> GetAllInstances() => _instances.ToList();
+        public List<DiscordInstance> GetAllInstances() => _instances.ToList();
 
         /// <summary>
         /// 获取存活的实例。
         /// </summary>
         /// <returns>存活的实例列表。</returns>
-        public List<IDiscordInstance> GetAliveInstances() =>
+        public List<DiscordInstance> GetAliveInstances() =>
             _instances.Where(c => c != null && c.IsAlive == true).Where(c => c != null).ToList() ?? [];
 
         /// <summary>
@@ -69,7 +64,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <param name="isDomain">过滤垂直领域的账号</param>
         /// <param name="domainIds">过滤垂直领域 ID</param>
         /// <param name="ids">指定 ids 账号</param>
-        public IDiscordInstance ChooseInstance(
+        public DiscordInstance ChooseInstance(
             AccountFilter accountFilter = null,
             bool? isNewTask = null,
             EBotType? botType = null,
@@ -147,7 +142,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// </summary>
         /// <param name="channelId">实例ID/渠道ID</param>
         /// <returns>实例。</returns>
-        public IDiscordInstance GetDiscordInstance(string channelId)
+        public DiscordInstance GetDiscordInstance(string channelId)
         {
             return string.IsNullOrWhiteSpace(channelId)
                 ? null
@@ -159,7 +154,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// </summary>
         /// <param name="channelId">实例ID/渠道ID</param>
         /// <returns>实例。</returns>
-        public IDiscordInstance GetDiscordInstanceIsAlive(string channelId)
+        public DiscordInstance GetDiscordInstanceIsAlive(string channelId)
         {
             return string.IsNullOrWhiteSpace(channelId)
                 ? null
@@ -211,13 +206,12 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// 添加 Discord 实例
         /// </summary>
         /// <param name="instance"></param>
-        public void AddInstance(IDiscordInstance instance) => _instances.Add(instance);
-
+        public void AddInstance(DiscordInstance instance) => _instances.Add(instance);
 
         /// <summary>
         /// 移除
         /// </summary>
         /// <param name="instance"></param>
-        public void RemoveInstance(IDiscordInstance instance) => _instances.Remove(instance);
+        public void RemoveInstance(DiscordInstance instance) => _instances.Remove(instance);
     }
 }

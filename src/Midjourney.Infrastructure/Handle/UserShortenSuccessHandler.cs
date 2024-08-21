@@ -41,7 +41,7 @@ namespace Midjourney.Infrastructure.Handle
 
         public override int Order() => 68888;
 
-        public override void Handle(IDiscordInstance instance, MessageType messageType, EventData message)
+        public override void Handle(DiscordInstance instance, MessageType messageType, EventData message)
         {
             if (message.InteractionMetadata?.Name != "shorten"
                 && message.Embeds?.FirstOrDefault()?.Footer?.Text.Contains("Click on a button to imagine one of the shortened prompts") != true)

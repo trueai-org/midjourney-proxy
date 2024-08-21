@@ -41,7 +41,7 @@ namespace Midjourney.Infrastructure.Handle
         {
         }
 
-        public override void Handle(IDiscordInstance instance, MessageType messageType, SocketMessage message)
+        public override void Handle(DiscordInstance instance, MessageType messageType, SocketMessage message)
         {
             // 判断消息是否处理过了
             CacheHelper<string, bool>.TryAdd(message.Id.ToString(), false);

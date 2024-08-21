@@ -41,7 +41,7 @@ namespace Midjourney.Infrastructure.Handle
 
         public override int Order() => 2;
 
-        public override void Handle(IDiscordInstance instance, MessageType messageType, EventData message)
+        public override void Handle(DiscordInstance instance, MessageType messageType, EventData message)
         {
             // 不需要处理，因为已经处理了
             return;
@@ -141,7 +141,7 @@ namespace Midjourney.Infrastructure.Handle
             */
         }
 
-        private TaskInfo FindTaskWhenError(IDiscordInstance instance, MessageType messageType, EventData message)
+        private TaskInfo FindTaskWhenError(DiscordInstance instance, MessageType messageType, EventData message)
         {
             string progressMessageId = messageType switch
             {

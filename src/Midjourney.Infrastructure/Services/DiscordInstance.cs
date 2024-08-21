@@ -15,11 +15,11 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Additional Terms:
-// This software shall not be used for any illegal activities. 
+// This software shall not be used for any illegal activities.
 // Users must comply with all applicable laws and regulations,
-// particularly those related to image and video processing. 
+// particularly those related to image and video processing.
 // The use of this software for any form of illegal face swapping,
-// invasion of privacy, or any other unlawful purposes is strictly prohibited. 
+// invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
 using Microsoft.Extensions.Caching.Memory;
@@ -35,17 +35,21 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.RegularExpressions;
 
+using ILogger = Serilog.ILogger;
+
 namespace Midjourney.Infrastructure.LoadBalancer
 {
     /// <summary>
-    /// Discord实例实现类。
+    /// Discord 实例
     /// 实现了IDiscordInstance接口，负责处理Discord相关的任务管理和执行。
     /// </summary>
-    public class DiscordInstance : IDiscordInstance
+    public class DiscordInstance
     {
+        private readonly ILogger _logger = Log.Logger;
+
         private readonly ITaskStoreService _taskStoreService;
         private readonly INotifyService _notifyService;
-        private readonly ILogger _logger;
+
         private readonly List<TaskInfo> _runningTasks;
         private readonly ConcurrentDictionary<string, Task> _taskFutureMap;
         private readonly SemaphoreSlimLock _semaphoreSlimLock;
@@ -63,19 +67,17 @@ namespace Midjourney.Infrastructure.LoadBalancer
         private readonly string _discordInteractionUrl;
         private readonly string _discordAttachmentUrl;
         private readonly string _discordMessageUrl;
-
-        private ConcurrentQueue<(TaskInfo, Func<Task<Message>>)> _queueTasks;
-
-        // 使用 MemoryCache 实例来存储缓存数据
-        private readonly MemoryCache _cache = new MemoryCache(new MemoryCacheOptions());
+        private readonly IMemoryCache _cache;
 
         /// <summary>
-        /// 表示是否已释放资源
+        /// 当前队列任务
         /// </summary>
-        private bool _isDispose = false;
+        private ConcurrentQueue<(TaskInfo, Func<Task<Message>>)> _queueTasks;
 
+        private DiscordAccount _account;
 
         public DiscordInstance(
+            IMemoryCache memoryCache,
             DiscordAccount account,
             ITaskStoreService taskStoreService,
             INotifyService notifyService,
@@ -94,6 +96,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 Timeout = TimeSpan.FromMinutes(10),
             };
 
+            _cache = memoryCache;
             _paramsMap = paramsMap;
             _discordHelper = discordHelper;
 
@@ -128,8 +131,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
             _longTaskCache.Start();
         }
 
-        private DiscordAccount _account;
-
         /// <summary>
         /// 默认会话ID。
         /// </summary>
@@ -140,6 +141,10 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// </summary>
         /// <returns>实例ID</returns>
         public string ChannelId => Account.ChannelId;
+
+        public BotMessageListener BotMessageListener { get; set; }
+
+        public WebSocketManager WebSocketManager { get; set; }
 
         /// <summary>
         /// 获取Discord账号信息。
@@ -191,10 +196,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// </summary>
         /// <returns>队列中的任务列表</returns>
         public List<TaskInfo> GetQueueTasks() => new List<TaskInfo>(_queueTasks.Select(c => c.Item1) ?? []);
-
-        public BotMessageListener BotMessageListener { get; set; }
-
-        public WebSocketManager WebSocketManager { get; set; }
 
         /// <summary>
         /// 后台服务执行任务
@@ -261,7 +262,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
                             // 提交任务前间隔
                             // 当一个作业完成后，是否先等待一段时间再提交下一个作业
                             Thread.Sleep((int)(interval * 1000));
-
 
                             // 从队列中移除任务，并开始执行
                             if (_queueTasks.TryDequeue(out info))
@@ -612,8 +612,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
             return GetRunningTasks().Where(condition);
         }
 
-
-
         /// <summary>
         /// 根据ID获取正在运行的任务。
         /// </summary>
@@ -671,9 +669,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
         {
             try
             {
-                _isDispose = true;
-
-
                 BotMessageListener?.Dispose();
                 WebSocketManager?.Dispose();
 
@@ -926,7 +921,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 }
 
                 _logger.Error("Seed Http 请求执行失败 {@0}, {@1}, {@2}", url, response.StatusCode, response.Content);
-
 
                 return Message.Of((int)response.StatusCode, "请求失败");
             }
@@ -1227,8 +1221,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
             return prompt;
         }
 
-
-
         /// <summary>
         /// 对 prompt 中含有 url 的进行转换为官方 url 处理
         /// 同一个 url 1 小时内有效缓存
@@ -1287,7 +1279,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                     urlDic[url] = okUrl;
                 }
-
 
                 // 替换 url
                 foreach (var item in urlDic)

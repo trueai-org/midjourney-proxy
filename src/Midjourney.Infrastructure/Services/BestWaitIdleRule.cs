@@ -21,6 +21,7 @@
 // The use of this software for any form of illegal face swapping,
 // invasion of privacy, or any other unlawful purposes is strictly prohibited. 
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
+
 namespace Midjourney.Infrastructure.LoadBalancer
 {
     /// <summary>
@@ -36,7 +37,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// </summary>
         /// <param name="instances">可用的 Discord 实例列表。</param>
         /// <returns>选择的 Discord 实例。</returns>
-        public IDiscordInstance Choose(List<IDiscordInstance> instances)
+        public DiscordInstance Choose(List<DiscordInstance> instances)
         {
             if (instances.Count == 0)
             {
@@ -84,7 +85,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// </summary>
         /// <param name="instances">可用的 Discord 实例列表。</param>
         /// <returns>选择的 Discord 实例。</returns>
-        public IDiscordInstance Choose(List<IDiscordInstance> instances)
+        public DiscordInstance Choose(List<DiscordInstance> instances)
         {
             if (instances.Count == 0)
             {
@@ -103,7 +104,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
     {
         private static readonly Random _random = new Random();
 
-        public IDiscordInstance Choose(List<IDiscordInstance> instances)
+        public DiscordInstance Choose(List<DiscordInstance> instances)
         {
             if (instances.Count == 0)
             {
@@ -120,7 +121,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
     /// </summary>
     public class WeightRule : IRule
     {
-        public IDiscordInstance Choose(List<IDiscordInstance> instances)
+        public DiscordInstance Choose(List<DiscordInstance> instances)
         {
             if (instances.Count == 0)
             {
