@@ -967,7 +967,7 @@ namespace Midjourney.Infrastructure
                                             var db = DbHelper.AccountStore;
                                             Account.InfoUpdated = DateTime.Now;
 
-                                            db.Update("InfoUpdated", Account);
+                                            db.Update("InfoUpdated,Properties", Account);
                                             _discordInstance?.ClearAccountCache(Account.Id);
                                         }
                                     }
