@@ -21,6 +21,7 @@
 // The use of this software for any form of illegal face swapping,
 // invasion of privacy, or any other unlawful purposes is strictly prohibited. 
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
+
 using MongoDB.Driver;
 using System.Linq.Expressions;
 
@@ -135,15 +136,17 @@ namespace Midjourney.Infrastructure.Data
 
         public void Save(T entity)
         {
-            var filter = Builders<T>.Filter.Eq("_id", entity.Id);
-            var existingEntity = _collection.Find(filter).FirstOrDefault();
-            if (existingEntity == null)
+            if (entity != null && !string.IsNullOrEmpty(entity.Id))
             {
-                _collection.InsertOne(entity);
-            }
-            else
-            {
-                _collection.ReplaceOne(filter, entity);
+                var model = _collection.Find(c => c.Id == entity.Id).FirstOrDefault();
+                if (model == null)
+                {
+                    _collection.InsertOne(entity);
+                }
+                else
+                {
+                    _collection.ReplaceOne(c => c.Id == entity.Id, entity);
+                }
             }
         }
 
