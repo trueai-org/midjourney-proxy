@@ -34,7 +34,6 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.RegularExpressions;
-
 using ILogger = Serilog.ILogger;
 
 namespace Midjourney.Infrastructure.LoadBalancer
@@ -928,7 +927,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
             {
                 _logger.Error(e, "Seed Http 请求执行异常 {@0}", url);
 
-                return ConvertHttpRequestException(e);
+                return Message.Of(ReturnCode.FAILURE, e.Message?.Substring(0, Math.Min(e.Message.Length, 100)) ?? "未知错误");
             }
         }
 
@@ -1331,7 +1330,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
             }
             catch (HttpRequestException e)
             {
-                return ConvertHttpRequestException(e);
+                _logger.Error(e, "局部重绘请求执行异常 {@0}", info);
+
+                return Message.Of(ReturnCode.FAILURE, e.Message?.Substring(0, Math.Min(e.Message.Length, 100)) ?? "未知错误");
             }
         }
 
@@ -1590,9 +1591,10 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
         private async Task<Message> PostJsonAndCheckStatusAsync(string paramsStr)
         {
+            HttpResponseMessage response = null;
             try
             {
-                HttpResponseMessage response = await PostJsonAsync(_discordInteractionUrl, paramsStr);
+                response = await PostJsonAsync(_discordInteractionUrl, paramsStr);
                 if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
                 {
                     return Message.Success();
@@ -1608,22 +1610,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
             {
                 _logger.Error(e, "Http 请求执行异常 {@0}", paramsStr);
 
-                return ConvertHttpRequestException(e);
-            }
-        }
-
-        private Message ConvertHttpRequestException(HttpRequestException e)
-        {
-            try
-            {
-                JObject error = JObject.Parse(e.Message);
-                return Message.Of(error.Value<int>("code"), error.Value<string>("message"));
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, ex.Message ?? "未知错误");
-
-                return Message.Of((int)e.StatusCode, e.Message?.Substring(0, Math.Min(e.Message.Length, 100)) ?? "未知错误");
+                return Message.Of(ReturnCode.FAILURE, e.Message?.Substring(0, Math.Min(e.Message.Length, 100)) ?? "未知错误");
             }
         }
     }
