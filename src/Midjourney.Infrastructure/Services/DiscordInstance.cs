@@ -1318,6 +1318,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     username = "0",
                 };
                 var paramsStr = Newtonsoft.Json.JsonConvert.SerializeObject(obj);
+
+                // NIJI 也是这个链接
                 var response = await PostJsonAsync("https://936929561302675456.discordsays.com/inpaint/api/submit-job",
                     paramsStr);
 
