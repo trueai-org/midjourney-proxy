@@ -190,6 +190,7 @@ namespace Midjourney.Infrastructure
                 // 或者账号已禁用
                 if (_isDispose || Account?.Enable != true)
                 {
+                    _logger.Warning("用户已禁用或资源已释放 {@0},{@1}", Account.ChannelId, _isDispose);
                     return false;
                 }
 
@@ -260,7 +261,14 @@ namespace Midjourney.Infrastructure
             }
             finally
             {
-                _stateLock.Release();
+                if (_stateLock.CurrentCount < _stateLock.Release(1))
+                {
+                    _stateLock.Release();
+                }
+                else
+                {
+                    _logger.Warning("Skipping _stateLock.Release() as the semaphore is already at max count.");
+                }
             }
 
             return false;
