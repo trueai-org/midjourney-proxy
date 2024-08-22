@@ -15,11 +15,11 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Additional Terms:
-// This software shall not be used for any illegal activities. 
+// This software shall not be used for any illegal activities.
 // Users must comply with all applicable laws and regulations,
-// particularly those related to image and video processing. 
+// particularly those related to image and video processing.
 // The use of this software for any form of illegal face swapping,
-// invasion of privacy, or any other unlawful purposes is strictly prohibited. 
+// invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 using LiteDB;
 using Midjourney.Infrastructure.Services;
@@ -169,6 +169,36 @@ namespace Midjourney.Infrastructure.Data
         {
             var col = _db.GetCollection<T>();
             col.Update(entity);
+        }
+
+        /// <summary>
+        /// 部分更新
+        /// </summary>
+        /// <param name="fields">BotToken,IsBlend,Properties</param>
+        /// <param name="item"></param>
+        /// <returns></returns>
+        public bool Update(string fields, T item)
+        {
+            // 获取现有文档
+            var col = _db.GetCollection<T>();
+            var model = col.FindById(item.Id);
+            if (model == null)
+                return false;
+
+            // 将更新对象的字段值复制到现有文档
+            var fieldArray = fields.Split(',');
+            foreach (var field in fieldArray)
+            {
+                var prop = typeof(T).GetProperty(field.Trim());
+                if (prop != null)
+                {
+                    var newValue = prop.GetValue(item);
+                    prop.SetValue(model, newValue);
+                }
+            }
+
+            // 更新文档
+            return col.Update(model);
         }
 
         /// <summary>
@@ -343,7 +373,6 @@ namespace Midjourney.Infrastructure.Data
         {
             return _db.GetCollection<T>().Query().ToList();
         }
-
 
         public List<T> Where(Expression<Func<T, bool>> filter, Expression<Func<T, object>> orderBy, bool orderByAsc, int limit)
         {

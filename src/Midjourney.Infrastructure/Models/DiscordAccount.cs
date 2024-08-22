@@ -498,9 +498,9 @@ namespace Midjourney.Infrastructure.Models
                 Id = Guid.NewGuid().ToString(),
                 ChannelId = configAccount.ChannelId,
 
+                UserAgent = string.IsNullOrEmpty(configAccount.UserAgent) ? Constants.DEFAULT_DISCORD_USER_AGENT : configAccount.UserAgent,
                 GuildId = configAccount.GuildId,
                 UserToken = configAccount.UserToken,
-                UserAgent = string.IsNullOrEmpty(configAccount.UserAgent) ? Constants.DEFAULT_DISCORD_USER_AGENT : configAccount.UserAgent,
                 Enable = configAccount.Enable,
                 CoreSize = configAccount.CoreSize,
                 QueueSize = configAccount.QueueSize,

@@ -343,7 +343,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     {
                         Account.DayDrawCount = count;
 
-                        DbHelper.AccountStore.Update(Account);
+                        DbHelper.AccountStore.Update("DayDrawCount", Account);
                     }
                 }
                 catch (Exception ex)

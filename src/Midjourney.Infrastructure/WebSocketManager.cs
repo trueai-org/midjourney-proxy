@@ -834,6 +834,11 @@ namespace Midjourney.Infrastructure
         {
             try
             {
+                if (_isDispose)
+                {
+                    return;
+                }
+
                 var success = StartAsync(true).ConfigureAwait(false).GetAwaiter().GetResult();
                 if (!success)
                 {
@@ -857,6 +862,11 @@ namespace Midjourney.Infrastructure
         /// </summary>
         private void TryNewConnect()
         {
+            if (_isDispose)
+            {
+                return;
+            }
+
             var isLock = LocalLock.TryLock("TryNewConnect", TimeSpan.FromSeconds(3), () =>
             {
                 for (int i = 1; i <= CONNECT_RETRY_LIMIT; i++)
@@ -913,7 +923,7 @@ namespace Midjourney.Infrastructure
                 Account.Enable = false;
                 Account.DisabledReason = msg;
 
-                DbHelper.AccountStore.Save(Account);
+                DbHelper.AccountStore.Update(Account);
 
                 _discordInstance?.ClearAccountCache(Account.Id);
                 _discordInstance?.Dispose();
@@ -1070,7 +1080,7 @@ namespace Midjourney.Infrastructure
             }
 
             // 保存
-            DbHelper.AccountStore.Save(Account);
+            DbHelper.AccountStore.Update("Enable,DisabledReason", Account);
             _discordInstance?.ClearAccountCache(Account.Id);
         }
 

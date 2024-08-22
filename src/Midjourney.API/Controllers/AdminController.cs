@@ -665,8 +665,10 @@ namespace Midjourney.API.Controllers
                 return Result.Fail("演示模式，禁止操作");
             }
 
-            var model = DbHelper.AccountStore.GetCollection().Query()
-                .Where(c => c.ChannelId == accountConfig.ChannelId).FirstOrDefault();
+            var model = DbHelper.AccountStore.GetCollection()
+                .Query()
+                .Where(c => c.ChannelId == accountConfig.ChannelId)
+                .FirstOrDefault();
 
             if (model != null)
             {

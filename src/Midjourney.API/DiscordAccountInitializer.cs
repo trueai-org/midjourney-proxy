@@ -186,7 +186,6 @@ namespace Midjourney.API
                         MongoAutoMigrate();
                     }
 
-
                     var oss = GlobalConfiguration.Setting.AliyunOss;
                     if (oss?.Enable == true && oss?.IsAutoMigrationLocalFile == true)
                     {
@@ -509,7 +508,7 @@ namespace Midjourney.API
         /// <returns></returns>
         public async Task Initialize(params DiscordAccountConfig[] appends)
         {
-            var isLock = await AsyncLocalLock.TryLockAsync("Initialize:all", TimeSpan.FromSeconds(10), async () =>
+            var isLock = await AsyncLocalLock.TryLockAsync("initialize:all", TimeSpan.FromSeconds(10), async () =>
             {
                 var db = DbHelper.AccountStore;
                 var accounts = db.GetAll().OrderBy(c => c.Sort).ToList();
@@ -559,7 +558,7 @@ namespace Midjourney.API
             });
             if (!isLock)
             {
-                throw new LogicException("初始化中，请稍后重拾");
+                throw new LogicException("初始化中，请稍后重试");
             }
 
             await Task.CompletedTask;
@@ -575,10 +574,18 @@ namespace Midjourney.API
                 return;
             }
 
-            var isLock = await AsyncLocalLock.TryLockAsync($"Initialize:{account.Id}", TimeSpan.FromSeconds(5), async () =>
+            var isLock = await AsyncLocalLock.TryLockAsync($"initialize:{account.Id}", TimeSpan.FromSeconds(5), async () =>
             {
                 var db = DbHelper.AccountStore;
-                Infrastructure.LoadBalancer.DiscordInstance disInstance = null;
+
+                // 获取获取值
+                account = db.Get(account.Id)!;
+                if (account.Enable != true)
+                {
+                    return;
+                }
+
+                DiscordInstance disInstance = null;
                 try
                 {
                     disInstance = _discordLoadBalancer.GetDiscordInstance(account.ChannelId);
@@ -648,7 +655,7 @@ namespace Midjourney.API
                                 }
 
                                 account.DayDrawCount = dayCount;
-                                db.Update(account);
+                                db.Update("SubChannels,SubChannelValues,FastExhausted,DayDrawCount", account);
 
                                 // 连接前先判断账号是否正常
                                 var success = await _discordAccountHelper.ValidateAccount(account);
@@ -658,7 +665,7 @@ namespace Midjourney.API
                                 }
 
                                 disInstance = await _discordAccountHelper.CreateDiscordInstance(account);
-                                _discordLoadBalancer.AddInstance((Infrastructure.LoadBalancer.DiscordInstance)disInstance);
+                                _discordLoadBalancer.AddInstance(disInstance);
 
                                 // 这里应该等待初始化完成，并获取用户信息验证，获取用户成功后设置为可用状态
                                 // 多账号启动时，等待一段时间再启动下一个账号
@@ -673,7 +680,7 @@ namespace Midjourney.API
                         if (disInstance?.Account != null && disInstance.Account.FastExhausted)
                         {
                             // 每 3~6 小时，和启动时检查账号快速用量是否用完了
-                            if (disInstance.Account.InfoUpdated == null || disInstance.Account.InfoUpdated.Value.AddMinutes((double)5) < DateTime.Now)
+                            if (disInstance.Account.InfoUpdated == null || disInstance.Account.InfoUpdated.Value.AddMinutes(5) < DateTime.Now)
                             {
                                 // 检查账号快速用量是否用完了
                                 // 随机 3~6 小时，执行一次
@@ -702,16 +709,16 @@ namespace Midjourney.API
                             }
 
                             // 判断 info 检查时间是否在 5 分钟内
-                            if (disInstance.Account.InfoUpdated != null && disInstance.Account.InfoUpdated.Value.AddMinutes((double)5) >= DateTime.Now)
+                            if (disInstance.Account.InfoUpdated != null && disInstance.Account.InfoUpdated.Value.AddMinutes(5) >= DateTime.Now)
                             {
                                 // 提取 fastime
                                 // 如果检查完之后，快速超过 1 小时，则标记为快速未用完
-                                var fastTime = disInstance.Account.FastTimeRemaining?.ToString()?.Split('/')?.FirstOrDefault<string>()?.Trim();
-                                if (!string.IsNullOrWhiteSpace((string)fastTime) && double.TryParse((string)fastTime, out var ftime) && ftime >= 1)
+                                var fastTime = disInstance.Account.FastTimeRemaining?.ToString()?.Split('/')?.FirstOrDefault()?.Trim();
+                                if (!string.IsNullOrWhiteSpace(fastTime) && double.TryParse(fastTime, out var ftime) && ftime >= 1)
                                 {
                                     // 标记未用完快速
                                     disInstance.Account.FastExhausted = false;
-                                    db.Update((DiscordAccount)disInstance.Account);
+                                    db.Update("FastExhausted", disInstance.Account);
 
                                     disInstance.ClearAccountCache(account.Id);
 
@@ -744,10 +751,9 @@ namespace Midjourney.API
                     disInstance = null;
                 }
             });
-
             if (!isLock)
             {
-                throw new LogicException("初始化中，请稍后重拾");
+                throw new LogicException("初始化中，请稍后重试");
             }
 
             await Task.CompletedTask;
@@ -759,98 +765,97 @@ namespace Midjourney.API
         /// <param name="param"></param>
         public void UpdateAccount(DiscordAccount param)
         {
-            DiscordAccount model = null;
-
-            var disInstance = _discordLoadBalancer.GetDiscordInstance(param.ChannelId);
-            if (disInstance != null)
-            {
-                model = disInstance.Account;
-            }
-
-            if (model == null)
-            {
-                model = DbHelper.AccountStore.Get(param.Id);
-            }
-
+            var model = DbHelper.AccountStore.Get(param.Id);
             if (model == null)
             {
                 throw new LogicException("账号不存在");
             }
 
-            // 渠道 ID 和 服务器 ID 禁止修改
-            //model.ChannelId = account.ChannelId;
-            //model.GuildId = account.GuildId;
-
-            // 更新账号重连时，自动解锁
-            model.Lock = false;
-            model.CfHashCreated = null;
-            model.CfHashUrl = null;
-            model.CfUrl = null;
-
-            // 验证 Interval
-            if (param.Interval < 1.2m)
+            // 更新一定要加锁，因为其他进程会修改 account 值，导致值覆盖
+            var isLock = AsyncLocalLock.TryLock($"initialize:{param.Id}", TimeSpan.FromSeconds(3), () =>
             {
-                param.Interval = 1.2m;
-            }
+                model = DbHelper.AccountStore.Get(param.Id)!;
 
-            // 验证 WorkTime
-            if (!string.IsNullOrEmpty(param.WorkTime))
-            {
-                var ts = param.WorkTime.ToTimeSlots();
-                if (ts.Count == 0)
+                // 渠道 ID 和 服务器 ID 禁止修改
+                //model.ChannelId = account.ChannelId;
+                //model.GuildId = account.GuildId;
+
+                // 更新账号重连时，自动解锁
+                model.Lock = false;
+                model.CfHashCreated = null;
+                model.CfHashUrl = null;
+                model.CfUrl = null;
+
+                // 验证 Interval
+                if (param.Interval < 1.2m)
                 {
-                    param.WorkTime = null;
+                    param.Interval = 1.2m;
                 }
-            }
 
-            // 验证 FishingTime
-            if (!string.IsNullOrEmpty(param.FishingTime))
-            {
-                var ts = param.FishingTime.ToTimeSlots();
-                if (ts.Count == 0)
+                // 验证 WorkTime
+                if (!string.IsNullOrEmpty(param.WorkTime))
                 {
-                    param.FishingTime = null;
+                    var ts = param.WorkTime.ToTimeSlots();
+                    if (ts.Count == 0)
+                    {
+                        param.WorkTime = null;
+                    }
                 }
+
+                // 验证 FishingTime
+                if (!string.IsNullOrEmpty(param.FishingTime))
+                {
+                    var ts = param.FishingTime.ToTimeSlots();
+                    if (ts.Count == 0)
+                    {
+                        param.FishingTime = null;
+                    }
+                }
+
+                model.EnableFastToRelax = param.EnableFastToRelax;
+                model.IsBlend = param.IsBlend;
+                model.IsDescribe = param.IsDescribe;
+                model.IsShorten = param.IsShorten;
+                model.DayDrawLimit = param.DayDrawLimit;
+                model.IsVerticalDomain = param.IsVerticalDomain;
+                model.VerticalDomainIds = param.VerticalDomainIds;
+                model.SubChannels = param.SubChannels;
+
+                model.PermanentInvitationLink = param.PermanentInvitationLink;
+                model.FishingTime = param.FishingTime;
+                model.EnableNiji = param.EnableNiji;
+                model.EnableMj = param.EnableMj;
+                model.AllowModes = param.AllowModes;
+                model.WorkTime = param.WorkTime;
+                model.Interval = param.Interval;
+                model.AfterIntervalMin = param.AfterIntervalMin;
+                model.AfterIntervalMax = param.AfterIntervalMax;
+                model.Sort = param.Sort;
+                model.Enable = param.Enable;
+                model.PrivateChannelId = param.PrivateChannelId;
+                model.NijiBotChannelId = param.NijiBotChannelId;
+                model.UserAgent = param.UserAgent;
+                model.RemixAutoSubmit = param.RemixAutoSubmit;
+                model.CoreSize = param.CoreSize;
+                model.QueueSize = param.QueueSize;
+                model.MaxQueueSize = param.MaxQueueSize;
+                model.TimeoutMinutes = param.TimeoutMinutes;
+                model.Weight = param.Weight;
+                model.Remark = param.Remark;
+                model.BotToken = param.BotToken;
+                model.UserToken = param.UserToken;
+                model.Mode = param.Mode;
+                model.Sponsor = param.Sponsor;
+
+                DbHelper.AccountStore.Update(model);
+
+                var disInstance = _discordLoadBalancer.GetDiscordInstance(model.ChannelId);
+                disInstance?.ClearAccountCache(model.Id);
+            });
+            if (!isLock)
+            {
+                throw new LogicException("作业执行中，请稍后重试");
             }
-
-            model.EnableFastToRelax = param.EnableFastToRelax;
-            model.IsBlend = param.IsBlend;
-            model.IsDescribe = param.IsDescribe;
-            model.IsShorten = param.IsShorten;
-            model.DayDrawLimit = param.DayDrawLimit;
-            model.IsVerticalDomain = param.IsVerticalDomain;
-            model.VerticalDomainIds = param.VerticalDomainIds;
-            model.SubChannels = param.SubChannels;
-
-            model.PermanentInvitationLink = param.PermanentInvitationLink;
-            model.FishingTime = param.FishingTime;
-            model.EnableNiji = param.EnableNiji;
-            model.EnableMj = param.EnableMj;
-            model.AllowModes = param.AllowModes;
-            model.WorkTime = param.WorkTime;
-            model.Interval = param.Interval;
-            model.AfterIntervalMin = param.AfterIntervalMin;
-            model.AfterIntervalMax = param.AfterIntervalMax;
-            model.Sort = param.Sort;
-            model.Enable = param.Enable;
-            model.PrivateChannelId = param.PrivateChannelId;
-            model.NijiBotChannelId = param.NijiBotChannelId;
-            model.UserAgent = param.UserAgent;
-            model.RemixAutoSubmit = param.RemixAutoSubmit;
-            model.CoreSize = param.CoreSize;
-            model.QueueSize = param.QueueSize;
-            model.MaxQueueSize = param.MaxQueueSize;
-            model.TimeoutMinutes = param.TimeoutMinutes;
-            model.Weight = param.Weight;
-            model.Remark = param.Remark;
-            model.BotToken = param.BotToken;
-            model.UserToken = param.UserToken;
-            model.Mode = param.Mode;
-            model.Sponsor = param.Sponsor;
-
-            DbHelper.AccountStore.Update(model);
-
-            disInstance?.ClearAccountCache(model.Id);
         }
 
         /// <summary>
