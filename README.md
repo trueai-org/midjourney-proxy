@@ -265,7 +265,9 @@ curl -o linux_install.sh https://raw.githubusercontent.com/trueai-org/midjourney
 
 > 如果你的任务量未来可能超过 10 万，推荐 Docker 部署 MongoDB。
 
-> 注意：切换 MongoDB 历史任务可选择自动迁移。
+> 注意：
+> 1.切换 MongoDB 历史任务可选择自动迁移。
+> 2.关于 IP 的填写方式有多种，内网 IP、外网 IP、容器互通等方式。
 
 1. 启动容器 `xxx` 为你的密码
 2. 打开系统设置 -> 输入 MongoDB 连接字符串 `mongodb://mongoadmin:xxx@ip` 即可
