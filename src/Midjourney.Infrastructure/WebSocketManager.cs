@@ -261,13 +261,17 @@ namespace Midjourney.Infrastructure
             }
             finally
             {
-                if (_stateLock.CurrentCount < _stateLock.Release(1))
+                try
                 {
                     _stateLock.Release();
                 }
-                else
+                catch (SemaphoreFullException)
                 {
                     _logger.Warning("Skipping _stateLock.Release() as the semaphore is already at max count. {@0}", Account.ChannelId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error(ex, "_stateLock Release 异常 {@0}", Account.ChannelId);
                 }
             }
 
