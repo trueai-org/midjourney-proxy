@@ -787,7 +787,10 @@ namespace Midjourney.Infrastructure
                                         // 如果开启自动切换慢速模式
                                         if (Account.EnableFastToRelax == true)
                                         {
-
+                                            // 切换到慢速模式
+                                            // 加锁切换到慢速模式
+                                            // 执行切换慢速命令
+                                            // TODO
                                         }
                                         else
                                         {
