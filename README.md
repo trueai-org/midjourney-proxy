@@ -14,6 +14,8 @@
 
 如果使用上和部署上有什么疑问，欢迎加入交流群，一起讨论和解决问题。
 
+如有绘图需求，欢迎加群联系群管理，群中大佬日出图量超百万张！
+
 [Midjourney公益群](https://qm.qq.com/q/k88clCkyMS)（QQ群：565908696）
 
 <img src="./docs/screenshots/565908696.png" alt="欢迎" width="360"/>
