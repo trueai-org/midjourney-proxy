@@ -1,0 +1,17 @@
+{
+  "type": 2,
+  "guild_id": "$guild_id",
+  "channel_id": "$channel_id",
+  "session_id": "$session_id",
+  "nonce": "$nonce",
+  "application_id": "1022952195194359889",
+  "data": {
+    "version": "1248805223925940262",
+    "id": "1023054140634579024",
+    "name": "relax",
+    "type": 1,
+    "options": [],
+    "attachments": []
+  },
+  "analytics_location": "slash_ui"
+}

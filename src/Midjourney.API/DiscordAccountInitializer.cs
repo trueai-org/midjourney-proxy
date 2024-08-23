@@ -687,7 +687,6 @@ namespace Midjourney.API
                             {
                                 // 检查账号快速用量是否用完了
                                 // 随机 3~6 小时，执行一次
-
                                 var key = $"fast_exhausted_{account.ChannelId}";
                                 await _memoryCache.GetOrCreateAsync(key, async c =>
                                 {
@@ -723,9 +722,26 @@ namespace Midjourney.API
                                     disInstance.Account.FastExhausted = false;
                                     db.Update("FastExhausted", disInstance.Account);
 
+                                    // 如果开启了自动切换到快速，则自动切换到快速
+                                    try
+                                    {
+                                        if (disInstance.Account.EnableRelaxToFast == true)
+                                        {
+                                            Thread.Sleep(2500);
+                                            await disInstance.FastAsync(SnowFlake.NextId(), EBotType.MID_JOURNEY);
+
+                                            Thread.Sleep(2500);
+                                            await disInstance.FastAsync(SnowFlake.NextId(), EBotType.NIJI_JOURNEY);
+                                        }
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        _logger.Error(ex, "切换快速异常 {@0}", account.ChannelId);
+                                    }
+
                                     disInstance.ClearAccountCache(account.Id);
 
-                                    _logger.Information("Account({@0}) fast exhausted, reset", account.ChannelId);
+                                    _logger.Information("Account({@0}) fast exhausted, 重置", account.ChannelId);
                                 }
                             }
                         }

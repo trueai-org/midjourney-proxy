@@ -372,6 +372,13 @@ namespace Midjourney.Infrastructure.Models
         public bool MjRemixOn => Buttons.Any(x => x.Label == "Remix mode" && x.Style == 3);
 
         /// <summary>
+        /// MJ 是否开启 fast mode
+        /// </summary>
+        [BsonIgnore]
+        public bool MjFastModeOn =>
+            Buttons.Any(x => (x.Label == "Fast mode" || x.Label == "Turbo mode") && x.Style == 3);
+
+        /// <summary>
         /// Niji 按钮
         /// </summary>
         [BsonIgnore]
@@ -393,6 +400,12 @@ namespace Midjourney.Infrastructure.Models
         /// </summary>
         [BsonIgnore]
         public bool NijiRemixOn => NijiButtons.Any(x => x.Label == "Remix mode" && x.Style == 3);
+
+        /// <summary>
+        /// Niji 是否开启 fast mode
+        /// </summary>
+        public bool NijiFastModeOn =>
+            NijiButtons.Any(x => (x.Label == "Fast mode" || x.Label == "Turbo mode") && x.Style == 3);
 
         /// <summary>
         /// Mj 下拉框

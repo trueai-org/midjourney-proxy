@@ -66,9 +66,17 @@
 		<Content Remove="Resources\wordsfull.txt" />
 		<Content Remove="Resources\ApiParams\shorten.json" />
 		<Content Remove="Resources\ApiParams\shortenniji.json" />
+		<Content Remove="Resources\ApiParams\fast.json" />
+		<Content Remove="Resources\ApiParams\fastniji.json" />
+		<Content Remove="Resources\ApiParams\relax.json" />
+		<Content Remove="Resources\ApiParams\relaxniji.json" />
 	</ItemGroup>
 
 	<ItemGroup>
+		<EmbeddedResource Include="Resources\ApiParams\fast.json" />
+		<EmbeddedResource Include="Resources\ApiParams\fastniji.json" />
+		<EmbeddedResource Include="Resources\ApiParams\relaxniji.json" />
+		<EmbeddedResource Include="Resources\ApiParams\relax.json" />
 		<EmbeddedResource Include="Resources\ApiParams\shortenniji.json" />
 		<EmbeddedResource Include="Resources\ApiParams\shorten.json" />
 		<EmbeddedResource Include="Resources\ApiParams\remix.json" />

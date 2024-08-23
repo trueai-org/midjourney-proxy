@@ -551,6 +551,134 @@ namespace Midjourney.Infrastructure
                         }
                     }
                 }
+                // 切换 fast 和 relax
+                else if (metaName == "fast" || metaName == "relax" || metaName == "turbo")
+                {
+                    // MJ
+                    // Done! Your jobs now do not consume fast-hours, but might take a little longer. You can always switch back with /fast
+                    if (metaName == "fast" && contentStr.StartsWith("Done!"))
+                    {
+                        foreach (var item in Account.Components)
+                        {
+                            foreach (var sub in item.Components)
+                            {
+                                if (sub.Label == "Fast mode")
+                                {
+                                    sub.Style = 2;
+                                }
+                                else if (sub.Label == "Relax mode")
+                                {
+                                    sub.Style = 2;
+                                }
+                                else if (sub.Label == "Turbo mode")
+                                {
+                                    sub.Style = 3;
+                                }
+                            }
+                        }
+                        foreach (var item in Account.NijiComponents)
+                        {
+                            foreach (var sub in item.Components)
+                            {
+                                if (sub.Label == "Fast mode")
+                                {
+                                    sub.Style = 2;
+                                }
+                                else if (sub.Label == "Relax mode")
+                                {
+                                    sub.Style = 2;
+                                }
+                                else if (sub.Label == "Turbo mode")
+                                {
+                                    sub.Style = 3;
+                                }
+                            }
+                        }
+                    }
+                    else if (metaName == "turbo" && contentStr.StartsWith("Done!"))
+                    {
+                        foreach (var item in Account.Components)
+                        {
+                            foreach (var sub in item.Components)
+                            {
+                                if (sub.Label == "Fast mode")
+                                {
+                                    sub.Style = 3;
+                                }
+                                else if (sub.Label == "Relax mode")
+                                {
+                                    sub.Style = 2;
+                                }
+                                else if (sub.Label == "Turbo mode")
+                                {
+                                    sub.Style = 2;
+                                }
+                            }
+                        }
+                        foreach (var item in Account.NijiComponents)
+                        {
+                            foreach (var sub in item.Components)
+                            {
+                                if (sub.Label == "Fast mode")
+                                {
+                                    sub.Style = 3;
+                                }
+                                else if (sub.Label == "Relax mode")
+                                {
+                                    sub.Style = 2;
+                                }
+                                else if (sub.Label == "Turbo mode")
+                                {
+                                    sub.Style = 2;
+                                }
+                            }
+                        }
+                    }
+                    else if (metaName == "relax" && contentStr.StartsWith("Done!"))
+                    {
+                        foreach (var item in Account.Components)
+                        {
+                            foreach (var sub in item.Components)
+                            {
+                                if (sub.Label == "Fast mode")
+                                {
+                                    sub.Style = 2;
+                                }
+                                else if (sub.Label == "Relax mode")
+                                {
+                                    sub.Style = 3;
+                                }
+                                else if (sub.Label == "Turbo mode")
+                                {
+                                    sub.Style = 2;
+                                }
+                            }
+                        }
+                        foreach (var item in Account.NijiComponents)
+                        {
+                            foreach (var sub in item.Components)
+                            {
+                                if (sub.Label == "Fast mode")
+                                {
+                                    sub.Style = 2;
+                                }
+                                else if (sub.Label == "Relax mode")
+                                {
+                                    sub.Style = 3;
+                                }
+                                else if (sub.Label == "Turbo mode")
+                                {
+                                    sub.Style = 2;
+                                }
+                            }
+                        }
+                    }
+
+                    DbHelper.AccountStore.Update("Components,NijiComponents", Account);
+                    _discordInstance.ClearAccountCache(Account.Id);
+
+                    return;
+                }
 
                 // 私信频道
                 var isPrivareChannel = false;
@@ -790,7 +918,25 @@ namespace Midjourney.Infrastructure
                                             // 切换到慢速模式
                                             // 加锁切换到慢速模式
                                             // 执行切换慢速命令
-                                            // TODO
+                                            // 如果当前不是慢速，则切换慢速，加锁切换
+                                            if (Account.MjFastModeOn || Account.NijiFastModeOn)
+                                            {
+                                                _ = AsyncLocalLock.TryLockAsync($"relax:{Account.ChannelId}", TimeSpan.FromSeconds(5), async () =>
+                                                {
+                                                    try
+                                                    {
+                                                        Thread.Sleep(2500);
+                                                        await _discordInstance?.RelaxAsync(SnowFlake.NextId(), EBotType.MID_JOURNEY);
+
+                                                        Thread.Sleep(2500);
+                                                        await _discordInstance?.RelaxAsync(SnowFlake.NextId(), EBotType.NIJI_JOURNEY);
+                                                    }
+                                                    catch (Exception ex)
+                                                    {
+                                                        _logger.Error(ex, "切换慢速异常 {@0}", Account.ChannelId);
+                                                    }
+                                                });
+                                            }
                                         }
                                         else
                                         {

@@ -1644,5 +1644,55 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 return Message.Of(ReturnCode.FAILURE, e.Message?.Substring(0, Math.Min(e.Message.Length, 100)) ?? "未知错误");
             }
         }
+
+        /// <summary>
+        /// 全局切换 fast 模式
+        /// </summary>
+        /// <param name="nonce"></param>
+        /// <param name="botType"></param>
+        /// <returns></returns>
+        public async Task<Message> FastAsync(string nonce, EBotType botType)
+        {
+            if (botType == EBotType.NIJI_JOURNEY && Account.EnableNiji != true)
+            {
+                return Message.Success("忽略提交，未开启 niji");
+            }
+
+            if (botType == EBotType.MID_JOURNEY && Account.EnableMj != true)
+            {
+                return Message.Success("忽略提交，未开启 mid");
+            }
+
+            var json = botType == EBotType.NIJI_JOURNEY ? _paramsMap["fastniji"] : _paramsMap["fast"];
+            var paramsStr = ReplaceInteractionParams(json, nonce);
+            var obj = JObject.Parse(paramsStr);
+            paramsStr = obj.ToString();
+            return await PostJsonAndCheckStatusAsync(paramsStr);
+        }
+
+        /// <summary>
+        /// 全局切换 relax 模式
+        /// </summary>
+        /// <param name="nonce"></param>
+        /// <param name="botType"></param>
+        /// <returns></returns>
+        public async Task<Message> RelaxAsync(string nonce, EBotType botType)
+        {
+            if (botType == EBotType.NIJI_JOURNEY && Account.EnableNiji != true)
+            {
+                return Message.Success("忽略提交，未开启 niji");
+            }
+
+            if(botType == EBotType.MID_JOURNEY && Account.EnableMj != true)
+            {
+                return Message.Success("忽略提交，未开启 mid");
+            }
+
+            var json = botType == EBotType.NIJI_JOURNEY ? _paramsMap["relaxniji"] : _paramsMap["relax"];
+            var paramsStr = ReplaceInteractionParams(json, nonce);
+            var obj = JObject.Parse(paramsStr);
+            paramsStr = obj.ToString();
+            return await PostJsonAndCheckStatusAsync(paramsStr);
+        }
     }
 }
