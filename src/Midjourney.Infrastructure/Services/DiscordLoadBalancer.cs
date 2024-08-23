@@ -64,6 +64,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <param name="isDomain">过滤垂直领域的账号</param>
         /// <param name="domainIds">过滤垂直领域 ID</param>
         /// <param name="ids">指定 ids 账号</param>
+        /// <param name="shorten"></param>
         public DiscordInstance ChooseInstance(
             AccountFilter accountFilter = null,
             bool? isNewTask = null,
@@ -75,61 +76,41 @@ namespace Midjourney.Infrastructure.LoadBalancer
             List<string> ids = null,
             bool? shorten = null)
         {
-            if (accountFilter == null)
-            {
-                var list = GetAliveInstances()
-                     .WhereIf(blend == true, c => c.Account.IsBlend)
-                     .WhereIf(describe == true, c => c.Account.IsDescribe)
-                     .WhereIf(shorten == true, c => c.Account.IsShorten)
-                     .WhereIf(isNewTask == true, c => c.Account.IsAcceptNewTask == true)
-                     .WhereIf(botType == EBotType.NIJI_JOURNEY, c => c.Account.EnableNiji == true)
-                     .WhereIf(botType == EBotType.MID_JOURNEY, c => c.Account.EnableMj == true)
-                     .WhereIf(isDomain == true && domainIds?.Count > 0, c => c.Account.IsVerticalDomain && c.Account.VerticalDomainIds.Any(x => domainIds.Contains(x)))
-                     .WhereIf(isDomain == false, c => c.Account.IsVerticalDomain != true)
-                     .WhereIf(ids?.Count > 0, c => ids.Contains(c.Account.ChannelId))
-                     .ToList();
-
-                return _rule.Choose(list);
-            }
-            else if (!string.IsNullOrWhiteSpace(accountFilter?.InstanceId))
+            if (!string.IsNullOrWhiteSpace(accountFilter?.InstanceId))
             {
                 return GetDiscordInstance(accountFilter.InstanceId);
             }
             else
             {
-                var list = _instances.Where(instance => instance.IsAlive)
+                var list = GetAliveInstances()
 
                          // 指定速度模式过滤
-                         .WhereIf(accountFilter.Modes.Count > 0, c => c.Account.Mode == null || accountFilter.Modes.Contains(c.Account.Mode.Value))
+                         .WhereIf(accountFilter?.Modes.Count > 0, c => c.Account.Mode == null || accountFilter.Modes.Contains(c.Account.Mode.Value))
 
                          // 允许速度模式过滤
                          // 或者有交集的
-                         .WhereIf(accountFilter.Modes.Count > 0, c => c.Account.AllowModes == null || c.Account.AllowModes.Count <= 0 || c.Account.AllowModes.Any(x => accountFilter.Modes.Contains(x)))
+                         .WhereIf(accountFilter?.Modes.Count > 0, c => c.Account.AllowModes == null || c.Account.AllowModes.Count <= 0 || c.Account.AllowModes.Any(x => accountFilter.Modes.Contains(x)))
 
                          // Midjourney Remix 过滤
-                         .WhereIf(accountFilter.Remix == true, c => c.Account.MjRemixOn == accountFilter.Remix || !c.Account.RemixAutoSubmit)
-                         .WhereIf(accountFilter.Remix == false, c => c.Account.MjRemixOn == accountFilter.Remix)
+                         .WhereIf(accountFilter?.Remix == true, c => c.Account.MjRemixOn == accountFilter.Remix || !c.Account.RemixAutoSubmit)
+                         .WhereIf(accountFilter?.Remix == false, c => c.Account.MjRemixOn == accountFilter.Remix)
                          // Niji Remix 过滤
-                         .WhereIf(accountFilter.NijiRemix == true, c => c.Account.NijiRemixOn == accountFilter.NijiRemix || !c.Account.RemixAutoSubmit)
-                         .WhereIf(accountFilter.NijiRemix == false, c => c.Account.NijiRemixOn == accountFilter.NijiRemix)
+                         .WhereIf(accountFilter?.NijiRemix == true, c => c.Account.NijiRemixOn == accountFilter.NijiRemix || !c.Account.RemixAutoSubmit)
+                         .WhereIf(accountFilter?.NijiRemix == false, c => c.Account.NijiRemixOn == accountFilter.NijiRemix)
                          // Remix 自动提交过滤
-                         .WhereIf(accountFilter.RemixAutoConsidered.HasValue, c => c.Account.RemixAutoSubmit == accountFilter.RemixAutoConsidered)
+                         .WhereIf(accountFilter?.RemixAutoConsidered.HasValue == true, c => c.Account.RemixAutoSubmit == accountFilter.RemixAutoConsidered)
 
                          // 过滤只接收新任务的实例
                          .WhereIf(isNewTask == true, c => c.Account.IsAcceptNewTask == true)
-
                          // 过滤开启 niji mj 的账号
                          .WhereIf(botType == EBotType.NIJI_JOURNEY, c => c.Account.EnableNiji == true)
                          .WhereIf(botType == EBotType.MID_JOURNEY, c => c.Account.EnableMj == true)
-
                          .WhereIf(blend == true, c => c.Account.IsBlend)
                          .WhereIf(describe == true, c => c.Account.IsDescribe)
                          .WhereIf(shorten == true, c => c.Account.IsShorten)
-
                          // 领域过滤
                          .WhereIf(isDomain == true && domainIds?.Count > 0, c => c.Account.IsVerticalDomain && c.Account.VerticalDomainIds.Any(x => domainIds.Contains(x)))
                          .WhereIf(isDomain == false, c => c.Account.IsVerticalDomain != true)
-
                          .WhereIf(ids?.Count > 0, c => ids.Contains(c.Account.ChannelId))
                          .ToList();
 
