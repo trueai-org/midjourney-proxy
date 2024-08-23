@@ -15,11 +15,11 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Additional Terms:
-// This software shall not be used for any illegal activities. 
+// This software shall not be used for any illegal activities.
 // Users must comply with all applicable laws and regulations,
-// particularly those related to image and video processing. 
+// particularly those related to image and video processing.
 // The use of this software for any form of illegal face swapping,
-// invasion of privacy, or any other unlawful purposes is strictly prohibited. 
+// invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
 using Aliyun.OSS;
@@ -279,7 +279,8 @@ namespace Midjourney.Infrastructure.Services
         /// 上传
         /// </summary>
         /// <param name="mediaBinaryStream"></param>
-        /// <param name="param"></param>
+        /// <param name="key"></param>
+        /// <param name="mimeType"></param>
         /// <returns></returns>
         /// <exception cref="ArgumentNullException"></exception>
         /// <exception cref="Exception"></exception>
@@ -301,26 +302,52 @@ namespace Midjourney.Infrastructure.Services
                 metadata.ContentType = mimeType;
             }
 
-            var objectResult = client.PutObject(_bucketName, key, mediaBinaryStream, metadata);
-            if (objectResult?.HttpStatusCode != System.Net.HttpStatusCode.OK)
+            var retryCount = 3;
+            for (int i = 0; i < retryCount; i++)
             {
-                throw new Exception("文件上传保存失败");
+                try
+                {
+                    var objectResult = client.PutObject(_bucketName, key, mediaBinaryStream, metadata);
+                    if (objectResult?.HttpStatusCode == System.Net.HttpStatusCode.OK)
+                    {
+                        var result = new UploadResult()
+                        {
+                            FileName = newFileName,
+                            Path = key.Trim('/'),
+                            Key = key,
+                            Size = size,
+                            Md5 = objectResult.ResponseMetadata["Content-MD5"],
+                            Id = objectResult.ETag,
+                            ContentType = mimeType,
+                        };
+
+                        _logger.Information("上传成功 {@0}", key);
+
+                        return result;
+                    }
+
+                    //var objectResult = client.PutObject(_bucketName, key, mediaBinaryStream, metadata);
+                    //if (objectResult?.HttpStatusCode == System.Net.HttpStatusCode.OK)
+                    //{
+                    //    // 上传成功，退出重试
+                    //    break;
+                    //}
+                }
+                catch (HttpRequestException ex)
+                {
+                    _logger.Warning("上传失败，重试次数: {@0}, {@1}", key, i + 1);
+
+                    if (i >= retryCount - 1)
+                    {
+                        throw new Exception($"多次重试后上传仍然失败 {key}", ex);
+                    }
+                }
+
+                // 重试等待
+                Thread.Sleep(TimeSpan.FromSeconds(5));
             }
 
-            var result = new UploadResult()
-            {
-                FileName = newFileName,
-                Path = key.Trim('/'),
-                Key = key,
-                Size = size,
-                Md5 = objectResult.ResponseMetadata["Content-MD5"],
-                Id = objectResult.ETag,
-                ContentType = mimeType,
-            };
-
-            _logger.Information("result: {@result}", result);
-
-            return result;
+            throw new Exception($"上传失败 {key}");
         }
 
         /// <summary>

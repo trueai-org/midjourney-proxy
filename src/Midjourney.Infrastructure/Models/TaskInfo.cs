@@ -318,12 +318,14 @@ namespace Midjourney.Infrastructure.Models
                                 var hch = new HttpClientHandler
                                 {
                                     UseProxy = webProxy != null,
-                                    Proxy = webProxy
+                                    Proxy = webProxy,
                                 };
 
                                 // 下载图片并保存
                                 using (HttpClient client = new HttpClient(hch))
                                 {
+                                    client.Timeout = TimeSpan.FromMinutes(15);
+
                                     var response = client.GetAsync(ImageUrl).Result;
                                     response.EnsureSuccessStatusCode();
                                     var stream = response.Content.ReadAsStreamAsync().Result;
