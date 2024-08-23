@@ -298,13 +298,16 @@ namespace Midjourney.Infrastructure.Models
                             // 如果路径是 ephemeral-attachments 或 attachments 才处理
                             if (localPath.StartsWith("ephemeral-attachments") || localPath.StartsWith("attachments") || IsReplicate)
                             {
-                                // 换脸放到附件中
+                                var oss = new AliyunOssStorageService();
+
+                                // 换脸放到私有附件中
                                 if (IsReplicate)
                                 {
-                                    localPath = $"attachments/{localPath}";
+                                    localPath = $"pri/{localPath}";
                                 }
 
-                                var oss = new AliyunOssStorageService();
+                                // 替换 url
+                                var url = $"{customCdn?.Trim()?.Trim('/')}/{localPath}{uri?.Query}";
 
                                 WebProxy webProxy = null;
                                 var proxy = GlobalConfiguration.Setting.Proxy;
@@ -332,10 +335,15 @@ namespace Midjourney.Infrastructure.Models
                                     }
 
                                     oss.SaveAsync(stream, localPath, mm);
+
+                                    // 换脸放到私有附件中
+                                    if (IsReplicate)
+                                    {
+                                        var priUri = oss.GetSignKey(localPath);
+                                        url = $"{customCdn?.Trim()?.Trim('/')}/{priUri.PathAndQuery.TrimStart('/')}";
+                                    }
                                 }
 
-                                // 替换 url
-                                var url = $"{customCdn?.Trim()?.Trim('/')}/{localPath}{uri?.Query}";
 
                                 if (Action != TaskAction.SWAP_VIDEO_FACE)
                                 {
@@ -374,7 +382,7 @@ namespace Midjourney.Infrastructure.Models
                                 // 换脸放到附件中
                                 if (IsReplicate)
                                 {
-                                    localPath = $"attachments/{localPath}";
+                                    localPath = $"pri/{localPath}";
                                 }
 
                                 var savePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", localPath);

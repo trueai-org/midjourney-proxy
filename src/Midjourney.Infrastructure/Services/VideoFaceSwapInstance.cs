@@ -363,12 +363,13 @@ namespace Midjourney.Infrastructure.LoadBalancer
                         // 因此这里上传到阿里云
                         var ali = new AliyunOssStorageService();
                         var fileName = Path.GetFileName(source);
-                        var key = $"attachments/pbxt/{fileName}";
+                        var key = $"pri/pbxt/{fileName}";
 
                         var res = ali.SaveAsync(File.OpenRead(source), key, ff.GetMimeType(fileName) ?? "image/jpeg");
                         if (!string.IsNullOrWhiteSpace(res.Key))
                         {
-                            source = $"{aliOpt.CustomCdn.TrimPath()}/{res.Key}";
+                            var priUri = ali.GetSignKey(res.Key);
+                            source = $"{aliOpt.CustomCdn.TrimPath()}/{priUri.PathAndQuery.TrimStart('/')}";
                         }
                         else
                         {
@@ -406,12 +407,13 @@ namespace Midjourney.Infrastructure.LoadBalancer
                         // 因此这里上传到阿里云
                         var ali = new AliyunOssStorageService();
                         var fileName = Path.GetFileName(target);
-                        var key = $"attachments/pbxt/{fileName}";
+                        var key = $"pri/pbxt/{fileName}";
 
                         var res = ali.SaveAsync(File.OpenRead(target), key, ff.GetMimeType(fileName) ?? "video/mp4");
                         if (!string.IsNullOrWhiteSpace(res.Key))
                         {
-                            target = $"{aliOpt.CustomCdn.TrimPath()}/{res.Key}";
+                            var priUri = ali.GetSignKey(res.Key);
+                            target = $"{aliOpt.CustomCdn.TrimPath()}/{priUri.PathAndQuery.TrimStart('/')}";
                         }
                         else
                         {
