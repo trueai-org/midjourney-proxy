@@ -199,11 +199,11 @@ namespace Midjourney.Infrastructure
                 {
                     if (await _stateLock.WaitAsync(0))
                     {
-                        _logger.Information($"获取到锁, 重连: {reconnect}, {Account.Id}");
+                        _logger.Information($"获取到锁, 重连: {reconnect}, {Account.ChannelId}");
                         break;
                     }
 
-                    _logger.Information($"取消处理, 未获取到锁, 重连: {reconnect}, {Account.Id}");
+                    _logger.Information($"取消处理, 未获取到锁, 重连: {reconnect}, {Account.ChannelId}");
                     return false;
                 }
 
@@ -267,7 +267,7 @@ namespace Midjourney.Infrastructure
                 }
                 else
                 {
-                    _logger.Warning("Skipping _stateLock.Release() as the semaphore is already at max count.");
+                    _logger.Warning("Skipping _stateLock.Release() as the semaphore is already at max count. {@0}", Account.ChannelId);
                 }
             }
 
