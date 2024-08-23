@@ -101,6 +101,11 @@ namespace Midjourney.Infrastructure.Models
         public bool? EnableFastToRelax { get; set; }
 
         /// <summary>
+        /// 启用时，当有快速时长时，自动切换到快速模式
+        /// </summary>
+        public bool? EnableRelaxToFast { get; set; }
+
+        /// <summary>
         /// 表示快速模式是否已经用完了
         /// </summary>
         public bool FastExhausted { get; set; }
@@ -533,7 +538,8 @@ namespace Midjourney.Infrastructure.Models
                 DayDrawLimit = configAccount.DayDrawLimit,
                 EnableMj = configAccount.EnableMj,
                 EnableNiji = configAccount.EnableNiji,
-                EnableFastToRelax = configAccount.EnableFastToRelax
+                EnableFastToRelax = configAccount.EnableFastToRelax,
+                EnableRelaxToFast = configAccount.EnableRelaxToFast
             };
         }
     }

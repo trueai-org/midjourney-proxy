@@ -60,6 +60,9 @@ namespace Midjourney.API
             ITaskService taskService,
             IMemoryCache memoryCache)
         {
+            // 配置全局缓存
+            GlobalConfiguration.MemoryCache = memoryCache;
+
             _discordLoadBalancer = discordLoadBalancer;
             _discordAccountHelper = discordAccountHelper;
             _properties = options.Value;

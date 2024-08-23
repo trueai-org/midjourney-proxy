@@ -23,6 +23,7 @@
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
 using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.LoadBalancer;
@@ -57,6 +58,7 @@ namespace Midjourney.API.Controllers
         private readonly DiscordLoadBalancer _discordLoadBalancer;
         private readonly GenerationSpeedMode? _mode;
         private readonly WorkContext _workContext;
+        private readonly IMemoryCache _memoryCache;
 
         public SubmitController(
             ITranslateService translateService,
@@ -66,8 +68,10 @@ namespace Midjourney.API.Controllers
             DiscordHelper discordHelper,
             IHttpContextAccessor httpContextAccessor,
             WorkContext workContext,
-            DiscordLoadBalancer discordLoadBalancer)
+            DiscordLoadBalancer discordLoadBalancer,
+            IMemoryCache memoryCache)
         {
+            _memoryCache = memoryCache;
             _translateService = translateService;
             _taskStoreService = taskStoreService;
             _properties = GlobalConfiguration.Setting;
@@ -662,7 +666,8 @@ namespace Midjourney.API.Controllers
                 Status = TaskStatus.NOT_START,
                 ClientIp = _ip,
                 Mode = _mode,
-                UserId = user?.Id
+                UserId = user?.Id,
+                IsWhite = user?.IsWhite ?? false
             };
 
             var now = new DateTimeOffset(DateTime.Now.Date).ToUnixTimeMilliseconds();
@@ -677,6 +682,72 @@ namespace Midjourney.API.Controllers
                     if (ipTodayDrawCount > GlobalConfiguration.Setting.GuestDefaultDayLimit)
                     {
                         throw new LogicException("今日绘图次数已达上限");
+                    }
+                }
+
+                var ban = GlobalConfiguration.Setting.BannedLimiting;
+                if (ban?.Enable == true && ban?.Rules?.Count > 0)
+                {
+                    if (!string.IsNullOrWhiteSpace(task.UserId))
+                    {
+                        // user band
+                        var bandKey = $"banned:{DateTime.Now.Date:yyyyMMdd}:{task.UserId}";
+                        _memoryCache.TryGetValue(bandKey, out int limit);
+                        if (limit > 0)
+                        {
+                            var lockKey = $"banned:lock:{task.UserId}";
+                            if (_memoryCache.TryGetValue(lockKey, out int lockValue) && lockValue > 0)
+                            {
+                                throw new LogicException("账号已被临时封锁，请勿使用违规词作图");
+                            }
+
+                            foreach (var item in ban.Rules.OrderByDescending(c => c.Key))
+                            {
+                                // 触发次数
+                                // 设置封锁时间
+                                if (limit >= item.Key && item.Value > 0)
+                                {
+                                    _memoryCache.Set(lockKey, limit, TimeSpan.FromMinutes(item.Value));
+                                    break;
+                                }
+                            }
+
+                            if (_memoryCache.TryGetValue(lockKey, out int lockValue2) && lockValue2 > 0)
+                            {
+                                throw new LogicException("账号已被临时封锁，请勿使用违规词作图");
+                            }
+                        }
+                    }
+
+                    if (true)
+                    {
+                        // ip band
+                        var bandKey = $"banned:{DateTime.Now.Date:yyyyMMdd}:{task.ClientIp}";
+                        _memoryCache.TryGetValue(bandKey, out int limit);
+                        if (limit > 0)
+                        {
+                            var lockKey = $"banned:lock:{task.ClientIp}";
+                            if (_memoryCache.TryGetValue(lockKey, out int lockValue) && lockValue > 0)
+                            {
+                                throw new LogicException("账号已被临时封锁，请勿使用违规词作图");
+                            }
+
+                            foreach (var item in ban.Rules.OrderByDescending(c => c.Key))
+                            {
+                                // 触发次数
+                                // 设置封锁时间
+                                if (limit >= item.Key && item.Value > 0)
+                                {
+                                    _memoryCache.Set(lockKey, limit, TimeSpan.FromMinutes(item.Value));
+                                    break;
+                                }
+                            }
+
+                            if (_memoryCache.TryGetValue(lockKey, out int lockValue2) && lockValue2 > 0)
+                            {
+                                throw new LogicException("账号已被临时封锁，请勿使用违规词作图");
+                            }
+                        }
                     }
                 }
             }

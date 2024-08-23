@@ -26,6 +26,7 @@ global using Midjourney.Infrastructure;
 global using Midjourney.Infrastructure.Models;
 
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.OpenApi.Models;
 using Midjourney.Infrastructure.Data;

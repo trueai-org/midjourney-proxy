@@ -22,6 +22,7 @@
 // invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
+using Microsoft.Extensions.Caching.Memory;
 using System.Runtime.InteropServices;
 
 namespace Midjourney.Infrastructure
@@ -45,6 +46,11 @@ namespace Midjourney.Infrastructure
         /// 全局配置项
         /// </summary>
         public static Setting Setting { get; set; }
+
+        /// <summary>
+        /// 全局缓存项
+        /// </summary>
+        public static IMemoryCache MemoryCache { get; set; }
 
         /// <summary>
         /// 判断是否是 Windows 系统

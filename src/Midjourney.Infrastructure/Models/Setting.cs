@@ -15,12 +15,13 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Additional Terms:
-// This software shall not be used for any illegal activities. 
+// This software shall not be used for any illegal activities.
 // Users must comply with all applicable laws and regulations,
-// particularly those related to image and video processing. 
+// particularly those related to image and video processing.
 // The use of this software for any form of illegal face swapping,
-// invasion of privacy, or any other unlawful purposes is strictly prohibited. 
+// invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
+
 using Midjourney.Infrastructure.Options;
 
 namespace Midjourney.Infrastructure.Models
@@ -39,6 +40,11 @@ namespace Midjourney.Infrastructure.Models
         /// 启用 Swagger
         /// </summary>
         public bool EnableSwagger { get; set; }
+
+        /// <summary>
+        /// Banned 限流配置
+        /// </summary>
+        public BannedLimitingOptions BannedLimiting { get; set; } = new();
 
         /// <summary>
         /// 限流配置
@@ -69,5 +75,21 @@ namespace Midjourney.Infrastructure.Models
         /// 访客默认日绘图限制
         /// </summary>
         public int GuestDefaultDayLimit { get; set; } = -1;
+    }
+
+    /// <summary>
+    /// 表示 Banned 限流配置选项，当处罚 Banned prompt detected 时，将会限制 IP 访问和非白名单用户
+    /// </summary>
+    public class BannedLimitingOptions
+    {
+        /// <summary>
+        /// 是否启用 Banned 限流
+        /// </summary>
+        public bool Enable { get; set; }
+
+        /// <summary>
+        /// Banned 限流规则，key：当日触发次数，value：封锁时间（分钟）
+        /// </summary>
+        public Dictionary<int, int> Rules { get; set; } = [];
     }
 }

@@ -15,17 +15,18 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Additional Terms:
-// This software shall not be used for any illegal activities. 
+// This software shall not be used for any illegal activities.
 // Users must comply with all applicable laws and regulations,
-// particularly those related to image and video processing. 
+// particularly those related to image and video processing.
 // The use of this software for any form of illegal face swapping,
-// invasion of privacy, or any other unlawful purposes is strictly prohibited. 
+// invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
+
+using Microsoft.Extensions.Caching.Memory;
 using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.Services;
 using Midjourney.Infrastructure.Util;
-using MimeDetective.Storage.Xml.v2;
 using Serilog;
 using System.Net;
 
@@ -57,6 +58,11 @@ namespace Midjourney.Infrastructure.Models
         /// 绘画用户 ID
         /// </summary>
         public string UserId { get; set; }
+
+        /// <summary>
+        /// 白名单用户（加入白名单不受限流控制）
+        /// </summary>
+        public bool IsWhite { get; set; } = false;
 
         /// <summary>
         /// 提交作业的唯一ID。
@@ -452,6 +458,36 @@ namespace Midjourney.Infrastructure.Models
             Status = TaskStatus.FAILURE;
             FailReason = reason;
             Progress = "";
+
+            if (!string.IsNullOrWhiteSpace(reason)
+                && reason.Contains("Banned prompt detected", StringComparison.OrdinalIgnoreCase))
+            {
+                // 触发提示提示词封锁
+                var band = GlobalConfiguration.Setting?.BannedLimiting;
+                var cache = GlobalConfiguration.MemoryCache;
+
+                // 记录累计触发次数
+                if (band?.Enable == true && cache != null)
+                {
+                    if (!string.IsNullOrWhiteSpace(UserId))
+                    {
+                        // user band
+                        var bandKey = $"banned:{DateTime.Now.Date:yyyyMMdd}:{UserId}";
+                        cache.TryGetValue(bandKey, out int limit);
+                        limit++;
+                        cache.Set(bandKey, limit, TimeSpan.FromDays(1));
+                    }
+
+                    if (true)
+                    {
+                        // ip band
+                        var bandKey = $"banned:{DateTime.Now.Date:yyyyMMdd}:{ClientIp}";
+                        cache.TryGetValue(bandKey, out int limit);
+                        limit++;
+                        cache.Set(bandKey, limit, TimeSpan.FromDays(1));
+                    }
+                }
+            }
         }
     }
 }

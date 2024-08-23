@@ -34,6 +34,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using ILogger = Serilog.ILogger;
 
 namespace Midjourney.Infrastructure.LoadBalancer
@@ -351,8 +352,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     _logger.Error(ex, "RuningCache 异常");
                 }
 
-                // 每 1 分钟执行一次
-                Thread.Sleep(60 * 1000 * 1);
+                // 每 2 分钟执行一次
+                Thread.Sleep(60 * 1000 * 2);
             }
         }
 
@@ -476,6 +477,34 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     SaveAndNotify(info);
                     _logger.Debug("[{@0}] task error, id: {@1}, status: {@2}", Account.GetDisplay(), info.Id, info.Status);
                     return;
+                }
+
+                // banned 判断
+                if (!info.IsWhite)
+                {
+                    if (!string.IsNullOrWhiteSpace(info.UserId))
+                    {
+                        var lockKey = $"banned:lock:{info.UserId}";
+                        if (_cache.TryGetValue(lockKey, out int lockValue) && lockValue > 0)
+                        {
+                            info.Fail("账号已被临时封锁，请勿使用违规词作图");
+                            SaveAndNotify(info);
+                            _logger.Debug("[{@0}] task error, id: {@1}, status: {@2}", Account.GetDisplay(), info.Id, info.Status);
+                            return;
+                        }
+                    }
+
+                    if (true)
+                    {
+                        var lockKey = $"banned:lock:{info.ClientIp}";
+                        if (_cache.TryGetValue(lockKey, out int lockValue) && lockValue > 0)
+                        {
+                            info.Fail("账号已被临时封锁，请勿使用违规词作图");
+                            SaveAndNotify(info);
+                            _logger.Debug("[{@0}] task error, id: {@1}, status: {@2}", Account.GetDisplay(), info.Id, info.Status);
+                            return;
+                        }
+                    }
                 }
 
                 info.Status = TaskStatus.SUBMITTED;

@@ -6,7 +6,7 @@
 
 如果觉得项目不错，请一定帮助点个 ⭐`Star`，万分感谢！
 
-> (lll￢ω￢) 每天几百独立访客 ⭐ 怎么上不去 😭
+> (lll￢ω￢) 每天几百独立访客 ⭐`Star` 怎么上不去 /(ㄒoㄒ)/~~
 
 ## 交流群
 
@@ -116,7 +116,7 @@
 > Docker 版本
 
 - [Bilibili Midjourney API Docker 部署视频教程](https://www.bilibili.com/video/BV1NQpQezEu4/)
-- [抖音 Midjourney API Docker 部署视频教程](https://www.douyin.com/video/7405107738868501771)
+- [抖音 Midjourney API Docker 部署视频教程](https://v.douyin.com/irvnDGfo/)
 
 注意：一定确认映射文件和路径不要出错⚠
 
@@ -308,6 +308,21 @@ docker run -d \
   "maxFileSize": 10485760,
   "webhook": null,
   "webhookEventsFilter": []
+}
+```
+
+#### Banned prompt 限流配置
+
+- 当日触发触发 `Banned prompt detected` n 次后，封锁用户的时长（分钟）配置（白名单用户除外）。
+
+```json
+{
+  "enable": true,
+  "rules": {
+    "1": 60,
+    "2": 120,
+    "3": 600
+  }
 }
 ```
 

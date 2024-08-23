@@ -15,14 +15,15 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Additional Terms:
-// This software shall not be used for any illegal activities. 
+// This software shall not be used for any illegal activities.
 // Users must comply with all applicable laws and regulations,
-// particularly those related to image and video processing. 
+// particularly those related to image and video processing.
 // The use of this software for any form of illegal face swapping,
-// invasion of privacy, or any other unlawful purposes is strictly prohibited. 
+// invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
 using Microsoft.AspNetCore.Http;
+using Serilog;
 using System.Net.Sockets;
 using System.Text;
 
@@ -138,9 +139,12 @@ namespace Midjourney.Infrastructure
                 ip = ip.Split(',')[0];
             }
 
+            // 如果用户 IP 无法获取，则固定为 1.1.1.1
             if (string.IsNullOrEmpty(ip))
             {
-                ip = "Unknown";
+                Log.Logger.Warning("IP address is empty, set to 1.1.1.1");
+
+                ip = "1.1.1.1";
             }
 
             return ip;
