@@ -379,10 +379,11 @@ namespace Midjourney.Infrastructure.Models
                             // 如果路径是 ephemeral-attachments 或 attachments 才处理
                             if (localPath.StartsWith("ephemeral-attachments") || localPath.StartsWith("attachments") || IsReplicate)
                             {
+                                // 如果是本地文件，则依然放到 attachments
                                 // 换脸放到附件中
                                 if (IsReplicate)
                                 {
-                                    localPath = $"pri/{localPath}";
+                                    localPath = $"attachments/{localPath}";
                                 }
 
                                 var savePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", localPath);
