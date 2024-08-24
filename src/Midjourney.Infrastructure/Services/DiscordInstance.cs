@@ -50,8 +50,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
         private readonly ITaskStoreService _taskStoreService;
         private readonly INotifyService _notifyService;
 
-        private readonly List<TaskInfo> _runningTasks;
-        private readonly ConcurrentDictionary<string, Task> _taskFutureMap;
+        private readonly List<TaskInfo> _runningTasks = [];
+        private readonly ConcurrentDictionary<string, Task> _taskFutureMap = [];
         private readonly SemaphoreSlimLock _semaphoreSlimLock;
 
         private readonly Task _longTask;
@@ -72,7 +72,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <summary>
         /// 当前队列任务
         /// </summary>
-        private ConcurrentQueue<(TaskInfo, Func<Task<Message>>)> _queueTasks;
+        private ConcurrentQueue<(TaskInfo, Func<Task<Message>>)> _queueTasks = [];
 
         private DiscordAccount _account;
 
@@ -85,6 +85,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
             Dictionary<string, string> paramsMap,
             IWebProxy webProxy)
         {
+            _logger = Log.Logger;
+
             var hch = new HttpClientHandler
             {
                 UseProxy = webProxy != null,
@@ -103,11 +105,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
             _account = account;
             _taskStoreService = taskStoreService;
             _notifyService = notifyService;
-
-            _logger = Log.Logger;
-            _runningTasks = new List<TaskInfo>();
-            _queueTasks = new ConcurrentQueue<(TaskInfo, Func<Task<Message>>)>();
-            _taskFutureMap = new ConcurrentDictionary<string, Task>();
 
             // 最小 1, 最大 12
             _semaphoreSlimLock = new SemaphoreSlimLock(Math.Max(1, Math.Min(account.CoreSize, 12)));
@@ -196,6 +193,27 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// </summary>
         /// <returns>队列中的任务列表</returns>
         public List<TaskInfo> GetQueueTasks() => new List<TaskInfo>(_queueTasks.Select(c => c.Item1) ?? []);
+
+        /// <summary>
+        /// 是否存在空闲队列，即：队列是否已满，是否可加入新的任务
+        /// </summary>
+        public bool IsIdleQueue
+        {
+            get
+            {
+                if (_queueTasks.Count <= 0)
+                {
+                    return true;
+                }
+
+                if (Account.MaxQueueSize <= 0)
+                {
+                    return true;
+                }
+
+                return _queueTasks.Count < Account.MaxQueueSize;
+            }
+        }
 
         /// <summary>
         /// 后台服务执行任务
@@ -1683,7 +1701,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 return Message.Success("忽略提交，未开启 niji");
             }
 
-            if(botType == EBotType.MID_JOURNEY && Account.EnableMj != true)
+            if (botType == EBotType.MID_JOURNEY && Account.EnableMj != true)
             {
                 return Message.Success("忽略提交，未开启 mid");
             }
