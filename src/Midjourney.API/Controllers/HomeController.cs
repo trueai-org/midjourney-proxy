@@ -62,7 +62,8 @@ namespace Midjourney.API.Controllers
                     IsRegister = GlobalConfiguration.Setting.EnableRegister == true
                     && !string.IsNullOrWhiteSpace(GlobalConfiguration.Setting?.Smtp?.FromPassword),
                     IsGuest = GlobalConfiguration.Setting.EnableGuest == true,
-                    IsDemoMode = GlobalConfiguration.IsDemoMode == true
+                    IsDemoMode = GlobalConfiguration.IsDemoMode == true,
+                    Version = GlobalConfiguration.Version
                 };
 
                 var now = new DateTimeOffset(DateTime.Now.Date).ToUnixTimeMilliseconds();
