@@ -674,8 +674,15 @@ namespace Midjourney.API
                                 // 多账号启动时，等待一段时间再启动下一个账号
                                 await Task.Delay(1000 * 5);
 
-                                // 启动后执行 info setting 操作
-                                await _taskService.InfoSetting(account.Id);
+                                try
+                                {
+                                    // 启动后执行 info setting 操作
+                                    await _taskService.InfoSetting(account.Id);
+                                }
+                                catch (Exception ex)
+                                {
+                                    _logger.Error(ex, "同步 info 异常 {@0}", account.ChannelId);
+                                }
                             }
                         }
 
