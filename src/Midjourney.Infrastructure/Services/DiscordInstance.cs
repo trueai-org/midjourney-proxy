@@ -34,7 +34,6 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using ILogger = Serilog.ILogger;
 
 namespace Midjourney.Infrastructure.LoadBalancer
@@ -45,6 +44,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
     /// </summary>
     public class DiscordInstance
     {
+
+        private readonly object _lockAccount = new object();
+
         private readonly ILogger _logger = Log.Logger;
 
         private readonly ITaskStoreService _taskStoreService;
@@ -68,6 +70,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         private readonly string _discordAttachmentUrl;
         private readonly string _discordMessageUrl;
         private readonly IMemoryCache _cache;
+        private readonly ITaskService _taskService;
 
         /// <summary>
         /// 当前队列任务
@@ -83,7 +86,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
             INotifyService notifyService,
             DiscordHelper discordHelper,
             Dictionary<string, string> paramsMap,
-            IWebProxy webProxy)
+            IWebProxy webProxy,
+            ITaskService taskService)
         {
             _logger = Log.Logger;
 
@@ -98,6 +102,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 Timeout = TimeSpan.FromMinutes(10),
             };
 
+            _taskService = taskService;
             _cache = memoryCache;
             _paramsMap = paramsMap;
             _discordHelper = discordHelper;
@@ -151,13 +156,25 @@ namespace Midjourney.Infrastructure.LoadBalancer
         {
             get
             {
-                // 缓存 3 分钟
-                _account = _cache.GetOrCreate($"account:{_account.Id}", (c) =>
+                try
                 {
-                    c.SetAbsoluteExpiration(TimeSpan.FromMinutes(3));
+                    lock (_lockAccount)
+                    {
+                        _account = _cache.GetOrCreate($"account:{_account.Id}", (c) =>
+                        {
+                            c.SetAbsoluteExpiration(TimeSpan.FromMinutes(2));
 
-                    return DbHelper.AccountStore.Get(_account.Id);
-                });
+                            return DbHelper.AccountStore.Get(_account.Id);
+                        });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error(ex, "Failed to get account.");
+
+                    // 不清空
+                    //_account = null;
+                }
 
                 return _account;
             }
@@ -173,14 +190,19 @@ namespace Midjourney.Infrastructure.LoadBalancer
         }
 
         /// <summary>
+        /// 是否已初始化完成
+        /// </summary>
+        public bool IsInit { get; set; }
+
+        /// <summary>
         /// 判断实例是否存活
         /// </summary>
         /// <returns>是否存活</returns>
-        public bool IsAlive => Account != null
-            && WebSocketManager != null
-            && Account?.Enable == true
-            && WebSocketManager?.Running == true
-            && Account?.Lock != true;
+        public bool IsAlive => IsInit && Account != null
+             && Account.Enable != null && Account.Enable == true
+             && WebSocketManager != null
+             && WebSocketManager.Running == true
+             && Account.Lock == false;
 
         /// <summary>
         /// 获取正在运行的任务列表。
@@ -1711,6 +1733,93 @@ namespace Midjourney.Infrastructure.LoadBalancer
             var obj = JObject.Parse(paramsStr);
             paramsStr = obj.ToString();
             return await PostJsonAndCheckStatusAsync(paramsStr);
+        }
+
+        /// <summary>
+        /// 全局切换快速模式检查
+        /// </summary>
+        /// <returns></returns>
+        public async Task RelaxToFastValidate()
+        {
+            try
+            {
+                // 快速用完时
+                // 并且开启快速切换慢速模式时
+                if (Account != null && Account.FastExhausted && Account.EnableRelaxToFast == true)
+                {
+                    // 每 3~6 小时，和启动时检查账号是否有快速时长
+                    if (Account.InfoUpdated == null || Account.InfoUpdated.Value.AddMinutes(5) < DateTime.Now)
+                    {
+                        // 随机 3~6 小时，执行一次
+                        var key = $"fast_exhausted_{Account.ChannelId}";
+                        await _cache.GetOrCreateAsync(key, async c =>
+                        {
+                            try
+                            {
+                                _logger.Information("自动切换快速模式检查 {@0}", Account.ChannelId);
+
+                                // 随机 3~6 小时
+                                var random = new Random();
+                                var minutes = random.Next(180, 360);
+                                c.SetAbsoluteExpiration(TimeSpan.FromMinutes(minutes));
+
+                                await _taskService.InfoSetting(Account.Id);
+
+                                return true;
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.Error(ex, "自动切换快速模式检查，执行异常 {@0}", Account.ChannelId);
+                            }
+
+                            return false;
+                        });
+                    }
+
+                    // 判断 info 检查时间是否在 5 分钟内
+                    if (Account.InfoUpdated != null && Account.InfoUpdated.Value.AddMinutes(5) >= DateTime.Now)
+                    {
+                        _logger.Information("自动切换快速模式，验证 {@0}", Account.ChannelId);
+
+                        // 提取 fastime
+                        // 如果检查完之后，快速超过 1 小时，则标记为快速未用完
+                        var fastTime = Account.FastTimeRemaining?.ToString()?.Split('/')?.FirstOrDefault()?.Trim();
+                        if (!string.IsNullOrWhiteSpace(fastTime) && double.TryParse(fastTime, out var ftime) && ftime >= 1)
+                        {
+                            _logger.Information("自动切换快速模式，开始 {@0}", Account.ChannelId);
+
+                            // 标记未用完快速
+                            Account.FastExhausted = false;
+                            DbHelper.AccountStore.Update("FastExhausted", Account);
+
+                            // 如果开启了自动切换到快速，则自动切换到快速
+                            try
+                            {
+                                if (Account.EnableRelaxToFast == true)
+                                {
+                                    Thread.Sleep(2500);
+                                    await FastAsync(SnowFlake.NextId(), EBotType.MID_JOURNEY);
+
+                                    Thread.Sleep(2500);
+                                    await FastAsync(SnowFlake.NextId(), EBotType.NIJI_JOURNEY);
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.Error(ex, "自动切换快速模式，执行异常 {@0}", Account.ChannelId);
+                            }
+
+                            ClearAccountCache(Account.Id);
+
+                            _logger.Information("自动切换快速模式，执行完成 {@0}", Account.ChannelId);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "快速切换慢速模式，检查执行异常");
+            }
         }
     }
 }

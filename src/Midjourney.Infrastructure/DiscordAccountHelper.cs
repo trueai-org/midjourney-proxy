@@ -48,6 +48,7 @@ namespace Midjourney.Infrastructure
         private readonly IEnumerable<UserMessageHandler> _userMessageHandlers;
         private readonly Dictionary<string, string> _paramsMap;
         private readonly IMemoryCache _memoryCache;
+        private readonly ITaskService _taskService;
 
         public DiscordAccountHelper(
             DiscordHelper discordHelper,
@@ -55,7 +56,8 @@ namespace Midjourney.Infrastructure
             IEnumerable<BotMessageHandler> messageHandlers,
             INotifyService notifyService,
             IEnumerable<UserMessageHandler> userMessageHandlers,
-            IMemoryCache memoryCache)
+            IMemoryCache memoryCache,
+            ITaskService taskService)
         {
             _properties = GlobalConfiguration.Setting;
             _discordHelper = discordHelper;
@@ -85,6 +87,7 @@ namespace Midjourney.Infrastructure
             }
 
             _paramsMap = paramsMap;
+            _taskService = taskService;
         }
 
         /// <summary>
@@ -119,7 +122,8 @@ namespace Midjourney.Infrastructure
                 _notifyService,
                 _discordHelper,
                 _paramsMap,
-                webProxy);
+                webProxy,
+                _taskService);
 
             if (account.Enable == true)
             {

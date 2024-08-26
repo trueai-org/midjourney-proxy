@@ -597,169 +597,64 @@ namespace Midjourney.API
                     var now = new DateTimeOffset(DateTime.Now.Date).ToUnixTimeMilliseconds();
                     var dayCount = (int)TaskHelper.Instance.TaskStore.Count(c => c.InstanceId == account.ChannelId && c.SubmitTime >= now);
 
+                    // 只要在工作时间内，就创建实例
                     if (DateTime.Now.IsInWorkTime(account.WorkTime))
                     {
-                        if (account.DayDrawLimit < 0 || dayCount < account.DayDrawLimit)
+                        if (disInstance == null)
                         {
-                            if (disInstance == null)
+                            // 初始化子频道
+                            account.InitSubChannels();
+
+                            // 快速时长校验
+                            // 如果 fastTime <= 0.1，则标记为快速用完
+                            var fastTime = account.FastTimeRemaining?.ToString()?.Split('/')?.FirstOrDefault()?.Trim();
+                            if (!string.IsNullOrWhiteSpace(fastTime) && double.TryParse(fastTime, out var ftime) && ftime <= 0.1)
                             {
-                                // 启动前校验
-                                if (account.SubChannels.Count > 0)
-                                {
-                                    // https://discord.com/channels/1256526716130693201/1256526716130693204
-                                    // https://discord.com/channels/{guid}/{id}
-                                    // {guid} {id} 都是纯数字
+                                account.FastExhausted = true;
+                            }
+                            else
+                            {
+                                account.FastExhausted = false;
+                            }
 
-                                    var dic = new Dictionary<string, string>();
-                                    foreach (var item in account.SubChannels)
-                                    {
-                                        if (string.IsNullOrWhiteSpace(item) || !item.Contains("https://discord.com/channels"))
-                                        {
-                                            continue;
-                                        }
+                            account.DayDrawCount = dayCount;
+                            db.Update("SubChannels,SubChannelValues,FastExhausted,DayDrawCount", account);
 
-                                        // {id} 作为 key, {guid} 作为 value
-                                        var fir = item.Split(',').Where(c => c.Contains("https://discord.com/channels")).FirstOrDefault();
-                                        if (fir == null)
-                                        {
-                                            continue;
-                                        }
+                            // 连接前先判断账号是否正常
+                            var success = await _discordAccountHelper.ValidateAccount(account);
+                            if (!success)
+                            {
+                                throw new Exception("账号不可用");
+                            }
 
-                                        var arr = fir.Split('/').Where(c => !string.IsNullOrWhiteSpace(c)).ToArray();
-                                        if (arr.Length < 5)
-                                        {
-                                            continue;
-                                        }
+                            disInstance = await _discordAccountHelper.CreateDiscordInstance(account)!;
+                            disInstance.IsInit = true;
+                            _discordLoadBalancer.AddInstance(disInstance);
 
-                                        var guid = arr[3];
-                                        var id = arr[4];
+                            // 这里应该等待初始化完成，并获取用户信息验证，获取用户成功后设置为可用状态
+                            // 多账号启动时，等待一段时间再启动下一个账号
+                            await Task.Delay(1000 * 5);
 
-                                        dic[id] = guid;
-                                    }
-
-                                    account.SubChannelValues = dic;
-                                }
-                                else
-                                {
-                                    account.SubChannels.Clear();
-                                    account.SubChannelValues.Clear();
-                                }
-
-                                // 快速时长校验
-                                // 如果 fastTime <= 0.1，则标记为快速用完
-                                var fastTime = account.FastTimeRemaining?.ToString()?.Split('/')?.FirstOrDefault()?.Trim();
-                                if (!string.IsNullOrWhiteSpace(fastTime) && double.TryParse(fastTime, out var ftime) && ftime <= 0.1)
-                                {
-                                    account.FastExhausted = true;
-                                }
-                                else
-                                {
-                                    account.FastExhausted = false;
-                                }
-
-                                account.DayDrawCount = dayCount;
-                                db.Update("SubChannels,SubChannelValues,FastExhausted,DayDrawCount", account);
-
-                                // 连接前先判断账号是否正常
-                                var success = await _discordAccountHelper.ValidateAccount(account);
-                                if (!success)
-                                {
-                                    throw new Exception("账号不可用");
-                                }
-
-                                disInstance = await _discordAccountHelper.CreateDiscordInstance(account);
-                                _discordLoadBalancer.AddInstance(disInstance);
-
-                                // 这里应该等待初始化完成，并获取用户信息验证，获取用户成功后设置为可用状态
-                                // 多账号启动时，等待一段时间再启动下一个账号
-                                await Task.Delay(1000 * 5);
-
-                                try
-                                {
-                                    // 启动后执行 info setting 操作
-                                    await _taskService.InfoSetting(account.Id);
-                                }
-                                catch (Exception ex)
-                                {
-                                    _logger.Error(ex, "同步 info 异常 {@0}", account.ChannelId);
-                                }
+                            try
+                            {
+                                // 启动后执行 info setting 操作
+                                await _taskService.InfoSetting(account.Id);
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.Error(ex, "同步 info 异常 {@0}", account.ChannelId);
                             }
                         }
 
-                        // 快速用完时
-                        if (disInstance?.Account != null && disInstance.Account.FastExhausted)
-                        {
-                            // 每 3~6 小时，和启动时检查账号快速用量是否用完了
-                            if (disInstance.Account.InfoUpdated == null || disInstance.Account.InfoUpdated.Value.AddMinutes(5) < DateTime.Now)
-                            {
-                                // 检查账号快速用量是否用完了
-                                // 随机 3~6 小时，执行一次
-                                var key = $"fast_exhausted_{account.ChannelId}";
-                                await _memoryCache.GetOrCreateAsync(key, async c =>
-                                {
-                                    try
-                                    {
-                                        // 随机 3~6 小时
-                                        var random = new Random();
-                                        var minutes = random.Next(180, 360);
-                                        c.SetAbsoluteExpiration(TimeSpan.FromMinutes(minutes));
-
-                                        await _taskService.InfoSetting(account.Id);
-
-                                        return true;
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        _logger.Error(ex, "同步 info 异常 {@0}", account.ChannelId);
-                                    }
-
-                                    return false;
-                                });
-                            }
-
-                            // 判断 info 检查时间是否在 5 分钟内
-                            if (disInstance.Account.InfoUpdated != null && disInstance.Account.InfoUpdated.Value.AddMinutes(5) >= DateTime.Now)
-                            {
-                                // 提取 fastime
-                                // 如果检查完之后，快速超过 1 小时，则标记为快速未用完
-                                var fastTime = disInstance.Account.FastTimeRemaining?.ToString()?.Split('/')?.FirstOrDefault()?.Trim();
-                                if (!string.IsNullOrWhiteSpace(fastTime) && double.TryParse(fastTime, out var ftime) && ftime >= 1)
-                                {
-                                    // 标记未用完快速
-                                    disInstance.Account.FastExhausted = false;
-                                    db.Update("FastExhausted", disInstance.Account);
-
-                                    // 如果开启了自动切换到快速，则自动切换到快速
-                                    try
-                                    {
-                                        if (disInstance.Account.EnableRelaxToFast == true)
-                                        {
-                                            Thread.Sleep(2500);
-                                            await disInstance.FastAsync(SnowFlake.NextId(), EBotType.MID_JOURNEY);
-
-                                            Thread.Sleep(2500);
-                                            await disInstance.FastAsync(SnowFlake.NextId(), EBotType.NIJI_JOURNEY);
-                                        }
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        _logger.Error(ex, "切换快速异常 {@0}", account.ChannelId);
-                                    }
-
-                                    disInstance.ClearAccountCache(account.Id);
-
-                                    _logger.Information("Account({@0}) fast exhausted, 重置", account.ChannelId);
-                                }
-                            }
-                        }
+                        // 慢速切换快速模式
+                        await disInstance?.RelaxToFastValidate();
                     }
                     else
                     {
                         // 非工作时间内，如果存在实例则释放
                         if (disInstance != null)
                         {
-                            _discordLoadBalancer.RemoveInstance((Infrastructure.LoadBalancer.DiscordInstance)disInstance);
-
+                            _discordLoadBalancer.RemoveInstance(disInstance);
                             disInstance.Dispose();
                         }
                     }
@@ -838,6 +733,7 @@ namespace Midjourney.API
                     }
                 }
 
+                model.EnableRelaxToFast = param.EnableRelaxToFast;
                 model.EnableFastToRelax = param.EnableFastToRelax;
                 model.IsBlend = param.IsBlend;
                 model.IsDescribe = param.IsDescribe;

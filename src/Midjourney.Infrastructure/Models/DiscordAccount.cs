@@ -555,5 +555,53 @@ namespace Midjourney.Infrastructure.Models
                 EnableRelaxToFast = configAccount.EnableRelaxToFast
             };
         }
+
+        /// <summary>
+        /// 初始化子频道
+        /// </summary>
+        public void InitSubChannels()
+        {
+            // 启动前校验
+            if (SubChannels.Count > 0)
+            {
+                // https://discord.com/channels/1256526716130693201/1256526716130693204
+                // https://discord.com/channels/{guid}/{id}
+                // {guid} {id} 都是纯数字
+
+                var dic = new Dictionary<string, string>();
+                foreach (var item in SubChannels)
+                {
+                    if (string.IsNullOrWhiteSpace(item) || !item.Contains("https://discord.com/channels"))
+                    {
+                        continue;
+                    }
+
+                    // {id} 作为 key, {guid} 作为 value
+                    var fir = item.Split(',').Where(c => c.Contains("https://discord.com/channels")).FirstOrDefault();
+                    if (fir == null)
+                    {
+                        continue;
+                    }
+
+                    var arr = fir.Split('/').Where(c => !string.IsNullOrWhiteSpace(c)).ToArray();
+                    if (arr.Length < 5)
+                    {
+                        continue;
+                    }
+
+                    var guid = arr[3];
+                    var id = arr[4];
+
+                    dic[id] = guid;
+                }
+
+                SubChannelValues = dic;
+            }
+            else
+            {
+                SubChannels.Clear();
+                SubChannelValues.Clear();
+            }
+        }
     }
 }
