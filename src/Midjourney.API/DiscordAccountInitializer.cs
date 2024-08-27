@@ -529,8 +529,8 @@ namespace Midjourney.API
                     if (account == null)
                     {
                         account = DiscordAccount.Create(configAccount);
-
                         db.Add(account);
+
                         accounts.Add(account);
                     }
                 }
@@ -793,7 +793,6 @@ namespace Midjourney.API
                 if (disInstance != null)
                 {
                     _discordLoadBalancer.RemoveInstance(disInstance);
-
                     disInstance.Dispose();
                 }
             }
@@ -821,6 +820,7 @@ namespace Midjourney.API
                     var disInstance = _discordLoadBalancer.GetDiscordInstance(model.ChannelId);
                     if (disInstance != null)
                     {
+                        _discordLoadBalancer.RemoveInstance(disInstance);
                         disInstance.Dispose();
                     }
                 }

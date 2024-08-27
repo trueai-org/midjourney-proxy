@@ -160,20 +160,27 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 {
                     lock (_lockAccount)
                     {
-                        _account = _cache.GetOrCreate($"account:{_account.Id}", (c) =>
+                        if (!string.IsNullOrWhiteSpace(_account?.Id))
                         {
-                            c.SetAbsoluteExpiration(TimeSpan.FromMinutes(2));
+                            _account = _cache.GetOrCreate($"account:{_account.Id}", (c) =>
+                            {
+                                c.SetAbsoluteExpiration(TimeSpan.FromMinutes(2));
 
-                            return DbHelper.AccountStore.Get(_account.Id);
-                        });
+                                // 必须数据库中存在
+                                var acc = DbHelper.AccountStore.Get(_account.Id);
+                                if (acc != null)
+                                {
+                                    return acc;
+                                }
+
+                                return _account;
+                            });
+                        }
                     }
                 }
                 catch (Exception ex)
                 {
-                    _logger.Error(ex, "Failed to get account.");
-
-                    // 不清空
-                    //_account = null;
+                    _logger.Error(ex, "Failed to get account. {@0}", _account?.Id ?? "unknown");
                 }
 
                 return _account;

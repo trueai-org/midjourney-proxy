@@ -111,7 +111,12 @@ namespace Midjourney.Infrastructure.Data
         public void Add(T entity)
         {
             var col = _db.GetCollection<T>();
-            entity.Id = col.Insert(entity);
+            var id = col.Insert(entity);
+
+            if (!string.IsNullOrWhiteSpace(id))
+            {
+                entity.Id = id;
+            }
         }
 
         /// <summary>
@@ -362,7 +367,7 @@ namespace Midjourney.Infrastructure.Data
         /// <returns></returns>
         public T Get(string id)
         {
-            return _db.GetCollection<T>().FindOne(c => c.Id == id);
+            return _db.GetCollection<T>().FindById(id);
         }
 
         /// <summary>
