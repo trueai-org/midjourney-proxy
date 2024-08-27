@@ -173,6 +173,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                     return acc;
                                 }
 
+                                // 如果账号被删除了
+                                IsInit = false;
+
                                 return _account;
                             });
                         }
