@@ -539,7 +539,7 @@ namespace Midjourney.API
                 {
                     try
                     {
-                        await StartCheckAccount(account);
+                        await StartCheckAccount(account, false);
                     }
                     catch (Exception ex)
                     {
@@ -570,7 +570,7 @@ namespace Midjourney.API
         /// <summary>
         /// 检查并启动连接
         /// </summary>
-        public async Task StartCheckAccount(DiscordAccount account)
+        public async Task StartCheckAccount(DiscordAccount account, bool isValidateLock = true)
         {
             if (account == null || account.Enable != true)
             {
@@ -672,7 +672,10 @@ namespace Midjourney.API
                     disInstance = null;
                 }
             });
-            if (!isLock)
+
+            // 未获取到锁时，是否抛出异常
+            // 如果验证锁，但未获取锁时，抛出异常
+            if (isValidateLock && !isLock)
             {
                 throw new LogicException("初始化中，请稍后重试");
             }

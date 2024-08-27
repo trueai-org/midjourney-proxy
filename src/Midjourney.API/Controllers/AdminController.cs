@@ -858,7 +858,8 @@ namespace Midjourney.API.Controllers
             .WhereIf(!string.IsNullOrWhiteSpace(param.Sponsor), c => c.Sponsor.Contains(param.Sponsor));
 
             var count = query.Count();
-            var list = query.OrderBy(c => c.Sort)
+            var list = query
+                .OrderBy(c => c.Sort)
                 .Skip((page.Current - 1) * page.PageSize)
                 .Limit(page.PageSize)
                 .ToList();
