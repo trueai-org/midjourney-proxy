@@ -79,7 +79,104 @@ namespace Midjourney.Infrastructure.LoadBalancer
             if (!string.IsNullOrWhiteSpace(accountFilter?.InstanceId))
             {
                 // 获取指定 ID 的实例
-                return GetDiscordInstance(accountFilter.InstanceId);
+                var model = GetDiscordInstance(accountFilter.InstanceId);
+
+                // 如果指定实例绘图
+                // 判断是否符合过滤条件
+                if (model != null)
+                {
+                    // 如果过滤 niji journey 的账号，但是账号未开启 niji journey，则不符合条件
+                    if (botType == EBotType.NIJI_JOURNEY && model.Account.EnableNiji != true)
+                    {
+                        return null;
+                    }
+
+                    // 如果过滤 mid journey 的账号，但是账号未开启 mid journey，则不符合条件
+                    if (botType == EBotType.MID_JOURNEY && model.Account.EnableMj != true)
+                    {
+                        return null;
+                    }
+
+                    // 如果过滤速度模式，但是账号未设置速度模式或者不在过滤列表中，则不符合条件
+                    if (accountFilter.Modes.Count > 0 && model.Account.Mode != null && !accountFilter.Modes.Contains(model.Account.Mode.Value))
+                    {
+                        return null;
+                    }
+
+                    // 如果过滤 remix = true, 但是账号未开启 remix 或 remix 开启了自动提交，则不符合条件
+                    if (accountFilter.Remix == true && (model.Account.MjRemixOn != true || model.Account.RemixAutoSubmit))
+                    {
+                        return null;
+                    }
+
+                    // 如果过滤 remix = false, 但是账号开启了 remix 且 remix 未开启自动提交，则不符合条件
+                    if (accountFilter.Remix == false && model.Account.MjRemixOn == true && !model.Account.RemixAutoSubmit)
+                    {
+                        return null;
+                    }
+
+                    // 如果过滤 niji remix = true, 但是账号未开启 niji remix 或 niji remix 开启了自动提交，则不符合条件
+                    if (accountFilter.NijiRemix == true && (model.Account.NijiRemixOn != true || model.Account.RemixAutoSubmit))
+                    {
+                        return null;
+                    }
+
+                    // 如果过滤 niji remix = false, 但是账号开启了 niji remix 且 niji remix 未开启自动提交，则不符合条件
+                    if (accountFilter.NijiRemix == false && model.Account.NijiRemixOn == true && !model.Account.RemixAutoSubmit)
+                    {
+                        return null;
+                    }
+
+                    // 如果过滤 remix 自动提交，则不符合条件
+                    if (accountFilter.RemixAutoConsidered.HasValue && model.Account.RemixAutoSubmit != accountFilter.RemixAutoConsidered)
+                    {
+                        return null;
+                    }
+
+                    // 如果过滤只接收新任务的实例，但是实例不接收新任务，则不符合条件
+                    if (isNewTask == true && model.Account.IsAcceptNewTask != true)
+                    {
+                        return null;
+                    }
+
+                    // 如果过滤开启 blend 的账号，但是账号未开启 blend，则不符合条件
+                    if (blend == true && model.Account.IsBlend != true)
+                    {
+                        return null;
+                    }
+
+                    // 如果过滤开启 describe 的账号，但是账号未开启 describe，则不符合条件
+                    if (describe == true && model.Account.IsDescribe != true)
+                    {
+                        return null;
+                    }
+
+                    // 如果过滤开启 shorten 的账号，但是账号未开启 shorten，则不符合条件
+                    if (shorten == true && model.Account.IsShorten != true)
+                    {
+                        return null;
+                    }
+
+                    // 如果过滤垂直领域的账号，但是账号未开启垂直领域，则不符合条件
+                    if (isDomain == true && (model.Account.IsVerticalDomain != true || !model.Account.VerticalDomainIds.Any(x => domainIds.Contains(x))))
+                    {
+                        return null;
+                    }
+
+                    // 如果过滤非垂直领域的账号，但是账号开启了垂直领域，则不符合条件
+                    if (isDomain == false && model.Account.IsVerticalDomain == true)
+                    {
+                        return null;
+                    }
+
+                    // 如果指定了账号 ID，但是不在指定 ID 列表中，则不符合条件
+                    if (ids?.Count > 0 && !ids.Contains(model.Account.ChannelId))
+                    {
+                        return null;
+                    }
+                }
+
+                return model;
             }
             else
             {
