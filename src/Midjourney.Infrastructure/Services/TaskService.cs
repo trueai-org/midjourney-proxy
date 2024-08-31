@@ -454,7 +454,7 @@ namespace Midjourney.Infrastructure.Services
             var messageId = targetTask.GetProperty<string>(Constants.TASK_PROPERTY_MESSAGE_ID, default);
 
             task.BotType = targetTask.BotType;
-            task.SetProperty(Constants.TASK_PROPERTY_BOT_TYPE, targetTask.BotType);
+            task.SetProperty(Constants.TASK_PROPERTY_BOT_TYPE, targetTask.BotType.GetDescription());
             task.SetProperty(Constants.TASK_PROPERTY_CUSTOM_ID, submitAction.CustomId);
 
             // 设置任务的提示信息 = 父级任务的提示信息
@@ -540,7 +540,7 @@ namespace Midjourney.Infrastructure.Services
                     };
 
                     subTask.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, discordInstance.ChannelId);
-                    subTask.SetProperty(Constants.TASK_PROPERTY_BOT_TYPE, targetTask.BotType);
+                    subTask.SetProperty(Constants.TASK_PROPERTY_BOT_TYPE, targetTask.BotType.GetDescription());
 
                     var nonce = SnowFlake.NextId();
                     subTask.Nonce = nonce;

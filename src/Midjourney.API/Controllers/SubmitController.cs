@@ -262,7 +262,7 @@ namespace Midjourney.API.Controllers
             task.BotType = GetBotType(imagineDTO.BotType);
             task.Description = $"/show {jobId}";
             task.JobId = jobId;
-
+      
             NewTaskDoFilter(task, imagineDTO.AccountFilter);
 
             var data = _taskService.ShowImagine(task);
@@ -390,7 +390,7 @@ namespace Midjourney.API.Controllers
 
             task.BotType = GetBotType(describeDTO.BotType);
             task.Action = TaskAction.DESCRIBE;
-
+    
             string taskFileName = $"{task.Id}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
             task.Description = $"/describe {taskFileName}";
 
@@ -411,7 +411,7 @@ namespace Midjourney.API.Controllers
 
             task.BotType = GetBotType(dto.BotType);
             task.Action = TaskAction.SHORTEN;
-
+        
             var prompt = dto.Prompt;
             task.Prompt = prompt;
 
@@ -470,7 +470,7 @@ namespace Midjourney.API.Controllers
             task.BotType = GetBotType(blendDTO.BotType);
             task.Action = TaskAction.BLEND;
             task.Description = $"/blend {task.Id} {dataUrlList.Count}";
-
+        
             NewTaskDoFilter(task, blendDTO.AccountFilter);
 
             return Ok(_taskService.SubmitBlend(task, dataUrlList, blendDTO.Dimensions.Value));
@@ -784,6 +784,7 @@ namespace Midjourney.API.Controllers
         private void NewTaskDoFilter(TaskInfo task, AccountFilter accountFilter)
         {
             task.AccountFilter = accountFilter;
+            task.SetProperty(Constants.TASK_PROPERTY_BOT_TYPE, task.BotType.GetDescription());
 
             if (_mode != null)
             {
