@@ -1679,27 +1679,46 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
         private async Task<Message> PostJsonAndCheckStatusAsync(string paramsStr)
         {
-            HttpResponseMessage response = null;
-            try
+            // 如果 TooManyRequests 请求失败，则重拾最多 3 次
+            var count = 3;
+            do
             {
-                response = await PostJsonAsync(_discordInteractionUrl, paramsStr);
-                if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
+                HttpResponseMessage response = null;
+                try
                 {
-                    return Message.Success();
+                    response = await PostJsonAsync(_discordInteractionUrl, paramsStr);
+                    if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
+                    {
+                        return Message.Success();
+                    }
+                    else if (response.StatusCode == HttpStatusCode.TooManyRequests)
+                    {
+                        // 等待 3~6 秒
+                        var random = new Random();
+                        var seconds = random.Next(3, 6);
+                        await Task.Delay(seconds * 1000);
+
+                        count--;
+                        if (count > 0)
+                        {
+                            _logger.Warning("Http 请求执行频繁，等待重试 {@0}, {@1}, {@2}", paramsStr, response.StatusCode, response.Content);
+                            continue;
+                        }
+                    }
+
+                    _logger.Error("Http 请求执行失败 {@0}, {@1}, {@2}", paramsStr, response.StatusCode, response.Content);
+
+                    var error = $"{response.StatusCode}: {paramsStr.Substring(0, Math.Min(paramsStr.Length, 1000))}";
+
+                    return Message.Of((int)response.StatusCode, error);
                 }
+                catch (HttpRequestException e)
+                {
+                    _logger.Error(e, "Http 请求执行异常 {@0}", paramsStr);
 
-                _logger.Error("Http 请求执行失败 {@0}, {@1}, {@2}", paramsStr, response.StatusCode, response.Content);
-
-                var error = $"{response.StatusCode}: {paramsStr.Substring(0, Math.Min(paramsStr.Length, 1000))}";
-
-                return Message.Of((int)response.StatusCode, error);
-            }
-            catch (HttpRequestException e)
-            {
-                _logger.Error(e, "Http 请求执行异常 {@0}", paramsStr);
-
-                return Message.Of(ReturnCode.FAILURE, e.Message?.Substring(0, Math.Min(e.Message.Length, 100)) ?? "未知错误");
-            }
+                    return Message.Of(ReturnCode.FAILURE, e.Message?.Substring(0, Math.Min(e.Message.Length, 100)) ?? "未知错误");
+                }
+            } while (true);
         }
 
         /// <summary>
