@@ -100,7 +100,7 @@ namespace Midjourney.Infrastructure.Util
                     return new FetchFileResult { Success = true, Url = url, Msg = "White host" };
                 }
 
-                _httpClient.DefaultRequestHeaders.Host = host;
+                //_httpClient.DefaultRequestHeaders.Host = host;
 
                 if (_maxFileSize > 0)
                 {

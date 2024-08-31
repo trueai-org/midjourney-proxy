@@ -1321,41 +1321,48 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 var urlDic = new Dictionary<string, string>();
                 foreach (var url in urls)
                 {
-                    // url 缓存默认 24 小时有效
-                    var okUrl = await _cache.GetOrCreateAsync($"tmp:{url}", async entry =>
+                    try
                     {
-                        entry.AbsoluteExpiration = DateTimeOffset.Now.AddHours(24);
-
-                        var ff = new FileFetchHelper();
-                        var res = await ff.FetchFileAsync(url);
-                        if (res.Success && !string.IsNullOrWhiteSpace(res.Url))
+                        // url 缓存默认 24 小时有效
+                        var okUrl = await _cache.GetOrCreateAsync($"tmp:{url}", async entry =>
                         {
-                            return res.Url;
-                        }
-                        else if (res.Success && res.FileBytes.Length > 0)
-                        {
-                            // 上传到 Discord 服务器
-                            var uploadResult = await UploadAsync(res.FileName, new DataUrl(res.ContentType, res.FileBytes));
+                            entry.AbsoluteExpiration = DateTimeOffset.Now.AddHours(24);
 
-                            if (uploadResult.Code != ReturnCode.SUCCESS)
+                            var ff = new FileFetchHelper();
+                            var res = await ff.FetchFileAsync(url);
+                            if (res.Success && !string.IsNullOrWhiteSpace(res.Url))
                             {
-                                throw new LogicException(uploadResult.Code, uploadResult.Description);
+                                return res.Url;
+                            }
+                            else if (res.Success && res.FileBytes.Length > 0)
+                            {
+                                // 上传到 Discord 服务器
+                                var uploadResult = await UploadAsync(res.FileName, new DataUrl(res.ContentType, res.FileBytes));
+
+                                if (uploadResult.Code != ReturnCode.SUCCESS)
+                                {
+                                    throw new LogicException(uploadResult.Code, uploadResult.Description);
+                                }
+
+                                var finalFileName = uploadResult.Description;
+                                var sendImageResult = await SendImageMessageAsync("upload image: " + finalFileName, finalFileName);
+                                if (sendImageResult.Code != ReturnCode.SUCCESS)
+                                {
+                                    throw new LogicException(sendImageResult.Code, sendImageResult.Description);
+                                }
+
+                                return sendImageResult.Description;
                             }
 
-                            var finalFileName = uploadResult.Description;
-                            var sendImageResult = await SendImageMessageAsync("upload image: " + finalFileName, finalFileName);
-                            if (sendImageResult.Code != ReturnCode.SUCCESS)
-                            {
-                                throw new LogicException(sendImageResult.Code, sendImageResult.Description);
-                            }
+                            throw new LogicException($"解析链接失败 {url}, {res?.Msg}");
+                        });
 
-                            return sendImageResult.Description;
-                        }
-
-                        throw new LogicException($"解析链接失败 {url}, {res?.Msg}");
-                    });
-
-                    urlDic[url] = okUrl;
+                        urlDic[url] = okUrl;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Error(ex, "解析 url 异常 {0}", url);
+                    }
                 }
 
                 // 替换 url
