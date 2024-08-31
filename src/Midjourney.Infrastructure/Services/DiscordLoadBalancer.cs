@@ -192,6 +192,11 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     // 或者有交集的
                     .WhereIf(accountFilter?.Modes.Count > 0, c => c.Account.AllowModes == null || c.Account.AllowModes.Count <= 0 || c.Account.AllowModes.Any(x => accountFilter.Modes.Contains(x)))
 
+                    // 如果速度模式中，包含快速模式，则过滤掉不支持快速模式的实例
+                    .WhereIf(accountFilter?.Modes.Contains(GenerationSpeedMode.FAST) == true ||
+                    accountFilter?.Modes.Contains(GenerationSpeedMode.TURBO) == true,
+                    c => c.Account.FastExhausted == false)
+
                     // Midjourney Remix 过滤
                     .WhereIf(accountFilter?.Remix == true, c => c.Account.MjRemixOn == accountFilter.Remix || !c.Account.RemixAutoSubmit)
                     .WhereIf(accountFilter?.Remix == false, c => c.Account.MjRemixOn == accountFilter.Remix)
