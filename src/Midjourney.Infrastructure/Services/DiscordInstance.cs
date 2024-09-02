@@ -598,8 +598,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 {
                     SaveAndNotify(info);
 
-                    // 每秒验证 1次
-                    await Task.Delay(1000);
+                    // 每 500ms
+                    await Task.Delay(500);
 
                     if (sw.ElapsedMilliseconds > timeoutMin * 60 * 1000)
                     {
