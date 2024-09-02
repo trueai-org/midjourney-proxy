@@ -265,6 +265,12 @@ namespace Midjourney.Infrastructure.Models
         public List<GenerationSpeedMode> AllowModes { get; set; } = new List<GenerationSpeedMode>();
 
         /// <summary>
+        /// 自动设置慢速
+        /// 启用后，当快速用完时，如果允许生成速度模式是 FAST 或 TURBO，则自动清空原有模式，并设置为 RELAX 模式。
+        /// </summary>
+        public bool? EnableAutoSetRelax { get; set; }
+
+        /// <summary>
         /// MJ 组件列表。
         /// </summary>
         public List<Component> Components { get; set; } = new List<Component>();
@@ -552,7 +558,8 @@ namespace Midjourney.Infrastructure.Models
                 EnableMj = configAccount.EnableMj,
                 EnableNiji = configAccount.EnableNiji,
                 EnableFastToRelax = configAccount.EnableFastToRelax,
-                EnableRelaxToFast = configAccount.EnableRelaxToFast
+                EnableRelaxToFast = configAccount.EnableRelaxToFast,
+                EnableAutoSetRelax = configAccount.EnableAutoSetRelax,
             };
         }
 

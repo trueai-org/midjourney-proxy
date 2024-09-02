@@ -617,8 +617,14 @@ namespace Midjourney.API
                                 account.FastExhausted = false;
                             }
 
+                            // 自动设置慢速，如果快速用完
+                            if (account.FastExhausted == true && account.EnableAutoSetRelax == true)
+                            {
+                                account.AllowModes = new List<GenerationSpeedMode>() { GenerationSpeedMode.RELAX };
+                            }
+
                             account.DayDrawCount = dayCount;
-                            db.Update("SubChannels,SubChannelValues,FastExhausted,DayDrawCount", account);
+                            db.Update("AllowModes,SubChannels,SubChannelValues,FastExhausted,DayDrawCount", account);
 
                             // 连接前先判断账号是否正常
                             var success = await _discordAccountHelper.ValidateAccount(account);
@@ -736,6 +742,7 @@ namespace Midjourney.API
                     }
                 }
 
+                model.EnableAutoSetRelax = param.EnableAutoSetRelax;
                 model.EnableRelaxToFast = param.EnableRelaxToFast;
                 model.EnableFastToRelax = param.EnableFastToRelax;
                 model.IsBlend = param.IsBlend;

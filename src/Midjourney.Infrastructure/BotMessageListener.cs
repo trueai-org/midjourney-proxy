@@ -907,9 +907,17 @@ namespace Midjourney.Infrastructure
                                             task.Fail("账号用量已经用完");
                                         }
 
+
                                         // 标记快速模式已经用完了
                                         Account.FastExhausted = true;
-                                        DbHelper.AccountStore.Update("FastExhausted", Account);
+
+                                        // 自动设置慢速，如果快速用完
+                                        if (Account.FastExhausted == true && Account.EnableAutoSetRelax == true)
+                                        {
+                                            Account.AllowModes = new List<GenerationSpeedMode>() { GenerationSpeedMode.RELAX };
+                                        }
+
+                                        DbHelper.AccountStore.Update("AllowModes,FastExhausted", Account);
                                         _discordInstance?.ClearAccountCache(Account.Id);
 
                                         // 如果开启自动切换慢速模式

@@ -55,7 +55,7 @@ namespace Midjourney.Infrastructure.Services
             _httpClient = httpClient;
             _notifyPoolSize = GlobalConfiguration.Setting.NotifyPoolSize;
 
-            var max = Math.Max(1, Math.Min(_notifyPoolSize, 12));
+            var max = Math.Max(1, Math.Min(_notifyPoolSize, 64));
 
             _semaphoreSlim = new SemaphoreSlim(max, max);
         }
@@ -91,6 +91,14 @@ namespace Midjourney.Infrastructure.Services
             {
                 _logger.LogError(e, e.Message);
             }
+            finally
+            {
+                // 如果任务已完成，或失败，则移除任务状态
+                if (task.Status == TaskStatus.SUCCESS || task.Status == TaskStatus.FAILURE)
+                {
+                    _taskStatusMap.TryRemove(taskId, out _);
+                }
+            }
         }
 
         private async Task ExecuteNotify(string taskId, string currentStatusStr, string notifyHook, string paramsStr)
@@ -105,7 +113,7 @@ namespace Midjourney.Infrastructure.Services
                     if (compare <= 0)
                     {
                         // 忽略消息
-                        //_logger.LogDebug("Ignore this change, task: {0}({1})", taskId, currentStatusStr);
+                        _logger.LogDebug("Ignore this change, task: {0}({1})", taskId, currentStatusStr);
                         return;
                     }
                 }

@@ -559,7 +559,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                 info.Status = TaskStatus.SUBMITTED;
                 info.Progress = "0%";
-                await AsyncSaveAndNotify(info);
+                SaveAndNotify(info);
 
                 var result = await discordSubmit();
 
@@ -587,7 +587,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                 await Task.Delay(500);
 
-                await AsyncSaveAndNotify(info);
+                SaveAndNotify(info);
 
                 // 超时处理
                 var timeoutMin = Account.TimeoutMinutes;
@@ -596,8 +596,10 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                 while (info.Status == TaskStatus.SUBMITTED || info.Status == TaskStatus.IN_PROGRESS)
                 {
-                    await AsyncSaveAndNotify(info);
-                    await Task.Delay(100);
+                    SaveAndNotify(info);
+
+                    // 每秒验证 1次
+                    await Task.Delay(1000);
 
                     if (sw.ElapsedMilliseconds > timeoutMin * 60 * 1000)
                     {
@@ -634,6 +636,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 }
                 //}
 
+                SaveAndNotify(info);
+
                 _logger.Debug("[{AccountDisplay}] task finished, id: {TaskId}, status: {TaskStatus}", Account.GetDisplay(), info.Id, info.Status);
             }
             catch (Exception ex)
@@ -662,13 +666,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
         {
             _runningTasks.Remove(task);
         }
-
-        /// <summary>
-        /// 异步保存和通知任务。
-        /// </summary>
-        /// <param name="task">任务信息</param>
-        /// <returns>异步任务</returns>
-        private async Task AsyncSaveAndNotify(TaskInfo task) => await Task.Run(() => SaveAndNotify(task));
 
         /// <summary>
         /// 保存并通知任务状态变化。

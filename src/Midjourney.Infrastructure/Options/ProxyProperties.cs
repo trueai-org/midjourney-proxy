@@ -262,6 +262,12 @@ namespace Midjourney.Infrastructure
         public bool EnableRelaxToFast { get; set; }
 
         /// <summary>
+        /// 自动设置慢速
+        /// 启用后，当快速用完时，如果允许生成速度模式是 FAST 或 TURBO，则自动清空原有模式，并设置为 RELAX 模式。
+        /// </summary>
+        public bool? EnableAutoSetRelax { get; set; }
+
+        /// <summary>
         /// 并发数.
         /// </summary>
         public int CoreSize { get; set; } = 3;
