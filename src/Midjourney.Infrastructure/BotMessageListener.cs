@@ -844,15 +844,17 @@ namespace Midjourney.Infrastructure
                                                 {
                                                     if (messageType == MessageType.CREATE)
                                                     {
+                                                        var error = $"{title}, {item.GetProperty("description").GetString()}";
+
                                                         task.MessageId = id;
-                                                        task.Description = $"{title}, {item.GetProperty("description").GetString()}";
+                                                        task.Description = error;
 
                                                         if (!task.MessageIds.Contains(id))
                                                         {
                                                             task.MessageIds.Add(id);
                                                         }
 
-                                                        task.Fail(title);
+                                                        task.Fail(error);
                                                     }
                                                 }
                                             }
@@ -875,15 +877,17 @@ namespace Midjourney.Infrastructure
                                                     {
                                                         if (messageType == MessageType.CREATE)
                                                         {
+                                                            var error = $"{title}, {item.GetProperty("description").GetString()}";
+
                                                             task.MessageId = id;
-                                                            task.Description = $"{title}, {item.GetProperty("description").GetString()}";
+                                                            task.Description = error;
 
                                                             if (!task.MessageIds.Contains(id))
                                                             {
                                                                 task.MessageIds.Add(id);
                                                             }
 
-                                                            task.Fail(title);
+                                                            task.Fail(error);
                                                         }
                                                     }
                                                 }
