@@ -24,16 +24,19 @@
 
 using Microsoft.Extensions.Caching.Memory;
 using Midjourney.Infrastructure.Data;
+using Midjourney.Infrastructure.Models;
 using Midjourney.Infrastructure.Services;
 using Midjourney.Infrastructure.Util;
 using Newtonsoft.Json.Linq;
 using Serilog;
+using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading.Channels;
 using ILogger = Serilog.ILogger;
 
 namespace Midjourney.Infrastructure.LoadBalancer
@@ -1677,7 +1680,10 @@ namespace Midjourney.Infrastructure.LoadBalancer
         private async Task<Message> PostJsonAndCheckStatusAsync(string paramsStr)
         {
             // 如果 TooManyRequests 请求失败，则重拾最多 3 次
-            var count = 3;
+            var count = 5;
+
+            // 已处理的 message id
+            var messageIds = new List<string>();
             do
             {
                 HttpResponseMessage response = null;
@@ -1690,16 +1696,64 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     }
                     else if (response.StatusCode == HttpStatusCode.TooManyRequests)
                     {
-                        // 等待 3~6 秒
-                        var random = new Random();
-                        var seconds = random.Next(3, 6);
-                        await Task.Delay(seconds * 1000);
-
                         count--;
                         if (count > 0)
                         {
+                            // 等待 3~6 秒
+                            var random = new Random();
+                            var seconds = random.Next(3, 6);
+                            await Task.Delay(seconds * 1000);
+
                             _logger.Warning("Http 请求执行频繁，等待重试 {@0}, {@1}, {@2}", paramsStr, response.StatusCode, response.Content);
                             continue;
+                        }
+                    }
+                    else if (response.StatusCode == HttpStatusCode.NotFound)
+                    {
+                        count--;
+
+                        if (count > 0)
+                        {
+                            // 等待 3~6 秒
+                            var random = new Random();
+                            var seconds = random.Next(3, 6);
+                            await Task.Delay(seconds * 1000);
+
+                            // 当是 NotFound 时
+                            // 可能是 message id 错乱导致
+                            if (paramsStr.Contains("message_id") && paramsStr.Contains("nonce"))
+                            {
+                                var obj = JObject.Parse(paramsStr);
+                                if (obj.ContainsKey("message_id") && obj.ContainsKey("nonce"))
+                                {
+                                    var nonce = obj["nonce"].ToString();
+                                    var message_id = obj["message_id"].ToString();
+                                    if (!string.IsNullOrEmpty(nonce) && !string.IsNullOrWhiteSpace(message_id))
+                                    {
+                                        messageIds.Add(message_id);
+
+                                        var t = GetRunningTaskByNonce(nonce);
+                                        if (t != null && !string.IsNullOrWhiteSpace(t.ParentId))
+                                        {
+                                            var p = GetTask(t.ParentId);
+                                            if (p != null)
+                                            {
+                                                var newMessageId = p.MessageIds.Where(c => !messageIds.Contains(c)).FirstOrDefault();
+                                                if (!string.IsNullOrWhiteSpace(newMessageId))
+                                                {
+                                                    obj["message_id"] = newMessageId;
+
+                                                    var oldStr = paramsStr;
+                                                    paramsStr = obj.ToString();
+
+                                                    _logger.Warning("Http 请求执行失败，可能消息错乱，等待重试 {@0}, {@1}, {@2}, {@3}", oldStr, paramsStr, response.StatusCode, response.Content);
+                                                    continue;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
 
