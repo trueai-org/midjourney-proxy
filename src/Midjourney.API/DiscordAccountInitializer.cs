@@ -623,8 +623,36 @@ namespace Midjourney.API
                                 account.AllowModes = new List<GenerationSpeedMode>() { GenerationSpeedMode.RELAX };
                             }
 
+                            try
+                            {
+                                Thread.Sleep(500);
+                                var id = await _discordAccountHelper.GetBotPrivateId(account, EBotType.MID_JOURNEY);
+                                if (!string.IsNullOrWhiteSpace(id))
+                                {
+                                    account.PrivateChannelId = id;
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.Error(ex, "获取 MJ 私聊频道 ID 异常 {@0}", account.ChannelId);
+                            }
+
+                            try
+                            {
+                                Thread.Sleep(500);
+                                var id = await _discordAccountHelper.GetBotPrivateId(account, EBotType.NIJI_JOURNEY);
+                                if (!string.IsNullOrWhiteSpace(id))
+                                {
+                                    account.NijiBotChannelId = id;
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.Error(ex, "获取 NIJI 私聊频道 ID 异常 {@0}", account.ChannelId);
+                            }
+
                             account.DayDrawCount = dayCount;
-                            db.Update("AllowModes,SubChannels,SubChannelValues,FastExhausted,DayDrawCount", account);
+                            db.Update("NijiBotChannelId,PrivateChannelId,AllowModes,SubChannels,SubChannelValues,FastExhausted,DayDrawCount", account);
 
                             // 连接前先判断账号是否正常
                             var success = await _discordAccountHelper.ValidateAccount(account);

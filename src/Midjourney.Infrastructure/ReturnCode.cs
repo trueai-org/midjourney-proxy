@@ -21,10 +21,11 @@
 // The use of this software for any form of illegal face swapping,
 // invasion of privacy, or any other unlawful purposes is strictly prohibited. 
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
+
 namespace Midjourney.Infrastructure
 {
     /// <summary>
-    /// 返回码常量类.
+    /// 返回码
     /// </summary>
     public static class ReturnCode
     {
@@ -64,7 +65,7 @@ namespace Midjourney.Infrastructure
         public const int QUEUE_REJECTED = 23;
 
         /// <summary>
-        /// prompt包含敏感词
+        /// 提示词 Prompt 包含敏感词
         /// </summary>
         public const int BANNED_PROMPT = 24;
     }

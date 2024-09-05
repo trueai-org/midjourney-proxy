@@ -21,7 +21,6 @@
 // The use of this software for any form of illegal face swapping,
 // invasion of privacy, or any other unlawful purposes is strictly prohibited. 
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
-using Microsoft.Extensions.Options;
 
 namespace Midjourney.Infrastructure
 {
@@ -64,6 +63,11 @@ namespace Midjourney.Infrastructure
         /// 身份验证地址如果 200 则是正常
         /// </summary>
         public const string DISCORD_VAL_URL = "https://discord.com/api/v9/users/@me/billing/country-code";
+
+        /// <summary>
+        /// ME 渠道
+        /// </summary>
+        public const string ME_CHANNELS_URL = "https://discord.com/api/v9/users/@me/channels";
 
         /// <summary>
         /// 获取 Discord 服务器 URL。

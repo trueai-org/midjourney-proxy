@@ -27,6 +27,7 @@ using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.Handle;
 using Midjourney.Infrastructure.LoadBalancer;
 using Midjourney.Infrastructure.Services;
+using Org.BouncyCastle.Cms;
 using System.Net;
 using System.Reflection;
 using System.Text.Json;
@@ -196,6 +197,7 @@ namespace Midjourney.Infrastructure
             //    "message": "执行此操作需要先验证您的账号。",
             //    "code": 40002
             //}
+
             var data = JsonDocument.Parse(json).RootElement;
             if (data.TryGetProperty("message", out var message))
             {
@@ -203,6 +205,63 @@ namespace Midjourney.Infrastructure
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// 获取私信 ID
+        /// </summary>
+        /// <param name="account"></param>
+        /// <param name="botType"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        public async Task<string> GetBotPrivateId(DiscordAccount account, EBotType botType)
+        {
+            if (string.IsNullOrWhiteSpace(account.UserAgent))
+            {
+                account.UserAgent = Constants.DEFAULT_DISCORD_USER_AGENT;
+            }
+
+            WebProxy webProxy = null;
+            if (!string.IsNullOrEmpty(_properties.Proxy?.Host))
+            {
+                webProxy = new WebProxy(_properties.Proxy.Host, _properties.Proxy.Port ?? 80);
+            }
+
+            var hch = new HttpClientHandler
+            {
+                UseProxy = webProxy != null,
+                Proxy = webProxy
+            };
+
+            var client = new HttpClient(hch)
+            {
+                Timeout = TimeSpan.FromMinutes(10),
+            };
+
+            var request = new HttpRequestMessage(HttpMethod.Post, DiscordHelper.ME_CHANNELS_URL);
+            request.Headers.Add("Authorization", account.UserToken);
+            request.Headers.Add("User-Agent", account.UserAgent);
+
+            var obj = new
+            {
+                recipients = new string[] { botType == EBotType.MID_JOURNEY ? Constants.MJ_APPLICATION_ID : Constants.NIJI_APPLICATION_ID }
+            };
+            var objStr = JsonSerializer.Serialize(obj);
+            var content = new StringContent(objStr, null, "application/json");
+            request.Content = content;
+
+            var response = await client.SendAsync(request);
+            var json = await response.Content.ReadAsStringAsync();
+            if (response.StatusCode == HttpStatusCode.OK)
+            {
+                var data = JsonDocument.Parse(json).RootElement;
+                if (data.TryGetProperty("id", out var id))
+                {
+                    return id.GetString();
+                }
+            }
+
+            throw new Exception($"获取私信 ID 失败 {response?.StatusCode}, {response?.Content}");
         }
     }
 }
