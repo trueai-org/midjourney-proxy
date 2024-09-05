@@ -354,12 +354,17 @@ namespace Midjourney.Infrastructure.Services
         /// 生成带签名的URL，设置过期时间为 1 小时
         /// </summary>
         /// <param name="key"></param>
-        /// <param name="expirationHour"></param>
+        /// <param name="minutes"></param>
         /// <returns></returns>
-        public Uri GetSignKey(string key, int expirationHour = 1)
+        public Uri GetSignKey(string key, int minutes = 60)
         {
             var client = new OssClient(_endpoint, _accessKeyId, _accessKeySecret);
-            var expiration = DateTime.Now.AddHours(expirationHour);
+            var expiration = DateTime.Now.AddMinutes(minutes);
+            if (minutes <= 0)
+            {
+                expiration = DateTime.Now.AddMinutes(minutes);
+            }
+
             return client.GeneratePresignedUri(_bucketName, key, expiration);
         }
 

@@ -75,6 +75,11 @@ namespace Midjourney.Infrastructure.Models
         /// 访客默认日绘图限制
         /// </summary>
         public int GuestDefaultDayLimit { get; set; } = -1;
+
+        /// <summary>
+        /// 首页公告
+        /// </summary>
+        public string Notify { get; set; }
     }
 
     /// <summary>

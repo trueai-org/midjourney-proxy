@@ -64,6 +64,11 @@ namespace Midjourney.Infrastructure.Dto
         public int TotalDraw { get; set; }
 
         /// <summary>
+        /// 首页公告
+        /// </summary>
+        public string Notify { get; set; }
+
+        /// <summary>
         /// 绘图客户端 top 5
         /// </summary>
         public Dictionary<string, int> Tops { get; set; } = new Dictionary<string, int>();

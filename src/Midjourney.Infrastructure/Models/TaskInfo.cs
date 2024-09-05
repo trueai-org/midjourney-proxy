@@ -341,21 +341,27 @@ namespace Midjourney.Infrastructure.Models
                                     // 换脸放到私有附件中
                                     if (IsReplicate)
                                     {
-                                        var priUri = oss.GetSignKey(localPath);
+                                        var priUri = oss.GetSignKey(localPath, opt.ExpirationMinutes);
                                         url = $"{customCdn?.Trim()?.Trim('/')}/{priUri.PathAndQuery.TrimStart('/')}";
                                     }
                                 }
 
 
-                                if (Action != TaskAction.SWAP_VIDEO_FACE)
-                                {
-                                    ImageUrl = url.ToStyle(opt.ImageStyle);
-                                    ThumbnailUrl = url.ToStyle(opt.ThumbnailImageStyle);
-                                }
-                                else
+                                if (Action == TaskAction.SWAP_VIDEO_FACE)
                                 {
                                     ImageUrl = url;
                                     ThumbnailUrl = url.ToStyle(opt.VideoSnapshotStyle);
+                                }
+                                else if (Action == TaskAction.SWAP_FACE)
+                                {
+                                    // 换脸不格式化
+                                    ImageUrl = url;
+                                    ThumbnailUrl = url;
+                                }
+                                else
+                                {
+                                    ImageUrl = url.ToStyle(opt.ImageStyle);
+                                    ThumbnailUrl = url.ToStyle(opt.ThumbnailImageStyle);
                                 }
                             }
                         }

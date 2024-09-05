@@ -1491,6 +1491,9 @@ namespace Midjourney.API.Controllers
 
             // 首页缓存
             _memoryCache.Remove("HOME");
+            var now = DateTime.Now.ToString("yyyyMMdd");
+            var key = $"{now}_home";
+            _memoryCache.Remove(key);
 
             return Result.Ok();
         }

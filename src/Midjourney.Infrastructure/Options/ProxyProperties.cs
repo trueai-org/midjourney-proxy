@@ -563,6 +563,11 @@ namespace Midjourney.Infrastructure
         /// 开启自动迁移本地文件到阿里云支持
         /// </summary>
         public bool IsAutoMigrationLocalFile { get; set; }
+
+        /// <summary>
+        /// 链接默认有效时间
+        /// </summary>
+        public int ExpirationMinutes { get; set; } = 60;
     }
 
     /// <summary>
