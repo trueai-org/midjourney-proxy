@@ -1746,7 +1746,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                                     var oldStr = paramsStr;
                                                     paramsStr = obj.ToString();
 
-                                                    _logger.Warning("Http 请求执行失败，可能消息错乱，等待重试 {@0}, {@1}, {@2}, {@3}", oldStr, paramsStr, response.StatusCode, response.Content);
+                                                    _logger.Warning("Http 可能消息错乱，等待重试 {@0}, {@1}, {@2}, {@3}", oldStr, paramsStr, response.StatusCode, response.Content);
                                                     continue;
                                                 }
                                             }
@@ -1760,6 +1760,19 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     _logger.Error("Http 请求执行失败 {@0}, {@1}, {@2}", paramsStr, response.StatusCode, response.Content);
 
                     var error = $"{response.StatusCode}: {paramsStr.Substring(0, Math.Min(paramsStr.Length, 1000))}";
+
+                    // 如果是 403 则直接禁用账号
+                    if (response.StatusCode == HttpStatusCode.Forbidden)
+                    {
+                        _logger.Error("Http 请求没有操作权限，禁用账号 {@0}", paramsStr);
+
+                        Account.Enable = false;
+                        Account.DisabledReason = "Http 请求没有操作权限，禁用账号";
+                        DbHelper.AccountStore.Update(Account);
+                        ClearAccountCache(Account.Id);
+
+                        return Message.Of(ReturnCode.FAILURE, "请求失败，禁用账号");
+                    }
 
                     return Message.Of((int)response.StatusCode, error);
                 }
