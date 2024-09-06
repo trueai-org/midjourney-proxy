@@ -23,9 +23,11 @@
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
 using LiteDB;
+using MailKit.Search;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
+using Midjourney.Infrastructure;
 using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.LoadBalancer;
@@ -848,6 +850,7 @@ namespace Midjourney.API.Controllers
                 }
             }
 
+            var sort = request.Sort;
             var param = request.Search;
 
             var query = DbHelper.AccountStore.GetCollection().Query()
@@ -859,7 +862,13 @@ namespace Midjourney.API.Controllers
 
             var count = query.Count();
             var list = query
-                .OrderBy(c => c.Sort)
+                .OrderByIf(nameof(DiscordAccount.GuildId).Equals(sort.Predicate, StringComparison.OrdinalIgnoreCase), c => c.GuildId, sort.Reverse)
+                .OrderByIf(nameof(DiscordAccount.ChannelId).Equals(sort.Predicate, StringComparison.OrdinalIgnoreCase), c => c.ChannelId, sort.Reverse)
+                .OrderByIf(nameof(DiscordAccount.Enable).Equals(sort.Predicate, StringComparison.OrdinalIgnoreCase), c => c.Enable, sort.Reverse)
+                .OrderByIf(nameof(DiscordAccount.Remark).Equals(sort.Predicate, StringComparison.OrdinalIgnoreCase), c => c.Remark, sort.Reverse)
+                .OrderByIf(nameof(DiscordAccount.Sponsor).Equals(sort.Predicate, StringComparison.OrdinalIgnoreCase), c => c.Sponsor, sort.Reverse)
+                .OrderByIf(nameof(DiscordAccount.DateCreated).Equals(sort.Predicate, StringComparison.OrdinalIgnoreCase), c => c.DateCreated, sort.Reverse)
+                .OrderByIf(string.IsNullOrWhiteSpace(sort.Predicate), c => c.Sort, false)
                 .Skip((page.Current - 1) * page.PageSize)
                 .Limit(page.PageSize)
                 .ToList();

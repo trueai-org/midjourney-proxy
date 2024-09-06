@@ -21,6 +21,7 @@
 // The use of this software for any form of illegal face swapping,
 // invasion of privacy, or any other unlawful purposes is strictly prohibited. 
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
+
 using LiteDB;
 using Midjourney.Infrastructure.Data;
 using MongoDB.Driver.Linq;
@@ -491,6 +492,27 @@ namespace Midjourney.Infrastructure
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// 排序条件扩展
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="query"></param>
+        /// <param name="where"></param>
+        /// <param name="keySelector"></param>
+        /// <param name="desc"></param>
+        /// <returns></returns>
+        public static ILiteQueryable<T> OrderByIf<T>(this ILiteQueryable<T> query, bool where, Expression<Func<T, object>> keySelector, bool desc = true)
+        {
+            if (desc)
+            {
+                return where ? query.OrderByDescending(keySelector) : query;
+            }
+            else
+            {
+                return where ? query.OrderBy(keySelector) : query;
+            }
         }
 
         /// <summary>
