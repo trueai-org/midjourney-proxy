@@ -357,6 +357,7 @@ docker run -d \
 {
   "Demo": null, // 网站配置为演示模式
   "Captcha": {
+    "Concurrent": 1, // 并发数
     "Headless": true, // chrome 是否后台运行
     "TwoCaptchaKey": "" // 2captcha.com 的 API Key
   },

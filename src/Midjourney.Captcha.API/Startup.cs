@@ -125,8 +125,8 @@ namespace Midjourney.Captcha.API
                 }
             });
 
-            // 注册 BrowserDownloadService
-            services.AddHostedService<BrowserDownloadService>();
+            // 注册服务
+            services.AddHostedService<QueueHostedService>();
         }
 
         public void Configure(IApplicationBuilder app, IHostEnvironment env)

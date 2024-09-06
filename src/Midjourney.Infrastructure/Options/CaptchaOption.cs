@@ -29,6 +29,11 @@ namespace Midjourney.Infrastructure.Options
     public class CaptchaOption
     {
         /// <summary>
+        /// 并发数
+        /// </summary>
+        public int Concurrent { get; set; } = 1;
+
+        /// <summary>
         /// 2captcha API key
         /// </summary>
         public string TwoCaptchaKey { get; set; }
