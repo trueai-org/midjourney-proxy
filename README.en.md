@@ -1,97 +1,97 @@
-# Midjourney Proxy
+# Midjourney API
 
-**中文** | [English](README.en.md)
+**English** | [中文](README.md)
 
-A proxy for the Midjourney Discord channel, allowing AI drawing through API calls. This is a public welfare project providing drawing APIs for free.
+Proxying Midjourney's Discord channel to draw images via API, supporting one-click face-swapping for images and videos, as a public welfare project offering free image generation interfaces.
 
-It is entirely open source, with no parts being closed, and contributions via PR are welcome.
+🦄 Total drawings generated through this project: over 2 million images 🐂, with a daily output of over 100,000 images. Thank you for your support!
 
-The most comprehensive, secure, and memory-efficient (100MB+) Midjourney Proxy API.
+⭐ If you think this project is useful, please consider giving it a `Star`, much appreciated!
 
-We are very grateful for the help and support from everyone, and for the many great sponsors who have contributed to this project. Thank you very much!
+## Discussion Group
 
-## Community Group
+If you have any questions about usage or deployment, feel free to join the discussion group for collective problem-solving.
 
-Since the documentation is not very comprehensive at the moment, you may encounter issues with usage and deployment. Feel free to join our community group for discussions and problem-solving.
+If you have drawing requests, feel free to contact the group admins. Some members generate over a million images daily!
 
 [Midjourney Public Welfare Group](https://qm.qq.com/q/k88clCkyMS) (QQ Group: 565908696)
 
-<img src="./docs/screenshots/565908696.png" alt="welcome" width="360"/>
+<img src="./docs/screenshots/565908696.png" alt="Welcome" width="360"/>
 
-## Main Features
+## Key Features
 
-- [x] Supports Imagine commands and related actions [V1/V2.../U1/U2.../R]
-- [x] Allows adding image base64 as a base map when using Imagine
-- [x] Supports Blend (image mixing) and Describe (text from image) commands
-- [x] Real-time task progress supported
-- [x] Chinese prompt translation with Baidu Translate configuration
-- [x] Pre-detection of sensitive words in prompts, with support for customization
-- [x] User-token connection to wss to retrieve error messages and complete features
-- [x] Supports Shorten (prompt analysis) command
-- [x] Supports pan movements: Pan ⬅️➡⬆️⬇️
-- [x] Partial redo supported: Vary (Region) 🖌
-- [x] Supports nearly all associated button actions
-- [x] Image zoom and custom zoom with Zoom 🔍
-- [x] Fetch seed values of images
-- [x] Account-specific generation speed modes: RELAX | FAST | TURBO 
-- [x] Multi-account configuration, with corresponding task queue settings and selection modes like BestWaitIdle | Random | Weight | Polling
+- [x] Supports the Imagine command and related actions [V1/V2.../U1/U2.../R]
+- [x] Supports adding base64 images as overlays during Imagine
+- [x] Supports Blend (image merging), Describe (image-to-text), and Shorten (prompt analysis) commands
+- [x] Supports real-time task progress
+- [x] Supports Chinese prompt translation via Baidu or GPT translation
+- [x] Pre-check for sensitive words in prompts with customizable overrides
+- [x] User-token connection to WSS to retrieve errors and full functionality
+- [x] Supports prompt analysis with Shorten
+- [x] Supports focus movement: Pan ⬅️➡⬆️⬇️
+- [x] Supports partial re-drawing: Vary (Region) 🖌
+- [x] Supports all related button actions
+- [x] Supports image zooming, customizable Zoom 🔍
+- [x] Retrieves image seed values
+- [x] Supports account-specified generation speed modes: RELAX | FAST | TURBO
+- [x] Supports multi-account configuration with individual task queues, selectable modes: BestWaitIdle | Random | Weight | Polling
 - [x] Persistent account pool with dynamic maintenance
-- [x] Retrieve account /info, /settings information
-- [x] Account settings management
-- [x] Support for both Niji・Journey Bot and Midjourney Bot
-- [x] Secure zlib-stream transmission <https://discord.com/developers/docs/topics/gateway>
-- [x] Built-in MJ management backend with multilingual support <https://github.com/trueai-org/midjourney-proxy-webui>
-- [x] CRUD operations for MJ accounts
-- [x] Detailed query and synchronization of MJ account information
-- [x] Concurrent queue settings for MJ accounts
-- [x] MJ account settings management
-- [x] Task querying for MJ
-- [x] Comprehensive drawing test page
-- [x] Compatibility with major drawing clients and API calls
-- [x] Adding parent task information to tasks
-- [x] 🎛️ Remix mode and auto-submission in Remix mode 
-- [x] Built-in image saving to local storage with CDN acceleration
-- [x] Simulated read on unviewed messages when drawing counts exceed a threshold
-- [x] Support for PicReader and Picread commands in image-to-text regeneration, including batch commands, without fast mode
-- [x] Support for BOOKMARK and other commands
-- [x] Allows drawing on specified instances and filtering accounts based on speed or `remix` mode; see Swagger's `accountFilter`
-- [x] Reverse task information creation from job id or image
-- [x] Configuration for account sorting, parallelism, queue limits, max queue length, task interval, etc.
-- [x] Client path mode specification, default URL example: https://{BASE_URL}/mj/submit/imagine, /mj-turbo/mj is turbo mode, /mj-relax/mj is relax mode, /mj-fast/mj is fast mode, /mj without mode specification
-- [x] Manual human verification with CloudFlare, with auto account lock on trigger and both GUI and email options for verification
-- [x] Auto human verification with CloudFlare; configure verification server address (auto-verifier supports Windows deployment only)
-- [x] Work schedule configuration to avoid triggering warnings from continuous 24-hour activities, suggested 8~10 hour rest; e.g., `09:10-23:55, 13:00-08:10`
-- [x] Built-in IP throttling, IP range throttling, blacklist, whitelist, auto-blacklist, etc.
-- [x] Daily drawing limit support with auto-stop upon reaching limit
+- [x] Retrieves account /info and /settings information
+- [x] Account settings configuration
+- [x] Supports both niji・journey Bot and Midjourney Bot
+- [x] Secure zlib-stream compression transmission <https://discord.com/developers/docs/topics/gateway>
+- [x] Embedded MJ management interface with multi-language support <https://github.com/trueai-org/midjourney-proxy-webui>
+- [x] Account management for adding, deleting, editing, and querying accounts
+- [x] Detailed account information queries and synchronization operations
+- [x] Account concurrency settings
+- [x] MJ account task queries
+- [x] Full-featured drawing test page
+- [x] Compatible with mainstream drawing clients and API calls
+- [x] Adds parent task information to tasks
+- [x] 🎛️ Remix mode and auto-submission in Remix mode
+- [x] Built-in local image saving and CDN acceleration
+- [x] Auto-mark unread messages when drawing to reduce notification overload
+- [x] Supports PicReader and Picread commands for regenerating images, including batch operations without needing fast mode
+- [x] Supports BOOKMARK and other commands
+- [x] Draw with specified instances or filter accounts based on speed, including remix mode filtering (see Swagger `accountFilter` field for details)
+- [x] Reverse generate system task info based on job id or image
+- [x] Configures account sorting, parallelism, queue numbers, maximum queue limits, task execution intervals, etc.
+- [x] Customizable client path specification, default example: https://{BASE_URL}/mj/submit/imagine; /mj-turbo/mj is turbo mode, /mj-relax/mj is relax mode, /mj-fast/mj is fast mode, /mj does not specify mode
+- [x] Cloudflare manual human verification with account auto-lock when triggered, verification via GUI or email notification
+- [x] Cloudflare automatic human verification with a server-side configuration (automatic verifier supports Windows deployment only)
+- [x] Configurable work schedules, recommended breaks of 8-10 hours to avoid warnings when drawing non-stop for 24 hours, e.g., `09:10-23:55, 13:00-08:10`
+- [x] Built-in IP rate limiting, IP block rate limiting, blacklist, whitelist, auto-blacklist features
+- [x] Daily drawing limit support; once the limit is exceeded, new drawing tasks are disabled, but variation and redraws are still possible
 - [x] Enable registration and guest access
 - [x] Visual configuration features
-- [x] Separate activation of Swagger documentation
-- [x] Optional bot token configuration, operational without a bot
-- [x] Optimization for command and status progress display
-- [x] Configuration for idle times, with accounts switching between relax modes to avoid high frequency operations (no new drawings in this mode; other commands can still be executed, configurable with multiple time slots and strategies)
-- [x] Vertical account classification support, with keyword configuration for accounts to focus on specific types of work (e.g., landscapes only, portraits only)
-- [ ] Allow shared drawing channels or subchannels, continuing drawings even if an account is banned; convert banned account channels into subchannels of active accounts by saving permanent invite links and subchannel links, with batch modification support; enter invite links or shared channel addresses directly with auto-channel joining. Or transfer ownership to achieve this.
-- [ ] Call for a video tutorial
-- [ ] One-click migration support from `mjplus` or other services to this service
+- [x] Independent Swagger documentation activation
+- [x] Bot token configuration is optional, usage is still available without bot configuration
+- [x] Optimized command and status progress display
+- [x] Idle mode configuration to reduce high-frequency operations; idle mode disables new drawings but still allows other commands, customizable across multiple time periods
+- [x] Vertical account categorization support, account-specific work types (e.g., only landscapes, only portraits)
+- [x] Supports shared or sub-channels for drawing, even if an account is banned; continue drawing with a sub-channel of a banned account by saving a permanent invite link, supporting batch modifications
+- [x] Multi-database support for local databases or MongoDB; for more than 100,000 tasks, MongoDB is recommended (default keeps 1 million records), with automatic data migration support
+- [x] Supports one-click migration of `mjplus` or other services to this service, including accounts, tasks, etc.
+- [x] Built-in banned word management with multi-term grouping
+- [x] Non-official links in prompts are automatically converted to official ones, allowing for domestic or custom reference links to avoid verification issues
+- [x] Supports automatic switch to slow mode when fast mode duration is exhausted, with customizable activation, and auto-reverts when fast mode time is purchased or renewed
+- [x] Supports image storage on Aliyun OSS, with customizable CDN, custom styles, and thumbnails (recommended to use OSS for faster loading)
+- [x] Supports Shorten analysis for prompt-based image regeneration
+- [x] Supports image face-swapping, please comply with legal regulations
+- [x] Supports video face-swapping, please comply with legal regulations
+- [x] Supports automatic switch to slow mode (when fast time is consumed) and auto-switch to fast mode (when fast time is available)
 
 ## Online Preview
 
-A public API is available in a slow mode. It allows free access with account pools sponsored by contributors. Please use it responsibly.
+The public interface uses slow mode. The interface is free to use, and the account pool is provided by sponsors. Please use it wisely.
 
-- Admin Dashboard: <https://ai.trueai.org>
-- Username and Password: `None`
-- Public API: <https://ai.trueai.org/mj>
+- Management Panel: <https://ai.trueai.org>
+- Account password: `none`
+- Public Interface: <https://ai.trueai.org/mj>
 - API Documentation: <https://ai.trueai.org/swagger>
-- API Key: `None`
-- CF Auto-validation Server Address: <http://47.76.110.222:8081>
-- CF Auto-validation Server Documentation: <http://47.76.110.222:8081/swagger>
-
-> Example of CF Auto-validation configuration (for free automatic CAPTCHA bypass)
-
-```json
-"CaptchaServer": "http://47.76.110.222:8081",
-"CaptchaNotifyHook": "https://ai.trueai.org" // Callback notification, defaults to the current domain
-```
+- API Key: `none`
+- Cloudflare Auto Verification Server: <http://47.76.110.222:8081>
+- Cloudflare Auto Verification Server Docs: <http://47.76.110.222:8081/swagger>
 
 ## Preview Screenshots
 
