@@ -476,32 +476,35 @@ namespace Midjourney.Infrastructure.Models
             FailReason = reason;
             Progress = "";
 
-            if (!string.IsNullOrWhiteSpace(reason)
-                && reason.Contains("Banned prompt detected", StringComparison.OrdinalIgnoreCase))
+            if (!string.IsNullOrWhiteSpace(reason))
             {
-                // 触发提示提示词封锁
-                var band = GlobalConfiguration.Setting?.BannedLimiting;
-                var cache = GlobalConfiguration.MemoryCache;
-
-                // 记录累计触发次数
-                if (band?.Enable == true && cache != null)
+                if (reason.Contains("Banned prompt detected", StringComparison.OrdinalIgnoreCase)
+                    || reason.Contains("Image denied", StringComparison.OrdinalIgnoreCase))
                 {
-                    if (!string.IsNullOrWhiteSpace(UserId))
-                    {
-                        // user band
-                        var bandKey = $"banned:{DateTime.Now.Date:yyyyMMdd}:{UserId}";
-                        cache.TryGetValue(bandKey, out int limit);
-                        limit++;
-                        cache.Set(bandKey, limit, TimeSpan.FromDays(1));
-                    }
+                    // 触发提示提示词封锁
+                    var band = GlobalConfiguration.Setting?.BannedLimiting;
+                    var cache = GlobalConfiguration.MemoryCache;
 
-                    if (true)
+                    // 记录累计触发次数
+                    if (band?.Enable == true && cache != null)
                     {
-                        // ip band
-                        var bandKey = $"banned:{DateTime.Now.Date:yyyyMMdd}:{ClientIp}";
-                        cache.TryGetValue(bandKey, out int limit);
-                        limit++;
-                        cache.Set(bandKey, limit, TimeSpan.FromDays(1));
+                        if (!string.IsNullOrWhiteSpace(UserId))
+                        {
+                            // user band
+                            var bandKey = $"banned:{DateTime.Now.Date:yyyyMMdd}:{UserId}";
+                            cache.TryGetValue(bandKey, out int limit);
+                            limit++;
+                            cache.Set(bandKey, limit, TimeSpan.FromDays(1));
+                        }
+
+                        if (true)
+                        {
+                            // ip band
+                            var bandKey = $"banned:{DateTime.Now.Date:yyyyMMdd}:{ClientIp}";
+                            cache.TryGetValue(bandKey, out int limit);
+                            limit++;
+                            cache.Set(bandKey, limit, TimeSpan.FromDays(1));
+                        }
                     }
                 }
             }
