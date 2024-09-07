@@ -21,6 +21,7 @@
 // The use of this software for any form of illegal face swapping,
 // invasion of privacy, or any other unlawful purposes is strictly prohibited. 
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
+
 using Midjourney.Infrastructure.Data;
 using System.Runtime.Serialization;
 
@@ -121,7 +122,38 @@ namespace Midjourney.Infrastructure.Models
         /// <returns>属性值或默认值。</returns>
         public T GetProperty<T>(string name, T defaultValue)
         {
-            return Properties.TryGetValue(name, out var value) ? (T)value : defaultValue;
+            // return Properties.TryGetValue(name, out var value) ? (T)value : defaultValue;
+
+            if (Properties.TryGetValue(name, out var value))
+            {
+                try
+                {
+                    // 检查值是否是目标类型
+                    if (value is T t)
+                    {
+                        return t; // 类型一致，直接返回
+                    }
+
+                    // 如果类型不一致，尝试强制转换
+                    return (T)Convert.ChangeType(value, typeof(T));
+                }
+                catch (InvalidCastException)
+                {
+                    // 捕获转换异常，返回默认值
+                    return defaultValue;
+                }
+                catch (FormatException)
+                {
+                    // 捕获格式异常，返回默认值
+                    return defaultValue;
+                }
+                catch (Exception)
+                {
+                    return defaultValue;
+                }
+            }
+
+            return defaultValue;
         }
 
         public void GetObjectData(SerializationInfo info, StreamingContext context)
