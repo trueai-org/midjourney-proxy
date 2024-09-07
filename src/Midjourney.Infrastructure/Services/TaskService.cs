@@ -1298,6 +1298,8 @@ namespace Midjourney.Infrastructure.Services
                         // 任务迁移
                         if (true)
                         {
+                            var accounts = DbHelper.AccountStore.GetAll();
+
                             var ids = TaskHelper.Instance.TaskStore.GetAllIds().ToHashSet<string>();
 
                             var path = "/mj/task-admin/query";
@@ -1322,6 +1324,9 @@ namespace Midjourney.Infrastructure.Services
                                     var json = item.ToString();
                                     var jsonObject = JsonConvert.DeserializeObject<dynamic>(json);
 
+                                    var aid = jsonObject.properties?.discordInstanceId;
+                                    var acc = accounts.FirstOrDefault(x => x.Id == aid);
+
                                     // 创建 TaskInfo 实例
                                     var taskInfo = new TaskInfo
                                     {
@@ -1341,11 +1346,19 @@ namespace Midjourney.Infrastructure.Services
                                         Nonce = jsonObject.properties?.nonce,
                                         MessageId = jsonObject.properties?.messageId,
                                         BotType = Enum.TryParse<EBotType>((string)jsonObject.properties?.botType, out var botType) ? botType : EBotType.MID_JOURNEY,
-                                        InstanceId = jsonObject.properties?.discordInstanceId,
+                                        InstanceId = acc?.ChannelId,
                                         Buttons = JsonConvert.DeserializeObject<List<CustomComponentModel>>(JsonConvert.SerializeObject(jsonObject.buttons)),
                                         Properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonConvert.SerializeObject(jsonObject.properties)),
                                     };
-                                    taskInfo.InstanceId = taskInfo.GetProperty<string>(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, default);
+                                    aid = taskInfo.GetProperty<string>(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, default);
+                                    if (!string.IsNullOrWhiteSpace(aid))
+                                    {
+                                        acc = accounts.FirstOrDefault(x => x.Id == aid);
+                                        if (acc != null)
+                                        {
+                                            taskInfo.InstanceId = acc.ChannelId;
+                                        }
+                                    }
 
                                     if (!ids.Contains(taskInfo.Id))
                                     {
