@@ -48,6 +48,34 @@ namespace Midjourney.Infrastructure
         }
 
         /// <summary>
+        /// string 转 int
+        /// </summary>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        public static int ToInt(this string value)
+        {
+            if (!string.IsNullOrWhiteSpace(value) && int.TryParse(value?.Trim(), out int v))
+            {
+                return v;
+            }
+            return default;
+        }
+
+        /// <summary>
+        /// string 转 long
+        /// </summary>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        public static long ToInt64(this string value)
+        {
+            if (!string.IsNullOrWhiteSpace(value) && long.TryParse(value?.Trim(), out long v))
+            {
+                return v;
+            }
+            return default;
+        }
+
+        /// <summary>
         /// 移除空白字符、url 等，只保留参数的 prompt 用于比较
         /// </summary>
         /// <param name="str"></param>

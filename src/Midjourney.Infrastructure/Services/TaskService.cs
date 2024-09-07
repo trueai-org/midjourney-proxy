@@ -450,7 +450,7 @@ namespace Midjourney.Infrastructure.Services
             task.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, discordInstance.ChannelId);
 
             var targetTask = _taskStoreService.Get(submitAction.TaskId)!;
-            var messageFlags = targetTask.GetProperty<int>(Constants.TASK_PROPERTY_FLAGS, default);
+            var messageFlags = targetTask.GetProperty<string>(Constants.TASK_PROPERTY_FLAGS, default)?.ToInt() ?? 0;
             var messageId = targetTask.GetProperty<string>(Constants.TASK_PROPERTY_MESSAGE_ID, default);
 
             task.BotType = targetTask.BotType;
@@ -746,7 +746,7 @@ namespace Midjourney.Infrastructure.Services
             return discordInstance.SubmitTaskAsync(task, async () =>
             {
                 var customId = task.GetProperty<string>(Constants.TASK_PROPERTY_CUSTOM_ID, default);
-                var messageFlags = task.GetProperty<int>(Constants.TASK_PROPERTY_FLAGS, default);
+                var messageFlags = task.GetProperty<string>(Constants.TASK_PROPERTY_FLAGS, default)?.ToInt() ?? 0;
                 var messageId = task.GetProperty<string>(Constants.TASK_PROPERTY_MESSAGE_ID, default);
                 var nonce = task.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default);
 

@@ -345,9 +345,10 @@ namespace Midjourney.API.Controllers
 
             task.InstanceId = targetTask.InstanceId;
             task.Description = description;
-            int messageFlags = targetTask.GetProperty<int>(Constants.TASK_PROPERTY_FLAGS, default);
-            string messageId = targetTask.GetProperty<string>(Constants.TASK_PROPERTY_MESSAGE_ID, default);
-            string messageHash = targetTask.GetProperty<string>(Constants.TASK_PROPERTY_MESSAGE_HASH, default);
+
+            var messageFlags = targetTask.GetProperty<string>(Constants.TASK_PROPERTY_FLAGS, default)?.ToInt() ?? 0;
+            var messageId = targetTask.GetProperty<string>(Constants.TASK_PROPERTY_MESSAGE_ID, default);
+            var messageHash = targetTask.GetProperty<string>(Constants.TASK_PROPERTY_MESSAGE_HASH, default);
             task.SetProperty(Constants.TASK_PROPERTY_REFERENCED_MESSAGE_ID, messageId);
             if (changeDTO.Action == TaskAction.UPSCALE)
             {
