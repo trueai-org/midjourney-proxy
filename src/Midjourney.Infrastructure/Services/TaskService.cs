@@ -894,14 +894,14 @@ namespace Midjourney.Infrastructure.Services
                         // 如果全局开启了高变化，则高变化
                         if (task.BotType == EBotType.MID_JOURNEY)
                         {
-                            if (discordInstance.Account.Buttons.Any(x => x.Label == "High Variation Mode" && x.Style == 3))
+                            if (discordInstance.Account.Buttons.Any(x => x.CustomId == "MJ::Settings::HighVariabilityMode::1" && x.Style == 3))
                             {
                                 suffix = "1";
                             }
                         }
                         else
                         {
-                            if (discordInstance.Account.NijiButtons.Any(x => x.Label == "High Variation Mode" && x.Style == 3))
+                            if (discordInstance.Account.NijiButtons.Any(x => x.CustomId == "MJ::Settings::HighVariabilityMode::1" && x.Style == 3))
                             {
                                 suffix = "1";
                             }
@@ -912,7 +912,7 @@ namespace Midjourney.Infrastructure.Services
                         {
                             suffix = "0";
                         }
-                        // 如果是高变化或 niji bot
+                        // 如果是高变化
                         else if (customId.Contains("high_variation"))
                         {
                             suffix = "1";
