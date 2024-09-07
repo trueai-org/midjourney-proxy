@@ -144,8 +144,6 @@ namespace Midjourney.Infrastructure
         /// </summary>
         public bool Running { get; private set; }
 
-        private readonly SemaphoreSlim _stateLock;
-
         /// <summary>
         /// 消息队列
         /// </summary>
@@ -159,17 +157,16 @@ namespace Midjourney.Infrastructure
             DiscordHelper discordHelper,
             BotMessageListener userMessageListener,
             WebProxy webProxy,
-            DiscordInstance discordInstanceImpl,
+            DiscordInstance discordInstance,
             IMemoryCache memoryCache)
         {
             _botListener = userMessageListener;
             _discordHelper = discordHelper;
             _webProxy = webProxy;
-            _discordInstance = discordInstanceImpl;
+            _discordInstance = discordInstance;
             _memoryCache = memoryCache;
 
             _logger = Log.Logger;
-            _stateLock = new SemaphoreSlim(1, 1);
 
             _messageQueueTask = new Task(MessageQueueDoWork, TaskCreationOptions.LongRunning);
             _messageQueueTask.Start();
@@ -194,62 +191,59 @@ namespace Midjourney.Infrastructure
                     return false;
                 }
 
-                // 保证处于创建的实例只有1个
-                while (true)
+                var isLock = await AsyncLocalLock.TryLockAsync($"contact_{Account.Id}", TimeSpan.FromMinutes(1), async () =>
                 {
-                    if (await _stateLock.WaitAsync(0))
+                    // 关闭现有连接并取消相关任务
+                    CloseSocket(reconnect);
+
+                    // 重置 token
+                    _receiveTokenSource = new CancellationTokenSource();
+
+                    WebSocket = new ClientWebSocket();
+
+                    if (_webProxy != null)
                     {
-                        _logger.Information($"获取到锁, 重连: {reconnect}, {Account.ChannelId}");
-                        break;
+                        WebSocket.Options.Proxy = _webProxy;
                     }
 
+                    WebSocket.Options.SetRequestHeader("User-Agent", Account.UserAgent);
+                    WebSocket.Options.SetRequestHeader("Accept-Encoding", "gzip, deflate, br");
+                    WebSocket.Options.SetRequestHeader("Accept-Language", "zh-CN,zh;q=0.9");
+                    WebSocket.Options.SetRequestHeader("Cache-Control", "no-cache");
+                    WebSocket.Options.SetRequestHeader("Pragma", "no-cache");
+                    WebSocket.Options.SetRequestHeader("Sec-WebSocket-Extensions", "permessage-deflate; client_max_window_bits");
+
+                    // 获取网关地址
+                    var gatewayUrl = GetGatewayServer(reconnect ? _resumeGatewayUrl : null) + "/?encoding=json&v=9&compress=zlib-stream";
+
+                    // 重新连接
+                    if (reconnect && !string.IsNullOrWhiteSpace(_sessionId) && _sequence.HasValue)
+                    {
+                        // 恢复
+                        await WebSocket.ConnectAsync(new Uri(gatewayUrl), CancellationToken.None);
+
+                        // 尝试恢复会话
+                        await ResumeSessionAsync();
+                    }
+                    else
+                    {
+                        await WebSocket.ConnectAsync(new Uri(gatewayUrl), CancellationToken.None);
+
+                        // 新连接，发送身份验证消息
+                        await SendIdentifyMessageAsync();
+                    }
+
+                    _receiveTask = ReceiveMessagesAsync(_receiveTokenSource.Token);
+
+                    _logger.Information("用户 WebSocket 连接已建立 {@0}", Account.ChannelId);
+
+                });
+
+                if (!isLock)
+                {
                     _logger.Information($"取消处理, 未获取到锁, 重连: {reconnect}, {Account.ChannelId}");
                     return false;
                 }
-
-                // 关闭现有连接并取消相关任务
-                CloseSocket(reconnect);
-
-                // 重置 token
-                _receiveTokenSource = new CancellationTokenSource();
-
-                WebSocket = new ClientWebSocket();
-
-                if (_webProxy != null)
-                {
-                    WebSocket.Options.Proxy = _webProxy;
-                }
-
-                WebSocket.Options.SetRequestHeader("User-Agent", Account.UserAgent);
-                WebSocket.Options.SetRequestHeader("Accept-Encoding", "gzip, deflate, br");
-                WebSocket.Options.SetRequestHeader("Accept-Language", "zh-CN,zh;q=0.9");
-                WebSocket.Options.SetRequestHeader("Cache-Control", "no-cache");
-                WebSocket.Options.SetRequestHeader("Pragma", "no-cache");
-                WebSocket.Options.SetRequestHeader("Sec-WebSocket-Extensions", "permessage-deflate; client_max_window_bits");
-
-                // 获取网关地址
-                var gatewayUrl = GetGatewayServer(reconnect ? _resumeGatewayUrl : null) + "/?encoding=json&v=9&compress=zlib-stream";
-
-                // 重新连接
-                if (reconnect && !string.IsNullOrWhiteSpace(_sessionId) && _sequence.HasValue)
-                {
-                    // 恢复
-                    await WebSocket.ConnectAsync(new Uri(gatewayUrl), CancellationToken.None);
-
-                    // 尝试恢复会话
-                    await ResumeSessionAsync();
-                }
-                else
-                {
-                    await WebSocket.ConnectAsync(new Uri(gatewayUrl), CancellationToken.None);
-
-                    // 新连接，发送身份验证消息
-                    await SendIdentifyMessageAsync();
-                }
-
-                _receiveTask = ReceiveMessagesAsync(_receiveTokenSource.Token);
-
-                _logger.Information("用户 WebSocket 连接已建立 {@0}", Account.ChannelId);
 
                 return true;
             }
@@ -258,21 +252,6 @@ namespace Midjourney.Infrastructure
                 _logger.Error(ex, "用户 WebSocket 连接异常 {@0}", Account.ChannelId);
 
                 HandleFailure(CLOSE_CODE_EXCEPTION, "用户 WebSocket 连接异常");
-            }
-            finally
-            {
-                try
-                {
-                    _stateLock.Release();
-                }
-                catch (SemaphoreFullException)
-                {
-                    _logger.Warning("Skipping _stateLock.Release() as the semaphore is already at max count. {@0}", Account.ChannelId);
-                }
-                catch (Exception ex)
-                {
-                    _logger.Error(ex, "_stateLock Release 异常 {@0}", Account.ChannelId);
-                }
             }
 
             return false;
