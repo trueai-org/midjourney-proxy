@@ -1324,7 +1324,7 @@ namespace Midjourney.Infrastructure.Services
                                     var json = item.ToString();
                                     var jsonObject = JsonConvert.DeserializeObject<dynamic>(json);
 
-                                    var aid = jsonObject.properties?.discordInstanceId;
+                                    string aid = jsonObject.properties?.discordInstanceId;
                                     var acc = accounts.FirstOrDefault(x => x.Id == aid);
 
                                     // 创建 TaskInfo 实例
@@ -1350,6 +1350,7 @@ namespace Midjourney.Infrastructure.Services
                                         Buttons = JsonConvert.DeserializeObject<List<CustomComponentModel>>(JsonConvert.SerializeObject(jsonObject.buttons)),
                                         Properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonConvert.SerializeObject(jsonObject.properties)),
                                     };
+
                                     aid = taskInfo.GetProperty<string>(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, default);
                                     if (!string.IsNullOrWhiteSpace(aid))
                                     {
