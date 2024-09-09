@@ -37,7 +37,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
     public class VideoFaceSwapInstance : BaseFaceSwapInstance
     {
         private readonly Task _longTask;
-        private readonly SemaphoreSlimLock _semaphoreSlimLock;
+        private readonly AsyncParallelLock _semaphoreSlimLock;
         private readonly CancellationTokenSource _longToken;
         private readonly ManualResetEvent _mre;
 
@@ -47,7 +47,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
             var config = GlobalConfiguration.Setting;
 
             // 最小 1, 最大 120
-            _semaphoreSlimLock = new SemaphoreSlimLock(Math.Max(1, Math.Min(config.Replicate.VideoFaceSwapCoreSize, 120)));
+            _semaphoreSlimLock = new AsyncParallelLock(Math.Max(1, Math.Min(config.Replicate.VideoFaceSwapCoreSize, 120)));
 
             // 初始化信号器
             _mre = new ManualResetEvent(false);
@@ -254,41 +254,43 @@ namespace Midjourney.Infrastructure.LoadBalancer
         {
             while (true)
             {
-                if (_longToken.Token.IsCancellationRequested)
+                try
                 {
-                    // 清理资源（如果需要）
-                    break;
-                }
+                    //if (_longToken.Token.IsCancellationRequested)
+                    //{
+                    //    // 清理资源（如果需要）
+                    //    break;
+                    //}
 
-                // 等待信号通知
-                _mre.WaitOne();
+                    // 等待信号通知
+                    _mre.WaitOne();
 
-                // 判断是否还有资源可用
-                while (!_semaphoreSlimLock.TryWait(100))
-                {
-                    if (_longToken.Token.IsCancellationRequested)
+                    // 判断是否还有资源可用
+                    while (!_semaphoreSlimLock.IsLockAvailable())
                     {
-                        // 清理资源（如果需要）
-                        break;
+                        //if (_longToken.Token.IsCancellationRequested)
+                        //{
+                        //    // 清理资源（如果需要）
+                        //    break;
+                        //}
+
+                        // 等待
+                        Thread.Sleep(100);
                     }
 
-                    // 等待
-                    Thread.Sleep(100);
-                }
+                    // 允许同时执行 N 个信号量的任务
+                    //while (true)
+                    //{
+                    //    if (_longToken.Token.IsCancellationRequested)
+                    //    {
+                    //        // 清理资源（如果需要）
+                    //        break;
+                    //    }
 
-                // 允许同时执行 N 个信号量的任务
-                while (true)
-                {
-                    if (_longToken.Token.IsCancellationRequested)
-                    {
-                        // 清理资源（如果需要）
-                        break;
-                    }
-
-                    if (_queueTasks.TryPeek(out var info))
+                    while (_queueTasks.TryPeek(out var info))
                     {
                         // 判断是否还有资源可用
-                        if (_semaphoreSlimLock.TryWait(100))
+                        if (_semaphoreSlimLock.IsLockAvailable())
                         {
                             // 从队列中移除任务，并开始执行
                             if (_queueTasks.TryDequeue(out info))
@@ -302,21 +304,43 @@ namespace Midjourney.Infrastructure.LoadBalancer
                             Thread.Sleep(100);
                         }
                     }
-                    else
-                    {
-                        // 队列为空，退出循环
-                        break;
-                    }
-                }
 
-                if (_longToken.Token.IsCancellationRequested)
+                    //    else
+                    //    {
+                    //        // 队列为空，退出循环
+                    //        break;
+                    //    }
+                    //}
+
+                    //if (_longToken.Token.IsCancellationRequested)
+                    //{
+                    //    // 清理资源（如果需要）
+                    //    break;
+                    //}
+
+                    // 重新设置信号
+                    _mre.Reset();
+                }
+                catch (Exception ex)
                 {
-                    // 清理资源（如果需要）
-                    break;
-                }
+                    _logger.Error(ex, $"视频后台作业执行异常");
 
-                // 重新设置信号
-                _mre.Reset();
+                    try
+                    {
+                        if (_longToken.Token.IsCancellationRequested)
+                        {
+                            // 清理资源（如果需要）
+                            break;
+                        }
+                    }
+                    catch
+                    {
+
+                    }
+
+                    // 停止 1min
+                    Thread.Sleep(1000 * 60);
+                }
             }
         }
 
@@ -336,7 +360,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
             {
                 var repl = GlobalConfiguration.Setting.Replicate;
 
-                _semaphoreSlimLock.Wait();
+                await _semaphoreSlimLock.LockAsync();
                 _runningTasks.Add(info);
 
                 // 判断当前实例是否可用
@@ -579,7 +603,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
             {
                 _runningTasks.Remove(info);
                 _taskFutureMap.TryRemove(info.Id, out _);
-                _semaphoreSlimLock.Release();
+                _semaphoreSlimLock.Unlock();
 
                 SaveAndNotify(info);
 

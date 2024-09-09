@@ -24,19 +24,17 @@
 
 using Microsoft.Extensions.Caching.Memory;
 using Midjourney.Infrastructure.Data;
-using Midjourney.Infrastructure.Models;
 using Midjourney.Infrastructure.Services;
 using Midjourney.Infrastructure.Util;
 using Newtonsoft.Json.Linq;
 using Serilog;
-using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Channels;
+
 using ILogger = Serilog.ILogger;
 
 namespace Midjourney.Infrastructure.LoadBalancer
@@ -57,7 +55,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
         private readonly List<TaskInfo> _runningTasks = [];
         private readonly ConcurrentDictionary<string, Task> _taskFutureMap = [];
-        private readonly SemaphoreSlimLock _semaphoreSlimLock;
+        private readonly AsyncParallelLock _semaphoreSlimLock;
 
         private readonly Task _longTask;
         private readonly Task _longTaskCache;
@@ -115,7 +113,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
             _notifyService = notifyService;
 
             // 最小 1, 最大 12
-            _semaphoreSlimLock = new SemaphoreSlimLock(Math.Max(1, Math.Min(account.CoreSize, 12)));
+            _semaphoreSlimLock = new AsyncParallelLock(Math.Max(1, Math.Min(account.CoreSize, 12)));
 
             // 初始化信号器
             _mre = new ManualResetEvent(false);
@@ -257,64 +255,66 @@ namespace Midjourney.Infrastructure.LoadBalancer
         {
             while (true)
             {
-                if (_longToken.Token.IsCancellationRequested)
+                try
                 {
-                    // 清理资源（如果需要）
-                    break;
-                }
+                    //if (_longToken.Token.IsCancellationRequested)
+                    //{
+                    //    // 清理资源（如果需要）
+                    //    break;
+                    //}
 
-                // 等待信号通知
-                _mre.WaitOne();
+                    // 等待信号通知
+                    _mre.WaitOne();
 
-                // 判断是否还有资源可用
-                while (!_semaphoreSlimLock.TryWait(100))
-                {
-                    if (_longToken.Token.IsCancellationRequested)
+                    // 判断是否还有资源可用
+                    while (!_semaphoreSlimLock.IsLockAvailable())
                     {
-                        // 清理资源（如果需要）
-                        break;
+                        //if (_longToken.Token.IsCancellationRequested)
+                        //{
+                        //    // 清理资源（如果需要）
+                        //    break;
+                        //}
+
+                        // 等待
+                        Thread.Sleep(100);
                     }
 
-                    // 等待
-                    Thread.Sleep(100);
-                }
+                    //// 允许同时执行 N 个信号量的任务
+                    //while (_queueTasks.TryDequeue(out var info))
+                    //{
+                    //    // 判断是否还有资源可用
+                    //    while (!_semaphoreSlimLock.TryWait(100))
+                    //    {
+                    //        // 等待
+                    //        Thread.Sleep(100);
+                    //    }
 
-                //// 允许同时执行 N 个信号量的任务
-                //while (_queueTasks.TryDequeue(out var info))
-                //{
-                //    // 判断是否还有资源可用
-                //    while (!_semaphoreSlimLock.TryWait(100))
-                //    {
-                //        // 等待
-                //        Thread.Sleep(100);
-                //    }
+                    //    _taskFutureMap[info.Item1.Id] = ExecuteTaskAsync(info.Item1, info.Item2);
+                    //}
 
-                //    _taskFutureMap[info.Item1.Id] = ExecuteTaskAsync(info.Item1, info.Item2);
-                //}
+                    // 允许同时执行 N 个信号量的任务
+                    //while (true)
+                    //{
+                    //if (_longToken.Token.IsCancellationRequested)
+                    //{
+                    //    // 清理资源（如果需要）
+                    //    break;
+                    //}
 
-                // 允许同时执行 N 个信号量的任务
-                while (true)
-                {
-                    if (_longToken.Token.IsCancellationRequested)
-                    {
-                        // 清理资源（如果需要）
-                        break;
-                    }
-
-                    var interval = Account.Interval;
-                    if (interval <= 1.2m)
-                    {
-                        interval = 1.2m;
-                    }
-
-                    if (_queueTasks.TryPeek(out var info))
+                    while (_queueTasks.TryPeek(out var info))
                     {
                         // 判断是否还有资源可用
-                        if (_semaphoreSlimLock.TryWait(100))
+                        if (_semaphoreSlimLock.IsLockAvailable())
                         {
+                            var preSleep = Account.Interval;
+                            if (preSleep <= 1.2m)
+                            {
+                                preSleep = 1.2m;
+                            }
+
                             // 提交任务前间隔
                             // 当一个作业完成后，是否先等待一段时间再提交下一个作业
-                            Thread.Sleep((int)(interval * 1000));
+                            Thread.Sleep((int)(preSleep * 1000));
 
                             // 从队列中移除任务，并开始执行
                             if (_queueTasks.TryDequeue(out info))
@@ -355,21 +355,46 @@ namespace Midjourney.Infrastructure.LoadBalancer
                             Thread.Sleep(100);
                         }
                     }
-                    else
-                    {
-                        // 队列为空，退出循环
-                        break;
-                    }
-                }
 
-                if (_longToken.Token.IsCancellationRequested)
+                    //else
+                    //{
+                    //    // 队列为空，退出循环
+                    //    break;
+                    //}
+                    //}
+
+                    //if (_longToken.Token.IsCancellationRequested)
+                    //{
+                    //    // 清理资源（如果需要）
+                    //    break;
+                    //}
+
+                    //// 等待
+                    //Thread.Sleep(100);
+
+                    // 重新设置信号
+                    _mre.Reset();
+                }
+                catch (Exception ex)
                 {
-                    // 清理资源（如果需要）
-                    break;
-                }
+                    _logger.Error(ex, $"后台作业执行异常 {Account?.ChannelId}");
 
-                // 重新设置信号
-                _mre.Reset();
+                    try
+                    {
+                        if (_longToken.Token.IsCancellationRequested)
+                        {
+                            // 清理资源（如果需要）
+                            break;
+                        }
+                    }
+                    catch
+                    {
+
+                    }
+
+                    // 停止 1min
+                    Thread.Sleep(1000 * 60);
+                }
             }
         }
 
@@ -520,7 +545,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
         {
             try
             {
-                _semaphoreSlimLock.Wait();
+                await _semaphoreSlimLock.LockAsync();
+
                 _runningTasks.Add(info);
 
                 // 判断当前实例是否可用
@@ -654,7 +680,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
             {
                 _runningTasks.Remove(info);
                 _taskFutureMap.TryRemove(info.Id, out _);
-                _semaphoreSlimLock.Release();
+
+                _semaphoreSlimLock.Unlock();
 
                 SaveAndNotify(info);
             }
@@ -676,8 +703,15 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <param name="task">任务信息</param>
         private void SaveAndNotify(TaskInfo task)
         {
-            _taskStoreService.Save(task);
-            _notifyService.NotifyTaskChange(task);
+            try
+            {
+                _taskStoreService.Save(task);
+                _notifyService.NotifyTaskChange(task);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "作业通知执行异常 {@0}", task.Id);
+            }
         }
 
         /// <summary>
