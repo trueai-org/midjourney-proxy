@@ -254,6 +254,19 @@ namespace Midjourney.Infrastructure.LoadBalancer
             {
                 try
                 {
+                    if (_longToken.Token.IsCancellationRequested)
+                    {
+                        // 清理资源（如果需要）
+                        break;
+                    }
+                }
+                catch
+                {
+
+                }
+
+                try
+                {
                     //if (_longToken.Token.IsCancellationRequested)
                     //{
                     //    // 清理资源（如果需要）
@@ -321,19 +334,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 catch (Exception ex)
                 {
                     _logger.Error(ex, $"图片换脸后台作业执行异常");
-
-                    try
-                    {
-                        if (_longToken.Token.IsCancellationRequested)
-                        {
-                            // 清理资源（如果需要）
-                            break;
-                        }
-                    }
-                    catch
-                    {
-
-                    }
 
                     // 停止 1min
                     Thread.Sleep(1000 * 60);

@@ -257,6 +257,19 @@ namespace Midjourney.Infrastructure.LoadBalancer
             {
                 try
                 {
+                    if (_longToken.Token.IsCancellationRequested)
+                    {
+                        // 清理资源（如果需要）
+                        break;
+                    }
+                }
+                catch
+                {
+
+                }
+
+                try
+                {
                     //if (_longToken.Token.IsCancellationRequested)
                     //{
                     //    // 清理资源（如果需要）
@@ -372,25 +385,14 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     //// 等待
                     //Thread.Sleep(100);
 
+           
+
                     // 重新设置信号
                     _mre.Reset();
                 }
                 catch (Exception ex)
                 {
                     _logger.Error(ex, $"后台作业执行异常 {Account?.ChannelId}");
-
-                    try
-                    {
-                        if (_longToken.Token.IsCancellationRequested)
-                        {
-                            // 清理资源（如果需要）
-                            break;
-                        }
-                    }
-                    catch
-                    {
-
-                    }
 
                     // 停止 1min
                     Thread.Sleep(1000 * 60);
