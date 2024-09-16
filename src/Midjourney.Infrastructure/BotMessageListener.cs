@@ -831,71 +831,8 @@ namespace Midjourney.Infrastructure
                                         "Subscription required" // 订阅过期
                                     };
 
-                                    if (!continueTitles.Contains(title) && (errorTitles.Contains(title) || color == 16711680 || title.Contains("Invalid")))
-                                    {
-                                        if (data.TryGetProperty("nonce", out JsonElement noneEle))
-                                        {
-                                            var nonce = noneEle.GetString();
-                                            if (!string.IsNullOrWhiteSpace(id) && !string.IsNullOrWhiteSpace(nonce))
-                                            {
-                                                // 设置 none 对应的任务 id
-                                                var task = _discordInstance.GetRunningTaskByNonce(nonce);
-                                                if (task != null)
-                                                {
-                                                    if (messageType == MessageType.CREATE)
-                                                    {
-                                                        var error = $"{title}, {item.GetProperty("description").GetString()}";
-
-                                                        task.MessageId = id;
-                                                        task.Description = error;
-
-                                                        if (!task.MessageIds.Contains(id))
-                                                        {
-                                                            task.MessageIds.Add(id);
-                                                        }
-
-                                                        task.Fail(error);
-                                                    }
-                                                }
-                                            }
-                                        }
-                                        else
-                                        {
-                                            // 如果没有获取到 none
-                                            _logger.Error("未知错误 {@0}, {@1}", Account.ChannelId, data.ToString());
-
-                                            // 如果 meta 是 show
-                                            // 说明是 show 任务出错了
-                                            if (metaName == "show")
-                                            {
-                                                var desc = item.GetProperty("description").GetString();
-                                                if (!string.IsNullOrWhiteSpace(desc))
-                                                {
-                                                    // 设置 none 对应的任务 id
-                                                    var task = _discordInstance.GetRunningTasks().Where(c => c.Action == TaskAction.SHOW && desc.Contains(c.JobId)).FirstOrDefault();
-                                                    if (task != null)
-                                                    {
-                                                        if (messageType == MessageType.CREATE)
-                                                        {
-                                                            var error = $"{title}, {item.GetProperty("description").GetString()}";
-
-                                                            task.MessageId = id;
-                                                            task.Description = error;
-
-                                                            if (!task.MessageIds.Contains(id))
-                                                            {
-                                                                task.MessageIds.Add(id);
-                                                            }
-
-                                                            task.Fail(error);
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
                                     // fast 用量已经使用完了
-                                    else if (title == "Credits exhausted")
+                                    if (title == "Credits exhausted")
                                     {
                                         // 你的处理逻辑
                                         _logger.Information($"账号 {Account.GetDisplay()} 用量已经用完");
@@ -984,11 +921,12 @@ namespace Midjourney.Infrastructure
 
                                         return;
                                     }
-                                    // 临时禁止/订阅取消/订阅过期
+                                    // 临时禁止/订阅取消/订阅过期/订阅暂停
                                     else if (title == "Pending mod message"
                                         || title == "Blocked"
                                         || title == "Plan Cancelled"
-                                        || title == "Subscription required")
+                                        || title == "Subscription required"
+                                        || title == "Subscription paused")
                                     {
                                         // 你的处理逻辑
                                         _logger.Warning($"账号 {Account.GetDisplay()} {title}, 自动禁用账号");
@@ -1054,6 +992,70 @@ namespace Midjourney.Infrastructure
                                                         if (!task.MessageIds.Contains(id))
                                                         {
                                                             task.MessageIds.Add(id);
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    // 其他错误消息
+                                    else if (!continueTitles.Contains(title) && (errorTitles.Contains(title) || color == 16711680 || title.Contains("Invalid")))
+                                    {
+                                        if (data.TryGetProperty("nonce", out JsonElement noneEle))
+                                        {
+                                            var nonce = noneEle.GetString();
+                                            if (!string.IsNullOrWhiteSpace(id) && !string.IsNullOrWhiteSpace(nonce))
+                                            {
+                                                // 设置 none 对应的任务 id
+                                                var task = _discordInstance.GetRunningTaskByNonce(nonce);
+                                                if (task != null)
+                                                {
+                                                    if (messageType == MessageType.CREATE)
+                                                    {
+                                                        var error = $"{title}, {item.GetProperty("description").GetString()}";
+
+                                                        task.MessageId = id;
+                                                        task.Description = error;
+
+                                                        if (!task.MessageIds.Contains(id))
+                                                        {
+                                                            task.MessageIds.Add(id);
+                                                        }
+
+                                                        task.Fail(error);
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        else
+                                        {
+                                            // 如果没有获取到 none
+                                            _logger.Error("未知错误 {@0}, {@1}", Account.ChannelId, data.ToString());
+
+                                            // 如果 meta 是 show
+                                            // 说明是 show 任务出错了
+                                            if (metaName == "show")
+                                            {
+                                                var desc = item.GetProperty("description").GetString();
+                                                if (!string.IsNullOrWhiteSpace(desc))
+                                                {
+                                                    // 设置 none 对应的任务 id
+                                                    var task = _discordInstance.GetRunningTasks().Where(c => c.Action == TaskAction.SHOW && desc.Contains(c.JobId)).FirstOrDefault();
+                                                    if (task != null)
+                                                    {
+                                                        if (messageType == MessageType.CREATE)
+                                                        {
+                                                            var error = $"{title}, {item.GetProperty("description").GetString()}";
+
+                                                            task.MessageId = id;
+                                                            task.Description = error;
+
+                                                            if (!task.MessageIds.Contains(id))
+                                                            {
+                                                                task.MessageIds.Add(id);
+                                                            }
+
+                                                            task.Fail(error);
                                                         }
                                                     }
                                                 }
