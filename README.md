@@ -2,7 +2,7 @@
 
 A public welfare project offering a free drawing API that proxies Midjourney's Discord channel, supporting one-click face swapping for images and videos.
 
-The most powerful, complete, full-featured, completely free and open source Midjourney API project on the market.
+**The most powerful, complete, full-featured, completely free and open source Midjourney API project on the market.**
 
 **中文** | [English](README.en.md)
 
