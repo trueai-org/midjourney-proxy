@@ -1,5 +1,7 @@
 # Midjourney API
 
+A public welfare project offering a free drawing API that proxies Midjourney's Discord channel, supporting one-click face swapping for images and videos.
+
 **中文** | [English](README.en.md)
 
 代理 Midjourney 的 Discord 频道，通过 API 绘图，支持图片、视频一键换脸，公益项目，提供免费绘图接口。
