@@ -405,3 +405,7 @@ docker run -d \
 - 本项目遵循 GPL 协议，允许个人和商业用途，但必须经作者允许且保留版权信息。
 - 请遵守当地国家法律法规，不得用于违法用途。
 - 请勿用于非法用途。
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=trueai-org/midjourney-proxy&type=Date)](https://star-history.com/#trueai-org/midjourney-proxy&Date)
