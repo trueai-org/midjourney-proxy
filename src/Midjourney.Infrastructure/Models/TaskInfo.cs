@@ -37,6 +37,7 @@ namespace Midjourney.Infrastructure.Models
     /// </summary>
     [BsonCollection("task")]
     [MongoDB.Bson.Serialization.Attributes.BsonIgnoreExtraElements]
+    [Serializable]
     public class TaskInfo : DomainObject
     {
         public TaskInfo()
@@ -193,6 +194,7 @@ namespace Midjourney.Infrastructure.Models
         /// </summary>
         [LiteDB.BsonIgnore]
         [MongoDB.Bson.Serialization.Attributes.BsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public Dictionary<string, object> Displays
         {
             get

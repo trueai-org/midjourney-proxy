@@ -32,8 +32,8 @@ namespace Midjourney.Infrastructure.Models
     /// <summary>
     /// 基础领域对象类，支持扩展属性和线程同步操作。
     /// </summary>
-    [DataContract]
-    public class DomainObject : ISerializable, IBaseId
+    //[DataContract] // 由于继承关系，不需要再次标记
+    public class DomainObject : IBaseId // , ISerializable
     {
         [JsonIgnore]
         private readonly object _lock = new object();
@@ -165,7 +165,7 @@ namespace Midjourney.Infrastructure.Models
         /// <summary>
         /// 获取或初始化扩展属性字典。
         /// </summary>
-        [JsonIgnore]
+        //[JsonIgnore]
         public Dictionary<string, object> Properties
         {
             get => _properties ??= new Dictionary<string, object>();
