@@ -691,7 +691,7 @@ namespace Midjourney.API.Controllers
         /// <param name="param"></param>
         /// <returns></returns>
         [HttpPut("account/{id}")]
-        public Result AccountEdit([FromBody] DiscordAccount param)
+        public async Task<Result> AccountEdit([FromBody] DiscordAccount param)
         {
             if (_isAnonymous)
             {
@@ -726,7 +726,8 @@ namespace Midjourney.API.Controllers
             // 初始化子频道
             model.InitSubChannels();
 
-            _discordAccountInitializer.UpdateAccount(model);
+            await _discordAccountInitializer.UpdateAccount(model);
+
             return Result.Ok();
         }
 

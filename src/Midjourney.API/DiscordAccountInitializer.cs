@@ -721,7 +721,7 @@ namespace Midjourney.API
         /// 更新账号信息
         /// </summary>
         /// <param name="param"></param>
-        public void UpdateAccount(DiscordAccount param)
+        public async Task UpdateAccount(DiscordAccount param)
         {
             var model = DbHelper.AccountStore.Get(param.Id);
             if (model == null)
@@ -730,9 +730,9 @@ namespace Midjourney.API
             }
 
             // 更新一定要加锁，因为其他进程会修改 account 值，导致值覆盖
-            var isLock = AsyncLocalLock.TryLock($"initialize:{param.Id}", TimeSpan.FromSeconds(3), () =>
+            var isLock = await AsyncLocalLock.TryLockAsync($"initialize:{model.Id}", TimeSpan.FromSeconds(3), async () =>
             {
-                model = DbHelper.AccountStore.Get(param.Id)!;
+                model = DbHelper.AccountStore.Get(model.Id)!;
 
                 // 渠道 ID 和 服务器 ID 禁止修改
                 //model.ChannelId = account.ChannelId;
@@ -811,6 +811,8 @@ namespace Midjourney.API
 
                 var disInstance = _discordLoadBalancer.GetDiscordInstance(model.ChannelId);
                 disInstance?.ClearAccountCache(model.Id);
+
+                await Task.CompletedTask;
             });
             if (!isLock)
             {
@@ -838,7 +840,7 @@ namespace Midjourney.API
             {
             }
 
-            UpdateAccount(account);
+            await UpdateAccount(account);
 
             await StartCheckAccount(account);
         }

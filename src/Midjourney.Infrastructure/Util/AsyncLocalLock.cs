@@ -15,12 +15,13 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Additional Terms:
-// This software shall not be used for any illegal activities. 
+// This software shall not be used for any illegal activities.
 // Users must comply with all applicable laws and regulations,
-// particularly those related to image and video processing. 
+// particularly those related to image and video processing.
 // The use of this software for any form of illegal face swapping,
-// invasion of privacy, or any other unlawful purposes is strictly prohibited. 
+// invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
+
 using System.Collections.Concurrent;
 
 namespace Midjourney.Infrastructure.Util
@@ -44,19 +45,17 @@ namespace Midjourney.Infrastructure.Util
             return await semaphore.WaitAsync(span);
         }
 
-
-        /// <summary>
-        /// 获取锁
-        /// </summary>
-        /// <param name="key"></param>
-        /// <param name="span"></param>
-        /// <returns></returns>
-        private static bool LockEnter(string key, TimeSpan span)
-        {
-            var semaphore = _lockObjs.GetOrAdd(key, new SemaphoreSlim(1, 1));
-            return semaphore.Wait(span);
-        }
-
+        ///// <summary>
+        ///// 获取锁
+        ///// </summary>
+        ///// <param name="key"></param>
+        ///// <param name="span"></param>
+        ///// <returns></returns>
+        //private static bool LockEnter(string key, TimeSpan span)
+        //{
+        //    var semaphore = _lockObjs.GetOrAdd(key, new SemaphoreSlim(1, 1));
+        //    return semaphore.Wait(span);
+        //}
 
         /// <summary>
         /// 退出锁
@@ -69,16 +68,19 @@ namespace Midjourney.Infrastructure.Util
             //    semaphore.Release();
             //}
 
-            if (_lockObjs.TryGetValue(key, out SemaphoreSlim semaphore) && semaphore != null)
+            if (_lockObjs.TryGetValue(key, out SemaphoreSlim semaphore))
             {
-                semaphore.Release();
+                _lockObjs.TryRemove(key, out _);
 
-                if (semaphore.CurrentCount == 1) // 表示没有其他线程在等待锁
-                {
-                    _lockObjs.TryRemove(key, out _);
+                semaphore?.Release();
+                semaphore?.Dispose();
 
-                    semaphore.Dispose(); // 释放 SemaphoreSlim 的资源
-                }
+                //if (semaphore.CurrentCount == 1) // 表示没有其他线程在等待锁
+                //{
+                //    _lockObjs.TryRemove(key, out _);
+
+                //    semaphore.Dispose(); // 释放 SemaphoreSlim 的资源
+                //}
             }
         }
 
@@ -106,29 +108,29 @@ namespace Midjourney.Infrastructure.Util
             return false;
         }
 
-        /// <summary>
-        /// 等待并获取锁
-        /// </summary>
-        /// <param name="resource"></param>
-        /// <param name="expirationTime">等待锁超时时间，如果超时没有获取到锁，返回 false</param>
-        /// <param name="action"></param>
-        /// <returns></returns>
-        public static bool TryLock(string resource, TimeSpan expirationTime, Action action)
-        {
-            if (LockEnter(resource, expirationTime))
-            {
-                try
-                {
-                    action?.Invoke();
-                    return true;
-                }
-                finally
-                {
-                    LockExit(resource);
-                }
-            }
-            return false;
-        }
+        ///// <summary>
+        ///// 等待并获取锁 - 不要同步和异步混用
+        ///// </summary>
+        ///// <param name="resource"></param>
+        ///// <param name="expirationTime">等待锁超时时间，如果超时没有获取到锁，返回 false</param>
+        ///// <param name="action"></param>
+        ///// <returns></returns>
+        //public static bool TryLock(string resource, TimeSpan expirationTime, Action action)
+        //{
+        //    if (LockEnter(resource, expirationTime))
+        //    {
+        //        try
+        //        {
+        //            action?.Invoke();
+        //            return true;
+        //        }
+        //        finally
+        //        {
+        //            LockExit(resource);
+        //        }
+        //    }
+        //    return false;
+        //}
 
         /// <summary>
         /// 判断指定的锁是否可用
