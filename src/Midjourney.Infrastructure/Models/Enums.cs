@@ -63,17 +63,17 @@ namespace Midjourney.Infrastructure
         /// <summary>
         /// Midjourney
         /// </summary>
-        MID_JOURNEY,
+        MID_JOURNEY = 0,
 
         /// <summary>
         /// Niji
         /// </summary>
-        NIJI_JOURNEY,
+        NIJI_JOURNEY = 1,
 
         /// <summary>
         /// 换脸
         /// </summary>
-        INSIGHT_FACE
+        INSIGHT_FACE = 2
     }
 
     /// <summary>
