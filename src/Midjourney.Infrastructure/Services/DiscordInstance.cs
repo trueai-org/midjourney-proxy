@@ -385,7 +385,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     //// 等待
                     //Thread.Sleep(100);
 
-           
+
 
                     // 重新设置信号
                     _mre.Reset();
@@ -561,32 +561,33 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 }
 
                 // banned 判断
-                if (!info.IsWhite)
-                {
-                    if (!string.IsNullOrWhiteSpace(info.UserId))
-                    {
-                        var lockKey = $"banned:lock:{info.UserId}";
-                        if (_cache.TryGetValue(lockKey, out int lockValue) && lockValue > 0)
-                        {
-                            info.Fail("账号已被临时封锁，请勿使用违规词作图");
-                            SaveAndNotify(info);
-                            _logger.Debug("[{@0}] task error, id: {@1}, status: {@2}", Account.GetDisplay(), info.Id, info.Status);
-                            return;
-                        }
-                    }
+                // banned 会导致执行中的数量计算不准确问题，暂时不处理
+                //if (!info.IsWhite)
+                //{
+                //    if (!string.IsNullOrWhiteSpace(info.UserId))
+                //    {
+                //        var lockKey = $"banned:lock:{info.UserId}";
+                //        if (_cache.TryGetValue(lockKey, out int lockValue) && lockValue > 0)
+                //        {
+                //            info.Fail("账号已被临时封锁，请勿使用违规词作图");
+                //            SaveAndNotify(info);
+                //            _logger.Debug("[{@0}] task error, id: {@1}, status: {@2}", Account.GetDisplay(), info.Id, info.Status);
+                //            return;
+                //        }
+                //    }
 
-                    if (true)
-                    {
-                        var lockKey = $"banned:lock:{info.ClientIp}";
-                        if (_cache.TryGetValue(lockKey, out int lockValue) && lockValue > 0)
-                        {
-                            info.Fail("账号已被临时封锁，请勿使用违规词作图");
-                            SaveAndNotify(info);
-                            _logger.Debug("[{@0}] task error, id: {@1}, status: {@2}", Account.GetDisplay(), info.Id, info.Status);
-                            return;
-                        }
-                    }
-                }
+                //    if (true)
+                //    {
+                //        var lockKey = $"banned:lock:{info.ClientIp}";
+                //        if (_cache.TryGetValue(lockKey, out int lockValue) && lockValue > 0)
+                //        {
+                //            info.Fail("账号已被临时封锁，请勿使用违规词作图");
+                //            SaveAndNotify(info);
+                //            _logger.Debug("[{@0}] task error, id: {@1}, status: {@2}", Account.GetDisplay(), info.Id, info.Status);
+                //            return;
+                //        }
+                //    }
+                //}
 
                 info.Status = TaskStatus.SUBMITTED;
                 info.Progress = "0%";
