@@ -4,7 +4,7 @@ A public project offering a free drawing API that proxies Midjourney's Discord c
 
 The most powerful, comprehensive, full-featured, and completely free open-source Midjourney API project available.
 
-**中文** | [English](README.en.md)
+**English** | [中文](README.md)
 
 The most powerful, complete, full-featured, and completely free open-source Midjourney API project on the market.
 
