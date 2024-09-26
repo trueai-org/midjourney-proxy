@@ -1,171 +1,167 @@
 # Midjourney API
 
-**English** | [中文](README.md)
+A public project offering a free drawing API that proxies Midjourney's Discord channel, supporting one-click face swapping for images and videos.
 
-Proxying Midjourney's Discord channel to draw images via API, supporting one-click face-swapping for images and videos, as a public welfare project offering free image generation interfaces.
+The most powerful, comprehensive, full-featured, and completely free open-source Midjourney API project available.
 
-🦄 Total drawings generated through this project: over 2 million images 🐂, with a daily output of over 100,000 images. Thank you for your support!
+**中文** | [English](README.en.md)
 
-⭐ If you think this project is useful, please consider giving it a `Star`, much appreciated!
+The most powerful, complete, full-featured, and completely free open-source Midjourney API project on the market.
 
-## Discussion Group
+It proxies Midjourney’s Discord channel to generate images via the API, supporting one-click face swapping for images and videos, providing free drawing interfaces as a public project.
 
-If you have any questions about usage or deployment, feel free to join the discussion group for collective problem-solving.
+🦄 As of September 2024, user feedback indicates over 10 million images generated using this project 🐂, with over 200,000 images generated daily!
 
-If you have drawing requests, feel free to contact the group admins. Some members generate over a million images daily!
+⭐ If you like this project, please give it a `Star`—thank you so much!
 
-[Midjourney Public Welfare Group](https://qm.qq.com/q/k88clCkyMS) (QQ Group: 565908696)
+## Community Group
+
+If you have any questions regarding usage or deployment, feel free to join the community group to discuss and solve issues together.
+
+For drawing requests, contact group admins. Everyone in the group is highly skilled!
+
+[Midjourney Group](https://qm.qq.com/q/k88clCkyMS) (QQ Group: 565908696)
 
 <img src="./docs/screenshots/565908696.png" alt="Welcome" width="360"/>
 
-## Key Features
+## Main Features
 
 - [x] Supports the Imagine command and related actions [V1/V2.../U1/U2.../R]
-- [x] Supports adding base64 images as overlays during Imagine
-- [x] Supports Blend (image merging), Describe (image-to-text), and Shorten (prompt analysis) commands
-- [x] Supports real-time task progress
-- [x] Supports Chinese prompt translation via Baidu or GPT translation
-- [x] Pre-check for sensitive words in prompts with customizable overrides
-- [x] User-token connection to WSS to retrieve errors and full functionality
-- [x] Supports prompt analysis with Shorten
-- [x] Supports focus movement: Pan ⬅️➡⬆️⬇️
-- [x] Supports partial re-drawing: Vary (Region) 🖌
+- [x] Supports adding base64 images during Imagine as a reference image
+- [x] Supports Blend (image mixing), Describe (image-to-text), and Shorten (prompt analysis) commands
+- [x] Real-time task progress tracking
+- [x] Supports Chinese prompt translation, requiring Baidu or GPT translation configuration
+- [x] Prompt sensitivity pre-detection with override options
+- [x] User token connects to WSS for error and full feature access
+- [x] Supports Shorten (prompt analysis) command
+- [x] Supports focus shift: Pan ⬅️➡⬆️⬇️
+- [x] Supports partial redraw: Vary (Region) 🖌
 - [x] Supports all related button actions
-- [x] Supports image zooming, customizable Zoom 🔍
-- [x] Retrieves image seed values
-- [x] Supports account-specified generation speed modes: RELAX | FAST | TURBO
-- [x] Supports multi-account configuration with individual task queues, selectable modes: BestWaitIdle | Random | Weight | Polling
+- [x] Supports image zoom and custom zoom Zoom 🔍
+- [x] Retrieve image seed values
+- [x] Supports account-specific speed modes RELAX | FAST | TURBO
+- [x] Multi-account configuration with customizable task queues, supporting account selection modes BestWaitIdle | Random | Weight | Polling
 - [x] Persistent account pool with dynamic maintenance
-- [x] Retrieves account /info and /settings information
-- [x] Account settings configuration
-- [x] Supports both niji・journey Bot and Midjourney Bot
-- [x] Secure zlib-stream compression transmission <https://discord.com/developers/docs/topics/gateway>
-- [x] Embedded MJ management interface with multi-language support <https://github.com/trueai-org/midjourney-proxy-webui>
-- [x] Account management for adding, deleting, editing, and querying accounts
-- [x] Detailed account information queries and synchronization operations
-- [x] Account concurrency settings
-- [x] MJ account task queries
-- [x] Full-featured drawing test page
+- [x] Retrieve account /info, /settings details
+- [x] Account settings customization
+- [x] Supports niji・journey Bot and Midjourney Bot
+- [x] Safe compression using zlib-stream <https://discord.com/developers/docs/topics/gateway>
+- [x] Embedded MJ management page, multi-language support <https://github.com/trueai-org/midjourney-proxy-webui>
+- [x] Full CRUD functionality for MJ accounts
+- [x] Support detailed information inquiry and account synchronization operations for MJ accounts
+- [x] Support concurrent queue settings for MJ accounts
+- [x] Configurable account concurrency settings
+- [x] Full task query functionality for MJ
+- [x] Provides a fully functional drawing test page
 - [x] Compatible with mainstream drawing clients and API calls
-- [x] Adds parent task information to tasks
-- [x] 🎛️ Remix mode and auto-submission in Remix mode
-- [x] Built-in local image saving and CDN acceleration
-- [x] Auto-mark unread messages when drawing to reduce notification overload
-- [x] Supports PicReader and Picread commands for regenerating images, including batch operations without needing fast mode
-- [x] Supports BOOKMARK and other commands
-- [x] Draw with specified instances or filter accounts based on speed, including remix mode filtering (see Swagger `accountFilter` field for details)
-- [x] Reverse generate system task info based on job id or image
-- [x] Configures account sorting, parallelism, queue numbers, maximum queue limits, task execution intervals, etc.
-- [x] Customizable client path specification, default example: https://{BASE_URL}/mj/submit/imagine; /mj-turbo/mj is turbo mode, /mj-relax/mj is relax mode, /mj-fast/mj is fast mode, /mj does not specify mode
-- [x] Cloudflare manual human verification with account auto-lock when triggered, verification via GUI or email notification
-- [x] Cloudflare automatic human verification with a server-side configuration (automatic verifier supports Windows deployment only)
-- [x] Configurable work schedules, recommended breaks of 8-10 hours to avoid warnings when drawing non-stop for 24 hours, e.g., `09:10-23:55, 13:00-08:10`
-- [x] Built-in IP rate limiting, IP block rate limiting, blacklist, whitelist, auto-blacklist features
-- [x] Daily drawing limit support; once the limit is exceeded, new drawing tasks are disabled, but variation and redraws are still possible
-- [x] Enable registration and guest access
-- [x] Visual configuration features
-- [x] Independent Swagger documentation activation
-- [x] Bot token configuration is optional, usage is still available without bot configuration
-- [x] Optimized command and status progress display
-- [x] Idle mode configuration to reduce high-frequency operations; idle mode disables new drawings but still allows other commands, customizable across multiple time periods
-- [x] Vertical account categorization support, account-specific work types (e.g., only landscapes, only portraits)
-- [x] Supports shared or sub-channels for drawing, even if an account is banned; continue drawing with a sub-channel of a banned account by saving a permanent invite link, supporting batch modifications
-- [x] Multi-database support for local databases or MongoDB; for more than 100,000 tasks, MongoDB is recommended (default keeps 1 million records), with automatic data migration support
-- [x] Supports one-click migration of `mjplus` or other services to this service, including accounts, tasks, etc.
-- [x] Built-in banned word management with multi-term grouping
-- [x] Non-official links in prompts are automatically converted to official ones, allowing for domestic or custom reference links to avoid verification issues
-- [x] Supports automatic switch to slow mode when fast mode duration is exhausted, with customizable activation, and auto-reverts when fast mode time is purchased or renewed
-- [x] Supports image storage on Aliyun OSS, with customizable CDN, custom styles, and thumbnails (recommended to use OSS for faster loading)
-- [x] Supports Shorten analysis for prompt-based image regeneration
-- [x] Supports image face-swapping, please comply with legal regulations
-- [x] Supports video face-swapping, please comply with legal regulations
-- [x] Supports automatic switch to slow mode (when fast time is consumed) and auto-switch to fast mode (when fast time is available)
+- [x] Task includes parent task information
+- [x] 🎛️ Remix mode and automatic Remix mode submission
+- [x] Built-in image saving to local storage, built-in CDN acceleration
+- [x] Auto-read unread messages during drawing when too many are queued
+- [x] Supports PicReader, Picread commands for image-to-text, with batch regeneration support (no fast mode needed)
+- [x] BOOKMARK command support
+- [x] Supports instance-specific drawing, filtering accounts by speed, remix mode, etc. See Swagger `accountFilter` field for details
+- [x] Reverse task generation from job ID or image
+- [x] Account sorting, parallelism, queue configuration, task interval settings
+- [x] Supports client path specification, with default URLs like https://{BASE_URL}/mj/submit/imagine, /mj-turbo/mj for turbo mode, /mj-relax/mj for relax mode, /mj-fast/mj for fast mode, /mj without mode specification
+- [x] CloudFlare manual human verification, auto-lock account upon trigger, verify via GUI or email notification
+- [x] CloudFlare automatic human verification, configurable verification server address (auto-verifier only supports Windows deployment)
+- [x] Work schedule configuration; 24/7 drawing may trigger warnings. Recommended rest: 8–10 hours, e.g., `09:10-23:55, 13:00-08:10`
+- [x] Built-in IP rate limiting, IP range limiting, blacklists, whitelists, automatic blacklisting
+- [x] Daily drawing limit, after which new tasks aren’t accepted but modifications and redrawing are still allowed
+- [x] Registration and guest access toggle
+- [x] Visual configuration functionality
+- [x] Independent Swagger documentation toggle
+- [x] Optional configuration of bot token, non-bot usage possible
+- [x] Command and status progress display optimization
+- [x] Leisure time configuration; accounts have relaxed mode to avoid high-frequency tasks (no new drawings, but other commands can be executed, configurable for multiple time slots)
+- [x] Vertical categorization of accounts; each account can specialize in specific types of art, e.g., only landscapes, only portraits
+- [x] Shared channels or sub-channels for drawing; even if an account is banned, previous drawings can continue using the banned account's channel as a sub-channel, with permanent invite and sub-channel links. Batch modification supported.
+- [x] Supports local databases, MongoDB, etc. If task data exceeds 100,000 entries, MongoDB storage is recommended (default retention of 1,000,000 records), with auto data migration support.
+- [x] Supports one-click migration from `mjplus` or other services, including account and task migration
+- [x] Built-in prohibited word management with multi-term grouping
+- [x] Auto-convert unofficial links in prompts to official ones, allowing for domestic or custom reference links to avoid verification issues.
+- [x] Auto-switch to slow mode when fast mode time runs out, with customizable enablement. Automatically restores fast mode upon purchase or renewal.
+- [x] Supports image storage to Alibaba Cloud OSS, custom CDN, custom styles, and thumbnails (OSS is recommended for faster loading, separated from the source site)
+- [x] Supports Shorten analysis of Prompt for image regeneration commands
+- [x] Supports face-swapping for images, in compliance with relevant laws and regulations
+- [x] Supports face-swapping for videos, in compliance with relevant laws and regulations
+- [x] Auto-switch between slow and fast modes, and auto-setup of slow mode
+- [x] Auto-fetch of private message ID upon service startup, no configuration required
 
 ## Online Preview
 
-The public interface uses slow mode. The interface is free to use, and the account pool is provided by sponsors. Please use it wisely.
+The public interface runs in slow mode, with free API access. The account pool is sponsored; please use responsibly.
 
-- Management Panel: <https://ai.trueai.org>
-- Account password: `none`
-- Public Interface: <https://ai.trueai.org/mj>
-- API Documentation: <https://ai.trueai.org/swagger>
-- API Key: `none`
-- Cloudflare Auto Verification Server: <http://47.76.110.222:8081>
-- Cloudflare Auto Verification Server Docs: <http://47.76.110.222:8081/swagger>
+- Admin panel: <https://ai.trueai.org>
+- Account password: `None`
+- Public API: <https://ai.trueai.org/mj>
+- API documentation: <https://ai.trueai.org/swagger>
+- API key: `None`
+- CloudFlare automatic verification server: <http://47.76.110.222:8081>
+- CloudFlare automatic verification server documentation: <http://47.76.110.222:8081/swagger>
 
 ## Preview Screenshots
 
-![Welcome](./docs/screenshots/ui1.png)
-
-![Account](./docs/screenshots/ui2.png)
-
-![Tasks](./docs/screenshots/ui3.png)
-
-![Testing](./docs/screenshots/ui4.png)
-
-![Logs](./docs/screenshots/ui5.png)
-
-![API](./docs/screenshots/uiswagger.png)
+![Drawing](./docs/screenshots/ui9.png)
 
 ## Recommended Clients
 
-- **ChatGPT-Midjourney**: <https://github.com/Licoy/ChatGPT-Midjourney>
-  - Easily set up your own ChatGPT+StabilityAI+Midjourney web service -> <https://chat-gpt-midjourney-96vk.vercel.app/#/mj>
-  - Visit the website -> Settings -> Custom API -> Model (Midjourney) -> API Address -> <https://ai.trueai.org/mj>
+- **ChatGPT Midjourney**: <https://github.com/Licoy/ChatGPT-Midjourney>
+  - Instantly set up your own ChatGPT+StabilityAI+Midjourney web service -> <https://aidemo.xiazai.zip/#/mj>
+  - Open the site -> Settings -> Custom API -> Model (Midjourney) -> API URL -> <https://ai.trueai.org/mj>
 
 - **ChatGPT Web Midjourney Proxy**: <https://github.com/Dooy/chatgpt-web-midjourney-proxy> 
-  - Visit <https://vercel.ddaiai.com> -> Settings -> MJ Drawing API Address -> <https://ai.trueai.org>
+  - Open the site <https://vercel.ddaiai.com> -> Settings -> MJ Drawing API URL -> <https://ai.trueai.org>
 
 - **GoAmzAI**: <https://github.com/Licoy/GoAmzAI>
-  - Access backend -> Drawing Management -> Add -> MJ Drawing API Address -> <https://ai.trueai.org/mj>
+  - Open the admin panel -> Drawing management -> Add new -> MJ Drawing API URL -> <https://ai.trueai.org/mj>
 
 ## Installation and Usage
+
+> Note: If you are deploying privately, make sure to disable demo mode, registration, and guest access to prevent API misuse.
+
+> Note: For the Windows platform, simply download and launch directly. See the instructions below for details.
 
 ### Quick Start
 
 > Docker Version
 
-**Note: Ensure the file mapping and paths are correct⚠⚠**
+- [Bilibili Midjourney API Docker Deployment Video Tutorial](https://www.bilibili.com/video/BV1NQpQezEu4/)
+- [Douyin Midjourney API Docker Deployment Video Tutorial](https://v.douyin.com/irvnDGfo/)
+
+Note: Ensure the file mappings and paths are correct ⚠
 
 ```bash
-# Aliyun Mirror (Recommended for users in China)
+# Automatic installation and startup
+# Recommended to use the one-click upgrade script
+# 1. First-time download (after downloading, you can edit this script to customize configurations such as path, port, memory, etc. The default port is 8086)
+wget -O docker-upgrade.sh https://raw.githubusercontent.com/trueai-org/midjourney-proxy/main/scripts/docker-upgrade.sh && bash docker-upgrade.sh
+
+# 2. To update/upgrade in the future, simply run this script
+sh docker-upgrade.sh
+```
+
+```bash
+# Manual installation and startup
+# Alibaba Cloud Mirror (Recommended for users in China)
 docker pull registry.cn-guangzhou.aliyuncs.com/trueai-org/midjourney-proxy
 
-# Example Configuration for Public Demonstration Site
+# 1. Download and rename the configuration file (sample config)
+# Note: Version 3.x no longer requires a configuration file
+# wget -O /root/mjopen/appsettings.Production.json https://raw.githubusercontent.com/trueai-org/midjourney-proxy/main/src/Midjourney.API/appsettings.json
+# curl -o /root/mjopen/appsettings.Production.json https://raw.githubusercontent.com/trueai-org/midjourney-proxy/main/src/Midjourney.API/appsettings.json
 
-# 1. Download and rename the configuration file (example config)
-# Note: Configuration file not needed for version 3.x
-wget -O /root/mjopen/appsettings.Production.json https://raw.githubusercontent.com/trueai-org/midjourney-proxy/main/src/Midjourney.API/appsettings.json
-
-# Or use curl to download and rename the configuration file (example config)
-# Note: Configuration file not needed for version 3.x
-curl -o /root/mjopen/appsettings.Production.json https://raw.githubusercontent.com/trueai-org/midjourney-proxy/main/src/Midjourney.API/appsettings.json
-
-# 2. Stop and remove old Docker container
+# 2. Stop and remove the old Docker container
 docker stop mjopen && docker rm mjopen
 
-# 3. Start new Docker container
-# Note: Configuration file not needed for version 3.x
-docker run -m 1g --name mjopen -d --restart=always \
- -p 8086:8080 --user root \
- -v /root/mjopen/logs:/app/logs:rw \
- -v /root/mjopen/data:/app/data:rw \
- -v /root/mjopen/attachments:/app/wwwroot/attachments:rw \
- -v /root/mjopen/ephemeral-attachments:/app/wwwroot/ephemeral-attachments:rw \
- -v /root/mjopen/appsettings.Production.json:/app/appsettings.Production.json:ro \
- -e TZ=Asia/Shanghai \
- -v /etc/localtime:/etc/localtime:ro \
- -v /etc/timezone:/etc/timezone:ro \
- registry.cn-guangzhou.aliyuncs.com/trueai-org/midjourney-proxy
-
-# Example Configuration for Production Environment
+# 3. Start the container
 docker run --name mjopen -d --restart=always \
  -p 8086:8080 --user root \
  -v /root/mjopen/logs:/app/logs:rw \
  -v /root/mjopen/data:/app/data:rw \
  -v /root/mjopen/attachments:/app/wwwroot/attachments:rw \
  -v /root/mjopen/ephemeral-attachments:/app/wwwroot/ephemeral-attachments:rw \
- -v /root/mjopen/appsettings.Production.json:/app/appsettings.Production.json:ro \
  -e TZ=Asia/Shanghai \
  -v /etc/localtime:/etc/localtime:ro \
  -v /etc/timezone:/etc/timezone:ro \
@@ -179,7 +175,6 @@ docker run --name mjopen -d --restart=always \
  -v /root/mjopen/data:/app/data:rw \
  -v /root/mjopen/attachments:/app/wwwroot/attachments:rw \
  -v /root/mjopen/ephemeral-attachments:/app/wwwroot/ephemeral-attachments:rw \
- -v /root/mjopen/appsettings.Production.json:/app/appsettings.Production.json:ro \
  -e TZ=Asia/Shanghai \
  -v /etc/localtime:/etc/localtime:ro \
  -v /etc/timezone:/etc/timezone:ro \
@@ -193,7 +188,6 @@ docker run --name mjopen -d --restart=always \
  -v /root/mjopen/data:/app/data:rw \
  -v /root/mjopen/attachments:/app/wwwroot/attachments:rw \
  -v /root/mjopen/ephemeral-attachments:/app/wwwroot/ephemeral-attachments:rw \
- -v /root/mjopen/appsettings.Production.json:/app/appsettings.Production.json:ro \
  -e TZ=Asia/Shanghai \
  -v /etc/localtime:/etc/localtime:ro \
  -v /etc/timezone:/etc/timezone:ro \
@@ -203,34 +197,34 @@ docker run --name mjopen -d --restart=always \
 > Windows Version
 
 ```bash
-a. Download the latest portable version for Windows from https://github.com/trueai-org/midjourney-proxy/releases, such as midjourney-proxy-win-x64.zip
+a. Download the latest portable version for Windows from https://github.com/trueai-org/midjourney-proxy/releases, for example: midjourney-proxy-win-x64.zip
 b. Extract and run Midjourney.API.exe
-c. Open http://localhost:8080 in your browser
-d. Deploy to IIS (optional), add the site in IIS and deploy the folder, set the application pool to `No Managed Code`, then start the site.
-e. Use the built-in `Task Scheduler` (optional), create a basic task, choose the `.exe` program, and make sure to select `Do not start a new instance` to ensure only one task runs.
+c. Open the site at http://localhost:8080
+d. (Optional) Deploy to IIS: Add the folder as a website in IIS and configure the application pool to "No Managed Code" and start the website.
+e. (Optional) Use the built-in "Task Scheduler" to create a basic task, select the .exe file, and ensure only one task instance is running at a time.
 ```
 
 > Linux Version
 
 ```bash
-a. Download the latest portable version for Linux from https://github.com/trueai-org/midjourney-proxy/releases, such as midjourney-proxy-linux-x64.zip 
-b. Extract to the current directory: tar -xzf midjourney-proxy-linux-x64-<VERSION>.tar.gz
-c. Run: run_app.sh
-c. Start Option 1: sh run_app.sh
-d. Start Option 2: chmod +x run_app.sh && ./run_app.sh
+a. Download the latest portable version for Linux from https://github.com/trueai-org/midjourney-proxy/releases, for example: midjourney-proxy-linux-x64.zip
+b. Extract the contents: tar -xzf midjourney-proxy-linux-x64-<VERSION>.tar.gz
+c. To run: execute the run_app.sh script
+c. Start method 1: sh run_app.sh
+d. Start method 2: chmod +x run_app.sh && ./run_app.sh
 ```
 
 > macOS Version
 
 ```bash
-a. Download the latest portable version for macOS from https://github.com/trueai-org/midjourney-proxy/releases, such as midjourney-proxy-osx-x64.zip 
-b. Extract to the current directory: tar -xzf midjourney-proxy-osx-x64-<VERSION>.tar.gz
-c. Run: run_app_osx.sh
-c. Start Option 1: sh run_app_osx.sh
-d. Start Option 2: chmod +x run_app_osx.sh && ./run_app_osx.sh
+a. Download the latest portable version for macOS from https://github.com/trueai-org/midjourney-proxy/releases, for example: midjourney-proxy-osx-x64.zip
+b. Extract the contents: tar -xzf midjourney-proxy-osx-x64-<VERSION>.tar.gz
+c. To run: execute the run_app_osx.sh script
+c. Start method 1: sh run_app_osx.sh
+d. Start method 2: chmod +x run_app_osx.sh && ./run_app_osx.sh
 ```
 
-> One-click Installation Script for Linux (❤Thanks to [@dbccccccc](https://github.com/dbccccccc))
+> Linux One-Click Install Script (❤ Thanks to [@dbccccccc](https://github.com/dbccccccc))
 
 ```bash
 # Method 1
@@ -240,250 +234,181 @@ wget -N --no-check-certificate https://raw.githubusercontent.com/trueai-org/midj
 curl -o linux_install.sh https://raw.githubusercontent.com/trueai-org/midjourney-proxy/main/scripts/linux_install.sh && chmod +x linux_install.sh && bash linux_install.sh
 ```
 
-## Parameter Configuration
+## Configuration Parameters
+
+[More configuration parameters documentation](./docs/appsettings.md)
 
 - `appsettings.json` Default Configuration
 - `appsettings.Production.json` Production Environment Configuration
-- `/app/data` Data Directory where accounts, tasks, etc., are stored
+- `/app/data` Data directory, stores accounts, tasks, etc.
     - `/app/data/mj.db` Database file
-- `/app/logs` Log Directory
-- `/app/wwwroot` Static Files Directory
+- `/app/logs` Log directory
+- `/app/wwwroot` Static file directory
     - `/app/wwwroot/attachments` Directory for drawing files
-    - `/app/wwwroot/ephemeral-attachments` Directory for images generated by 'describe'
+    - `/app/wwwroot/ephemeral-attachments` Directory for images generated by the describe command
 
-#### Role Description
+#### Role Explanation
 
-- `Regular User`: Can only access drawing API, cannot log into the backend.
-- `Administrator`: Can log into the backend, view tasks, configurations, etc.
+- `Regular User`: Can only access the drawing interface, cannot access the admin panel.
+- `Admin`: Can log into the admin panel to view tasks, configuration, etc.
 
-#### Default User Information
+#### Default Users
 
-- When starting the site, if `AdminToken` is not previously set, the default admin token is: `admin`
+- On first launch, the default admin token is: `admin`. Please reset the token after logging in.
 
-> For version 3.x, this configuration is not needed. Please use the GUI for configuration changes.
+#### Alibaba Cloud OSS Configuration
 
 ```json
 {
-  "Demo": null, // Site configured in demo mode
-  "UserToken": "", // User drawing token for accessing drawing API, optional
-  "AdminToken": "", // Admin backend token for accessing drawing API and admin features
-  "mj": {
-    "AccountChooseRule": "BestWaitIdle", // BestWaitIdle | Random | Weight | Polling = best idle | random | weighted | polling
-    "Discord": { // Discord configuration, can be null by default
-      "GuildId": "125652671***", // Server ID
-      "ChannelId": "12565267***", // Channel ID
-      "PrivateChannelId": "1256495659***", // MJ direct message channel ID for receiving seed values
-      "NijiBotChannelId": "1261608644***", // NIJI direct message channel ID for receiving seed values
-      "UserToken": "MTI1NjQ5N***", // User token
-      "BotToken": "MTI1NjUyODEy***", // Bot token
-      "UserAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36",
-      "Enable": true, // Default enable
-      "CoreSize": 3, // Concurrency number
-      "QueueSize": 10, // Queue size
-      "MaxQueueSize": 100, // Maximum queue size
-      "TimeoutMinutes": 5, // Task timeout in minutes
-      "Mode": null, // RELAX | FAST | TURBO specify generation speed mode --fast, --relax, or --turbo parameter at the end.
-      "Weight": 1 // Weight
-    },
-    "NgDiscord": { // NG Discord configuration, can be null by default
-      "Server": "",
-      "Cdn": "",
-      "Wss": "",
-      "ResumeWss": "",
-      "UploadServer": "",
-      "SaveToLocal": false, // Enable local image saving, use local deployment address if enabled or set a custom CDN address
-      "CustomCdn": "" // Defaults to root if not set and local save is enabled, recommended to set your domain
-    },
-    "Proxy": { // Proxy configuration, can be null by default
-      "Host": "",
-      "Port": 10809
-    },
-    "Accounts": [], // Account pool configuration
-    "BaiduTranslate": { // Baidu Translation configuration, can be null by default
-      "Appid": "", // your_appid
-      "AppSecret": "" // your_app_secret
-    },
-    "TranslateWay": "NULL", // NULL | GTP | BAIDU, translation configuration, default: NULL
-    "ApiSecret": "", // your_api_secret
-    "NotifyHook": "", // your_notify_hook, callback configuration
-    "NotifyPoolSize": 10,
-    "Smtp": {
-      "Host": "smtp.mxhichina.com", // SMTP server information
-      "Port": 465, // SMTP port, usually 587 or 465 depending on your server
-      "EnableSsl": true, // Set according to your SMTP server's requirements
-      "FromName": "system", // Sender's nickname
-      "FromEmail": "system@***.org", // Sender's email address
-      "FromPassword": "", // Your email password or app-specific password
-      "To": "" // Recipient
-    },
-    "CaptchaServer": "", // CF verification server address
-    "CaptchaNotifyHook": "" // CF verification notification address (callback notification after verification, default is your current domain)
-  },
-  // IP/IP range rate limiting configuration, can be used to limit access frequency
-  // Will return 429 status code upon triggering rate limit
-  // Blacklist directly returns 403 status code
-  // Support for IP and CIDR format for black/whitelist, e.g., 192.168.1.100, 192.168.1.0/24
-  "IpRateLimiting": {
-    "Enable": false,
-    "Whitelist": [], // Permanent whitelist "127.0.0.1", "::1/10", "::1"
-    "Blacklist": [], // Permanent blacklist
-    // 0.0.0.0/32 single IP
-    "IpRules": {
-      // Restriction on mj/submit API
-      "*/mj/submit/*": {
-        "3": 1, // Maximum 1 access every 3 seconds
-        "60": 6, // Maximum 6 accesses every 60 seconds
-        "600": 20, // Maximum 20 accesses every 600 seconds
-        "3600": 60, // Maximum 60 accesses every 3600 seconds
-        "86400": 120 // Maximum 120 accesses daily
-      }
-    },
-    // 0.0.0.0/24 IP segment
-    "IpRangeRules": {
-      // Restriction on mj/submit API
-      "*/mj/submit/*": {
-        "5": 10, // Maximum 10 accesses every 5 seconds
-        "60": 30, // Maximum 30 accesses every 60 seconds
-        "600": 100, // Maximum 100 accesses every 600 seconds
-        "3600": 300, // Maximum 300 accesses every 3600 seconds
-        "86400": 360 // Maximum 360 accesses daily
-      }
-    },
-    // 0.0.0.0/24 IP segment
-    "Ip24Rules": {},
-    // 0.0.0.0/16 IP segment
-    "Ip16Rules": {}
-  },
-  // IP blacklist rate limiting configuration, automatically blocks IP upon triggering limits
-  // Will return 403 status code when added to blacklist
-  // Support for IP and CIDR format for black/whitelist, e.g., 192.168.1.100, 192.168.1.0/24
-  "IpBlackRateLimiting": {
-    "Enable": false,
-    "Whitelist": [], // Permanent whitelist "127.0.0.1", "::1/10", "::1"
-    "Blacklist": [], // Permanent blacklist
-    "BlockTime": 1440, // Block time in minutes
-    "IpRules": {
-      "*/mj/*": {
-        "1": 30,
-        "60": 900
-      }
-    },
-    "IpRangeRules": {
-      "*/mj/*": {
-        "1": 90,
-        "60": 3000
-      }
-    }
-  },
-  "Serilog": {
-    "MinimumLevel": {
-      "Default": "Information",
-      "Override": {
-        "Default": "Warning",
-        "System": "Warning",
-        "Microsoft": "Warning"
-      }
-    },
-    "WriteTo": [
-      {
-        "Name": "File",
-        "Args": {
-          "path": "logs/log.txt",
-          "rollingInterval": "Day",
-          "fileSizeLimitBytes": null,
-          "rollOnFileSizeLimit": false,
-          "retainedFileCountLimit": 31
-        }
-      },
-      {
-        "Name": "Console"
-      }
-    ]
-  },
-  "Logging": {
-    "LogLevel": {
-      "Default": "Information",
-      "Microsoft.AspNetCore": "Warning"
-    }
-  },
-  "AllowedHosts": "*",
-  "urls": "http://*:8080" // Default port
+  "enable": true,
+  "bucketName": "mjopen",
+  "region": null,
+  "accessKeyId": "LTAIa***",
+  "accessKeySecret": "QGqO7***",
+  "endpoint": "oss-cn-hongkong-internal.aliyuncs.com",
+  "customCdn": "https://mjcdn.googlec.cc",
+  "imageStyle": "x-oss-process=style/webp",
+  "thumbnailImageStyle": "x-oss-process=style/w200"
 }
 ```
 
-## Deployment of CloudFlare Validator
+#### MongoDB Configuration
 
-Support is limited to Windows deployment (and requires TLS 1.3, thus Windows 11 or Windows Server 2022). Since the CloudFlare validator utilizes the Chrome browser, it necessitates deployment in a Windows environment. Deploying on Linux is not supported at this time due to heavy library dependencies.
+> If your task volume is expected to exceed 100,000 in the future, it is recommended to deploy MongoDB using Docker.
 
-Note: You must provide an API Key for 2captcha.com to use this otherwise it won't function. Pricing: 1000 requests for 9 RMB. Official website: <https://2captcha.cn/p/cloudflare-turnstile>
+> Note:
+> 1. Switching to MongoDB allows for optional migration of historical tasks.
+> 2. Various methods are available for specifying the IP, including internal IP, external IP, or container communication.
 
-Tip: The first launch will download the Chrome browser, which may take some time, so please be patient.
+1. Start the container, with `xxx` as your password.
+2. Open system settings -> Enter the MongoDB connection string `mongodb://mongoadmin:xxx@ip`.
+3. Enter the MongoDB database name -> `mj` -> Save.
+4. Restart the service.
 
-> `appsettings.json` Configuration Example
+```bash
+# Start the container
+docker run -d \
+  --name mjopen-mongo \
+  -p 27017:27017 \
+  -v /root/mjopen/mongo/data:/data/db \
+  --restart always \
+  -e MONGO_INITDB_ROOT_USERNAME=mongoadmin \
+  -e MONGO_INITDB_ROOT_PASSWORD=xxx \
+  mongo
+
+# Create the database (optional, can also be done via BT)
+```
+
+#### Face Swap Configuration
+
+- Register on the official website and copy the Token: https://replicate.com/codeplugtech/face-swap
 
 ```json
 {
-  "Demo": null, // Site configuration for demo mode
+  "token": "****",
+  "enableFaceSwap": true,
+  "faceSwapVersion": "278a81e7ebb22db98bcba54de985d22cc1abeead2754eb1f2af717247be69b34",
+  "faceSwapCoreSize": 3,
+  "faceSwapQueueSize": 10,
+  "faceSwapTimeoutMinutes": 10,
+  "enableVideoFaceSwap": true,
+  "videoFaceSwapVersion": "104b4a39315349db50880757bc8c1c996c5309e3aa11286b0a3c84dab81fd440",
+  "videoFaceSwapCoreSize": 3,
+  "videoFaceSwapQueueSize": 10,
+  "videoFaceSwapTimeoutMinutes": 30,
+  "maxFileSize": 10485760,
+  "webhook": null,
+  "webhookEventsFilter": []
+}
+```
+
+#### Banned Prompt Rate Limiting Configuration
+
+- Configures the duration (in minutes) to block a user after `Banned prompt detected` is triggered `n` times in a day (excluding whitelisted users).
+
+```json
+{
+  "enable": true,
+  "rules": {
+    "1": 60,
+    "2": 120,
+    "3": 600
+  }
+}
+```
+
+## CloudFlare CAPTCHA Verification
+
+Free automatic CAPTCHA verification. Example configuration for CloudFlare auto-verification.
+
+- `CaptchaServer`: Address of the verification server.
+- `CaptchaNotifyHook`: Callback URL for notification upon verification completion, default is your domain.
+
+```json
+"CaptchaServer": "http://47.76.110.222:8081",
+"CaptchaNotifyHook": "https://ai.trueai.org"
+```
+
+## CloudFlare Verifier
+
+Only supports Windows deployment (TLS 1.3 supported, Windows 11 or Windows Server 2022 required). Since the CloudFlare verifier uses Chrome, it must be deployed on a Windows environment; Linux deployment is not supported due to dependencies on many libraries.
+
+Note: You must provide a 2captcha.com API key for self-deployment, or it won't function. Pricing: 1000 verifications/9 CNY. Official website: <https://2captcha.cn/p/cloudflare-turnstile>
+
+Tip: The first startup will download the Chrome browser, which may take some time. Please be patient.
+
+> Example `appsettings.json` configuration:
+
+```json
+{
+  "Demo": null, // Set website to demo mode
   "Captcha": {
-    "Headless": true, // whether chrome runs in the background
-    "TwoCaptchaKey": "" // API Key for 2captcha.com
+    "Concurrent": 1, // Number of concurrent processes
+    "Headless": true, // Whether to run Chrome in headless mode
+    "TwoCaptchaKey": "" // API key for 2captcha.com
   },
   "urls": "http://*:8081" // Default port
 }
-
 ```
 
 ## Bot Token (Optional Configuration)
 
-This project utilizes a Discord Bot Token to connect to wss, allowing for error reporting and full functionality, ensuring message reliability, among other features.
+This project uses the Discord Bot Token to connect to wss, providing error messages and full functionality to ensure high availability of messages.
 
-```
-1. Create an application
-https://discord.com/developers/applications
+[Bot Token Configuration Guide](./docs/api.md)
 
-2. Configure application permissions (ensure read message permissions, refer to screenshots)
-[Bot] Settings -> Enable all
+## Drawing Frequency Warning
 
-3. Add application to server (refer to screenshots)
-
-client_id can be found on application details page, labelled as APPLICATION ID
-
-https://discord.com/oauth2/authorize?client_id=xxx&permissions=8&scope=bot
-
-4. Copy or reset the Bot Token in the configuration file
-```
-
-Configure application permissions (ensure read message permissions, refer to screenshot)
-
-![Configure application permissions](./docs/screenshots/gjODn5Nplq.png)
-
-Add application to server (refer to screenshot)
-
-![Add application to server](./docs/screenshots/ItiWgaWIaX.png)
-
-## Related Documentation
-1. [API Interface Documentation](./docs/api.md)
-
-## Roadmap
-
-- [ ] Optimize alerts for full tasks and queues
-- [ ] Optimize issues with concurrent queues for shared accounts
-- [ ] Built-in lexicon management for batch modifications
-- [ ] Integration with official drawing API support
-- [ ] Add statistics panel, drawing statistics, visitor statistics
-- [ ] Built-in user system with registration, management, rate limiting, and max attempts
-- [ ] Integration of GPT translation
-- [ ] Enhance final prompt with translation and Chinese display support
-- [ ] Separate proxy support for individual accounts
-- [ ] Multi-database support including MySQL, Sqlite, SqlServer, MongoDB, PostgeSQL, Redis, etc.
-- [ ] Payment integration support for WeChat, Alipay, and custom drawing pricing strategies
-- [ ] Announcement feature
-- [ ] Text-from-image seed value handling
-- [ ] Automatically read private messages
-- [ ] Multi-account group and pagination support
-- [ ] Upon service restart, any unstarted tasks will join the execution queue
+- Task interval: 30–180 seconds, with a minimum of 3.6 seconds before execution.
+- Daily limit: 200 drawings.
+- Recommended daily working hours: 09:10–22:50.
+- If multiple accounts are used, it is recommended to enable vertical field functionality, with each account focusing on a specific type of artwork.
 
 ## Support and Sponsorship
 
-- If you find this project helpful, please give it a star ⭐
-- You can also contribute by providing temporarily unused public drawing accounts (sponsoring 1 slow queue) to support the development of this project 😀
+- If you find this project helpful, please give it a Star⭐.
+- You can also provide temporarily idle public accounts for drawing (sponsoring one slow queue) to support the project's development 😀.
+- If you have more ideas and creativity, feel free to submit PRs, Issues, or join discussions in the QQ group.
+
+## Sponsors
+
+Many thanks to the sponsors and community members for their help and support!
+
+<a href="https://goapi.gptnb.ai"><img src="https://img.stqu.me/images/2023/06/26/favicon.png" style="width: 60px;"></a>
+<a href="https://d.goamzai.com" target="_blank"><img src="https://d.goamzai.com/logo.png" style="width: 60px;"></a>
+<a href="https://api.ephone.ai" target="_blank"><img src="https://api.iowen.cn/favicon/supernormal.com.png" style="width: 60px;"></a>
+<a href="https://api.mjdjourney.cn" target="_blank"><img src="https://cdn.optiai.cn/file/upload/2024/08/05/1820477746069901312.png?x-oss-process=image/resize,p_25/format,webp" style="width: 60px;"></a>
+<a href="https://rixapi.com" target="_blank"><img src="https://img.fy6b.com/2024/08/23/53d7e54cc31a2.png" style="width: 60px;"></a>
+
+## Security Policy
+
+> Due to some open-source authors being subject to legal consequences, this project must not be used for illegal purposes.
+
+- You must abide by national laws. Any illegal behavior is the sole responsibility of the user.
+- This project follows the GPL license, allowing for personal and commercial use, but permission from the author is required, and copyright information must be retained.
+- Please follow local laws and regulations; do not use for illegal purposes.
+- Do not use for illegal activities.
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=trueai-org/midjourney-proxy&type=Date)](https://star-history.com/#trueai-org/midjourney-proxy&Date)
