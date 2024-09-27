@@ -1,42 +1,42 @@
-## 安装与使用
+## Installation and Usage
 
-> 提示：如果您是私有化部署，请务必关闭演示模式、关闭注册、关闭访客功能，避免 API 被滥用。
+> Note: If you are deploying privately, make sure to disable demo mode, registration, and guest access to prevent API misuse.
 
-> 提示：Windows 平台直接下载启动即可，详情参考下方说明。
+> Note: For the Windows platform, simply download and launch directly. See the instructions below for details.
 
-### 快速启动
+### Quick Start
 
-> Docker 版本
+> Docker Version
 
-- [Bilibili Midjourney API Docker 部署视频教程](https://www.bilibili.com/video/BV1NQpQezEu4/)
-- [抖音 Midjourney API Docker 部署视频教程](https://v.douyin.com/irvnDGfo/)
+- [Bilibili Midjourney API Docker Deployment Video Tutorial](https://www.bilibili.com/video/BV1NQpQezEu4/)
+- [Douyin Midjourney API Docker Deployment Video Tutorial](https://v.douyin.com/irvnDGfo/)
 
-注意：一定确认映射文件和路径不要出错⚠
+Note: Ensure the file mappings and paths are correct ⚠
 
 ```bash
-# 自动安装并启动
-# 推荐使用一键升级脚本
-# 1.首次下载（下载后可以编辑此脚本，进行自定义配置，例如：路径、端口、内存等配置，默认8086端口）
+# Automatic installation and startup
+# Recommended to use the one-click upgrade script
+# 1. First-time download (after downloading, you can edit this script to customize configurations such as path, port, memory, etc. The default port is 8086)
 wget -O docker-upgrade.sh https://raw.githubusercontent.com/trueai-org/midjourney-proxy/main/scripts/docker-upgrade.sh && bash docker-upgrade.sh
 
-# 2.更新升级（以后升级只需要执行此脚本即可）
+# 2. To update/upgrade in the future, simply run this script
 sh docker-upgrade.sh
 ```
 
 ```bash
-# 手动安装并启动
-# 阿里云镜像（推荐国内使用）
+# Manual installation and startup
+# Alibaba Cloud Mirror (Recommended for users in China)
 docker pull registry.cn-guangzhou.aliyuncs.com/trueai-org/midjourney-proxy
 
-# 1.下载并重命名配置文件（示例配置）
-# 提示：3.x 版本无需配置文件
+# 1. Download and rename the configuration file (sample config)
+# Note: Version 3.x no longer requires a configuration file
 # wget -O /root/mjopen/appsettings.Production.json https://raw.githubusercontent.com/trueai-org/midjourney-proxy/main/src/Midjourney.API/appsettings.json
 # curl -o /root/mjopen/appsettings.Production.json https://raw.githubusercontent.com/trueai-org/midjourney-proxy/main/src/Midjourney.API/appsettings.json
 
-# 2.停止并移除旧的 Docker 容器
+# 2. Stop and remove the old Docker container
 docker stop mjopen && docker rm mjopen
 
-# 3.启动容器
+# 3. Start the container
 docker run --name mjopen -d --restart=always \
  -p 8086:8080 --user root \
  -v /root/mjopen/logs:/app/logs:rw \
@@ -48,7 +48,7 @@ docker run --name mjopen -d --restart=always \
  -v /etc/timezone:/etc/timezone:ro \
  registry.cn-guangzhou.aliyuncs.com/trueai-org/midjourney-proxy
 
-# GitHub 镜像
+# GitHub Mirror
 docker pull ghcr.io/trueai-org/midjourney-proxy
 docker run --name mjopen -d --restart=always \
  -p 8086:8080 --user root \
@@ -61,7 +61,7 @@ docker run --name mjopen -d --restart=always \
  -v /etc/timezone:/etc/timezone:ro \
  ghcr.io/trueai-org/midjourney-proxy
 
-# DockerHub 镜像
+# DockerHub Mirror
 docker pull trueaiorg/midjourney-proxy
 docker run --name mjopen -d --restart=always \
  -p 8086:8080 --user root \
@@ -75,69 +75,69 @@ docker run --name mjopen -d --restart=always \
  trueaiorg/midjourney-proxy
 ```
 
-> Windows 版本
+> Windows Version
 
 ```bash
-a. 通过 https://github.com/trueai-org/midjourney-proxy/releases 下载 windows 最新免安装版，例如：midjourney-proxy-win-x64.zip
-b. 解压并执行 Midjourney.API.exe
-c. 打开网站 http://localhost:8080
-d. 部署到 IIS（可选），在 IIS 添加网站，将文件夹部署到 IIS，配置应用程序池为`无托管代码`，启动网站。
-e. 使用系统自带的 `任务计划程序`（可选），创建基本任务，选择 `.exe` 程序即可，请选择`请勿启动多个实例`，保证只有一个任务执行即可。
+a. Download the latest portable version for Windows from https://github.com/trueai-org/midjourney-proxy/releases, for example: midjourney-proxy-win-x64.zip
+b. Extract and run Midjourney.API.exe
+c. Open the site at http://localhost:8080
+d. (Optional) Deploy to IIS: Add the folder as a website in IIS and configure the application pool to "No Managed Code" and start the website.
+e. (Optional) Use the built-in "Task Scheduler" to create a basic task, select the .exe file, and ensure only one task instance is running at a time.
 ```
 
-> Linux 版本
+> Linux Version
 
 ```bash
-a. 通过 https://github.com/trueai-org/midjourney-proxy/releases 下载 linux 最新免安装版，例如：midjourney-proxy-linux-x64.zip
-b. 解压到当前目录: tar -xzf midjourney-proxy-linux-x64-<VERSION>.tar.gz
-c. 执行: run_app.sh
-c. 启动方式1: sh run_app.sh
-d. 启动方式2: chmod +x run_app.sh && ./run_app.sh
+a. Download the latest portable version for Linux from https://github.com/trueai-org/midjourney-proxy/releases, for example: midjourney-proxy-linux-x64.zip
+b. Extract the contents: tar -xzf midjourney-proxy-linux-x64-<VERSION>.tar.gz
+c. To run: execute the run_app.sh script
+c. Start method 1: sh run_app.sh
+d. Start method 2: chmod +x run_app.sh && ./run_app.sh
 ```
 
-> macOS 版本
+> macOS Version
 
 ```bash
-a. 通过 https://github.com/trueai-org/midjourney-proxy/releases 下载 macOS 最新免安装版，例如：midjourney-proxy-osx-x64.zip
-b. 解压到当前目录: tar -xzf midjourney-proxy-osx-x64-<VERSION>.tar.gz
-c. 执行: run_app_osx.sh
-c. 启动方式1: sh run_app_osx.sh
-d. 启动方式2: chmod +x run_app_osx.sh && ./run_app_osx.sh
+a. Download the latest portable version for macOS from https://github.com/trueai-org/midjourney-proxy/releases, for example: midjourney-proxy-osx-x64.zip
+b. Extract the contents: tar -xzf midjourney-proxy-osx-x64-<VERSION>.tar.gz
+c. To run: execute the run_app_osx.sh script
+c. Start method 1: sh run_app_osx.sh
+d. Start method 2: chmod +x run_app_osx.sh && ./run_app_osx.sh
 ```
 
-> Linux 一键安装脚本（❤感谢 [@dbccccccc](https://github.com/dbccccccc)）
+> Linux One-Click Install Script (❤ Thanks to [@dbccccccc](https://github.com/dbccccccc))
 
 ```bash
-# 方式1
+# Method 1
 wget -N --no-check-certificate https://raw.githubusercontent.com/trueai-org/midjourney-proxy/main/scripts/linux_install.sh && chmod +x linux_install.sh && bash linux_install.sh
 
-# 方式2
+# Method 2
 curl -o linux_install.sh https://raw.githubusercontent.com/trueai-org/midjourney-proxy/main/scripts/linux_install.sh && chmod +x linux_install.sh && bash linux_install.sh
 ```
 
-## 参数配置
+## Configuration Parameters
 
-[更多配置参数文档](./docs/appsettings.md)
+[More configuration parameters documentation](./docs/appsettings.md)
 
-- `appsettings.json` 默认配置
-- `appsettings.Production.json` 生产环境配置
-- `/app/data` 数据目录，存放账号、任务等数据
-    - `/app/data/mj.db` 数据库文件
-- `/app/logs` 日志目录
-- `/app/wwwroot` 静态文件目录
-    - `/app/wwwroot/attachments` 绘图文件目录
-    - `/app/wwwroot/ephemeral-attachments` describe 生成图片目录
+- `appsettings.json` Default Configuration
+- `appsettings.Production.json` Production Environment Configuration
+- `/app/data` Data directory, stores accounts, tasks, etc.
+    - `/app/data/mj.db` Database file
+- `/app/logs` Log directory
+- `/app/wwwroot` Static file directory
+    - `/app/wwwroot/attachments` Directory for drawing files
+    - `/app/wwwroot/ephemeral-attachments` Directory for images generated by the describe command
 
-#### 角色说明
+#### Role Explanation
 
-- `普通用户`：只可用于绘图接口，无法登录后台。
-- `管理员`：可以登录后台，可以查看任务、配置等。
+- `Regular User`: Can only access the drawing interface, cannot access the admin panel.
+- `Admin`: Can log into the admin panel to view tasks, configuration, etc.
 
-#### 默认用户
+#### Default Users
 
-- 首次启动站点，默认管理员 token 为：`admin`，登录后请重置 `token`
+- On first launch, the default admin token is: `admin`. Please reset the token after logging in.
 
-#### 阿里云 OSS 配置项
+#### Alibaba Cloud OSS Configuration
 
 ```json
 {
@@ -153,21 +153,21 @@ curl -o linux_install.sh https://raw.githubusercontent.com/trueai-org/midjourney
 }
 ```
 
-#### MongoDB 配置
+#### MongoDB Configuration
 
-> 如果你的任务量未来可能超过 10 万，推荐 Docker 部署 MongoDB。
+> If your task volume is expected to exceed 100,000 in the future, it is recommended to deploy MongoDB using Docker.
 
-> 注意：
-> 1.切换 MongoDB 历史任务可选择自动迁移。
-> 2.关于 IP 的填写方式有多种，内网 IP、外网 IP、容器互通等方式。
+> Note:
+> 1. Switching to MongoDB allows for optional migration of historical tasks.
+> 2. Various methods are available for specifying the IP, including internal IP, external IP, or container communication.
 
-1. 启动容器 `xxx` 为你的密码
-2. 打开系统设置 -> 输入 MongoDB 连接字符串 `mongodb://mongoadmin:xxx@ip` 即可
-3. 填写 MongoDB 数据库名称 -> `mj` -> 保存
-4. 重启服务
+1. Start the container, with `xxx` as your password.
+2. Open system settings -> Enter the MongoDB connection string `mongodb://mongoadmin:xxx@ip`.
+3. Enter the MongoDB database name -> `mj` -> Save.
+4. Restart the service.
 
 ```bash
-# 启动容器
+# Start the container
 docker run -d \
   --name mjopen-mongo \
   -p 27017:27017 \
@@ -177,12 +177,12 @@ docker run -d \
   -e MONGO_INITDB_ROOT_PASSWORD=xxx \
   mongo
 
-# 创建数据库（也可以通过 BT 创建数据库）（可选）
+# Create the database (optional, can also be done via BT)
 ```
 
-#### 换脸配置
+#### Face Swap Configuration
 
-- 打开官网注册并复制 Token: https://replicate.com/codeplugtech/face-swap
+- Register on the official website and copy the Token: https://replicate.com/codeplugtech/face-swap
 
 ```json
 {
@@ -203,9 +203,9 @@ docker run -d \
 }
 ```
 
-#### Banned prompt 限流配置
+#### Banned Prompt Rate Limiting Configuration
 
-- 当日触发触发 `Banned prompt detected` n 次后，封锁用户的时长（分钟）配置（白名单用户除外）。
+- Configures the duration (in minutes) to block a user after `Banned prompt detected` is triggered `n` times in a day (excluding whitelisted users).
 
 ```json
 {
@@ -218,49 +218,49 @@ docker run -d \
 }
 ```
 
-## CloudFlare 人机验证
+## CloudFlare CAPTCHA Verification
 
-免费自动过人机验证，CloudFlare 自动验证配置示例。
+Free automatic CAPTCHA verification. Example configuration for CloudFlare auto-verification.
 
-- `CaptchaServer` 验证器地址
-- `CaptchaNotifyHook` 验证完成通知回调，默认为你的域名
+- `CaptchaServer`: Address of the verification server.
+- `CaptchaNotifyHook`: Callback URL for notification upon verification completion, default is your domain.
 
 ```json
 "CaptchaServer": "http://47.76.110.222:8081",
 "CaptchaNotifyHook": "https://ai.trueai.org"
 ```
 
-## CloudFlare 验证器
+## CloudFlare Verifier
 
-仅支持 Windows 部署（并且支持 TLS 1.3，系统要求 Windows11 或 Windows Server 2022），由于 CloudFlare 验证器需要使用到 Chrome 浏览器，所以需要在 Windows 环境下部署，而在 Linux 环境下部署会依赖很多库，所以暂时不支持 Linux 部署。
+Only supports Windows deployment (TLS 1.3 supported, Windows 11 or Windows Server 2022 required). Since the CloudFlare verifier uses Chrome, it must be deployed on a Windows environment; Linux deployment is not supported due to dependencies on many libraries.
 
-注意：自行部署需提供 2captcha.com 的 API Key，否则无法使用，价格：1000次/9元，官网：<https://2captcha.cn/p/cloudflare-turnstile>
+Note: You must provide a 2captcha.com API key for self-deployment, or it won't function. Pricing: 1000 verifications/9 CNY. Official website: <https://2captcha.cn/p/cloudflare-turnstile>
 
-提示：首次启动会下载 Chrome 浏览器，会比较慢，请耐心等待。
+Tip: The first startup will download the Chrome browser, which may take some time. Please be patient.
 
-> `appsettings.json` 配置参考
+> Example `appsettings.json` configuration:
 
 ```json
 {
-  "Demo": null, // 网站配置为演示模式
+  "Demo": null, // Set website to demo mode
   "Captcha": {
-    "Concurrent": 1, // 并发数
-    "Headless": true, // chrome 是否后台运行
-    "TwoCaptchaKey": "" // 2captcha.com 的 API Key
+    "Concurrent": 1, // Number of concurrent processes
+    "Headless": true, // Whether to run Chrome in headless mode
+    "TwoCaptchaKey": "" // API key for 2captcha.com
   },
-  "urls": "http://*:8081" // 默认端口
+  "urls": "http://*:8081" // Default port
 }
 ```
 
-## 机器人 Token（可选配置）
+## Bot Token (Optional Configuration)
 
-本项目利用 Discord 机器人 Token 连接 wss，可以获取错误信息和完整功能，确保消息的高可用性等问题。
+This project uses the Discord Bot Token to connect to wss, providing error messages and full functionality to ensure high availability of messages.
 
-[机器人 Token 配置教程](./docs/api.md)
+[Bot Token Configuration Guide](./docs/en/api.md)
 
-## 作图频繁预防警告
+## Drawing Frequency Warning
 
-- 任务间隔 30~180 秒，执行前间隔 3.6 秒以上
-- 每日最大 200 张
-- 每日工作时间，建议 9：10~22：50
-- 如果有多个账号，则建议开启垂直领域功能，每个账号只做某一类作品
+- Task interval: 30–180 seconds, with a minimum of 3.6 seconds before execution.
+- Daily limit: 200 drawings.
+- Recommended daily working hours: 09:10–22:50.
+- If multiple accounts are used, it is recommended to enable vertical field functionality, with each account focusing on a specific type of artwork.
