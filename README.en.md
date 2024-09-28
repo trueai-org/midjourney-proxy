@@ -375,7 +375,7 @@ Tip: The first startup will download the Chrome browser, which may take some tim
 
 This project uses the Discord Bot Token to connect to wss, providing error messages and full functionality to ensure high availability of messages.
 
-[Bot Token Configuration Guide](./docs/api.md)
+[Bot Token Configuration Guide](./docs/en/api.md)
 
 ## Drawing Frequency Warning
 

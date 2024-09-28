@@ -1,12 +1,8 @@
 ![logo](https://raw.githubusercontent.com/trueai-org/midjourney-proxy/main/docs/logo.png)
 
-# Midjourney Proxy <small>v3.0.x</small>
+# Midjourney Proxy
 
-> API 形式调用 Midjourney AI 绘图
-
-- 免费、开源、跨平台
-- 公益项目，提供绘图 API 免费使用
-- 功能最全、最安全、占用内存最小（100MB+）的 Midjourney Proxy API ~~
+> 市面上最强大，最完整，功能最全面、完全免费开源的 Midjourney API 项目。
 
 [演示站](https://ai.trueai.org)
 [开始](https://dbccccccc.github.io/midjourney-proxy/#/?id=midjourney-proxy)

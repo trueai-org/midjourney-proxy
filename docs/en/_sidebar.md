@@ -1,2 +1,6 @@
 * [Introduction](https://dbccccccc.github.io/midjourney-proxy/#/en/?id=introduction)
 * [Install](/en/install)
+* [API](/en/api)
+* [Appsettings](/en/appsettings)
+* [Discord bot](/en/discord-bot)
+* [Discord params](/en/discord-params)
