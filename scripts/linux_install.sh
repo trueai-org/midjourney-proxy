@@ -234,7 +234,9 @@ update_docker_container() {
 check_docker_status() {
     if [ "$docker_installed" = false ]; then
         print_msg "${YELLOW}" "Docker 未安装。"
+        # docker_installed=false
     else
+        # docker_installed=true
         if [ "$(docker ps -q -f name=${CONTAINER_NAME})" ]; then
             print_msg "${GREEN}" "容器 ${CONTAINER_NAME} 正在运行。"
         else
@@ -466,7 +468,6 @@ docker_submenu() {
 
 linux_menu() {
     while true; do
-        check_docker_installed
         echo
         list_installed_versions
         echo -e "${BLUE}Linux版本菜单:${NC}"
@@ -507,6 +508,7 @@ main() {
     check_dependencies
     check_architecture
     load_config
+    check_docker_installed
     main_menu
 }
 
