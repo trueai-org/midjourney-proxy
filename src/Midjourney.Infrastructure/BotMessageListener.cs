@@ -454,9 +454,9 @@ namespace Midjourney.Infrastructure
                 // 交互元数据 id
                 var metaId = string.Empty;
                 var metaName = string.Empty;
-                if (data.TryGetProperty("interaction_metadata", out JsonElement meta) && meta.TryGetProperty("id", out var m))
+                if (data.TryGetProperty("interaction_metadata", out JsonElement meta) && meta.TryGetProperty("id", out var mid))
                 {
-                    metaId = m.GetString();
+                    metaId = mid.GetString();
 
                     metaName = meta.TryGetProperty("name", out var n) ? n.GetString() : string.Empty;
                 }
@@ -795,7 +795,7 @@ namespace Midjourney.Infrastructure
                     _logger.Information($"用户消息, {messageType}, {Account.GetDisplay()} - id: {id}, mid: {metaId}, {authorName}, content: {contentStr}");
 
                     var isEm = data.TryGetProperty("embeds", out var em);
-                    if (messageType == MessageType.CREATE && isEm)
+                    if ((messageType == MessageType.CREATE || messageType == MessageType.UPDATE) && isEm)
                     {
                         // em 是一个 JSON 数组
                         if (em.ValueKind == JsonValueKind.Array)
@@ -810,6 +810,11 @@ namespace Midjourney.Infrastructure
                                     // 16711680 error, 65280 success, 16776960 warning
                                     var color = item.TryGetProperty("color", out var colorEle) ? colorEle.GetInt32() : 0;
 
+                                    // 描述
+                                    var desc = item.GetProperty("description").GetString();
+
+                                    _logger.Information($"用户 embeds 消息, {messageType}, {Account.GetDisplay()} - id: {id}, mid: {metaId}, {authorName}, embeds: {title}, {color}, {desc}");
+
                                     // 无效参数、违规的提示词、无效提示词
                                     var errorTitles = new[] {
                                         "Invalid prompt", // 无效提示词
@@ -821,15 +826,7 @@ namespace Midjourney.Infrastructure
                                     };
 
                                     // 跳过的 title
-                                    var continueTitles = new[] {
-                                        "Job queued", // 已加入到队列
-                                        "Credits exhausted", // 余额不足
-                                        "Action needed to continue",
-                                        "Pending mod message", // 警告
-                                        "Blocked", // 警告
-                                        "Plan Cancelled", // 取消计划
-                                        "Subscription required" // 订阅过期
-                                    };
+                                    var continueTitles = new[] { "Action needed to continue" };
 
                                     // fast 用量已经使用完了
                                     if (title == "Credits exhausted")
@@ -987,7 +984,7 @@ namespace Midjourney.Infrastructure
                                                         // 不需要赋值
                                                         //task.MessageId = id;
 
-                                                        task.Description = $"{emTitle.GetString()}, {item.GetProperty("description").GetString()}";
+                                                        task.Description = $"{title}, {desc}";
 
                                                         if (!task.MessageIds.Contains(id))
                                                         {
@@ -998,8 +995,17 @@ namespace Midjourney.Infrastructure
                                             }
                                         }
                                     }
+                                    // 暂时跳过的业务处理
+                                    else if (continueTitles.Contains(title))
+                                    {
+                                        _logger.Warning("跳过 embeds {@0}, {@1}", Account.ChannelId, data.ToString());
+                                    }
                                     // 其他错误消息
-                                    else if (!continueTitles.Contains(title) && (errorTitles.Contains(title) || color == 16711680 || title.Contains("Invalid")))
+                                    else if (errorTitles.Contains(title)
+                                        || color == 16711680
+                                        || title.Contains("Invalid")
+                                        || title.Contains("error")
+                                        || title.Contains("denied"))
                                     {
                                         if (data.TryGetProperty("nonce", out JsonElement noneEle))
                                         {
@@ -1010,9 +1016,33 @@ namespace Midjourney.Infrastructure
                                                 var task = _discordInstance.GetRunningTaskByNonce(nonce);
                                                 if (task != null)
                                                 {
+                                                    var error = $"{title}, {desc}";
+
+                                                    task.MessageId = id;
+                                                    task.Description = error;
+
+                                                    if (!task.MessageIds.Contains(id))
+                                                    {
+                                                        task.MessageIds.Add(id);
+                                                    }
+
+                                                    task.Fail(error);
+                                                }
+                                            }
+                                        }
+                                        else
+                                        {
+                                            // 如果 meta 是 show
+                                            // 说明是 show 任务出错了
+                                            if (metaName == "show" && !string.IsNullOrWhiteSpace(desc))
+                                            {
+                                                // 设置 none 对应的任务 id
+                                                var task = _discordInstance.GetRunningTasks().Where(c => c.Action == TaskAction.SHOW && desc.Contains(c.JobId)).FirstOrDefault();
+                                                if (task != null)
+                                                {
                                                     if (messageType == MessageType.CREATE)
                                                     {
-                                                        var error = $"{title}, {item.GetProperty("description").GetString()}";
+                                                        var error = $"{title}, {desc}";
 
                                                         task.MessageId = id;
                                                         task.Description = error;
@@ -1026,38 +1056,21 @@ namespace Midjourney.Infrastructure
                                                     }
                                                 }
                                             }
-                                        }
-                                        else
-                                        {
-                                            // 如果没有获取到 none
-                                            _logger.Error("未知错误 {@0}, {@1}", Account.ChannelId, data.ToString());
-
-                                            // 如果 meta 是 show
-                                            // 说明是 show 任务出错了
-                                            if (metaName == "show")
+                                            else
                                             {
-                                                var desc = item.GetProperty("description").GetString();
-                                                if (!string.IsNullOrWhiteSpace(desc))
+                                                // 没有获取到 none 尝试使用 mid 获取 task
+                                                var task = _discordInstance.GetRunningTasks()
+                                                    .Where(c => c.MessageId == metaId || c.MessageIds.Contains(metaId) || c.InteractionMetadataId == metaId)
+                                                    .FirstOrDefault();
+                                                if (task != null)
                                                 {
-                                                    // 设置 none 对应的任务 id
-                                                    var task = _discordInstance.GetRunningTasks().Where(c => c.Action == TaskAction.SHOW && desc.Contains(c.JobId)).FirstOrDefault();
-                                                    if (task != null)
-                                                    {
-                                                        if (messageType == MessageType.CREATE)
-                                                        {
-                                                            var error = $"{title}, {item.GetProperty("description").GetString()}";
-
-                                                            task.MessageId = id;
-                                                            task.Description = error;
-
-                                                            if (!task.MessageIds.Contains(id))
-                                                            {
-                                                                task.MessageIds.Add(id);
-                                                            }
-
-                                                            task.Fail(error);
-                                                        }
-                                                    }
+                                                    var error = $"{title}, {desc}";
+                                                    task.Fail(error);
+                                                }
+                                                else
+                                                {
+                                                    // 如果没有获取到 none
+                                                    _logger.Error("未知 embeds 错误 {@0}, {@1}", Account.ChannelId, data.ToString());
                                                 }
                                             }
                                         }
@@ -1077,14 +1090,14 @@ namespace Midjourney.Infrastructure
                                                     if (messageType == MessageType.CREATE)
                                                     {
                                                         task.MessageId = id;
-                                                        task.Description = $"{title}, {item.GetProperty("description").GetString()}";
+                                                        task.Description = $"{title}, {desc}";
 
                                                         if (!task.MessageIds.Contains(id))
                                                         {
                                                             task.MessageIds.Add(id);
                                                         }
 
-                                                        _logger.Warning($"未知消息: {title}, {item.GetProperty("description").GetString()}, {Account.ChannelId}");
+                                                        _logger.Warning($"未知消息: {title}, {desc}, {Account.ChannelId}");
                                                     }
                                                 }
                                             }
