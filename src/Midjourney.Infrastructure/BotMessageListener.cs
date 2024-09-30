@@ -191,7 +191,8 @@ namespace Midjourney.Infrastructure
                 }
                 // describe 重新提交
                 // MJ::Picread::Retry
-                else if (msg.Embeds.Count > 0 && msg.Author.IsBot && msg.Components.Count > 0 && msg.Components.First().Components.Any(x => x.CustomId.Contains("PicReader")))
+                else if (msg.Embeds.Count > 0 && msg.Author.IsBot && msg.Components.Count > 0
+                    && msg.Components.First().Components.Any(x => x.CustomId?.Contains("PicReader") == true))
                 {
                     // 消息加锁处理
                     LocalLock.TryLock($"lock_{msg.Id}", TimeSpan.FromSeconds(10), () =>
@@ -1285,8 +1286,8 @@ namespace Midjourney.Infrastructure
                 }
                 // describe 重新提交
                 // MJ::Picread::Retry
-                else if (eventData.Embeds.Count > 0 && eventData.Author.Bot == true && eventData.Components.Count > 0
-                    && eventData.Components.First().Components.Any(x => x.CustomId.Contains("PicReader")))
+                else if (eventData.Embeds.Count > 0 && eventData.Author?.Bot == true && eventData.Components.Count > 0
+                    && eventData.Components.First().Components.Any(x => x.CustomId?.Contains("PicReader") == true))
                 {
                     // 消息加锁处理
                     LocalLock.TryLock($"lock_{eventData.Id}", TimeSpan.FromSeconds(10), () =>
@@ -1303,7 +1304,7 @@ namespace Midjourney.Infrastructure
                 {
                     if (!string.IsNullOrWhiteSpace(eventData.Content)
                           && eventData.Content.Contains("%")
-                          && eventData.Author.Bot == true)
+                          && eventData.Author?.Bot == true)
                     {
                         // 消息加锁处理
                         LocalLock.TryLock($"lock_{eventData.Id}", TimeSpan.FromSeconds(10), () =>

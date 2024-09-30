@@ -513,7 +513,7 @@ namespace Midjourney.Infrastructure.Services
                     .SetProperty(Constants.TASK_PROPERTY_REMIX, true);
             }
             // describe 全部重新生成绘图
-            else if (submitAction.CustomId.Contains("MJ::Job::PicReader::all"))
+            else if (submitAction.CustomId?.Contains("MJ::Job::PicReader::all") == true)
             {
                 var prompts = targetTask.PromptEn.Split('\n').Where(c => !string.IsNullOrWhiteSpace(c)).ToArray();
                 var ids = new List<string>();
@@ -573,7 +573,7 @@ namespace Midjourney.Infrastructure.Services
             }
             // 如果是 PicReader 作业，则直接返回
             // 图生文 -> 生图
-            else if (submitAction.CustomId.StartsWith("MJ::Job::PicReader::"))
+            else if (submitAction.CustomId?.StartsWith("MJ::Job::PicReader::") == true)
             {
                 var index = int.Parse(submitAction.CustomId.Split("::").LastOrDefault().Trim());
                 var pre = targetTask.PromptEn.Split('\n').Where(c => !string.IsNullOrWhiteSpace(c)).ToArray()[index - 1].Trim();

@@ -445,17 +445,17 @@ namespace Midjourney.Infrastructure.Models
                 if (Buttons.Count > 0)
                 {
                     // U1
-                    if (Buttons.Any(x => x.CustomId.Contains("MJ::JOB::upsample::1")))
+                    if (Buttons.Any(x => x.CustomId?.Contains("MJ::JOB::upsample::1") == true))
                     {
                         Action = TaskAction.IMAGINE;
                     }
                     // 局部重绘说明是放大
-                    else if (Buttons.Any(x => x.CustomId.Contains("MJ::Inpaint::")))
+                    else if (Buttons.Any(x => x.CustomId?.Contains("MJ::Inpaint::") == true))
                     {
                         Action = TaskAction.UPSCALE;
                     }
                     // MJ::Job::PicReader
-                    else if (Buttons.Any(x => x.CustomId.Contains("MJ::Job::PicReader")))
+                    else if (Buttons.Any(x => x.CustomId?.Contains("MJ::Job::PicReader") == true))
                     {
                         Action = TaskAction.DESCRIBE;
                     }
