@@ -121,6 +121,7 @@ The most powerful, complete, full-featured, completely free and open source Midj
 
 - **VoAPI**: <https://github.com/Licoy/VoAPI>
 - **GPTNB**: <https://goapi.gptnb.ai>
+- **益丰**: <https://api.ephone.ai>
 
 ## 安装与使用
 
