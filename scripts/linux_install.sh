@@ -378,7 +378,6 @@ main_menu() {
         echo
         check_docker_status
         list_installed_versions
-        echo -e "${BLUE}请选择操作方式:${NC}"
         echo -e "1. ${GREEN}Docker版本（推荐，仅支持x64）${NC}"
         echo -e "2. ${GREEN}Linux版本（支持x64和arm64）${NC}"
         echo -e "3. ${GREEN}退出${NC}"
@@ -411,39 +410,43 @@ docker_submenu() {
         echo
         check_docker_status
         echo -e "${BLUE}Docker 菜单:${NC}"
-        echo -e "1. ${GREEN}启动容器${NC}"
-        echo -e "2. ${GREEN}停止容器${NC}"
-        echo -e "3. ${GREEN}更新容器${NC}"
-        echo -e "4. ${GREEN}返回主菜单${NC}"
-        read -rp "请选择 (1-4)： " option
+        echo -e "1. ${GREEN}安装 Docker${NC}"
+        echo -e "2. ${GREEN}启动容器${NC}"
+        echo -e "3. ${GREEN}停止容器${NC}"
+        echo -e "4. ${GREEN}更新容器${NC}"
+        echo -e "5. ${GREEN}返回主菜单${NC}"
+        read -rp "请选择 (1-5)： " option
 
         case "$option" in
         1)
+            install_docker
+            ;;
+        2)
             if [ "$docker_installed" = true ]; then
                 run_docker_container
             else
                 print_msg "${RED}" "Docker 未安装，请先安装 Docker。"
             fi
             ;;
-        2)
+        3)
             if [ "$docker_installed" = true ]; then
                 stop_docker_container
             else
                 print_msg "${RED}" "Docker 未安装，无法停止容器。"
             fi
             ;;
-        3)
+        4)
             if [ "$docker_installed" = true ]; then
                 update_docker_container
             else
                 print_msg "${RED}" "Docker 未安装，无法更新容器。"
             fi
             ;;
-        4)
+        5)
             break
             ;;
         *)
-            print_msg "${RED}" "无效选项，请输入1到4之间的数字。"
+            print_msg "${RED}" "无效选项，请输入1到5之间的数字。"
             ;;
         esac
     done
