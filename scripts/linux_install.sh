@@ -419,7 +419,11 @@ docker_submenu() {
 
         case "$option" in
         1)
-            install_docker
+            if [ "$docker_installed" = false ]; then
+                install_docker
+            else
+                print_msg "${YELLOW}" "Docker 已安装。"
+            fi
             ;;
         2)
             if [ "$docker_installed" = true ]; then
