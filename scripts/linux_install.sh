@@ -111,6 +111,14 @@ load_config() {
     fi
 }
 
+check_docker_installed() {
+    if ! command -v docker &>/dev/null; then
+        docker_installed=false
+    else
+        docker_installed=true
+    fi
+}
+
 # 询问是否启用加速
 ask_acceleration() {
     while true; do
@@ -458,6 +466,7 @@ docker_submenu() {
 
 linux_menu() {
     while true; do
+        check_docker_installed
         echo
         list_installed_versions
         echo -e "${BLUE}Linux版本菜单:${NC}"
