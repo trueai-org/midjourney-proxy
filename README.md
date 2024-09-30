@@ -117,6 +117,11 @@ The most powerful, complete, full-featured, completely free and open source Midj
 - **GoAmzAI**: <https://github.com/Licoy/GoAmzAI>
   -	打开后台 -> 绘画管理 -> 新增 -> MJ 绘画接口地址 -> <https://ai.trueai.org/mj>
 
+## 服务商推荐
+
+- **VoAPI**: <https://github.com/Licoy/VoAPI>
+- **GPTNB**: <https://goapi.gptnb.ai>
+
 ## 安装与使用
 
 > 提示：如果您是私有化部署，请务必关闭演示模式、关闭注册、关闭访客功能，避免 API 被滥用。
