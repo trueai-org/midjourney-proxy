@@ -341,7 +341,7 @@ install_version() {
     fi
 
     local tar_url
-    tar_url=$(echo "$response" | jq -r --arg ARCH "$ARCH" '.assets[] | select(.name | test("midjourney-proxy-linux-\($ARCH)-$version.tar.gz")) | .browser_download_url')
+    tar_url=$(echo "$response" | jq -r --arg ARCH "$ARCH" --arg VERSION "$version" '.assets[] | select(.name | test("midjourney-proxy-linux-\($ARCH)-\($VERSION)\.tar\.gz")) | .browser_download_url')
 
     if [ -z "$tar_url" ]; then
         print_msg "${RED}" "找不到指定版本的下载链接：$version"
