@@ -25,6 +25,12 @@ IMAGE_NAME="registry.cn-guangzhou.aliyuncs.com/trueai-org/midjourney-proxy"
 # 工具函数
 # ================================
 
+# 启动提示信息
+start_info() {
+    echo -e "${BLUE}MidJourney Proxy 安装脚本${NC}"
+    echo -e "${BLUE}正在执行启动前检查...${NC}"
+}
+
 # 彩色打印消息
 print_msg() {
     local color="$1"
@@ -43,10 +49,13 @@ exit_with_error() {
 detect_package_manager() {
     if command -v dnf &>/dev/null; then
         PKG_MANAGER="dnf"
+        print_msg "${GREEN}" "检测到dnf包管理器"
     elif command -v yum &>/dev/null; then
         PKG_MANAGER="yum"
+        print_msg "${GREEN}" "检测到yum包管理器"
     elif command -v apt-get &>/dev/null; then
         PKG_MANAGER="apt-get"
+        print_msg "${GREEN}" "检测到apt-get包管理器"
     else
         exit_with_error "不支持的Linux发行版。"
     fi
@@ -58,6 +67,7 @@ install_package() {
     print_msg "${YELLOW}" "正在安装 $package..."
     case "$PKG_MANAGER" in
     apt-get)
+        print_msg "${BLUE}" "正在更新apt-get..."
         apt-get update -y
         apt-get install "$package" -y || exit_with_error "安装 $package 失败。"
         ;;
@@ -66,6 +76,7 @@ install_package() {
         yum install "$package" -y || exit_with_error "安装 $package 失败。"
         ;;
     dnf)
+        print_msg "${BLUE}" "正在更新dnf..."
         dnf makecache -y
         dnf install "$package" -y || exit_with_error "安装 $package 失败。"
         ;;
@@ -77,7 +88,7 @@ install_package() {
 
 # 检查并安装依赖
 check_dependencies() {
-    echo "正在检查并安装依赖"
+    print_msg "${BLUE}" "正在检查并安装依赖..."
     for dep in curl jq; do
         if ! command -v "$dep" &>/dev/null; then
             install_package "$dep"
@@ -92,9 +103,11 @@ check_architecture() {
     case "$arch" in
     x86_64)
         ARCH="x64"
+        print_msg "${GREEN}" "检测到x64架构"
         ;;
     aarch64)
         ARCH="arm64"
+        print_msg "${GREEN}" "检测到arm64架构"
         ;;
     *)
         exit_with_error "不支持的架构: $arch"
@@ -106,7 +119,9 @@ check_architecture() {
 load_config() {
     if [ -f "$CONFIG_FILE" ]; then
         source "$CONFIG_FILE"
+        print_msg "${GREEN}" "已加载配置文件"
     else
+        print_msg "${YELLOW}" "未发现配置文件"
         ask_acceleration
     fi
 }
@@ -114,8 +129,10 @@ load_config() {
 check_docker_installed() {
     if ! command -v docker &>/dev/null; then
         docker_installed=false
+        print_msg "${YELLOW}" "未安装Docker"
     else
         docker_installed=true
+        print_msg "${GREEN}" "已安装Docker"
     fi
 }
 
@@ -141,6 +158,7 @@ ask_acceleration() {
 # 保存配置
 save_config() {
     echo "USE_ACCELERATION=$USE_ACCELERATION" >"$CONFIG_FILE"
+    print_msg "${GREEN}" "已保存配置文件"
 }
 
 # ================================
@@ -158,21 +176,19 @@ install_docker() {
                 docker_try=true
                 install_docker
             else
-                print_msg "${RED}" "Docker 安装失败，请检查错误信息并重试。"
-                exit 1
+                exit_with_error "Docker 安装失败，请检查错误信息并重试。"
             fi
         else
             if curl -fsSL https://get.docker.com | bash -s docker; then
                 docker_try=true
                 install_docker
             else
-                print_msg "${RED}" "Docker 安装失败，请检查错误信息并重试。"
-                exit 1
+                exit_with_error "Docker 安装失败，请检查错误信息并重试。"
             fi
         fi
     else
         docker_installed=true
-        print_msg "${GREEN}" "Docker 已安装。"
+        print_msg "${GREEN}" "Docker 已安装，无需进行操作。"
     fi
 }
 
@@ -182,9 +198,21 @@ run_docker_container() {
 
     # 停止并删除现有容器
     if [ "$(docker ps -q -f name=${CONTAINER_NAME})" ]; then
-        print_msg "${BLUE}" "停止现有容器 ${CONTAINER_NAME}..."
+        print_msg "${BLUE}" "停止现有的容器 ${CONTAINER_NAME}..."
         docker stop ${CONTAINER_NAME}
+        if [ $? -ne 0 ]; then
+            print_msg "${RED}" "停止容器失败，请手动检查。"
+            return 1
+        fi
+    fi
+
+    if [ "$(docker ps -aq -f status=exited -f name=${CONTAINER_NAME})" ]; then
+        print_msg "${BLUE}" "移除现有的容器 ${CONTAINER_NAME}..."
         docker rm ${CONTAINER_NAME}
+        if [ $? -ne 0 ]; then
+            print_msg "${RED}" "移除容器失败，请手动检查。"
+            return 1
+        fi
     fi
 
     # 运行容器
@@ -206,8 +234,9 @@ run_docker_container() {
     public_ip=$(curl -s ifconfig.me)
     private_ip=$(hostname -I | awk '{print $1}')
 
-    print_msg "${GREEN}" "Docker 容器 ${CONTAINER_NAME} 启动成功，请注意端口配置。"
-    print_msg "${GREEN}" "访问地址: http://$private_ip:8086 或 http://$public_ip:8086"
+    print_msg "${GREEN}" "Docker 容器 ${CONTAINER_NAME} 已成功启动，请确认端口设置："
+    print_msg "${GREEN}" "内网地址: http://$private_ip:8086"
+    print_msg "${GREEN}" "外网地址: http://$public_ip:8080"
 }
 
 start_docker_container() {
@@ -235,7 +264,7 @@ check_docker_status() {
         if [ "$(docker ps -q -f name=${CONTAINER_NAME})" ]; then
             print_msg "${GREEN}" "容器 ${CONTAINER_NAME} 正在运行。"
         else
-            print_msg "${YELLOW}" "容器 ${CONTAINER_NAME} 未在运行。"
+            print_msg "${YELLOW}" "Docker 已安装，容器未启动。"
         fi
     fi
 }
@@ -258,12 +287,18 @@ get_latest_version_info() {
         API_URL="https://ghproxy.com/$API_URL"
     fi
 
-    response=$(curl -s "$API_URL") || exit_with_error "获取最新版本信息失败。"
+    response=$(curl -s "$API_URL")
+    if [ $? -ne 0 ]; then
+        print_msg "${RED}" "获取最新版本信息失败。"
+        return
+    fi
+
     LATEST_VERSION=$(echo "$response" | jq -r '.tag_name')
     DOWNLOAD_URL=$(echo "$response" | jq -r --arg ARCH "$ARCH" '.assets[] | select(.name | test("midjourney-proxy-linux-\($ARCH)")) | .browser_download_url')
 
     if [ -z "$LATEST_VERSION" ] || [ -z "$DOWNLOAD_URL" ]; then
-        exit_with_error "无法获取最新版本的信息。"
+        print_msg "${RED}" "获取最新版本信息失败。"
+        return
     fi
 }
 
@@ -298,39 +333,59 @@ install_version() {
         specific_api_url="https://ghproxy.com/$specific_api_url"
     fi
     local response
-    response=$(curl -s "$specific_api_url") || exit_with_error "获取版本 $version 的信息失败。"
+    response=$(curl -s "$specific_api_url")
+    echo $response
+    if [ $? -ne 0 ]; then
+        print_msg "${RED}" "获取版本 $version 的信息失败。"
+        return
+    fi
 
     local tar_url
     tar_url=$(echo "$response" | jq -r --arg ARCH "$ARCH" '.assets[] | select(.name | test("midjourney-proxy-linux-\($ARCH)-$version.tar.gz")) | .browser_download_url')
 
     if [ -z "$tar_url" ]; then
-        exit_with_error "找不到指定版本的下载链接：$version"
+        print_msg "${RED}" "找不到指定版本的下载链接：$version"
+        return
     fi
 
     # 创建临时目录
     local temp_dir
-    temp_dir=$(mktemp -d) || exit_with_error "创建临时目录失败。"
+    temp_dir=$(mktemp -d)
+    if [ ! -d "$temp_dir" ]; then
+        print_msg "${RED}" "创建临时目录失败。"
+        return
+    fi
     trap 'rm -rf "$temp_dir"' EXIT
 
-    cd "$temp_dir" || exit_with_error "进入临时目录失败。"
+    cd "$temp_dir" || { print_msg "${RED}" "进入临时目录失败。"; return; }
 
     # 下载压缩包
-    download_file "$tar_url" "midjourney-proxy-linux-${ARCH}-${version}.tar.gz"
+    download_file "$tar_url" "midjourney-proxy-linux-${ARCH}-${version}.tar.gz" || {
+        print_msg "${RED}" "下载失败。"
+        return
+    }
 
     # 解压
-    tar -xzf "midjourney-proxy-linux-${ARCH}-${version}.tar.gz" || exit_with_error "解压文件失败。"
+    if ! tar -xzf "midjourney-proxy-linux-${ARCH}-${version}.tar.gz"; then
+        print_msg "${RED}" "解压文件失败。"
+        return
+    fi
 
     # 获取解压后的目录
     local extracted_dir
     extracted_dir=$(tar -tzf "midjourney-proxy-linux-${ARCH}-${version}.tar.gz" | head -1 | cut -f1 -d "/")
 
-    if [ -d "$extracted_dir" ]; then
-        mv "$extracted_dir" "$OLDPWD/$version" || exit_with_error "移动解压目录失败。"
-    else
-        exit_with_error "未找到解压目录。可能安装失败。"
+    if [ ! -d "$extracted_dir" ]; then
+        print_msg "${RED}" "未找到解压目录。可能安装失败。"
+        return
     fi
 
-    cd "$OLDPWD" || exit_with_error "返回原目录失败。"
+    if ! mv "$extracted_dir" "$OLDPWD/$version"; then
+        print_msg "${RED}" "移动解压目录失败。"
+        return
+    fi
+
+    cd "$OLDPWD" || { print_msg "${RED}" "返回原目录失败。"; return; }
 
     print_msg "${GREEN}" "版本 $version 安装完成。"
 }
@@ -364,12 +419,14 @@ download_file() {
         local proxy_url="https://ghproxy.com/${url#https://}"
         print_msg "${BLUE}" "正在使用加速下载 $proxy_url..."
         if ! curl -L -o "$output" "$proxy_url"; then
-            exit_with_error "下载失败，请检查网络连接。"
+            print_msg "${RED}" "下载失败，请检查网络连接。"
+            return 1
         fi
     else
         print_msg "${BLUE}" "正在下载 $url..."
         if ! curl -L -o "$output" "$url"; then
-            exit_with_error "下载失败，请检查网络连接。"
+            print_msg "${RED}" "下载失败，请检查网络连接。"
+            return 1
         fi
     fi
 }
@@ -417,9 +474,10 @@ docker_submenu() {
         echo -e "${BLUE}Docker 菜单:${NC}"
         echo -e "1. ${GREEN}安装 Docker${NC}"
         echo -e "2. ${GREEN}安装或更新并启动容器${NC}"
-        echo -e "3. ${GREEN}停止容器${NC}"
-        echo -e "4. ${GREEN}返回主菜单${NC}"
-        read -rp "请选择 (1-4)： " option
+        echo -e "3. ${GREEN}启动但不更新容器${NC}"
+        echo -e "4. ${GREEN}停止容器${NC}"
+        echo -e "5. ${GREEN}返回主菜单${NC}"
+        read -rp "请选择 (1-5)： " option
 
         case "$option" in
         1)
@@ -438,20 +496,27 @@ docker_submenu() {
             ;;
         3)
             if [ "$docker_installed" = true ]; then
+                start_docker_container
+            else
+                print_msg "${RED}" "Docker 未安装，请先安装 Docker。"
+            fi
+            ;;
+        4)
+            if [ "$docker_installed" = true ]; then
                 if [ "$(docker ps -q -f name=${CONTAINER_NAME})" ]; then
                     stop_docker_container
                 else
                     print_msg "${YELLOW}" "容器 $CONTAINER_NAME 未在运行。"
                 fi
             else
-                print_msg "${RED}" "Docker 未安装，无法停止容器。"
+                print_msg "${RED}" "Docker 未安装，请先安装 Docker。"
             fi
             ;;
-        4)
+        5)
             break
             ;;
         *)
-            print_msg "${RED}" "无效选项，请输入1到4之间的数字。"
+            print_msg "${RED}" "无效选项，请输入1到5之间的数字。"
             ;;
         esac
     done
