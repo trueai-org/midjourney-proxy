@@ -334,14 +334,17 @@ install_version() {
     fi
     local response
     response=$(curl -s "$specific_api_url")
-    echo $response
     if [ $? -ne 0 ]; then
         print_msg "${RED}" "获取版本 $version 的信息失败。"
         return
     fi
 
     local tar_url
-    tar_url=$(echo "$response" | jq -r --arg ARCH "$ARCH" --arg VERSION "$version" '.assets[] | select(.name | test("midjourney-proxy-linux-\($ARCH)-\($VERSION)\.tar\.gz")) | .browser_download_url')
+    tar_url=$(echo "$response" | jq -r --arg ARCH "$ARCH" --arg VERSION "$version" '
+        .assets[]
+        | select(.name | test("midjourney-proxy-linux-" + $ARCH + "-" + $VERSION + "\\.tar\\.gz"))
+        | .browser_download_url
+    ')
 
     if [ -z "$tar_url" ]; then
         print_msg "${RED}" "找不到指定版本的下载链接：$version"
