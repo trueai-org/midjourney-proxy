@@ -235,8 +235,8 @@ run_docker_container() {
     private_ip=$(hostname -I | awk '{print $1}')
 
     print_msg "${GREEN}" "Docker 容器 ${CONTAINER_NAME} 已成功启动，请确认端口设置："
-    print_msg "${GREEN}" "内网地址: http://$private_ip:8086"
-    print_msg "${GREEN}" "外网地址: http://$public_ip:8080"
+    print_msg "${GREEN}" "内网地址: http://$private_ip:8080"
+    print_msg "${GREEN}" "外网地址: http://$public_ip:8086"
 }
 
 start_docker_container() {
@@ -423,6 +423,73 @@ download_file() {
     fi
 }
 
+start_version() {
+    local version="$1"
+
+    if [ ! -d "$version" ]; then
+        print_msg "${RED}" "版本 $version 未安装。"
+        return 1
+    fi
+
+    local settings_file=""
+    if [ -f "$version/appsettings.Production.json" ]; then
+        settings_file="$version/appsettings.Production.json"
+    elif [ -f "$version/appsettings.json" ]; then
+        settings_file="$version/appsettings.json"
+    else
+        print_msg "${RED}" "未找到配置文件。"
+        return 1
+    fi
+
+    local urls
+    urls=$(jq -r '.urls' "$settings_file")
+    if [ -z "$urls" ]; then
+        print_msg "${YELLOW}" "未在配置文件中找到 'urls' 字段。"
+    else
+        print_msg "${GREEN}" "启动版本 $version，访问地址：$urls"
+    fi
+
+    cd "$version" || { print_msg "${RED}" "无法进入目录 $version"; return 1; }
+    nohup ./run_app.sh > "../$version.log" 2>&1 &
+    cd - > /dev/null || return 1
+
+    print_msg "${GREEN}" "版本 $version 已启动。"
+}
+
+stop_version() {
+    local version="$1"
+
+    local pids
+    pids=$(pgrep -f "$version/run_app.sh")
+    if [ -z "$pids" ]; then
+        print_msg "${YELLOW}" "版本 $version 未在运行。"
+        return 1
+    fi
+
+    for pid in $pids; do
+        kill "$pid"
+        print_msg "${GREEN}" "已停止版本 $version，PID: $pid"
+    done
+}
+
+list_running_versions() {
+    local pids
+    pids=$(pgrep -f "run_app.sh")
+    if [ -z "$pids" ]; then
+        print_msg "${YELLOW}" "没有正在运行的版本。"
+        return
+    fi
+
+    print_msg "${GREEN}" "正在运行的版本："
+    for pid in $pids; do
+        local cmd
+        cmd=$(ps -p "$pid" -o args=)
+        local version
+        version=$(echo "$cmd" | grep -oP '[^ ]+/(\d+\.\d+\.\d+)/run_app\.sh' | awk -F'/' '{print $(NF-2)}')
+        echo "版本 $version，PID: $pid"
+    done
+}
+
 # ================================
 # 主菜单
 # ================================
@@ -518,12 +585,15 @@ linux_menu() {
     while true; do
         echo
         list_installed_versions
+        list_running_versions
         echo -e "${BLUE}Linux版本菜单:${NC}"
         echo -e "1. ${GREEN}安装最新版本${NC}"
         echo -e "2. ${GREEN}安装指定版本${NC}"
         echo -e "3. ${GREEN}删除指定版本${NC}"
-        echo -e "4. ${GREEN}返回主菜单${NC}"
-        read -rp "请选择 (1-4)： " option
+        echo -e "4. ${GREEN}启动指定版本${NC}"
+        echo -e "5. ${GREEN}停止指定版本${NC}"
+        echo -e "6. ${GREEN}返回主菜单${NC}"
+        read -rp "请选择 (1-6)： " option
 
         case "$option" in
         1)
@@ -538,10 +608,18 @@ linux_menu() {
             delete_version
             ;;
         4)
+            read -rp "请输入要启动的版本号： " version
+            start_version "$version"
+            ;;
+        5)
+            read -rp "请输入要停止的版本号： " version
+            stop_version "$version"
+            ;;
+        6)
             break
             ;;
         *)
-            print_msg "${RED}" "无效选项，请输入1到4之间的数字。"
+            print_msg "${RED}" "无效选项，请输入1到6之间的数字。"
             ;;
         esac
     done
