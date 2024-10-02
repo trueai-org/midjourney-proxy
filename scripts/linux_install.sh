@@ -126,6 +126,16 @@ load_config() {
     fi
 }
 
+# 创建运行版本配置文件
+create_running_versions_file() {
+    local file="running_versions.conf"
+    # 如果文件不存在，则创建一个空文件
+    if [ ! -f "$file" ]; then
+        touch "$file"
+        # print_msg "${GREEN}" "已创建运行版本配置文件：$file"
+    fi
+}
+
 check_docker_installed() {
     if ! command -v docker &>/dev/null; then
         docker_installed=false
@@ -446,7 +456,7 @@ start_version() {
     temp_json=$(mktemp)
 
     # 移除注释（行注释和行内注释）
-    sed 's#//.*##' "$settings_file" > "$temp_json"
+    sed -e 's#//.*##' -e '/\/\/.*/d' "$settings_file" > "$temp_json"
 
     local urls
     urls=$(jq -r '.urls' "$temp_json")
@@ -460,43 +470,64 @@ start_version() {
 
     cd "$version" || { print_msg "${RED}" "无法进入目录 $version"; return 1; }
     nohup ./run_app.sh > "../$version.log" 2>&1 &
+
+    local pid=$!
     cd - > /dev/null || return 1
 
-    print_msg "${GREEN}" "版本 $version 已启动。"
+    # 将版本号和 PID 写入运行版本配置文件
+    echo "$version:$pid" >> "running_versions.conf"
+    print_msg "${GREEN}" "版本 $version 已启动，PID: $pid。"
 }
 
 stop_version() {
     local version="$1"
 
-    local pids
-    pids=$(pgrep -f "$version/run_app.sh")
-    if [ -z "$pids" ]; then
+    local pid
+    pid=$(awk -F":" -v ver="$version" '$1 == ver {print $2}' "running_versions.conf")
+    if [ -z "$pid" ]; then
         print_msg "${YELLOW}" "版本 $version 未在运行。"
         return 1
     fi
 
-    for pid in $pids; do
-        kill "$pid"
+    if kill "$pid" > /dev/null 2>&1; then
         print_msg "${GREEN}" "已停止版本 $version，PID: $pid"
-    done
+        # 从配置文件中删除对应的记录
+        grep -v "^$version:$pid$" "running_versions.conf" > "running_versions.tmp" && mv "running_versions.tmp" "running_versions.conf"
+    else
+        print_msg "${RED}" "停止版本 $version 失败，可能进程已不存在。"
+        # 同样移除配置文件中的记录
+        grep -v "^$version:$pid$" "running_versions.tmp" > "running_versions.conf"
+    fi
 }
 
 list_running_versions() {
-    local pids
-    pids=$(pgrep -f "run_app.sh")
-    if [ -z "$pids" ]; then
+    if [ ! -f "running_versions.conf" ]; then
         print_msg "${YELLOW}" "没有正在运行的版本。"
         return
     fi
 
-    print_msg "${GREEN}" "正在运行的版本："
-    for pid in $pids; do
-        local cmd
-        cmd=$(ps -p "$pid" -o args=)
-        local version
-        version=$(echo "$cmd" | grep -oP '[^ ]+/(\d+\.\d+\.\d+)/run_app\.sh' | awk -F'/' '{print $(NF-2)}')
-        echo "版本 $version，PID: $pid"
-    done
+    local running_versions=()
+    local updated_entries=()
+    while IFS=":" read -r version pid; do
+        if ps -p "$pid" > /dev/null 2>&1; then
+            running_versions+=("$version (PID: $pid)")
+            updated_entries+=("$version:$pid")
+        else
+            print_msg "${YELLOW}" "版本 $version (PID: $pid) 已停止，移除记录。"
+        fi
+    done < "running_versions.conf"
+
+    # 更新配置文件，移除已停止的进程
+    printf "%s\n" "${updated_entries[@]}" > "running_versions.conf"
+
+    if [ "${#running_versions[@]}" -gt 0 ]; then
+        print_msg "${GREEN}" "正在运行的版本："
+        for entry in "${running_versions[@]}"; do
+            echo "  $entry"
+        done
+    else
+        print_msg "${YELLOW}" "没有正在运行的版本。"
+    fi
 }
 
 # ================================
@@ -642,6 +673,7 @@ main() {
     detect_package_manager
     check_dependencies
     check_architecture
+    create_running_versions_file
     load_config
     check_docker_installed
     main_menu
