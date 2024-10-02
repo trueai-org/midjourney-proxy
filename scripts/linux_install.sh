@@ -441,9 +441,18 @@ start_version() {
         return 1
     fi
 
+    # 创建一个临时文件来存储无注释的 JSON
+    local temp_json
+    temp_json=$(mktemp)
+
+    # 移除注释（行注释和行内注释）
+    sed 's#//.*##' "$settings_file" > "$temp_json"
+
     local urls
-    urls=$(jq -r '.urls' "$settings_file")
-    if [ -z "$urls" ]; then
+    urls=$(jq -r '.urls' "$temp_json")
+    rm -f "$temp_json"  # 删除临时文件
+
+    if [ -z "$urls" ] || [ "$urls" == "null" ]; then
         print_msg "${YELLOW}" "未在配置文件中找到 'urls' 字段。"
     else
         print_msg "${GREEN}" "启动版本 $version，访问地址：$urls"
