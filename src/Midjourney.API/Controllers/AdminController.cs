@@ -809,15 +809,15 @@ namespace Midjourney.API.Controllers
                     item.UserToken = item.UserToken?.Substring(0, item.UserToken.Length / 5) + "****";
                     item.BotToken = item.BotToken?.Substring(0, item.BotToken.Length / 5) + "****";
 
-                    item.CfUrl = item.CfUrl?.Substring(0, item.CfUrl.Length / 5) + "****";
-                    item.CfHashUrl = item.CfHashUrl?.Substring(0, item.CfHashUrl.Length / 5) + "****";
-
-                    item.PermanentInvitationLink = item.PermanentInvitationLink?.Substring(0, item.PermanentInvitationLink.Length / 2) + "****";
+                    item.CfUrl = "****";
+                    item.CfHashUrl = "****";
+                    item.PermanentInvitationLink = "****";
+                    item.Remark = "****";
 
                     if (item.SubChannels.Count > 0)
                     {
                         // 加密
-                        item.SubChannels = item.SubChannels.Select(c => "****" + c?.Substring(c.Length / 3)).ToList();
+                        item.SubChannels = item.SubChannels.Select(c => "****").ToList();
                     }
                 }
             }
