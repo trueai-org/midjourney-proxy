@@ -368,23 +368,12 @@ install_version() {
         return
     }
 
-    # 解压
-    if ! tar -xzf "midjourney-proxy-linux-${ARCH}-${version}.tar.gz"; then
+    # 创建目标目录
+    mkdir -p "$OLDPWD/$version"
+
+    # 解压到目标目录
+    if ! tar -xzf "midjourney-proxy-linux-${ARCH}-${version}.tar.gz" -C "$OLDPWD/$version"; then
         print_msg "${RED}" "解压文件失败。"
-        return
-    fi
-
-    # 获取解压后的目录
-    local extracted_dir
-    extracted_dir=$(tar -tzf "midjourney-proxy-linux-${ARCH}-${version}.tar.gz" | head -1 | cut -f1 -d "/")
-
-    if [ ! -d "$extracted_dir" ]; then
-        print_msg "${RED}" "未找到解压目录。可能安装失败。"
-        return
-    fi
-
-    if ! mv "$extracted_dir" "$OLDPWD/$version"; then
-        print_msg "${RED}" "移动解压目录失败。"
         return
     fi
 
