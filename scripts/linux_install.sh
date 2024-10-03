@@ -482,6 +482,7 @@ start_version() {
     fi
 
     cd "$version" || { print_msg "${RED}" "无法进入目录 $version"; return 1; }
+    chmod +x ./run_app.sh
     nohup ./run_app.sh > "../$version.log" 2>&1 &
 
     local pid=$!
