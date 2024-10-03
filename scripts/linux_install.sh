@@ -395,13 +395,13 @@ install_version() {
 
 # 删除指定版本
 delete_version() {
-    read -rp "请输入要删除的版本（例如：v2.3.7）： " version
-    if [[ "$version" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-        if [ -d "$version" ]; then
-            read -rp "确定要删除 $version 吗？ [y/N]: " confirm
+    read -rp "请输入要删除的版本（例如：v2.3.7）： " ver
+    if [[ "$ver" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        if [ -d "$ver" ]; then
+            read -rp "确定要删除 $ver 吗？ [y/N]: " confirm
             confirm=$(echo "$confirm" | tr '[:upper:]' '[:lower:]')
             if [ "$confirm" == "y" ]; then
-                rm -rf "$version" && print_msg "${GREEN}" "版本 $version 已删除。" || print_msg "${RED}" "删除版本 $version 失败。"
+                rm -rf "$ver" && print_msg "${GREEN}" "版本 $ver 已删除。" || print_msg "${RED}" "删除版本 $ver 失败。"
             else
                 print_msg "${YELLOW}" "已取消删除。"
             fi
