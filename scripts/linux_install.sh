@@ -754,8 +754,7 @@ linux_menu() {
             install_version "$version"
             ;;
         3)
-            read -rp "请输入要删除的版本（例如：v2.3.7）： " version
-            delete_version "$version"
+            delete_version
             ;;
         4)
             read -rp "请输入要启动的版本号： " version
