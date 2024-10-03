@@ -555,6 +555,72 @@ list_running_versions() {
     fi
 }
 
+update_version() {
+    local version="$1"
+
+    if [ ! -d "$version" ]; then
+        print_msg "${RED}" "版本 $version 未安装，无法更新。"
+        return 1
+    fi
+
+    stop_version "$version"
+
+    print_msg "${BLUE}" "正在更新版本 $version ..."
+
+    # 获取最新版本信息
+    get_latest_version_info
+    if [ -z "$LATEST_VERSION" ] || [ -z "$DOWNLOAD_URL" ]; then
+        print_msg "${RED}" "获取最新版本信息失败。"
+        return 1
+    fi
+
+    # 检查版本是否需要更新
+    if [ "$version" == "$LATEST_VERSION" ]; then
+        print_msg "${GREEN}" "版本 $version 已是最新，无需更新。"
+        return 0
+    fi
+
+    # 在更新前备份配置文件
+    if [ ! -f "$version/appsettings.Production.json" ]; then
+        if [ -f "$version/appsettings.json" ]; then
+            cp "$version/appsettings.json" "$version/appsettings.Production.json"
+            print_msg "${Green}" "已将 appsettings.json 复制为 appsettings.Production.json"
+        else
+            print_msg "${YELLOW}" "警告：未发现 appsettings.json"
+        fi
+    fi
+
+    # 下载最新版本的安装包
+    local temp_dir
+    temp_dir=$(mktemp -d)
+    if [ ! -d "$temp_dir" ]; then
+        print_msg "${RED}" "创建临时目录失败。"
+        return 1
+    fi
+    trap 'rm -rf "$temp_dir"' EXIT
+
+    cd "$temp_dir" || { print_msg "${RED}" "进入临时目录失败。"; return 1; }
+
+    # 下载最新版本的压缩包
+    print_msg "${BLUE}" "正在下载最新版本的安装包..."
+    download_file "$DOWNLOAD_URL" "midjourney-proxy-linux-${ARCH}-${LATEST_VERSION}.tar.gz" || {
+        print_msg "${RED}" "下载失败。"
+        return 1
+    }
+
+    # 解压到版本目录，覆盖安装
+    if ! tar -xzf "midjourney-proxy-linux-${ARCH}-${LATEST_VERSION}.tar.gz" -C "$OLDPWD/$version"; then
+        print_msg "${RED}" "解压文件失败。"
+        return 1
+    fi
+
+    if ! cd "$OLDPWD"; then
+        exit_with_error "在安装更新时返回原目录失败。"
+    fi
+
+    print_msg "${GREEN}" "版本 $version 已更新到最新版本 $LATEST_VERSION。"
+}
+
 # ================================
 # 主菜单
 # ================================
@@ -574,7 +640,7 @@ main_menu() {
         case "$choice" in
         1)
             if [ "$ARCH" != "x64" ]; then
-                print_msg "${RED}" "Docker版本仅支持x64架构。"
+                print_msg "${RED}" "Docker版本目前仅支持x64架构。"
             else
                 docker_submenu
             fi
@@ -659,8 +725,9 @@ linux_menu() {
         echo -e "3. ${GREEN}删除指定版本${NC}"
         echo -e "4. ${GREEN}启动指定版本${NC}"
         echo -e "5. ${GREEN}停止指定版本${NC}"
-        echo -e "6. ${GREEN}返回主菜单${NC}"
-        read -rp "请选择 (1-6)： " option
+        echo -e "6. ${GREEN}更新已安装的版本${NC}"
+        echo -e "7. ${GREEN}返回主菜单${NC}"
+        read -rp "请选择 (1-7)： " option
 
         case "$option" in
         1)
@@ -672,7 +739,8 @@ linux_menu() {
             install_version "$version"
             ;;
         3)
-            delete_version
+            read -rp "请输入要删除的版本（例如：v2.3.7）： " version
+            delete_version "$version"
             ;;
         4)
             read -rp "请输入要启动的版本号： " version
@@ -683,10 +751,14 @@ linux_menu() {
             stop_version "$version"
             ;;
         6)
+            read -rp "请输入要更新的版本号： " version
+            update_version "$version"
+            ;;
+        7)
             break
             ;;
         *)
-            print_msg "${RED}" "无效选项，请输入1到6之间的数字。"
+            print_msg "${RED}" "无效选项，请输入1到7之间的数字。"
             ;;
         esac
     done
