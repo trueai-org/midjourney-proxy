@@ -487,16 +487,24 @@ start_version() {
     local pid=$!
     cd - > /dev/null || return 1
 
-    # 将版本号和 PID 写入运行版本配置文件
-    echo "$version:$pid" >> "running_versions.conf"
-    print_msg "${GREEN}" "版本 $version 已启动，PID: $pid。"
+    # 等待3秒
+    sleep 3
 
-    if $flag; then
-        local private_url="${urls//\*/$private_ip}"
-        local public_url="${urls//\*/$public_ip}"
-        print_msg "${GREEN}" "版本 $version 已启动，访问地址：$urls"
-        print_msg "${GREEN}" "内网地址: $private_url"
-        print_msg "${GREEN}" "外网地址: $public_url"
+    # 检查进程是否仍在运行
+    if ps -p "$pid" > /dev/null 2>&1; then
+        # 将版本号和 PID 写入运行版本配置文件
+        echo "$version:$pid" >> "running_versions.conf"
+        print_msg "${GREEN}" "版本 $version 已启动，PID: $pid。"
+
+        if $flag; then
+            local private_url="${urls//\*/$private_ip}"
+            local public_url="${urls//\*/$public_ip}"
+            print_msg "${GREEN}" "内网地址: $private_url"
+            print_msg "${GREEN}" "外网地址: $public_url"
+        fi
+    else
+        print_msg "${RED}" "版本 $version 启动失败，请检查日志文件：$version.log"
+        return 1
     fi
 }
 
