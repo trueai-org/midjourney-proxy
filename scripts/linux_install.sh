@@ -593,7 +593,7 @@ update_version() {
     if [ ! -f "$version/appsettings.Production.json" ]; then
         if [ -f "$version/appsettings.json" ]; then
             cp "$version/appsettings.json" "$version/appsettings.Production.json"
-            print_msg "${Green}" "已将 appsettings.json 复制为 appsettings.Production.json"
+            print_msg "${GREEN}" "已将 appsettings.json 复制为 appsettings.Production.json"
         else
             print_msg "${YELLOW}" "警告：未发现 appsettings.json"
         fi
@@ -627,7 +627,13 @@ update_version() {
         exit_with_error "在安装更新时返回原目录失败。"
     fi
 
-    print_msg "${GREEN}" "版本 $version 已更新到最新版本 $LATEST_VERSION。"
+    # 更新成功后重命名目录
+    if ! mv "$version" "${LATEST_VERSION}"; then
+        print_msg "${RED}" "重命名目录失败。"
+        return 1
+    fi
+
+    print_msg "${GREEN}" "版本 $version 已更新到最新版本 $LATEST_VERSION 并重命名目录。"
 }
 
 # ================================
