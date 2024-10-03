@@ -225,10 +225,13 @@ run_docker_container() {
         fi
     fi
 
-    # 运行容器
+    # 提示用户输入端口
+    read -rp "请设定外部端口（输入enter选择默认，默认8086）: " external_port
+    external_port=${external_port:-8086}  # 使用默认端口8086
+
     print_msg "${BLUE}" "启动 Docker 容器..."
     docker run --name ${CONTAINER_NAME} -d --restart=always \
-        -p 8086:8080 --user root \
+        -p $external_port:8080 --user root \
         -v /root/mjopen/logs:/app/logs:rw \
         -v /root/mjopen/data:/app/data:rw \
         -v /root/mjopen/attachments:/app/wwwroot/attachments:rw \
@@ -246,7 +249,7 @@ run_docker_container() {
 
     print_msg "${GREEN}" "Docker 容器 ${CONTAINER_NAME} 已成功启动，请确认端口设置："
     print_msg "${GREEN}" "内网地址: http://$private_ip:8080"
-    print_msg "${GREEN}" "外网地址: http://$public_ip:8086"
+    print_msg "${GREEN}" "外网地址: http://$public_ip:$external_port"
 }
 
 start_docker_container() {
@@ -268,9 +271,7 @@ stop_docker_container() {
 check_docker_status() {
     if [ "$docker_installed" = false ]; then
         print_msg "${YELLOW}" "Docker 未安装。"
-        # docker_installed=false
     else
-        # docker_installed=true
         if [ "$(docker ps -q -f name=${CONTAINER_NAME})" ]; then
             print_msg "${GREEN}" "容器 ${CONTAINER_NAME} 正在运行。"
         else
@@ -445,7 +446,12 @@ start_version() {
     if [ -f "$version/appsettings.Production.json" ]; then
         settings_file="$version/appsettings.Production.json"
     elif [ -f "$version/appsettings.json" ]; then
-        settings_file="$version/appsettings.json"
+        cp "$version/appsettings.json" "$version/appsettings.Production.json"
+        if [ ! -f "$version/appsettings.Production.json" ]; then
+            print_msg "${RED}" "复制配置文件失败。"
+            return 1
+        fi
+        settings_file="$version/appsettings.Production.json"
     else
         print_msg "${RED}" "未找到配置文件。"
         return 1
@@ -456,16 +462,23 @@ start_version() {
     temp_json=$(mktemp)
 
     # 移除注释（行注释和行内注释）
-    sed -e 's#//.*##' -e '/\/\/.*/d' "$settings_file" > "$temp_json"
+    sed -E 's,([^:])(//.*),\1,g' "$settings_file" > "$temp_json"
 
     local urls
     urls=$(jq -r '.urls' "$temp_json")
     rm -f "$temp_json"  # 删除临时文件
 
+    # 获取本机公网和内网IP
+    local public_ip
+    local private_ip
+    public_ip=$(curl -s ifconfig.me)
+    private_ip=$(hostname -I | awk '{print $1}')
+
+    local flag=true
+
     if [ -z "$urls" ] || [ "$urls" == "null" ]; then
         print_msg "${YELLOW}" "未在配置文件中找到 'urls' 字段。"
-    else
-        print_msg "${GREEN}" "启动版本 $version，访问地址：$urls"
+        flag=false
     fi
 
     cd "$version" || { print_msg "${RED}" "无法进入目录 $version"; return 1; }
@@ -477,10 +490,23 @@ start_version() {
     # 将版本号和 PID 写入运行版本配置文件
     echo "$version:$pid" >> "running_versions.conf"
     print_msg "${GREEN}" "版本 $version 已启动，PID: $pid。"
+
+    if $flag; then
+        local private_url="${urls//\*/$private_ip}"
+        local public_url="${urls//\*/$public_ip}"
+        print_msg "${GREEN}" "版本 $version 已启动，访问地址：$urls"
+        print_msg "${GREEN}" "内网地址: $private_url"
+        print_msg "${GREEN}" "外网地址: $public_url"
+    fi
 }
 
 stop_version() {
     local version="$1"
+
+    if [ ! -s "running_versions.conf" ]; then
+        print_msg "${YELLOW}" "版本 $version 未在运行。"
+        return 1
+    fi
 
     local pid
     pid=$(awk -F":" -v ver="$version" '$1 == ver {print $2}' "running_versions.conf")
@@ -491,17 +517,15 @@ stop_version() {
 
     if kill "$pid" > /dev/null 2>&1; then
         print_msg "${GREEN}" "已停止版本 $version，PID: $pid"
-        # 从配置文件中删除对应的记录
-        grep -v "^$version:$pid$" "running_versions.conf" > "running_versions.tmp" && mv "running_versions.tmp" "running_versions.conf"
+        grep -vE "^$version:$pid$|^$" "running_versions.conf" > "running_versions.tmp" && mv "running_versions.tmp" "running_versions.conf"
     else
         print_msg "${RED}" "停止版本 $version 失败，可能进程已不存在。"
-        # 同样移除配置文件中的记录
-        grep -v "^$version:$pid$" "running_versions.tmp" > "running_versions.conf"
+        grep -vE "^$version:$pid$|^$" "running_versions.conf" > "running_versions.tmp" && mv "running_versions.tmp" "running_versions.conf"
     fi
 }
 
 list_running_versions() {
-    if [ ! -f "running_versions.conf" ]; then
+    if [ ! -s "running_versions.conf" ]; then
         print_msg "${YELLOW}" "没有正在运行的版本。"
         return
     fi
@@ -509,15 +533,16 @@ list_running_versions() {
     local running_versions=()
     local updated_entries=()
     while IFS=":" read -r version pid; do
-        if ps -p "$pid" > /dev/null 2>&1; then
+        if [[ -n "$version" && -n "$pid" ]] && ps -p "$pid" > /dev/null 2>&1; then
             running_versions+=("$version (PID: $pid)")
             updated_entries+=("$version:$pid")
         else
-            print_msg "${YELLOW}" "版本 $version (PID: $pid) 已停止，移除记录。"
+            if [[ -n "$version" ]]; then
+                print_msg "${YELLOW}" "版本 $version (PID: $pid) 已停止，移除记录。"
+            fi
         fi
     done < "running_versions.conf"
 
-    # 更新配置文件，移除已停止的进程
     printf "%s\n" "${updated_entries[@]}" > "running_versions.conf"
 
     if [ "${#running_versions[@]}" -gt 0 ]; then
@@ -537,8 +562,10 @@ list_running_versions() {
 main_menu() {
     while true; do
         echo
+        echo -e "${BLUE}Midjourney Proxy 安装脚本${NC}"
         check_docker_status
         list_installed_versions
+        list_running_versions
         echo -e "1. ${GREEN}Docker版本（推荐，仅支持x64）${NC}"
         echo -e "2. ${GREEN}Linux版本（支持x64和arm64）${NC}"
         echo -e "3. ${GREEN}退出${NC}"
