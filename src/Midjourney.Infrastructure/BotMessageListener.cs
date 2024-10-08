@@ -798,6 +798,76 @@ namespace Midjourney.Infrastructure
                     var isEm = data.TryGetProperty("embeds", out var em);
                     if ((messageType == MessageType.CREATE || messageType == MessageType.UPDATE) && isEm)
                     {
+                        if (metaName == "info" && messageType == MessageType.UPDATE)
+                        {
+                            // info 指令
+                            if (em.ValueKind == JsonValueKind.Array)
+                            {
+                                foreach (JsonElement item in em.EnumerateArray())
+                                {
+                                    if (item.TryGetProperty("title", out var emtitle) && emtitle.GetString().Contains("Your info"))
+                                    {
+                                        if (item.TryGetProperty("description", out var description))
+                                        {
+                                            var dic = ParseDiscordData(description.GetString());
+                                            foreach (var d in dic)
+                                            {
+                                                if (d.Key == "Job Mode")
+                                                {
+                                                    if (applicationId == Constants.NIJI_APPLICATION_ID)
+                                                    {
+                                                        Account.SetProperty($"Niji {d.Key}", d.Value);
+                                                    }
+                                                    else if (applicationId == Constants.MJ_APPLICATION_ID)
+                                                    {
+                                                        Account.SetProperty(d.Key, d.Value);
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    Account.SetProperty(d.Key, d.Value);
+                                                }
+                                            }
+
+                                            var db = DbHelper.AccountStore;
+                                            Account.InfoUpdated = DateTime.Now;
+
+                                            db.Update("InfoUpdated,Properties", Account);
+                                            _discordInstance?.ClearAccountCache(Account.Id);
+                                        }
+                                    }
+                                }
+                            }
+
+                            return;
+                        }
+                        else if (metaName == "settings" && data.TryGetProperty("components", out var components))
+                        {
+                            // settings 指令
+                            var eventDataMsg = data.Deserialize<EventData>();
+                            if (eventDataMsg != null && eventDataMsg.InteractionMetadata?.Name == "settings" && eventDataMsg.Components?.Count > 0)
+                            {
+                                if (applicationId == Constants.NIJI_APPLICATION_ID)
+                                {
+                                    Account.NijiComponents = eventDataMsg.Components;
+                                    Account.NijiSettingsMessageId = id;
+
+                                    DbHelper.AccountStore.Update("NijiComponents,NijiSettingsMessageId", Account);
+                                    _discordInstance?.ClearAccountCache(Account.Id);
+                                }
+                                else if (applicationId == Constants.MJ_APPLICATION_ID)
+                                {
+                                    Account.Components = eventDataMsg.Components;
+                                    Account.SettingsMessageId = id;
+
+                                    DbHelper.AccountStore.Update("Components,SettingsMessageId", Account);
+                                    _discordInstance?.ClearAccountCache(Account.Id);
+                                }
+                            }
+
+                            return;
+                        }
+
                         // em 是一个 JSON 数组
                         if (em.ValueKind == JsonValueKind.Array)
                         {
@@ -1108,78 +1178,7 @@ namespace Midjourney.Infrastructure
                             }
                         }
                     }
-                    else if (messageType == MessageType.UPDATE && isEm)
-                    {
-                        if (metaName == "info")
-                        {
-                            // info 指令
-                            if (em.ValueKind == JsonValueKind.Array)
-                            {
-                                foreach (JsonElement item in em.EnumerateArray())
-                                {
-                                    if (item.TryGetProperty("title", out var emtitle) && emtitle.GetString().Contains("Your info"))
-                                    {
-                                        if (item.TryGetProperty("description", out var description))
-                                        {
-                                            var dic = ParseDiscordData(description.GetString());
-                                            foreach (var d in dic)
-                                            {
-                                                if (d.Key == "Job Mode")
-                                                {
-                                                    if (applicationId == Constants.NIJI_APPLICATION_ID)
-                                                    {
-                                                        Account.SetProperty($"Niji {d.Key}", d.Value);
-                                                    }
-                                                    else if (applicationId == Constants.MJ_APPLICATION_ID)
-                                                    {
-                                                        Account.SetProperty(d.Key, d.Value);
-                                                    }
-                                                }
-                                                else
-                                                {
-                                                    Account.SetProperty(d.Key, d.Value);
-                                                }
-                                            }
 
-                                            var db = DbHelper.AccountStore;
-                                            Account.InfoUpdated = DateTime.Now;
-
-                                            db.Update("InfoUpdated,Properties", Account);
-                                            _discordInstance?.ClearAccountCache(Account.Id);
-                                        }
-                                    }
-                                }
-                            }
-
-                            return;
-                        }
-                        else if (metaName == "settings" && data.TryGetProperty("components", out var components))
-                        {
-                            // settings 指令
-                            var eventDataMsg = data.Deserialize<EventData>();
-                            if (eventDataMsg != null && eventDataMsg.InteractionMetadata?.Name == "settings" && eventDataMsg.Components?.Count > 0)
-                            {
-                                if (applicationId == Constants.NIJI_APPLICATION_ID)
-                                {
-                                    Account.NijiComponents = eventDataMsg.Components;
-                                    Account.NijiSettingsMessageId = id;
-
-                                    DbHelper.AccountStore.Update("NijiComponents,NijiSettingsMessageId", Account);
-                                    _discordInstance?.ClearAccountCache(Account.Id);
-                                }
-                                else if (applicationId == Constants.MJ_APPLICATION_ID)
-                                {
-                                    Account.Components = eventDataMsg.Components;
-                                    Account.SettingsMessageId = id;
-
-                                    DbHelper.AccountStore.Update("Components,SettingsMessageId", Account);
-                                    _discordInstance?.ClearAccountCache(Account.Id);
-                                }
-                            }
-
-                            return;
-                        }
-                    }
 
                     if (data.TryGetProperty("nonce", out JsonElement noneElement))
                     {
