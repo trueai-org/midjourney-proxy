@@ -654,6 +654,9 @@ namespace Midjourney.API
                             account.DayDrawCount = dayCount;
                             db.Update("NijiBotChannelId,PrivateChannelId,AllowModes,SubChannels,SubChannelValues,FastExhausted,DayDrawCount", account);
 
+                            // 清除缓存
+                            ClearAccountCache(account.Id);
+
                             // 连接前先判断账号是否正常
                             var success = await _discordAccountHelper.ValidateAccount(account);
                             if (!success)
@@ -704,6 +707,9 @@ namespace Midjourney.API
 
                     disInstance?.ClearAccountCache(account.Id);
                     disInstance = null;
+
+                    // 清除缓存
+                    ClearAccountCache(account.Id);
                 }
             });
 
@@ -812,6 +818,9 @@ namespace Midjourney.API
                 var disInstance = _discordLoadBalancer.GetDiscordInstance(model.ChannelId);
                 disInstance?.ClearAccountCache(model.Id);
 
+                // 清除缓存
+                ClearAccountCache(model.Id);
+
                 await Task.CompletedTask;
             });
             if (!isLock)
@@ -819,6 +828,16 @@ namespace Midjourney.API
                 throw new LogicException("作业执行中，请稍后重试");
             }
         }
+
+        /// <summary>
+        /// 清理账号缓存
+        /// </summary>
+        /// <param name="id"></param>
+        public void ClearAccountCache(string id)
+        {
+            _memoryCache.Remove($"account:{id}");
+        }
+
 
         /// <summary>
         /// 更新并重新连接账号

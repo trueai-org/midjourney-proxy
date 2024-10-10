@@ -128,7 +128,10 @@ namespace Midjourney.Infrastructure
 
             if (account.Enable == true)
             {
+                // bot 消息监听
                 var messageListener = new BotMessageListener(_discordHelper, webProxy);
+                messageListener.Init(discordInstance, _botMessageHandlers, _userMessageHandlers);
+                await messageListener.StartAsync();
 
                 // 用户 WebSocket 连接
                 var webSocket = new WebSocketManager(
@@ -137,12 +140,7 @@ namespace Midjourney.Infrastructure
                     webProxy,
                     discordInstance,
                     _memoryCache);
-
                 await webSocket.StartAsync();
-
-                messageListener.Init(discordInstance, _botMessageHandlers, _userMessageHandlers);
-
-                await messageListener.StartAsync();
 
                 // 跟踪 wss 连接
                 discordInstance.BotMessageListener = messageListener;

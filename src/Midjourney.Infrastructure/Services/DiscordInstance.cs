@@ -784,6 +784,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
         {
             try
             {
+                // 清除缓存
+                ClearAccountCache(Account?.Id);
+
                 BotMessageListener?.Dispose();
                 WebSocketManager?.Dispose();
 
