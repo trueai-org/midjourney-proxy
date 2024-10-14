@@ -22,7 +22,9 @@
 // invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
+using Midjourney.Infrastructure.Data;
 using Newtonsoft.Json;
+using System.Reflection.Metadata;
 
 namespace Midjourney.Infrastructure.Models
 {
@@ -72,6 +74,13 @@ namespace Midjourney.Infrastructure.Models
         public SubmitResultVO SetProperty(string name, object value)
         {
             Properties[name] = value;
+
+            // 同时赋值将 Discord 实例 ID  = 频道 ID
+            if (name == Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID)
+            {
+                Properties[Constants.TASK_PROPERTY_DISCORD_CHANNEL_ID] = value;
+            }
+
             return this;
         }
 

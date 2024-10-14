@@ -129,9 +129,14 @@ namespace Midjourney.Infrastructure.Data
         public const string TASK_PROPERTY_NONCE = "nonce";
 
         /// <summary>
-        /// Discord实例ID.
+        /// Discord实例ID = Discord频道ID
         /// </summary>
         public const string TASK_PROPERTY_DISCORD_INSTANCE_ID = "discordInstanceId";
+
+        /// <summary>
+        /// Discord频道ID = Discord实例ID
+        /// </summary>
+        public const string TASK_PROPERTY_DISCORD_CHANNEL_ID = "discordChannelId";
 
         /// <summary>
         /// 引用消息ID.
