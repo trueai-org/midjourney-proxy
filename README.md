@@ -125,6 +125,7 @@ The most powerful, complete, full-featured, completely free and open source Midj
 
 - **GPTNB**: <https://goapi.gptnb.ai>
 - **益丰**: <https://api.ephone.ai>
+- **Midjourney API**: <https://api.mjdjourney.cn>
 
 ## 安装与使用
 
