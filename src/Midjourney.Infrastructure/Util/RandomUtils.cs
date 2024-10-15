@@ -30,7 +30,7 @@ namespace Midjourney.Infrastructure.Util
     /// </summary>
     public static class RandomUtils
     {
-        private static readonly char[] Characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789".ToCharArray();
+        private static readonly char[] Characters = "0123456789".ToCharArray();
 
         /// <summary>
         /// 生成指定长度的随机字符串
