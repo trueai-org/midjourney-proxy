@@ -1019,7 +1019,7 @@ namespace Midjourney.Infrastructure
 
                                                 // 保存
                                                 Account.Enable = false;
-                                                Account.DisabledReason = title;
+                                                Account.DisabledReason = $"{title}, {desc}";
 
                                                 DbHelper.AccountStore.Update(Account);
 
