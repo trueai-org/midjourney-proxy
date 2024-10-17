@@ -30,7 +30,8 @@ using Midjourney.Infrastructure.Services;
 using Midjourney.Infrastructure.Util;
 using MongoDB.Driver;
 using Serilog;
-
+using System.Diagnostics;
+using System.Text;
 using ILogger = Serilog.ILogger;
 
 namespace Midjourney.API
@@ -579,23 +580,36 @@ namespace Midjourney.API
 
             var isLock = await AsyncLocalLock.TryLockAsync($"initialize:{account.Id}", TimeSpan.FromSeconds(5), async () =>
             {
+                var sw = new Stopwatch();
+                var swAll = new Stopwatch();
+
+                swAll.Start();
+                sw.Start();
+
+                var info = new StringBuilder();
+                info.AppendLine($"{account.Id}初始化中...");
+
                 var db = DbHelper.AccountStore;
-
-                // 获取获取值
-                account = db.Get(account.Id)!;
-                if (account.Enable != true)
-                {
-                    return;
-                }
-
                 DiscordInstance disInstance = null;
+
                 try
                 {
+                    // 获取获取值
+                    account = db.Get(account.Id)!;
+                    if (account.Enable != true)
+                    {
+                        return;
+                    }
+
                     disInstance = _discordLoadBalancer.GetDiscordInstance(account.ChannelId);
 
                     // 判断是否在工作时间内
                     var now = new DateTimeOffset(DateTime.Now.Date).ToUnixTimeMilliseconds();
                     var dayCount = (int)TaskHelper.Instance.TaskStore.Count(c => c.InstanceId == account.ChannelId && c.SubmitTime >= now);
+
+                    sw.Stop();
+                    info.AppendLine($"{account.Id}初始化中... 获取任务数耗时: {sw.ElapsedMilliseconds}ms");
+                    sw.Restart();
 
                     // 只要在工作时间内，就创建实例
                     if (DateTime.Now.IsInWorkTime(account.WorkTime))
@@ -637,6 +651,10 @@ namespace Midjourney.API
                                 _logger.Error(ex, "获取 MJ 私聊频道 ID 异常 {@0}", account.ChannelId);
                             }
 
+                            sw.Stop();
+                            info.AppendLine($"{account.Id}初始化中... 获取 MJ 私聊频道 ID 耗时: {sw.ElapsedMilliseconds}ms");
+                            sw.Restart();
+
                             try
                             {
                                 Thread.Sleep(500);
@@ -651,6 +669,10 @@ namespace Midjourney.API
                                 _logger.Error(ex, "获取 NIJI 私聊频道 ID 异常 {@0}", account.ChannelId);
                             }
 
+                            sw.Stop();
+                            info.AppendLine($"{account.Id}初始化中... 获取 NIJI 私聊频道 ID 耗时: {sw.ElapsedMilliseconds}ms");
+                            sw.Restart();
+
                             account.DayDrawCount = dayCount;
                             db.Update("NijiBotChannelId,PrivateChannelId,AllowModes,SubChannels,SubChannelValues,FastExhausted,DayDrawCount", account);
 
@@ -664,9 +686,17 @@ namespace Midjourney.API
                                 throw new Exception("账号不可用");
                             }
 
+                            sw.Stop();
+                            info.AppendLine($"{account.Id}初始化中... 验证账号耗时: {sw.ElapsedMilliseconds}ms");
+                            sw.Restart();
+
                             disInstance = await _discordAccountHelper.CreateDiscordInstance(account)!;
                             disInstance.IsInit = true;
                             _discordLoadBalancer.AddInstance(disInstance);
+
+                            sw.Stop();
+                            info.AppendLine($"{account.Id}初始化中... 创建实例耗时: {sw.ElapsedMilliseconds}ms");
+                            sw.Restart();
 
                             // 这里应该等待初始化完成，并获取用户信息验证，获取用户成功后设置为可用状态
                             // 多账号启动时，等待一段时间再启动下一个账号
@@ -681,23 +711,43 @@ namespace Midjourney.API
                             {
                                 _logger.Error(ex, "同步 info 异常 {@0}", account.ChannelId);
                             }
+
+                            sw.Stop();
+                            info.AppendLine($"{account.Id}初始化中... 同步 info 耗时: {sw.ElapsedMilliseconds}ms");
+                            sw.Restart();
                         }
 
                         // 慢速切换快速模式
                         await disInstance?.RelaxToFastValidate();
+
+                        sw.Stop();
+                        info.AppendLine($"{account.Id}初始化中... 慢速切换快速模式耗时: {sw.ElapsedMilliseconds}ms");
+                        sw.Restart();
                     }
                     else
                     {
+                        sw.Stop();
+                        info.AppendLine($"{account.Id}初始化中... 非工作时间，不创建实例耗时: {sw.ElapsedMilliseconds}ms");
+                        sw.Restart();
+
                         // 非工作时间内，如果存在实例则释放
                         if (disInstance != null)
                         {
                             _discordLoadBalancer.RemoveInstance(disInstance);
                             disInstance.Dispose();
                         }
+
+                        sw.Stop();
+                        info.AppendLine($"{account.Id}初始化中... 非工作时间，释放实例耗时: {sw.ElapsedMilliseconds}ms");
+                        sw.Restart();
                     }
                 }
                 catch (Exception ex)
                 {
+                    sw.Stop();
+                    info.AppendLine($"{account.Id}初始化中... 异常: {ex.Message} 耗时: {sw.ElapsedMilliseconds}ms");
+                    sw.Restart();
+
                     _logger.Error(ex, "Account({@0}) init fail, disabled: {@1}", account.ChannelId, ex.Message);
 
                     account.Enable = false;
@@ -710,6 +760,17 @@ namespace Midjourney.API
 
                     // 清除缓存
                     ClearAccountCache(account.Id);
+
+                    sw.Stop();
+                    info.AppendLine($"{account.Id}初始化中... 异常，禁用账号耗时: {sw.ElapsedMilliseconds}ms");
+                    sw.Restart();
+                }
+                finally
+                {
+                    swAll.Stop();
+                    info.AppendLine($"{account.Id}初始化完成, 总耗时: {swAll.ElapsedMilliseconds}ms");
+
+                    _logger.Information(info.ToString());
                 }
             });
 
