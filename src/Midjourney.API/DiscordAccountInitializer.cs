@@ -635,6 +635,11 @@ namespace Midjourney.API
                             if (account.FastExhausted == true && account.EnableAutoSetRelax == true)
                             {
                                 account.AllowModes = new List<GenerationSpeedMode>() { GenerationSpeedMode.RELAX };
+
+                                if (account.CoreSize > 3)
+                                {
+                                    account.CoreSize = 3;
+                                }
                             }
 
                             try

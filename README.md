@@ -88,6 +88,7 @@ The most powerful, complete, full-featured, completely free and open source Midj
 - [x] 支持视频换脸，请遵守相关法律法规，不得用于违法用途
 - [x] 支持自动切换到慢速模式、支持自动切快速模式、支持自动设置慢速
 - [x] 私信 ID 免配置，服务启动时自动获取私信 ID
+- [x] 自动过 Tos not accepted 验证
 
 ## 在线预览
 

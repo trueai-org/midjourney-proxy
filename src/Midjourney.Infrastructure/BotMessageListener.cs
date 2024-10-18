@@ -924,9 +924,14 @@ namespace Midjourney.Infrastructure
                                         if (Account.FastExhausted == true && Account.EnableAutoSetRelax == true)
                                         {
                                             Account.AllowModes = new List<GenerationSpeedMode>() { GenerationSpeedMode.RELAX };
+
+                                            if (Account.CoreSize > 3)
+                                            {
+                                                Account.CoreSize = 3;
+                                            }
                                         }
 
-                                        DbHelper.AccountStore.Update("AllowModes,FastExhausted", Account);
+                                        DbHelper.AccountStore.Update("AllowModes,FastExhausted,CoreSize", Account);
                                         _discordInstance?.ClearAccountCache(Account.Id);
 
                                         // 如果开启自动切换慢速模式
@@ -1078,6 +1083,7 @@ namespace Midjourney.Infrastructure
                                         || title.Contains("error")
                                         || title.Contains("denied"))
                                     {
+
                                         if (data.TryGetProperty("nonce", out JsonElement noneEle))
                                         {
                                             var nonce = noneEle.GetString();
@@ -1087,6 +1093,39 @@ namespace Midjourney.Infrastructure
                                                 var task = _discordInstance.GetRunningTaskByNonce(nonce);
                                                 if (task != null)
                                                 {
+                                                    // 需要用户同意 Tos
+                                                    if (title.Contains("Tos not accepted"))
+                                                    {
+                                                        try
+                                                        {
+                                                            var tosData = data.Deserialize<EventData>();
+                                                            var customId = tosData?.Components?.SelectMany(x => x.Components)
+                                                                .Where(x => x.Label == "Accept ToS")
+                                                                .FirstOrDefault()?.CustomId;
+
+                                                            if (!string.IsNullOrWhiteSpace(customId))
+                                                            {
+                                                                var nonce2 = SnowFlake.NextId();
+                                                                var tosRes = _discordInstance.ActionAsync(id, customId, tosData.Flags, nonce2, task)
+                                                                    .ConfigureAwait(false).GetAwaiter().GetResult();
+
+                                                                if (tosRes?.Code == ReturnCode.SUCCESS)
+                                                                {
+                                                                    _logger.Information("处理 Tos 成功 {@0}", Account.ChannelId);
+                                                                    return;
+                                                                }
+                                                                else
+                                                                {
+                                                                    _logger.Information("处理 Tos 失败 {@0}, {@1}", Account.ChannelId, tosRes);
+                                                                }
+                                                            }
+                                                        }
+                                                        catch (Exception ex)
+                                                        {
+                                                            _logger.Error(ex, "处理 Tos 异常 {@0}", Account.ChannelId);
+                                                        }
+                                                    }
+
                                                     var error = $"{title}, {desc}";
 
                                                     task.MessageId = id;
