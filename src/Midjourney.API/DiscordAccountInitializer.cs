@@ -802,7 +802,7 @@ namespace Midjourney.API
             }
 
             // 更新一定要加锁，因为其他进程会修改 account 值，导致值覆盖
-            var isLock = await AsyncLocalLock.TryLockAsync($"initialize:{model.Id}", TimeSpan.FromSeconds(3), async () =>
+            var isLock = await AsyncLocalLock.TryLockAsync($"initialize:{model.Id}", TimeSpan.FromSeconds(5), async () =>
             {
                 model = DbHelper.AccountStore.Get(model.Id)!;
 
@@ -927,7 +927,8 @@ namespace Midjourney.API
 
             await UpdateAccount(account);
 
-            await StartCheckAccount(account);
+            // 异步执行
+            _ = StartCheckAccount(account);
         }
 
         /// <summary>

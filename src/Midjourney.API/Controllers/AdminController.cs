@@ -660,7 +660,7 @@ namespace Midjourney.API.Controllers
         /// <param name="accountConfig"></param>
         /// <returns></returns>
         [HttpPost("account")]
-        public async Task<Result> AccountAdd([FromBody] DiscordAccountConfig accountConfig)
+        public Result AccountAdd([FromBody] DiscordAccountConfig accountConfig)
         {
             if (_isAnonymous)
             {
@@ -680,7 +680,8 @@ namespace Midjourney.API.Controllers
             var account = DiscordAccount.Create(accountConfig);
             DbHelper.AccountStore.Add(account);
 
-            await _discordAccountInitializer.StartCheckAccount(account);
+            // 后台执行
+            _ = _discordAccountInitializer.StartCheckAccount(account);
 
             return Result.Ok();
         }
