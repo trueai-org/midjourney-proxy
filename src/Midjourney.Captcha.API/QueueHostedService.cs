@@ -388,7 +388,7 @@ namespace Midjourney.Captcha.API
                 req.AddHeader("Content-Type", "application/json");
                 req.AddJsonBody(request, contentType: ContentType.Json);
                 var res = await client.ExecuteAsync(req);
-                if (res.StatusCode != System.Net.HttpStatusCode.OK)
+                if (res.StatusCode == System.Net.HttpStatusCode.OK)
                 {
                     return true;
                 }

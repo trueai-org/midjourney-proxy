@@ -376,7 +376,8 @@ docker run -d \
   "Captcha": {
     "Concurrent": 1, // 并发数
     "Headless": true, // chrome 是否后台运行
-    "TwoCaptchaKey": "" // 2captcha.com 的 API Key
+    "TwoCaptchaKey": "", // 2captcha.com 的 API Key
+    "YesCaptchaKey": "" // yescaptcha.com 的 API Key
   },
   "urls": "http://*:8081" // 默认端口
 }

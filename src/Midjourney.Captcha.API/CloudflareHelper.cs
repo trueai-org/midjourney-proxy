@@ -148,100 +148,203 @@ namespace Midjourney.Captcha.API
                     return false;
                 }
 
-                var taskId = string.Empty;
-                var taskCount = 0;
-                do
+                var token = string.Empty;
+                var tokenCount = 0;
+
+                if (!string.IsNullOrWhiteSpace(captchaOption.TwoCaptchaKey))
                 {
-                    if (taskCount > 20)
+                    var taskId = string.Empty;
+                    var taskCount = 0;
+                    do
                     {
-                        // 超时没有获取到 taskId
+                        if (taskCount > 20)
+                        {
+                            // 超时没有获取到 taskId
+                            return false;
+                        }
+
+                        // 使用 RestSharp 调用 2Captcha API 解决验证码
+                        var client = new RestClient();
+                        var request = new RestRequest("https://api.2captcha.com/createTask", Method.Post);
+                        request.AddHeader("Content-Type", "application/json");
+                        var body = new
+                        {
+                            clientKey = captchaOption.TwoCaptchaKey,
+                            task = new
+                            {
+                                type = "TurnstileTaskProxyless",
+                                websiteURL = url,
+                                websiteKey = siteKey
+                            }
+                        };
+
+                        var json = JsonConvert.SerializeObject(body);
+                        request.AddStringBody(json, DataFormat.Json);
+                        var response = await client.ExecuteAsync(request);
+                        if (response.StatusCode == System.Net.HttpStatusCode.OK)
+                        {
+                            var obj = JsonConvert.DeserializeObject<JObject>(response.Content);
+                            if (obj.ContainsKey("taskId"))
+                            {
+                                taskId = obj["taskId"].ToString();
+
+                                if (!string.IsNullOrWhiteSpace(taskId))
+                                {
+                                    break;
+                                }
+                            }
+                        }
+
+                        taskCount++;
+                        await Task.Delay(1000);
+                    } while (true);
+
+                    // 日志
+                    Log.Information("CF 验证 TaskId: {@0}", taskId);
+                    if (string.IsNullOrWhiteSpace(taskId))
+                    {
                         return false;
                     }
 
-                    // 使用 RestSharp 调用 2Captcha API 解决验证码
-                    var client = new RestClient();
-                    var request = new RestRequest("https://api.2captcha.com/createTask", Method.Post);
-                    request.AddHeader("Content-Type", "application/json");
-                    var body = new
+                    // 等待
+                    await Task.Delay(6000);
+
+                    do
                     {
-                        clientKey = captchaOption.TwoCaptchaKey,
-                        task = new
+                        if (tokenCount > 60)
                         {
-                            type = "TurnstileTaskProxyless",
-                            websiteURL = url,
-                            websiteKey = siteKey
+                            // 超时没有获取到 token
+                            return false;
                         }
-                    };
 
-                    var json = JsonConvert.SerializeObject(body);
-                    request.AddStringBody(json, DataFormat.Json);
-                    var response = await client.ExecuteAsync(request);
-                    if (response.StatusCode == System.Net.HttpStatusCode.OK)
-                    {
-                        var obj = JsonConvert.DeserializeObject<JObject>(response.Content);
-                        if (obj.ContainsKey("taskId"))
+                        var client = new RestClient();
+                        var request = new RestRequest("https://api.2captcha.com/getTaskResult", Method.Post);
+                        request.AddHeader("Content-Type", "application/json");
+                        var body = new
                         {
-                            taskId = obj["taskId"].ToString();
-
-                            if (!string.IsNullOrWhiteSpace(taskId))
+                            clientKey = captchaOption.TwoCaptchaKey,
+                            taskId = taskId
+                        };
+                        var json = JsonConvert.SerializeObject(body);
+                        request.AddStringBody(json, DataFormat.Json);
+                        var response = await client.ExecuteAsync(request);
+                        if (response.StatusCode == System.Net.HttpStatusCode.OK)
+                        {
+                            var obj = JsonConvert.DeserializeObject<JObject>(response.Content);
+                            if (obj.ContainsKey("solution"))
                             {
-                                break;
+                                token = obj["solution"]["token"].ToString();
+                                if (!string.IsNullOrWhiteSpace(token))
+                                {
+                                    break;
+                                }
                             }
                         }
+
+                        tokenCount++;
+                        await Task.Delay(1000);
+                    } while (true);
+                }
+                else if (!string.IsNullOrWhiteSpace(captchaOption.YesCaptchaKey))
+                {
+                    // yescaptcha
+                    var taskId = string.Empty;
+                    var taskCount = 0;
+                    do
+                    {
+                        if (taskCount > 20)
+                        {
+                            // 超时没有获取到 taskId
+                            return false;
+                        }
+
+                        // 使用 RestSharp 调用 yescaptcha 解决验证码
+                        var client = new RestClient();
+                        var request = new RestRequest("https://api.yescaptcha.com/createTask", Method.Post);
+                        request.AddHeader("Content-Type", "application/json");
+                        var body = new
+                        {
+                            clientKey = captchaOption.YesCaptchaKey,
+                            task = new
+                            {
+                                type = "TurnstileTaskProxyless",
+                                websiteURL = url,
+                                websiteKey = siteKey
+                            }
+                        };
+
+                        var json = JsonConvert.SerializeObject(body);
+                        request.AddStringBody(json, DataFormat.Json);
+                        var response = await client.ExecuteAsync(request);
+                        if (response.StatusCode == System.Net.HttpStatusCode.OK)
+                        {
+                            var obj = JsonConvert.DeserializeObject<JObject>(response.Content);
+                            if (obj.ContainsKey("taskId"))
+                            {
+                                taskId = obj["taskId"].ToString();
+
+                                if (!string.IsNullOrWhiteSpace(taskId))
+                                {
+                                    break;
+                                }
+                            }
+                        }
+
+                        taskCount++;
+                        await Task.Delay(1000);
+                    } while (true);
+
+                    // 日志
+                    Log.Information("CF 验证 TaskId: {@0}", taskId);
+                    if (string.IsNullOrWhiteSpace(taskId))
+                    {
+                        return false;
                     }
 
-                    taskCount++;
-                    await Task.Delay(1000);
-                } while (true);
+                    // 等待
+                    await Task.Delay(6000);
 
-                // 日志
-                Log.Information("CF 验证 TaskId: {@0}", taskId);
-                if (string.IsNullOrWhiteSpace(taskId))
+                    do
+                    {
+                        if (tokenCount > 60)
+                        {
+                            // 超时没有获取到 token
+                            return false;
+                        }
+
+                        var client = new RestClient();
+                        var request = new RestRequest("https://api.yescaptcha.com/getTaskResult", Method.Post);
+                        request.AddHeader("Content-Type", "application/json");
+                        var body = new
+                        {
+                            clientKey = captchaOption.YesCaptchaKey,
+                            taskId = taskId
+                        };
+                        var json = JsonConvert.SerializeObject(body);
+                        request.AddStringBody(json, DataFormat.Json);
+                        var response = await client.ExecuteAsync(request);
+                        if (response.StatusCode == System.Net.HttpStatusCode.OK)
+                        {
+                            var obj = JsonConvert.DeserializeObject<JObject>(response.Content);
+                            if (obj.ContainsKey("solution"))
+                            {
+                                token = obj["solution"]["token"].ToString();
+                                if (!string.IsNullOrWhiteSpace(token))
+                                {
+                                    break;
+                                }
+                            }
+                        }
+
+                        tokenCount++;
+                        await Task.Delay(1000);
+                    } while (true);
+                }
+                else
                 {
                     return false;
                 }
 
-                // 等待
-                await Task.Delay(6000);
-
-                var token = string.Empty;
-                var tokenCount = 0;
-
-                do
-                {
-                    if (tokenCount > 60)
-                    {
-                        // 超时没有获取到 token
-                        return false;
-                    }
-
-                    var client = new RestClient();
-                    var request = new RestRequest("https://api.2captcha.com/getTaskResult", Method.Post);
-                    request.AddHeader("Content-Type", "application/json");
-                    var body = new
-                    {
-                        clientKey = captchaOption.TwoCaptchaKey,
-                        taskId = taskId
-                    };
-                    var json = JsonConvert.SerializeObject(body);
-                    request.AddStringBody(json, DataFormat.Json);
-                    var response = await client.ExecuteAsync(request);
-                    if (response.StatusCode == System.Net.HttpStatusCode.OK)
-                    {
-                        var obj = JsonConvert.DeserializeObject<JObject>(response.Content);
-                        if (obj.ContainsKey("solution"))
-                        {
-                            token = obj["solution"]["token"].ToString();
-                            if (!string.IsNullOrWhiteSpace(token))
-                            {
-                                break;
-                            }
-                        }
-                    }
-
-                    tokenCount++;
-                    await Task.Delay(1000);
-                } while (true);
 
                 // 日志
                 Log.Information("CF 验证 Token: {@0}", token);
@@ -251,6 +354,7 @@ namespace Midjourney.Captcha.API
                 }
 
                 var submitUrl = $"https://editor.midjourney.com/captcha/api/c/{hash}/submit";
+                // https://editor.midjourney.com/captcha/api/c/fopSUuR6brCzgJuFJVmV6Tzn5QaW4Z6yCTbktDzNoZai-3iIlWTsG3E8lywCV4xpxsjS50qVcFDlK6sb/submit
 
                 try
                 {
