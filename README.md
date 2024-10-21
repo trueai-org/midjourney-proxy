@@ -364,7 +364,9 @@ docker run -d \
 
 仅支持 Windows 部署（并且支持 TLS 1.3，系统要求 Windows11 或 Windows Server 2022），由于 CloudFlare 验证器需要使用到 Chrome 浏览器，所以需要在 Windows 环境下部署，而在 Linux 环境下部署会依赖很多库，所以暂时不支持 Linux 部署。
 
-注意：自行部署需提供 2captcha.com 的 API Key，否则无法使用，价格：1000次/9元，官网：<https://2captcha.cn/p/cloudflare-turnstile>
+推荐使用：<https://yescaptcha.com/i/4pizLQ>
+
+注意：2captcha 暂不稳定，自行部署需提供 2captcha.com 的 API Key，否则无法使用，价格：1000次/9元，官网：<https://2captcha.cn/p/cloudflare-turnstile>
 
 提示：首次启动会下载 Chrome 浏览器，会比较慢，请耐心等待。
 
