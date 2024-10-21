@@ -269,7 +269,7 @@ namespace Midjourney.Captcha.API
 
                     var options = new RestClientOptions()
                     {
-                        MaxTimeout = -1,
+                        Timeout = TimeSpan.FromMinutes(5),
                         UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36",
                     };
                     var client = new RestClient(options);

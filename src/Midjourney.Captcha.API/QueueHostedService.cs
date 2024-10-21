@@ -142,6 +142,13 @@ namespace Midjourney.Captcha.API
             {
                 Log.Information("CF 开始验证 {@0}", request);
 
+                var conn = await ValidateNotify(request.NotifyHook);
+                if (!conn)
+                {
+                    Log.Warning("CF 回调错误 {@0}", request);
+                    return;
+                }
+
                 // 如果 2 分钟内，有验证成功的通知，则不再执行
                 var successKey = $"{request.State}";
                 if (_memoryCache.TryGetValue<bool>(successKey, out var ok) && ok)
@@ -242,7 +249,10 @@ namespace Midjourney.Captcha.API
                                                     }
 
                                                     var client = new RestClient();
-                                                    var req = new RestRequest(notifyHook, Method.Post);
+                                                    var req = new RestRequest(notifyHook, Method.Post)
+                                                    {
+                                                        Timeout = TimeSpan.FromSeconds(30)
+                                                    };
                                                     req.AddHeader("Content-Type", "application/json");
                                                     req.AddJsonBody(request, contentType: ContentType.Json);
                                                     var res = await client.ExecuteAsync(req);
@@ -328,12 +338,12 @@ namespace Midjourney.Captcha.API
                                     var res = await client.ExecuteAsync(req);
                                     if (res.StatusCode != System.Net.HttpStatusCode.OK)
                                     {
-                                        Log.Error("通知失败 {@0} - {@1}", request, notifyHook);
+                                        Log.Error("CF 通知失败 {@0} - {@1}", request, notifyHook);
                                     }
                                     else
                                     {
                                         // 通知请手动验证成功
-                                        Log.Information("通知手动验证成功 {@0} - {@1}", request, notifyHook);
+                                        Log.Information("CF 通知手动验证 {@0} - {@1}", request, notifyHook);
                                         break;
                                     }
                                 } while (true);
@@ -342,7 +352,7 @@ namespace Midjourney.Captcha.API
                     }
                     catch (Exception ex)
                     {
-                        Log.Error(ex, "通知服务器手动验证异常 {@0}", request);
+                        Log.Error(ex, "CF 通知服务器手动验证异常 {@0}", request);
                     }
                 }
             });
@@ -352,6 +362,39 @@ namespace Midjourney.Captcha.API
             }
 
             await Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// 验证回调通知服务器是否可以连接
+        /// </summary>
+        /// <param name="notify"></param>
+        /// <returns></returns>
+        public async Task<bool> ValidateNotify(string notify)
+        {
+            var request = new CaptchaVerfyRequest()
+            {
+                NotifyHook = notify
+            };
+
+            var notifyHook = request.NotifyHook;
+            if (!string.IsNullOrWhiteSpace(notifyHook))
+            {
+                notifyHook = $"{notifyHook.Trim().TrimEnd('/')}/mj/admin/account-cf-notify";
+                var client = new RestClient();
+                var req = new RestRequest(notifyHook, Method.Post)
+                {
+                    Timeout = TimeSpan.FromSeconds(60)
+                };
+                req.AddHeader("Content-Type", "application/json");
+                req.AddJsonBody(request, contentType: ContentType.Json);
+                var res = await client.ExecuteAsync(req);
+                if (res.StatusCode != System.Net.HttpStatusCode.OK)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }
