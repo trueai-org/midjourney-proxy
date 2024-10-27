@@ -6,7 +6,7 @@
 		<InvariantGlobalization>true</InvariantGlobalization>
 		<GenerateDocumentationFile>True</GenerateDocumentationFile>
 		<IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
-		<SatelliteResourceLanguages>zh</SatelliteResourceLanguages>
+		<SatelliteResourceLanguages>zh-Hans</SatelliteResourceLanguages>
 		<EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
 	</PropertyGroup>
 

@@ -8,7 +8,7 @@
 		<GenerateDocumentationFile>True</GenerateDocumentationFile>
 		<IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
 		<EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
-		<SatelliteResourceLanguages>zh</SatelliteResourceLanguages>
+		<SatelliteResourceLanguages>zh-Hans</SatelliteResourceLanguages>
 		<DockerfileContext>..\..</DockerfileContext>
 	</PropertyGroup>
 
