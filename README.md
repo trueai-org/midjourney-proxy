@@ -410,7 +410,7 @@ docker run -d \
 
 <a href="https://goapi.gptnb.ai"><img src="https://pic.scdn.app/images/2023/06/26/favicon.png" style="width: 60px;"></a>
 <a href="https://d.goamzai.com" target="_blank"><img src="https://d.goamzai.com/logo.png" style="width: 60px;"></a>
-<a href="https://api.ephone.ai" target="_blank"><img src="https://api.iowen.cn/favicon/supernormal.com.png" style="width: 60px;"></a>
+<a href="https://api.ephone.ai" target="_blank"><img src="https://img.fy6b.com/2024/10/25/a0bc4cac5e72f.png" style="width: 60px;"></a>
 <a href="https://api.mjdjourney.cn" target="_blank"><img src="https://cdn.optiai.cn/file/upload/2024/08/05/1820477746069901312.png?x-oss-process=image/resize,p_25/format,webp" style="width: 60px;"></a>
 <a href="https://rixapi.com" target="_blank"><img src="https://img.fy6b.com/2024/08/23/53d7e54cc31a2.png" style="width: 60px;"></a>
 
