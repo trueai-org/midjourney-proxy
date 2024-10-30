@@ -408,7 +408,7 @@ docker run -d \
 
 非常感谢赞助商和群友的帮助和支持，万分感谢！
 
-<a href="https://goapi.gptnb.ai"><img src="https://img.stqu.me/images/2023/06/26/favicon.png" style="width: 60px;"></a>
+<a href="https://goapi.gptnb.ai"><img src="https://pic.scdn.app/images/2023/06/26/favicon.png" style="width: 60px;"></a>
 <a href="https://d.goamzai.com" target="_blank"><img src="https://d.goamzai.com/logo.png" style="width: 60px;"></a>
 <a href="https://api.ephone.ai" target="_blank"><img src="https://api.iowen.cn/favicon/supernormal.com.png" style="width: 60px;"></a>
 <a href="https://api.mjdjourney.cn" target="_blank"><img src="https://cdn.optiai.cn/file/upload/2024/08/05/1820477746069901312.png?x-oss-process=image/resize,p_25/format,webp" style="width: 60px;"></a>
