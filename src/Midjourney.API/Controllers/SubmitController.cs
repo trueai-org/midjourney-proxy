@@ -677,18 +677,23 @@ namespace Midjourney.API.Controllers
             // 如果不是白名单用户，则计算 ip 绘图限制
             if (user == null || user.IsWhite != true)
             {
-                if (GlobalConfiguration.Setting.GuestDefaultDayLimit > 0)
+                // 访客绘图绘图上限验证
+                if (user == null)
                 {
-                    var ipTodayDrawCount = (int)TaskHelper.Instance.TaskStore.Count(x => x.SubmitTime >= now && x.ClientIp == _ip);
-                    if (ipTodayDrawCount > GlobalConfiguration.Setting.GuestDefaultDayLimit)
+                    if (GlobalConfiguration.Setting.GuestDefaultDayLimit > 0)
                     {
-                        throw new LogicException("今日绘图次数已达上限");
+                        var ipTodayDrawCount = (int)TaskHelper.Instance.TaskStore.Count(x => x.SubmitTime >= now && x.ClientIp == _ip);
+                        if (ipTodayDrawCount > GlobalConfiguration.Setting.GuestDefaultDayLimit)
+                        {
+                            throw new LogicException("今日绘图次数已达上限");
+                        }
                     }
                 }
 
                 var ban = GlobalConfiguration.Setting.BannedLimiting;
                 if (ban?.Enable == true && ban?.Rules?.Count > 0)
                 {
+                    // 用户封锁验证
                     if (!string.IsNullOrWhiteSpace(task.UserId))
                     {
                         // user band
@@ -720,7 +725,8 @@ namespace Midjourney.API.Controllers
                         }
                     }
 
-                    if (true)
+                    // 访客封锁验证
+                    if (user == null)
                     {
                         // ip band
                         var bandKey = $"banned:{DateTime.Now.Date:yyyyMMdd}:{task.ClientIp}";
