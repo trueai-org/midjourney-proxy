@@ -50,7 +50,6 @@ namespace Midjourney.API
         private readonly IConfiguration _configuration;
 
         private readonly IMemoryCache _memoryCache;
-        private readonly SemaphoreSlim _semaphoreSlim = new(1, 1);
         private Timer _timer;
 
         public DiscordAccountInitializer(
@@ -426,37 +425,43 @@ namespace Midjourney.API
 
         private async void DoWork(object state)
         {
-            if (_semaphoreSlim.CurrentCount == 0)
-            {
-                return;
-            }
-
-            await _semaphoreSlim.WaitAsync();
+            _logger.Information("开始例行检查");
 
             try
             {
-                _logger.Information("开始例行检查");
-
-                // 配置中的默认账号，如果存在
-                var configAccounts = _properties.Accounts.ToList();
-                if (!string.IsNullOrEmpty(_properties.Discord?.ChannelId) && _properties.Discord.ChannelId.EndsWith("***"))
+                var isLock = await AsyncLocalLock.TryLockAsync("DoWork", TimeSpan.FromSeconds(10), async () =>
                 {
-                    configAccounts.Add(_properties.Discord);
+                    try
+                    {
+                        // 本地配置中的默认账号
+                        var configAccounts = _properties.Accounts.ToList();
+                        if (!string.IsNullOrEmpty(_properties.Discord?.ChannelId)
+                        && !_properties.Discord.ChannelId.Contains("*"))
+                        {
+                            configAccounts.Add(_properties.Discord);
+                        }
+
+                        await Initialize(configAccounts.ToArray());
+
+                        // 检查并删除旧的文档
+                        CheckAndDeleteOldDocuments();
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Error(ex, "执行例行检查时发生异常");
+                    }
+
+                    _logger.Information("例行检查完成");
+                });
+
+                if (!isLock)
+                {
+                    _logger.Information("例行检查中，请稍后重试...");
                 }
-
-                await Initialize(configAccounts.ToArray());
-
-                CheckAndDeleteOldDocuments();
-
-                _logger.Information("例行检查完成");
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "执行例行检查时发生异常");
-            }
-            finally
-            {
-                _semaphoreSlim.Release();
+                _logger.Error(ex, "例行检查执行异常");
             }
         }
 
@@ -562,7 +567,7 @@ namespace Midjourney.API
             });
             if (!isLock)
             {
-                throw new LogicException("初始化中，请稍后重试");
+                _logger.Warning("初始化所有账号中，请稍后重试...");
             }
 
             await Task.CompletedTask;
@@ -722,11 +727,19 @@ namespace Midjourney.API
                             sw.Restart();
                         }
 
-                        // 慢速切换快速模式
-                        await disInstance?.RelaxToFastValidate();
-
+                        // 慢速切换快速模式检查
+                        if (account.EnableRelaxToFast == true)
+                        {
+                            await disInstance?.RelaxToFastValidate();
+                            sw.Stop();
+                            info.AppendLine($"{account.Id}初始化中... 慢速切换快速模式检查耗时: {sw.ElapsedMilliseconds}ms");
+                            sw.Restart();
+                        }
+                        
+                        // 每 6~12 小时，同步账号信息
+                        await disInstance?.RandomSyncInfo();
                         sw.Stop();
-                        info.AppendLine($"{account.Id}初始化中... 慢速切换快速模式耗时: {sw.ElapsedMilliseconds}ms");
+                        info.AppendLine($"{account.Id}初始化中... 随机同步信息耗时: {sw.ElapsedMilliseconds}ms");
                         sw.Restart();
                     }
                     else
@@ -968,8 +981,8 @@ namespace Midjourney.API
             _logger.Information("例行检查服务已停止");
 
             _timer?.Change(Timeout.Infinite, 0);
-            await _semaphoreSlim.WaitAsync();
-            _semaphoreSlim.Release();
+
+            await Task.CompletedTask;
         }
     }
 }

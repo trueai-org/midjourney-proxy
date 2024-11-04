@@ -1887,34 +1887,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 // 并且开启快速切换慢速模式时
                 if (Account != null && Account.FastExhausted && Account.EnableRelaxToFast == true)
                 {
-                    // 每 3~6 小时，和启动时检查账号是否有快速时长
-                    if (Account.InfoUpdated == null || Account.InfoUpdated.Value.AddMinutes(5) < DateTime.Now)
-                    {
-                        // 随机 3~6 小时，执行一次
-                        var key = $"fast_exhausted_{Account.ChannelId}";
-                        await _cache.GetOrCreateAsync(key, async c =>
-                        {
-                            try
-                            {
-                                _logger.Information("自动切换快速模式检查 {@0}", Account.ChannelId);
-
-                                // 随机 3~6 小时
-                                var random = new Random();
-                                var minutes = random.Next(180, 360);
-                                c.SetAbsoluteExpiration(TimeSpan.FromMinutes(minutes));
-
-                                await _taskService.InfoSetting(Account.Id);
-
-                                return true;
-                            }
-                            catch (Exception ex)
-                            {
-                                _logger.Error(ex, "自动切换快速模式检查，执行异常 {@0}", Account.ChannelId);
-                            }
-
-                            return false;
-                        });
-                    }
+                    // 每 6~12 小时，和启动时检查账号是否有快速时长
+                    await RandomSyncInfo();
 
                     // 判断 info 检查时间是否在 5 分钟内
                     if (Account.InfoUpdated != null && Account.InfoUpdated.Value.AddMinutes(5) >= DateTime.Now)
@@ -1959,6 +1933,43 @@ namespace Midjourney.Infrastructure.LoadBalancer
             catch (Exception ex)
             {
                 _logger.Error(ex, "快速切换慢速模式，检查执行异常");
+            }
+        }
+
+        /// <summary>
+        /// 随机 6-12 小时 同步一次账号信息
+        /// </summary>
+        /// <returns></returns>
+        public async Task RandomSyncInfo()
+        {
+            // 每 6~12 小时
+            if (Account.InfoUpdated == null || Account.InfoUpdated.Value.AddMinutes(5) < DateTime.Now)
+            {
+                var key = $"fast_exhausted_{Account.ChannelId}";
+                await _cache.GetOrCreateAsync(key, async c =>
+                {
+                    try
+                    {
+                        _logger.Information("随机同步账号信息开始 {@0}", Account.ChannelId);
+
+                        // 随机 6~12 小时
+                        var random = new Random();
+                        var minutes = random.Next(360, 600);
+                        c.SetAbsoluteExpiration(TimeSpan.FromMinutes(minutes));
+
+                        await _taskService.InfoSetting(Account.Id);
+
+                        _logger.Information("随机同步账号信息完成 {@0}", Account.ChannelId);
+
+                        return true;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Error(ex, "随机同步账号信息异常 {@0}", Account.ChannelId);
+                    }
+
+                    return false;
+                });
             }
         }
     }
