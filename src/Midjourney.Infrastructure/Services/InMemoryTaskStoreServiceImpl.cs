@@ -70,5 +70,15 @@ namespace Midjourney.Infrastructure.Services
             _taskMap.TryGetValue(key, out var task);
             return task;
         }
+
+        /// <summary>
+        /// 批量获取任务
+        /// </summary>
+        /// <param name="ids"></param>
+        /// <returns></returns>
+        public List<TaskInfo> GetList(List<string> ids)
+        {
+            return ids.Select(Get).ToList();
+        }
     }
 }
