@@ -193,14 +193,20 @@ namespace Midjourney.API.Controllers
                 }
             }
 
-            foreach (var id in notInQueueIds)
+            var list = _taskStoreService.GetList(notInQueueIds.ToList());
+            if (list.Any())
             {
-                var task = _taskStoreService.Get(id);
-                if (task != null)
-                {
-                    result.Add(task);
-                }
+                result.AddRange(list);
             }
+
+            //foreach (var id in notInQueueIds)
+            //{
+            //    var task = _taskStoreService.Get(id);
+            //    if (task != null)
+            //    {
+            //        result.Add(task);
+            //    }
+            //}
 
             return Ok(result);
         }

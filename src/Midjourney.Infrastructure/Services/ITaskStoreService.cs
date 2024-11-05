@@ -47,5 +47,12 @@ namespace Midjourney.Infrastructure.Services
         /// <param name="id">任务ID。</param>
         /// <returns>任务实例。</returns>
         TaskInfo Get(string id);
+
+        /// <summary>
+        /// 获取任务。
+        /// </summary>
+        /// <param name="ids">任务ID。</param>
+        /// <returns>任务实例。</returns>
+        List<TaskInfo> GetList(List<string> ids);
     }
 }

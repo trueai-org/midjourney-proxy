@@ -54,6 +54,16 @@ namespace Midjourney.Infrastructure.Data
             //return DbHelper.TaskStore.Get(id);
             return TaskHelper.Instance.TaskStore.Get(id);
         }
+
+        public List<TaskInfo> GetList(List<string> ids)
+        {
+            if (ids == null || ids.Count <= 0)
+            {
+                return new List<TaskInfo>();
+            }
+
+            return TaskHelper.Instance.TaskStore.Where(c => ids.Contains(c.Id));
+        }
     }
 
     /// <summary>
