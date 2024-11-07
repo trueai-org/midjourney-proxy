@@ -647,41 +647,51 @@ namespace Midjourney.API
                                 }
                             }
 
-                            try
+                            var setting = GlobalConfiguration.Setting;
+
+                            // 启用自动获取私信 ID
+                            if (setting.EnableAutoGetPrivateId)
                             {
-                                Thread.Sleep(500);
-                                var id = await _discordAccountHelper.GetBotPrivateId(account, EBotType.MID_JOURNEY);
-                                if (!string.IsNullOrWhiteSpace(id))
+                                try
                                 {
-                                    account.PrivateChannelId = id;
+                                    Thread.Sleep(500);
+                                    var id = await _discordAccountHelper.GetBotPrivateId(account, EBotType.MID_JOURNEY);
+                                    if (!string.IsNullOrWhiteSpace(id))
+                                    {
+                                        account.PrivateChannelId = id;
+                                    }
                                 }
-                            }
-                            catch (Exception ex)
-                            {
-                                _logger.Error(ex, "获取 MJ 私聊频道 ID 异常 {@0}", account.ChannelId);
-                            }
-
-                            sw.Stop();
-                            info.AppendLine($"{account.Id}初始化中... 获取 MJ 私聊频道 ID 耗时: {sw.ElapsedMilliseconds}ms");
-                            sw.Restart();
-
-                            try
-                            {
-                                Thread.Sleep(500);
-                                var id = await _discordAccountHelper.GetBotPrivateId(account, EBotType.NIJI_JOURNEY);
-                                if (!string.IsNullOrWhiteSpace(id))
+                                catch (Exception ex)
                                 {
-                                    account.NijiBotChannelId = id;
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                _logger.Error(ex, "获取 NIJI 私聊频道 ID 异常 {@0}", account.ChannelId);
-                            }
+                                    _logger.Error(ex, "获取 MJ 私聊频道 ID 异常 {@0}", account.ChannelId);
 
-                            sw.Stop();
-                            info.AppendLine($"{account.Id}初始化中... 获取 NIJI 私聊频道 ID 耗时: {sw.ElapsedMilliseconds}ms");
-                            sw.Restart();
+                                    info.AppendLine($"{account.Id}初始化中... 获取 MJ 私聊频道 ID 异常");
+                                }
+
+                                sw.Stop();
+                                info.AppendLine($"{account.Id}初始化中... 获取 MJ 私聊频道 ID 耗时: {sw.ElapsedMilliseconds}ms");
+                                sw.Restart();
+
+                                try
+                                {
+                                    Thread.Sleep(500);
+                                    var id = await _discordAccountHelper.GetBotPrivateId(account, EBotType.NIJI_JOURNEY);
+                                    if (!string.IsNullOrWhiteSpace(id))
+                                    {
+                                        account.NijiBotChannelId = id;
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    _logger.Error(ex, "获取 NIJI 私聊频道 ID 异常 {@0}", account.ChannelId);
+
+                                    info.AppendLine($"{account.Id}初始化中... 获取 NIJI 私聊频道 ID 异常");
+                                }
+
+                                sw.Stop();
+                                info.AppendLine($"{account.Id}初始化中... 获取 NIJI 私聊频道 ID 耗时: {sw.ElapsedMilliseconds}ms");
+                                sw.Restart();
+                            }
 
                             account.DayDrawCount = dayCount;
                             db.Update("NijiBotChannelId,PrivateChannelId,AllowModes,SubChannels,SubChannelValues,FastExhausted,DayDrawCount", account);
@@ -689,16 +699,20 @@ namespace Midjourney.API
                             // 清除缓存
                             ClearAccountCache(account.Id);
 
+                            // 启用自动验证账号功能
                             // 连接前先判断账号是否正常
-                            var success = await _discordAccountHelper.ValidateAccount(account);
-                            if (!success)
+                            if (setting.EnableAutoVerifyAccount)
                             {
-                                throw new Exception("账号不可用");
-                            }
+                                var success = await _discordAccountHelper.ValidateAccount(account);
+                                if (!success)
+                                {
+                                    throw new Exception("账号不可用");
+                                }
 
-                            sw.Stop();
-                            info.AppendLine($"{account.Id}初始化中... 验证账号耗时: {sw.ElapsedMilliseconds}ms");
-                            sw.Restart();
+                                sw.Stop();
+                                info.AppendLine($"{account.Id}初始化中... 验证账号耗时: {sw.ElapsedMilliseconds}ms");
+                                sw.Restart();
+                            }
 
                             disInstance = await _discordAccountHelper.CreateDiscordInstance(account)!;
                             disInstance.IsInit = true;
@@ -712,19 +726,25 @@ namespace Midjourney.API
                             // 多账号启动时，等待一段时间再启动下一个账号
                             await Task.Delay(1000 * 5);
 
-                            try
+                            // 启用自动同步信息和设置
+                            if (setting.EnableAutoSyncInfoSetting)
                             {
-                                // 启动后执行 info setting 操作
-                                await _taskService.InfoSetting(account.Id);
-                            }
-                            catch (Exception ex)
-                            {
-                                _logger.Error(ex, "同步 info 异常 {@0}", account.ChannelId);
-                            }
+                                try
+                                {
+                                    // 启动后执行 info setting 操作
+                                    await _taskService.InfoSetting(account.Id);
+                                }
+                                catch (Exception ex)
+                                {
+                                    _logger.Error(ex, "同步 info 异常 {@0}", account.ChannelId);
 
-                            sw.Stop();
-                            info.AppendLine($"{account.Id}初始化中... 同步 info 耗时: {sw.ElapsedMilliseconds}ms");
-                            sw.Restart();
+                                    info.AppendLine($"{account.Id}初始化中... 同步 info 异常");
+                                }
+
+                                sw.Stop();
+                                info.AppendLine($"{account.Id}初始化中... 同步 info 耗时: {sw.ElapsedMilliseconds}ms");
+                                sw.Restart();
+                            }
                         }
 
                         // 慢速切换快速模式检查
@@ -735,7 +755,7 @@ namespace Midjourney.API
                             info.AppendLine($"{account.Id}初始化中... 慢速切换快速模式检查耗时: {sw.ElapsedMilliseconds}ms");
                             sw.Restart();
                         }
-                        
+
                         // 每 6~12 小时，同步账号信息
                         await disInstance?.RandomSyncInfo();
                         sw.Stop();

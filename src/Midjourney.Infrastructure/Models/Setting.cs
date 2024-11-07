@@ -80,6 +80,21 @@ namespace Midjourney.Infrastructure.Models
         /// 首页公告
         /// </summary>
         public string Notify { get; set; }
+
+        /// <summary>
+        /// 启用启动时自动获取私信 ID 功能
+        /// </summary>
+        public bool EnableAutoGetPrivateId { get; set; }
+
+        /// <summary>
+        /// 启用启动时自动验证账号可用性功能
+        /// </summary>
+        public bool EnableAutoVerifyAccount { get; set; }
+
+        /// <summary>
+        /// 启用自动同步信息和设置
+        /// </summary>
+        public bool EnableAutoSyncInfoSetting { get; set; }
     }
 
     /// <summary>
