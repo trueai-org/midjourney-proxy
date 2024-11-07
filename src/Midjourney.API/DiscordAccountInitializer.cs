@@ -585,6 +585,8 @@ namespace Midjourney.API
 
             var isLock = await AsyncLocalLock.TryLockAsync($"initialize:{account.Id}", TimeSpan.FromSeconds(5), async () =>
             {
+                var setting = GlobalConfiguration.Setting;
+
                 var sw = new Stopwatch();
                 var swAll = new Stopwatch();
 
@@ -647,7 +649,7 @@ namespace Midjourney.API
                                 }
                             }
 
-                            var setting = GlobalConfiguration.Setting;
+
 
                             // 启用自动获取私信 ID
                             if (setting.EnableAutoGetPrivateId)
@@ -726,25 +728,23 @@ namespace Midjourney.API
                             // 多账号启动时，等待一段时间再启动下一个账号
                             await Task.Delay(1000 * 5);
 
-                            // 启用自动同步信息和设置
-                            if (setting.EnableAutoSyncInfoSetting)
+
+                            try
                             {
-                                try
-                                {
-                                    // 启动后执行 info setting 操作
-                                    await _taskService.InfoSetting(account.Id);
-                                }
-                                catch (Exception ex)
-                                {
-                                    _logger.Error(ex, "同步 info 异常 {@0}", account.ChannelId);
-
-                                    info.AppendLine($"{account.Id}初始化中... 同步 info 异常");
-                                }
-
-                                sw.Stop();
-                                info.AppendLine($"{account.Id}初始化中... 同步 info 耗时: {sw.ElapsedMilliseconds}ms");
-                                sw.Restart();
+                                // 启动后执行 info setting 操作
+                                await _taskService.InfoSetting(account.Id);
                             }
+                            catch (Exception ex)
+                            {
+                                _logger.Error(ex, "同步 info 异常 {@0}", account.ChannelId);
+
+                                info.AppendLine($"{account.Id}初始化中... 同步 info 异常");
+                            }
+
+                            sw.Stop();
+                            info.AppendLine($"{account.Id}初始化中... 同步 info 耗时: {sw.ElapsedMilliseconds}ms");
+                            sw.Restart();
+
                         }
 
                         // 慢速切换快速模式检查
@@ -756,11 +756,15 @@ namespace Midjourney.API
                             sw.Restart();
                         }
 
-                        // 每 6~12 小时，同步账号信息
-                        await disInstance?.RandomSyncInfo();
-                        sw.Stop();
-                        info.AppendLine($"{account.Id}初始化中... 随机同步信息耗时: {sw.ElapsedMilliseconds}ms");
-                        sw.Restart();
+                        // 启用自动同步信息和设置
+                        if (setting.EnableAutoSyncInfoSetting)
+                        {
+                            // 每 6~12 小时，同步账号信息
+                            await disInstance?.RandomSyncInfo();
+                            sw.Stop();
+                            info.AppendLine($"{account.Id}初始化中... 随机同步信息耗时: {sw.ElapsedMilliseconds}ms");
+                            sw.Restart();
+                        }
                     }
                     else
                     {
