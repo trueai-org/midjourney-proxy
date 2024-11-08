@@ -27,6 +27,7 @@ using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.Services;
 using Midjourney.Infrastructure.Util;
 using Newtonsoft.Json.Linq;
+using RestSharp;
 using Serilog;
 using System.Collections.Concurrent;
 using System.Diagnostics;
