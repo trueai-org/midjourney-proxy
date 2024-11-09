@@ -1348,6 +1348,12 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <returns></returns>
         public async Task<string> FormatUrls(string prompt)
         {
+            var setting = GlobalConfiguration.Setting;
+            if (!setting.EnableConvertOfficialLink)
+            {
+                return prompt;
+            }
+
             if (string.IsNullOrWhiteSpace(prompt))
             {
                 return prompt;

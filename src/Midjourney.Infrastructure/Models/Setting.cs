@@ -105,6 +105,11 @@ namespace Midjourney.Infrastructure.Models
         /// 启用用户自定义上传 Base64
         /// </summary>
         public bool EnableUserCustomUploadBase64 { get; set; } = true;
+
+        /// <summary>
+        /// 启用转换官方链接
+        /// </summary>
+        public bool EnableConvertOfficialLink { get; set; } = true;
     }
 
     /// <summary>
