@@ -624,10 +624,13 @@ namespace Midjourney.API
                     sw.Restart();
 
                     // 随机延期token
-                    await RandomSyncToken(account);
-                    sw.Stop();
-                    info.AppendLine($"{account.Id}初始化中... 随机延期token耗时: {sw.ElapsedMilliseconds}ms");
-                    sw.Restart();
+                    if (setting.EnableAutoExtendToken)
+                    {
+                        await RandomSyncToken(account);
+                        sw.Stop();
+                        info.AppendLine($"{account.Id}初始化中... 随机延期token耗时: {sw.ElapsedMilliseconds}ms");
+                        sw.Restart();
+                    }
 
                     // 只要在工作时间内，就创建实例
                     if (DateTime.Now.IsInWorkTime(account.WorkTime))
@@ -659,8 +662,6 @@ namespace Midjourney.API
                                     account.CoreSize = 3;
                                 }
                             }
-
-
 
                             // 启用自动获取私信 ID
                             if (setting.EnableAutoGetPrivateId)

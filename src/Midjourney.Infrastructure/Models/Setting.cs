@@ -95,6 +95,16 @@ namespace Midjourney.Infrastructure.Models
         /// 启用自动同步信息和设置
         /// </summary>
         public bool EnableAutoSyncInfoSetting { get; set; }
+
+        /// <summary>
+        /// 启用 token 自动延期
+        /// </summary>
+        public bool EnableAutoExtendToken { get; set; }
+
+        /// <summary>
+        /// 启用用户自定义上传 Base64
+        /// </summary>
+        public bool EnableUserCustomUploadBase64 { get; set; } = true;
     }
 
     /// <summary>

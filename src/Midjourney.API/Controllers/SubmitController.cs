@@ -124,6 +124,15 @@ namespace Midjourney.API.Controllers
             {
                 return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "prompt不能为空"));
             }
+
+            var base64Array = imagineDTO.Base64Array ?? [];
+
+            var setting = GlobalConfiguration.Setting;
+            if (!setting.EnableUserCustomUploadBase64 && base64Array.Count > 0)
+            {
+                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "禁止上传"));
+            }
+
             prompt = prompt.Trim();
             var task = NewTask(imagineDTO);
             task.Action = TaskAction.IMAGINE;
@@ -141,7 +150,7 @@ namespace Midjourney.API.Controllers
                     .SetProperty("bannedWord", e.Message));
             }
 
-            List<string> base64Array = imagineDTO.Base64Array ?? new List<string>();
+
 
             List<DataUrl> dataUrls = new List<DataUrl>();
             try
@@ -172,6 +181,12 @@ namespace Midjourney.API.Controllers
         [HttpPost("upload-discord-images")]
         public async Task<ActionResult<SubmitResultVO>> ImagineDiscordImages([FromBody] SubmitUploadDiscordDto imagineDTO)
         {
+            var setting = GlobalConfiguration.Setting;
+            if (!setting.EnableUserCustomUploadBase64)
+            {
+                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "禁止上传"));
+            }
+
             var base64Array = imagineDTO.Base64Array ?? new List<string>();
             if (base64Array.Count <= 0)
             {
