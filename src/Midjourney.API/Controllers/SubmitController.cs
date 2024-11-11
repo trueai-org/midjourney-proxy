@@ -392,6 +392,12 @@ namespace Midjourney.API.Controllers
                 return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "base64不能为空"));
             }
 
+            var setting = GlobalConfiguration.Setting;
+            if (!setting.EnableUserCustomUploadBase64)
+            {
+                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "禁止上传"));
+            }
+
             DataUrl dataUrl;
             try
             {
@@ -463,6 +469,12 @@ namespace Midjourney.API.Controllers
             if (base64Array == null || base64Array.Count < 2 || base64Array.Count > 5)
             {
                 return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "base64List参数错误"));
+            }
+
+            var setting = GlobalConfiguration.Setting;
+            if (!setting.EnableUserCustomUploadBase64)
+            {
+                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "禁止上传"));
             }
 
             if (blendDTO.Dimensions == null)
