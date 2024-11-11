@@ -70,9 +70,14 @@
 		<Content Remove="Resources\ApiParams\fastniji.json" />
 		<Content Remove="Resources\ApiParams\relax.json" />
 		<Content Remove="Resources\ApiParams\relaxniji.json" />
+		<Content Remove="Resources\ApiParams\describelink.json" />
+		<Content Remove="Resources\ApiParams\describenijilink.json" />
 	</ItemGroup>
 
+
 	<ItemGroup>
+		<EmbeddedResource Include="Resources\ApiParams\describelink.json" />
+		<EmbeddedResource Include="Resources\ApiParams\describenijilink.json" />
 		<EmbeddedResource Include="Resources\ApiParams\fast.json" />
 		<EmbeddedResource Include="Resources\ApiParams\fastniji.json" />
 		<EmbeddedResource Include="Resources\ApiParams\relaxniji.json" />

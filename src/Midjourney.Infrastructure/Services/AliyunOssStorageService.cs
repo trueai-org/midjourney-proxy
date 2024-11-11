@@ -135,6 +135,9 @@ namespace Midjourney.Infrastructure.Services
             _endpoint = ossOptions.Endpoint!;
         }
 
+
+        public AliyunOssOptions Options => _ossOptions;
+
         /// <summary>
         /// 水印 base64 编码
         /// </summary>

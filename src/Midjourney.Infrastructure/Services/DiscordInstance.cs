@@ -27,7 +27,6 @@ using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.Services;
 using Midjourney.Infrastructure.Util;
 using Newtonsoft.Json.Linq;
-using RestSharp;
 using Serilog;
 using System.Collections.Concurrent;
 using System.Diagnostics;
@@ -1385,20 +1384,26 @@ namespace Midjourney.Infrastructure.LoadBalancer
                             {
                                 // 上传到 Discord 服务器
                                 var uploadResult = await UploadAsync(res.FileName, new DataUrl(res.ContentType, res.FileBytes));
-
                                 if (uploadResult.Code != ReturnCode.SUCCESS)
                                 {
                                     throw new LogicException(uploadResult.Code, uploadResult.Description);
                                 }
 
-                                var finalFileName = uploadResult.Description;
-                                var sendImageResult = await SendImageMessageAsync("upload image: " + finalFileName, finalFileName);
-                                if (sendImageResult.Code != ReturnCode.SUCCESS)
+                                if (uploadResult.Description.StartsWith("http"))
                                 {
-                                    throw new LogicException(sendImageResult.Code, sendImageResult.Description);
+                                    return uploadResult.Description;
                                 }
+                                else
+                                {
+                                    var finalFileName = uploadResult.Description;
+                                    var sendImageResult = await SendImageMessageAsync("upload image: " + finalFileName, finalFileName);
+                                    if (sendImageResult.Code != ReturnCode.SUCCESS)
+                                    {
+                                        throw new LogicException(sendImageResult.Code, sendImageResult.Description);
+                                    }
 
-                                return sendImageResult.Description;
+                                    return sendImageResult.Description;
+                                }
                             }
 
                             throw new LogicException($"解析链接失败 {url}, {res?.Msg}");
@@ -1519,6 +1524,21 @@ namespace Midjourney.Infrastructure.LoadBalancer
         }
 
         /// <summary>
+        /// 解析描述
+        /// </summary>
+        /// <param name="link"></param>
+        /// <param name="nonce"></param>
+        /// <param name="botType"></param>
+        /// <returns></returns>
+        public async Task<Message> DescribeByLinkAsync(string link, string nonce, EBotType botType)
+        {
+            var json = botType == EBotType.NIJI_JOURNEY ? _paramsMap["describenijilink"] : _paramsMap["describelink"];
+            string paramsStr = ReplaceInteractionParams(json, nonce)
+                .Replace("$link", link);
+            return await PostJsonAndCheckStatusAsync(paramsStr);
+        }
+
+        /// <summary>
         /// 上传一个较长的提示词，mj 可以返回一组简要的提示词
         /// </summary>
         /// <param name="prompt"></param>
@@ -1609,43 +1629,86 @@ namespace Midjourney.Infrastructure.LoadBalancer
             return str;
         }
 
-        public async Task<Message> UploadAsync(string fileName, DataUrl dataUrl)
+        public async Task<Message> UploadAsync(string fileName, DataUrl dataUrl, bool useDiscordUpload = false)
         {
-            try
+            // 启用转为阿里链接
+            if (GlobalConfiguration.Setting.EnableConvertAliyunLink && !useDiscordUpload)
             {
-                JObject fileObj = new JObject
+                try
                 {
-                    ["filename"] = fileName,
-                    ["file_size"] = dataUrl.Data.Length,
-                    ["id"] = "0"
-                };
-                JObject paramsJson = new JObject
-                {
-                    ["files"] = new JArray { fileObj }
-                };
-                HttpResponseMessage response = await PostJsonAsync(_discordAttachmentUrl, paramsJson.ToString());
-                if (response.StatusCode != System.Net.HttpStatusCode.OK)
-                {
-                    _logger.Error("上传图片到discord失败, status: {StatusCode}, msg: {Body}", response.StatusCode, await response.Content.ReadAsStringAsync());
-                    return Message.Of(ReturnCode.VALIDATION_ERROR, "上传图片到discord失败");
-                }
-                JArray array = JObject.Parse(await response.Content.ReadAsStringAsync())["attachments"] as JArray;
-                if (array == null || array.Count == 0)
-                {
-                    return Message.Of(ReturnCode.VALIDATION_ERROR, "上传图片到discord失败");
-                }
-                string uploadUrl = array[0]["upload_url"].ToString();
-                string uploadFilename = array[0]["upload_filename"].ToString();
+                    var oss = new AliyunOssStorageService();
 
-                await PutFileAsync(uploadUrl, dataUrl);
+                    var localPath = $"attachments/{DateTime.Now:yyyyMMdd}/{Guid.NewGuid():N}/{fileName}";
 
-                return Message.Success(uploadFilename);
+                    var mt = MimeKit.MimeTypes.GetMimeType(Path.GetFileName(localPath));
+                    if (string.IsNullOrWhiteSpace(mt))
+                    {
+                        mt = "image/png";
+                    }
+
+                    var stream = new MemoryStream(dataUrl.Data);
+                    var res = oss.SaveAsync(stream, localPath, dataUrl.MimeType ?? mt);
+                    if (string.IsNullOrWhiteSpace(res?.Key))
+                    {
+                        throw new Exception("上传图片到阿里云失败");
+                    }
+
+                    // 替换 url
+                    var customCdn = oss.Options.CustomCdn;
+                    if (string.IsNullOrWhiteSpace(customCdn))
+                    {
+                        customCdn = oss.Options.Endpoint;
+                    }
+
+                    var url = $"{customCdn?.Trim()?.Trim('/')}/{res.Key}";
+
+                    return Message.Success(url);
+                }
+                catch (Exception e)
+                {
+                    _logger.Error(e, "上传图片到阿里云失败");
+
+                    return Message.Of(ReturnCode.FAILURE, "上传图片到阿里云失败");
+                }
             }
-            catch (Exception e)
+            else
             {
-                _logger.Error(e, "上传图片到discord失败");
+                try
+                {
+                    JObject fileObj = new JObject
+                    {
+                        ["filename"] = fileName,
+                        ["file_size"] = dataUrl.Data.Length,
+                        ["id"] = "0"
+                    };
+                    JObject paramsJson = new JObject
+                    {
+                        ["files"] = new JArray { fileObj }
+                    };
+                    HttpResponseMessage response = await PostJsonAsync(_discordAttachmentUrl, paramsJson.ToString());
+                    if (response.StatusCode != System.Net.HttpStatusCode.OK)
+                    {
+                        _logger.Error("上传图片到discord失败, status: {StatusCode}, msg: {Body}", response.StatusCode, await response.Content.ReadAsStringAsync());
+                        return Message.Of(ReturnCode.VALIDATION_ERROR, "上传图片到discord失败");
+                    }
+                    JArray array = JObject.Parse(await response.Content.ReadAsStringAsync())["attachments"] as JArray;
+                    if (array == null || array.Count == 0)
+                    {
+                        return Message.Of(ReturnCode.VALIDATION_ERROR, "上传图片到discord失败");
+                    }
+                    string uploadUrl = array[0]["upload_url"].ToString();
+                    string uploadFilename = array[0]["upload_filename"].ToString();
 
-                return Message.Of(ReturnCode.FAILURE, "上传图片到discord失败");
+                    await PutFileAsync(uploadUrl, dataUrl);
+
+                    return Message.Success(uploadFilename);
+                }
+                catch (Exception e)
+                {
+                    _logger.Error(e, "上传图片到discord失败");
+
+                    return Message.Of(ReturnCode.FAILURE, "上传图片到discord失败");
+                }
             }
         }
 

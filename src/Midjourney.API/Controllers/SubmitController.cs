@@ -220,13 +220,20 @@ namespace Midjourney.API.Controllers
                     return Ok(Message.Of(uploadResult.Code, uploadResult.Description));
                 }
 
-                var finalFileName = uploadResult.Description;
-                var sendImageResult = await instance.SendImageMessageAsync("upload image: " + finalFileName, finalFileName);
-                if (sendImageResult.Code != ReturnCode.SUCCESS)
+                if (uploadResult.Description.StartsWith("http"))
                 {
-                    return Ok(Message.Of(sendImageResult.Code, sendImageResult.Description));
+                    imageUrls.Add(uploadResult.Description);
                 }
-                imageUrls.Add(sendImageResult.Description);
+                else
+                {
+                    var finalFileName = uploadResult.Description;
+                    var sendImageResult = await instance.SendImageMessageAsync("upload image: " + finalFileName, finalFileName);
+                    if (sendImageResult.Code != ReturnCode.SUCCESS)
+                    {
+                        return Ok(Message.Of(sendImageResult.Code, sendImageResult.Description));
+                    }
+                    imageUrls.Add(sendImageResult.Description);
+                }
             }
 
             var info = SubmitResultVO.Of(ReturnCode.SUCCESS, "提交成功", imageUrls);
@@ -471,11 +478,12 @@ namespace Midjourney.API.Controllers
                 return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "base64List参数错误"));
             }
 
-            var setting = GlobalConfiguration.Setting;
-            if (!setting.EnableUserCustomUploadBase64)
-            {
-                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "禁止上传"));
-            }
+            // blend 不限制上传
+            //var setting = GlobalConfiguration.Setting;
+            //if (!setting.EnableUserCustomUploadBase64)
+            //{
+            //    return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "禁止上传"));
+            //}
 
             if (blendDTO.Dimensions == null)
             {

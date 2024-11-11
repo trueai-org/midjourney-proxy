@@ -216,13 +216,21 @@ namespace Midjourney.Infrastructure.Services
                     {
                         return Message.Of(uploadResult.Code, uploadResult.Description);
                     }
-                    var finalFileName = uploadResult.Description;
-                    var sendImageResult = await instance.SendImageMessageAsync("upload image: " + finalFileName, finalFileName);
-                    if (sendImageResult.Code != ReturnCode.SUCCESS)
+
+                    if (uploadResult.Description.StartsWith("http"))
                     {
-                        return Message.Of(sendImageResult.Code, sendImageResult.Description);
+                        imageUrls.Add(uploadResult.Description);
                     }
-                    imageUrls.Add(sendImageResult.Description);
+                    else
+                    {
+                        var finalFileName = uploadResult.Description;
+                        var sendImageResult = await instance.SendImageMessageAsync("upload image: " + finalFileName, finalFileName);
+                        if (sendImageResult.Code != ReturnCode.SUCCESS)
+                        {
+                            return Message.Of(sendImageResult.Code, sendImageResult.Description);
+                        }
+                        imageUrls.Add(sendImageResult.Description);
+                    }
                 }
                 if (imageUrls.Any())
                 {
@@ -330,14 +338,40 @@ namespace Midjourney.Infrastructure.Services
 
             return discordInstance.SubmitTaskAsync(task, async () =>
             {
-                var taskFileName = $"{task.Id}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
+                var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
                 var uploadResult = await discordInstance.UploadAsync(taskFileName, dataUrl);
                 if (uploadResult.Code != ReturnCode.SUCCESS)
                 {
                     return Message.Of(uploadResult.Code, uploadResult.Description);
                 }
-                var finalFileName = uploadResult.Description;
-                return await discordInstance.DescribeAsync(finalFileName, task.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default),
+
+                var link = "";
+                if (uploadResult.Description.StartsWith("http"))
+                {
+                    link = uploadResult.Description;
+                }
+                else
+                {
+                    var finalFileName = uploadResult.Description;
+                    var sendImageResult = await discordInstance.SendImageMessageAsync("upload image: " + finalFileName, finalFileName);
+                    if (sendImageResult.Code != ReturnCode.SUCCESS)
+                    {
+                        return Message.Of(sendImageResult.Code, sendImageResult.Description);
+                    }
+                    link = sendImageResult.Description;
+                }
+
+                //var taskFileName = $"{task.Id}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
+                //var uploadResult = await discordInstance.UploadAsync(taskFileName, dataUrl);
+                //if (uploadResult.Code != ReturnCode.SUCCESS)
+                //{
+                //    return Message.Of(uploadResult.Code, uploadResult.Description);
+                //}
+                //var finalFileName = uploadResult.Description;
+                //return await discordInstance.DescribeAsync(finalFileName, task.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default),
+                //    task.BotType);
+
+                return await discordInstance.DescribeByLinkAsync(link, task.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default),
                     task.BotType);
             });
         }
@@ -393,11 +427,13 @@ namespace Midjourney.Infrastructure.Services
                 foreach (var dataUrl in dataUrls)
                 {
                     var taskFileName = $"{task.Id}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
-                    var uploadResult = await discordInstance.UploadAsync(taskFileName, dataUrl);
+
+                    var uploadResult = await discordInstance.UploadAsync(taskFileName, dataUrl, useDiscordUpload: true);
                     if (uploadResult.Code != ReturnCode.SUCCESS)
                     {
                         return Message.Of(uploadResult.Code, uploadResult.Description);
                     }
+
                     finalFileNames.Add(uploadResult.Description);
                 }
                 return await discordInstance.BlendAsync(finalFileNames, dimensions,

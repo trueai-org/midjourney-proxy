@@ -110,6 +110,11 @@ namespace Midjourney.Infrastructure.Models
         /// 启用转换官方链接
         /// </summary>
         public bool EnableConvertOfficialLink { get; set; } = true;
+
+        /// <summary>
+        /// 启用转换阿里云链接
+        /// </summary>
+        public bool EnableConvertAliyunLink { get; set; }
     }
 
     /// <summary>
