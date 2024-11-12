@@ -406,7 +406,7 @@ docker run -d \
 
 ## 赞助商
 
-非常感谢赞助商和群友的帮助和支持，万分感谢！
+非常感谢赞助商和群友的帮助和支持！
 
 <a href="https://goapi.gptnb.ai"><img src="https://pic.scdn.app/images/2023/06/26/favicon.png" style="width: 60px;"></a>
 <a href="https://d.goamzai.com" target="_blank"><img src="https://d.goamzai.com/logo.png" style="width: 60px;"></a>
