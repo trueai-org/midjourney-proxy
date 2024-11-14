@@ -195,10 +195,11 @@ namespace Midjourney.API
                     }
 
                     var oss = GlobalConfiguration.Setting.AliyunOss;
-                    if (oss?.Enable == true && oss?.IsAutoMigrationLocalFile == true)
-                    {
-                        AutoMigrationLocalFileToOss();
-                    }
+
+                    //if (oss?.Enable == true && oss?.IsAutoMigrationLocalFile == true)
+                    //{
+                    //    AutoMigrationLocalFileToOss();
+                    //}
                 }
             });
 
@@ -315,118 +316,118 @@ namespace Midjourney.API
             }
         }
 
-        /// <summary>
-        /// 自动迁移本地文件到 oss
-        /// </summary>
-        public void AutoMigrationLocalFileToOss()
-        {
-            try
-            {
-                LocalLock.TryLock("AutoMigrationLocalFileToOss", TimeSpan.FromSeconds(10), () =>
-                {
-                    var oss = GlobalConfiguration.Setting.AliyunOss;
-                    var dis = GlobalConfiguration.Setting.NgDiscord;
-                    var coll = MongoHelper.GetCollection<TaskInfo>();
+        ///// <summary>
+        ///// 自动迁移本地文件到 oss
+        ///// </summary>
+        //public void AutoMigrationLocalFileToOss()
+        //{
+        //    try
+        //    {
+        //        LocalLock.TryLock("AutoMigrationLocalFileToOss", TimeSpan.FromSeconds(10), () =>
+        //        {
+        //            var oss = GlobalConfiguration.Setting.AliyunOss;
+        //            var dis = GlobalConfiguration.Setting.NgDiscord;
+        //            var coll = MongoHelper.GetCollection<TaskInfo>();
 
-                    var localCdn = dis.CustomCdn;
-                    var aliCdn = oss.CustomCdn;
+        //            var localCdn = dis.CustomCdn;
+        //            var aliCdn = oss.CustomCdn;
 
-                    // 并且开启了本地域名
-                    // 并且已经开了 mongodb
-                    var isMongo = GlobalConfiguration.Setting.IsMongo;
-                    if (oss?.Enable == true && oss?.IsAutoMigrationLocalFile == true && !string.IsNullOrWhiteSpace(localCdn) && isMongo)
-                    {
-                        var localPath1 = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "attachments");
-                        var localPath2 = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "ephemeral-attachments");
-                        var paths = new List<string> { localPath1, localPath2 };
-                        var process = 0;
-                        foreach (var dir in paths)
-                        {
-                            if (Directory.Exists(dir))
-                            {
-                                var files = Directory.GetFiles(dir, "*.*", SearchOption.AllDirectories);
-                                foreach (var fileFullPath in files)
-                                {
-                                    try
-                                    {
-                                        var fileName = Path.GetFileName(fileFullPath);
+        //            // 并且开启了本地域名
+        //            // 并且已经开了 mongodb
+        //            var isMongo = GlobalConfiguration.Setting.IsMongo;
+        //            if (oss?.Enable == true && oss?.IsAutoMigrationLocalFile == true && !string.IsNullOrWhiteSpace(localCdn) && isMongo)
+        //            {
+        //                var localPath1 = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "attachments");
+        //                var localPath2 = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "ephemeral-attachments");
+        //                var paths = new List<string> { localPath1, localPath2 };
+        //                var process = 0;
+        //                foreach (var dir in paths)
+        //                {
+        //                    if (Directory.Exists(dir))
+        //                    {
+        //                        var files = Directory.GetFiles(dir, "*.*", SearchOption.AllDirectories);
+        //                        foreach (var fileFullPath in files)
+        //                        {
+        //                            try
+        //                            {
+        //                                var fileName = Path.GetFileName(fileFullPath);
 
-                                        var model = coll.Find(c => c.ImageUrl.StartsWith(localCdn) && c.ImageUrl.Contains(fileName)).FirstOrDefault();
-                                        if (model != null)
-                                        {
-                                            // 创建保存路径
-                                            var uri = new Uri(model.ImageUrl);
-                                            var localPath = uri.AbsolutePath.TrimStart('/');
+        //                                var model = coll.Find(c => c.ImageUrl.StartsWith(localCdn) && c.ImageUrl.Contains(fileName)).FirstOrDefault();
+        //                                if (model != null)
+        //                                {
+        //                                    // 创建保存路径
+        //                                    var uri = new Uri(model.ImageUrl);
+        //                                    var localPath = uri.AbsolutePath.TrimStart('/');
 
-                                            var stream = File.OpenRead(fileFullPath);
-                                            var ossService = new AliyunOssStorageService();
+        //                                    var stream = File.OpenRead(fileFullPath);
+        //                                    var ossService = new AliyunOssStorageService();
 
-                                            var mm = MimeKit.MimeTypes.GetMimeType(Path.GetFileName(localPath));
-                                            if (string.IsNullOrWhiteSpace(mm))
-                                            {
-                                                mm = "image/png";
-                                            }
+        //                                    var mm = MimeKit.MimeTypes.GetMimeType(Path.GetFileName(localPath));
+        //                                    if (string.IsNullOrWhiteSpace(mm))
+        //                                    {
+        //                                        mm = "image/png";
+        //                                    }
 
-                                            var result = ossService.SaveAsync(stream, localPath, mm);
+        //                                    var result = ossService.SaveAsync(stream, localPath, mm);
 
-                                            // 替换 url
-                                            var url = $"{aliCdn?.Trim()?.Trim('/')}/{localPath}{uri?.Query}";
+        //                                    // 替换 url
+        //                                    var url = $"{aliCdn?.Trim()?.Trim('/')}/{localPath}{uri?.Query}";
 
-                                            if (model.Action != TaskAction.SWAP_VIDEO_FACE)
-                                            {
-                                                model.ImageUrl = url.ToStyle(oss.ImageStyle);
-                                                model.ThumbnailUrl = url.ToStyle(oss.ThumbnailImageStyle);
-                                            }
-                                            else
-                                            {
-                                                model.ImageUrl = url;
-                                                model.ThumbnailUrl = url.ToStyle(oss.VideoSnapshotStyle);
-                                            }
-                                            coll.ReplaceOne(c => c.Id == model.Id, model);
+        //                                    if (model.Action != TaskAction.SWAP_VIDEO_FACE)
+        //                                    {
+        //                                        model.ImageUrl = url.ToStyle(oss.ImageStyle);
+        //                                        model.ThumbnailUrl = url.ToStyle(oss.ThumbnailImageStyle);
+        //                                    }
+        //                                    else
+        //                                    {
+        //                                        model.ImageUrl = url;
+        //                                        model.ThumbnailUrl = url.ToStyle(oss.VideoSnapshotStyle);
+        //                                    }
+        //                                    coll.ReplaceOne(c => c.Id == model.Id, model);
 
-                                            stream.Close();
+        //                                    stream.Close();
 
-                                            // 删除
-                                            File.Delete(fileFullPath);
+        //                                    // 删除
+        //                                    File.Delete(fileFullPath);
 
-                                            process++;
-                                            Log.Information("文件已自动迁移到阿里云 {@0}, {@1}", process, fileFullPath);
-                                        }
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        Log.Error(ex, "文件已自动迁移到阿里云异常 {@0}", fileFullPath);
-                                    }
-                                }
-                            }
+        //                                    process++;
+        //                                    Log.Information("文件已自动迁移到阿里云 {@0}, {@1}", process, fileFullPath);
+        //                                }
+        //                            }
+        //                            catch (Exception ex)
+        //                            {
+        //                                Log.Error(ex, "文件已自动迁移到阿里云异常 {@0}", fileFullPath);
+        //                            }
+        //                        }
+        //                    }
 
-                            Log.Information("文件已自动迁移到阿里云完成 {@0}", process);
+        //                    Log.Information("文件已自动迁移到阿里云完成 {@0}", process);
 
-                            // 二次临时修复，如果本地数据库是阿里云，但是 mongodb 不是阿里云，则将本地的 url 赋值到 mongodb
-                            //var localDb = DbHelper.TaskStore;
-                            //var localList = localDb.GetAll();
-                            //foreach (var localItem in localList)
-                            //{
-                            //    if (localItem.ImageUrl?.StartsWith(aliCdn) == true)
-                            //    {
-                            //        var model = coll.Find(c => c.Id == localItem.Id).FirstOrDefault();
-                            //        if (model != null && localItem.ImageUrl != model.ImageUrl)
-                            //        {
-                            //            model.ImageUrl = localItem.ImageUrl;
-                            //            model.ThumbnailUrl = localItem.ThumbnailUrl;
-                            //            coll.ReplaceOne(c => c.Id == model.Id, model);
-                            //        }
-                            //    }
-                            //}
-                        }
-                    }
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "AutoMigrationLocalFileToOss error");
-            }
-        }
+        //                    // 二次临时修复，如果本地数据库是阿里云，但是 mongodb 不是阿里云，则将本地的 url 赋值到 mongodb
+        //                    //var localDb = DbHelper.TaskStore;
+        //                    //var localList = localDb.GetAll();
+        //                    //foreach (var localItem in localList)
+        //                    //{
+        //                    //    if (localItem.ImageUrl?.StartsWith(aliCdn) == true)
+        //                    //    {
+        //                    //        var model = coll.Find(c => c.Id == localItem.Id).FirstOrDefault();
+        //                    //        if (model != null && localItem.ImageUrl != model.ImageUrl)
+        //                    //        {
+        //                    //            model.ImageUrl = localItem.ImageUrl;
+        //                    //            model.ThumbnailUrl = localItem.ThumbnailUrl;
+        //                    //            coll.ReplaceOne(c => c.Id == model.Id, model);
+        //                    //        }
+        //                    //    }
+        //                    //}
+        //                }
+        //            }
+        //        });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.Error(ex, "AutoMigrationLocalFileToOss error");
+        //    }
+        //}
 
         private async void DoWork(object state)
         {

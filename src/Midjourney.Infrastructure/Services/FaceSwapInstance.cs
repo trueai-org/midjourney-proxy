@@ -470,13 +470,10 @@ namespace Midjourney.Infrastructure.LoadBalancer
                         if (res?.Status == "succeeded")
                         {
                             // 成功
-                            var customCdn = _discordHelper.GetCustomCdn();
-                            var toLocal = _discordHelper.GetSaveToLocal();
-
                             if (res.Output is string output && !string.IsNullOrEmpty(output))
                             {
                                 info.ImageUrl = output;
-                                info.Success(customCdn, toLocal);
+                                info.Success();
                                 SaveAndNotify(info);
                                 return;
                             }

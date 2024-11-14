@@ -121,6 +121,32 @@ namespace Midjourney.Infrastructure
     }
 
     /// <summary>
+    /// 图片存储类型
+    /// </summary>
+    public enum ImageStorageType
+    {
+        /// <summary>
+        /// 不存储
+        /// </summary>
+        NONE = 0,
+
+        /// <summary>
+        /// 本地存储
+        /// </summary>
+        LOCAL = 1,
+
+        /// <summary>
+        /// 阿里云存储 OSS
+        /// </summary>
+        OSS = 2,
+
+        /// <summary>
+        /// 腾讯云 COS
+        /// </summary>
+        COS = 3,
+    }
+
+    /// <summary>
     /// 任务状态枚举.
     /// </summary>
     public enum TaskStatus

@@ -199,7 +199,7 @@ namespace Midjourney.API.Controllers
                 Status = TaskStatus.NOT_START,
                 ClientIp = _ip,
                 Mode = _mode,
-                UserId = user?.Id
+                UserId = user?.Id,
             };
 
             var now = new DateTimeOffset(DateTime.Now.Date).ToUnixTimeMilliseconds();

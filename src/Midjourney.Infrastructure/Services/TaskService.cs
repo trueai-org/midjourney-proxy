@@ -181,7 +181,7 @@ namespace Midjourney.Infrastructure.Services
 
             var instance = _discordLoadBalancer.ChooseInstance(info.AccountFilter,
                 isNewTask: true,
-                botType: info.BotType,
+                botType: info.RealBotType ?? info.BotType,
                 isDomain: isDomain,
                 domainIds: domainIds);
 
@@ -192,7 +192,7 @@ namespace Midjourney.Infrastructure.Services
                     // 说明没有获取到符合领域的账号，再次获取不带领域的账号
                     instance = _discordLoadBalancer.ChooseInstance(info.AccountFilter,
                         isNewTask: true,
-                        botType: info.BotType,
+                        botType: info.RealBotType ?? info.BotType,
                         isDomain: false);
                 }
             }
@@ -240,7 +240,7 @@ namespace Midjourney.Infrastructure.Services
                     _taskStoreService.Save(info);
                 }
                 return await instance.ImagineAsync(info, info.PromptEn,
-                    info.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default), info.BotType);
+                    info.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default));
             });
         }
 
@@ -252,7 +252,7 @@ namespace Midjourney.Infrastructure.Services
         public SubmitResultVO ShowImagine(TaskInfo info)
         {
             var instance = _discordLoadBalancer.ChooseInstance(info.AccountFilter,
-                botType: info.BotType);
+                botType:info.RealBotType ?? info.BotType);
 
             if (instance == null)
             {
@@ -265,7 +265,7 @@ namespace Midjourney.Infrastructure.Services
             return instance.SubmitTaskAsync(info, async () =>
             {
                 return await instance.ShowAsync(info.JobId,
-                    info.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default), info.BotType);
+                    info.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default),info.RealBotType ?? info.BotType);
             });
         }
 
@@ -279,7 +279,7 @@ namespace Midjourney.Infrastructure.Services
             }
             return discordInstance.SubmitTaskAsync(task, async () =>
                 await discordInstance.UpscaleAsync(targetMessageId, index, targetMessageHash, messageFlags,
-                task.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default), task.BotType));
+                task.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default), task.RealBotType ?? task.BotType));
         }
 
         public SubmitResultVO SubmitVariation(TaskInfo task, string targetMessageId, string targetMessageHash, int index, int messageFlags)
@@ -292,7 +292,7 @@ namespace Midjourney.Infrastructure.Services
             }
             return discordInstance.SubmitTaskAsync(task, async () =>
                 await discordInstance.VariationAsync(targetMessageId, index, targetMessageHash, messageFlags,
-                task.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default), task.BotType));
+                task.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default), task.RealBotType ?? task.BotType));
         }
 
         /// <summary>
@@ -313,7 +313,7 @@ namespace Midjourney.Infrastructure.Services
             }
             return discordInstance.SubmitTaskAsync(task, async () =>
                 await discordInstance.RerollAsync(targetMessageId, targetMessageHash, messageFlags,
-                task.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default), task.BotType));
+                task.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default), task.RealBotType ?? task.BotType));
         }
 
         /// <summary>
@@ -326,7 +326,7 @@ namespace Midjourney.Infrastructure.Services
         {
             var discordInstance = _discordLoadBalancer.ChooseInstance(task.AccountFilter,
                 isNewTask: true,
-                botType: task.BotType,
+                botType: task.RealBotType ?? task.BotType,
                 describe: true);
 
             if (discordInstance == null)
@@ -369,10 +369,10 @@ namespace Midjourney.Infrastructure.Services
                 //}
                 //var finalFileName = uploadResult.Description;
                 //return await discordInstance.DescribeAsync(finalFileName, task.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default),
-                //    task.BotType);
+                //  task.RealBotType ?? task.BotType);
 
                 return await discordInstance.DescribeByLinkAsync(link, task.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default),
-                    task.BotType);
+                   task.RealBotType ?? task.BotType);
             });
         }
 
@@ -385,7 +385,7 @@ namespace Midjourney.Infrastructure.Services
         {
             var discordInstance = _discordLoadBalancer.ChooseInstance(task.AccountFilter,
                 isNewTask: true,
-                botType: task.BotType,
+                botType: task.RealBotType ?? task.BotType,
                 shorten: true);
 
             if (discordInstance == null)
@@ -397,7 +397,7 @@ namespace Midjourney.Infrastructure.Services
 
             return discordInstance.SubmitTaskAsync(task, async () =>
             {
-                return await discordInstance.ShortenAsync(task, task.PromptEn, task.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default), task.BotType);
+                return await discordInstance.ShortenAsync(task, task.PromptEn, task.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default), task.RealBotType ?? task.BotType);
             });
         }
 
@@ -412,7 +412,7 @@ namespace Midjourney.Infrastructure.Services
         {
             var discordInstance = _discordLoadBalancer.ChooseInstance(task.AccountFilter,
                 isNewTask: true,
-                botType: task.BotType,
+                botType: task.RealBotType ?? task.BotType,
                 blend: true);
 
             if (discordInstance == null)
@@ -437,7 +437,7 @@ namespace Midjourney.Infrastructure.Services
                     finalFileNames.Add(uploadResult.Description);
                 }
                 return await discordInstance.BlendAsync(finalFileNames, dimensions,
-                    task.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default), task.BotType);
+                    task.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default), task.RealBotType ?? task.BotType);
             });
         }
 
@@ -467,7 +467,7 @@ namespace Midjourney.Infrastructure.Services
                 if (ids.Count > 0)
                 {
                     discordInstance = _discordLoadBalancer.ChooseInstance(accountFilter: task.AccountFilter,
-                        botType: task.BotType, ids: ids);
+                        botType: task.RealBotType ?? task.BotType, ids: ids);
 
                     if (discordInstance != null)
                     {
@@ -490,6 +490,8 @@ namespace Midjourney.Infrastructure.Services
             var messageId = targetTask.GetProperty<string>(Constants.TASK_PROPERTY_MESSAGE_ID, default);
 
             task.BotType = targetTask.BotType;
+            task.RealBotType = targetTask.RealBotType;
+
             task.SetProperty(Constants.TASK_PROPERTY_BOT_TYPE, targetTask.BotType.GetDescription());
             task.SetProperty(Constants.TASK_PROPERTY_CUSTOM_ID, submitAction.CustomId);
 
@@ -566,13 +568,14 @@ namespace Midjourney.Infrastructure.Services
                         ParentId = targetTask.Id,
                         Action = task.Action,
                         BotType = task.BotType,
+                        RealBotType = task.RealBotType,
                         InstanceId = task.InstanceId,
                         Prompt = prompt,
                         PromptEn = prompt,
                         Status = TaskStatus.NOT_START,
                         Mode = task.Mode,
                         RemixAutoSubmit = true,
-                        SubInstanceId = task.SubInstanceId
+                        SubInstanceId = task.SubInstanceId,
                     };
 
                     subTask.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, discordInstance.ChannelId);
@@ -689,7 +692,7 @@ namespace Midjourney.Infrastructure.Services
                 {
                     // 如果开启了 remix 自动提交
                     // 并且已开启 remix 模式
-                    if ((task.BotType == EBotType.MID_JOURNEY && discordInstance.Account.MjRemixOn)
+                    if (((task.RealBotType ?? task.BotType) == EBotType.MID_JOURNEY && discordInstance.Account.MjRemixOn)
                         || (task.BotType == EBotType.NIJI_JOURNEY && discordInstance.Account.NijiRemixOn))
                     {
                         task.RemixAutoSubmit = true;
@@ -709,7 +712,7 @@ namespace Midjourney.Infrastructure.Services
                 {
                     // 未开启 remix 自动提交
                     // 并且已开启 remix 模式
-                    if ((task.BotType == EBotType.MID_JOURNEY && discordInstance.Account.MjRemixOn)
+                    if (((task.RealBotType ?? task.BotType) == EBotType.MID_JOURNEY && discordInstance.Account.MjRemixOn)
                         || (task.BotType == EBotType.NIJI_JOURNEY && discordInstance.Account.NijiRemixOn))
                     {
                         // 如果是 REMIX 任务，则设置任务状态为 modal
@@ -761,7 +764,7 @@ namespace Midjourney.Infrastructure.Services
                 if (ids.Count > 0)
                 {
                     discordInstance = _discordLoadBalancer.ChooseInstance(accountFilter: task.AccountFilter,
-                        botType: task.BotType, ids: ids);
+                        botType: task.RealBotType ?? task.BotType, ids: ids);
 
                     if (discordInstance != null)
                     {
@@ -826,13 +829,13 @@ namespace Midjourney.Infrastructure.Services
                     task.Nonce = nonce;
                     task.SetProperty(Constants.TASK_PROPERTY_NONCE, nonce);
 
-                    return await discordInstance.ZoomAsync(task, task.RemixModalMessageId, customId, task.PromptEn, nonce, task.BotType);
+                    return await discordInstance.ZoomAsync(task, task.RemixModalMessageId, customId, task.PromptEn, nonce);
                 }
                 // 局部重绘
                 else if (customId.StartsWith("MJ::Inpaint::"))
                 {
                     var ifarmeCustomId = task.GetProperty<string>(Constants.TASK_PROPERTY_IFRAME_MODAL_CREATE_CUSTOM_ID, default);
-                    return await discordInstance.InpaintAsync(task, ifarmeCustomId, task.PromptEn, submitAction.MaskBase64, task.BotType);
+                    return await discordInstance.InpaintAsync(task, ifarmeCustomId, task.PromptEn, submitAction.MaskBase64);
                 }
                 // 图生文 -> 文生图
                 else if (customId.StartsWith("MJ::Job::PicReader::"))
@@ -841,7 +844,7 @@ namespace Midjourney.Infrastructure.Services
                     task.Nonce = nonce;
                     task.SetProperty(Constants.TASK_PROPERTY_NONCE, nonce);
 
-                    return await discordInstance.PicReaderAsync(task, task.RemixModalMessageId, customId, task.PromptEn, nonce, task.BotType);
+                    return await discordInstance.PicReaderAsync(task, task.RemixModalMessageId, customId, task.PromptEn, nonce, task.RealBotType ?? task.BotType);
                 }
                 // prompt shorten -> 生图
                 else if (customId.StartsWith("MJ::Job::PromptAnalyzer::"))
@@ -855,7 +858,7 @@ namespace Midjourney.Infrastructure.Services
                     var modal = "MJ::ImagineModal::new_prompt";
 
                     return await discordInstance.RemixAsync(task, task.Action.Value, task.RemixModalMessageId, modal,
-                        customId, task.PromptEn, nonce, task.BotType);
+                        customId, task.PromptEn, nonce, task.RealBotType ?? task.BotType);
                 }
                 // Remix mode
                 else if (task.Action == TaskAction.VARIATION || task.Action == TaskAction.REROLL || task.Action == TaskAction.PAN)
@@ -928,7 +931,7 @@ namespace Midjourney.Infrastructure.Services
                         var suffix = "0";
 
                         // 如果全局开启了高变化，则高变化
-                        if (task.BotType == EBotType.MID_JOURNEY)
+                        if ((task.RealBotType ?? task.BotType) == EBotType.MID_JOURNEY)
                         {
                             if (discordInstance.Account.Buttons.Any(x => x.CustomId == "MJ::Settings::HighVariabilityMode::1" && x.Style == 3))
                             {
@@ -985,7 +988,7 @@ namespace Midjourney.Infrastructure.Services
                     }
 
                     return await discordInstance.RemixAsync(task, task.Action.Value, task.RemixModalMessageId, modal,
-                        customId, task.PromptEn, nonce, task.BotType);
+                        customId, task.PromptEn, nonce, task.RealBotType ?? task.BotType);
                 }
                 else
                 {
@@ -1011,7 +1014,7 @@ namespace Midjourney.Infrastructure.Services
             // 请配置私聊频道
             var privateChannelId = string.Empty;
 
-            if (task.BotType == EBotType.MID_JOURNEY)
+            if ((task.RealBotType ?? task.BotType) == EBotType.MID_JOURNEY)
             {
                 privateChannelId = discordInstance.Account.PrivateChannelId;
             }
@@ -1037,7 +1040,7 @@ namespace Midjourney.Infrastructure.Services
 
                 // /show job_id
                 // https://discord.com/api/v9/interactions
-                var res = await discordInstance.SeedAsync(hash, nonce, task.BotType);
+                var res = await discordInstance.SeedAsync(hash, nonce, task.RealBotType ?? task.BotType);
                 if (res.Code != ReturnCode.SUCCESS)
                 {
                     return SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, res.Description);

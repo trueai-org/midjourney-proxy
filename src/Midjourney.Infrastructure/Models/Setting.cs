@@ -112,9 +112,35 @@ namespace Midjourney.Infrastructure.Models
         public bool EnableConvertOfficialLink { get; set; } = true;
 
         /// <summary>
-        /// 启用转换阿里云链接
+        /// 启用转换云/加速链接/OSS/COS/CDN
         /// </summary>
         public bool EnableConvertAliyunLink { get; set; }
+
+        /// <summary>
+        /// 开启 mj 翻译
+        /// </summary>
+        public bool EnableMjTranslate { get; set; } = true;
+
+        /// <summary>
+        /// 开启 niji 翻译
+        /// </summary>
+        public bool EnableNijiTranslate { get; set; } = true;
+
+        /// <summary>
+        /// 转换 Niji 为 MJ
+        /// 启用后将 Niji · journey 任务自动转为 Midjourney 任务，并对任务添加 --niji 后缀（转换后出图效果是一致的）
+        /// </summary>
+        public bool EnableConvertNijiToMj { get; set; }
+
+        /// <summary>
+        /// 开启自动登录
+        /// </summary>
+        public bool EnableAutoLogin { get; set; }
+
+        /// <summary>
+        /// 开启账号赞助
+        /// </summary>
+        public bool EnableAccountSponsor { get; set; }
     }
 
     /// <summary>

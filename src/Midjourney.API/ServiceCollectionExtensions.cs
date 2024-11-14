@@ -25,6 +25,7 @@ using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.Handle;
 using Midjourney.Infrastructure.LoadBalancer;
 using Midjourney.Infrastructure.Services;
+using Midjourney.Infrastructure.Storage;
 
 namespace Midjourney.API
 {
@@ -78,6 +79,9 @@ namespace Midjourney.API
             {
                 services.AddSingleton<ITranslateService, BaiduTranslateService>();
             }
+
+            // 存储服务
+            StorageHelper.Configure();
 
             // 存储服务
             // 内存

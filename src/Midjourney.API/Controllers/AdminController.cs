@@ -33,6 +33,7 @@ using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.LoadBalancer;
 using Midjourney.Infrastructure.Services;
 using Midjourney.Infrastructure.StandardTable;
+using Midjourney.Infrastructure.Storage;
 using MongoDB.Driver;
 using Serilog;
 using System.Net;
@@ -1475,6 +1476,12 @@ namespace Midjourney.API.Controllers
                     model.Replicate.Token = "****";
                 }
 
+                if(model.TencentCos!=null)
+                {
+                    model.TencentCos.SecretId = "****";
+                    model.TencentCos.SecretKey = "****";
+                }
+
                 model.CaptchaNotifySecret = "****";
             }
 
@@ -1499,6 +1506,9 @@ namespace Midjourney.API.Controllers
             DbHelper.SettingStore.Update(setting);
 
             GlobalConfiguration.Setting = setting;
+
+            // 存储服务
+            StorageHelper.Configure();
 
             // 首页缓存
             _memoryCache.Remove("HOME");

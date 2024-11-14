@@ -77,6 +77,7 @@ namespace Midjourney.Infrastructure.Handle
         {
             var botId = message.Author?.Id.ToString();
             EBotType? botType = null;
+
             if (botId == Constants.NIJI_APPLICATION_ID)
             {
                 botType = EBotType.NIJI_JOURNEY;
@@ -136,7 +137,7 @@ namespace Midjourney.Infrastructure.Handle
             {
                 if (!string.IsNullOrWhiteSpace(fullPrompt))
                 {
-                    task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && c.BotType == botType && c.PromptFull == fullPrompt)
+                    task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && (c.BotType == botType || c.RealBotType == botType ) && c.PromptFull == fullPrompt)
                     .OrderBy(c => c.StartTime).FirstOrDefault();
                 }
             }
@@ -151,7 +152,7 @@ namespace Midjourney.Infrastructure.Handle
                     task = instance
                         .FindRunningTask(c =>
                         (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED)
-                        && c.BotType == botType
+                        && (c.BotType == botType || c.RealBotType == botType)
                         && !string.IsNullOrWhiteSpace(c.PromptEn)
                         && (c.PromptEn.FormatPrompt() == prompt || c.PromptEn.FormatPrompt().EndsWith(prompt) || prompt.StartsWith(c.PromptEn.FormatPrompt())))
                         .OrderBy(c => c.StartTime).FirstOrDefault();
@@ -161,7 +162,7 @@ namespace Midjourney.Infrastructure.Handle
                     // 如果最终提示词为空，则可能是重绘、混图等任务
                     task = instance
                         .FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) &&
-                        c.BotType == botType && c.Action == action)
+                        (c.BotType == botType || c.RealBotType == botType) && c.Action == action)
                         .OrderBy(c => c.StartTime).FirstOrDefault();
                 }
             }
@@ -175,7 +176,7 @@ namespace Midjourney.Infrastructure.Handle
 
                     task = instance
                             .FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) &&
-                            c.BotType == botType && !string.IsNullOrWhiteSpace(c.PromptEn)
+                            (c.BotType == botType || c.RealBotType == botType) && !string.IsNullOrWhiteSpace(c.PromptEn)
                             && (c.PromptEn.FormatPromptParam() == prompt || c.PromptEn.FormatPromptParam().EndsWith(prompt) || prompt.StartsWith(c.PromptEn.FormatPromptParam())))
                             .OrderBy(c => c.StartTime).FirstOrDefault();
                 }
@@ -185,7 +186,7 @@ namespace Midjourney.Infrastructure.Handle
             if (task == null && action == TaskAction.SHOW)
             {
                 task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) &&
-                c.BotType == botType && c.Action == TaskAction.SHOW && c.JobId == messageHash).OrderBy(c => c.StartTime).FirstOrDefault();
+                (c.BotType == botType || c.RealBotType == botType ) && c.Action == TaskAction.SHOW && c.JobId == messageHash).OrderBy(c => c.StartTime).FirstOrDefault();
             }
 
             if (task == null || task.Status == TaskStatus.SUCCESS || task.Status == TaskStatus.FAILURE)
@@ -247,10 +248,7 @@ namespace Midjourney.Infrastructure.Handle
                 task.State = "";
             }
 
-            var customCdn = discordHelper.GetCustomCdn();
-            var toLocal = discordHelper.GetSaveToLocal();
-
-            task.Success(customCdn, toLocal);
+            task.Success();
 
             // 表示消息已经处理过了
             CacheHelper<string, bool>.AddOrUpdate(message.Id.ToString(), true);

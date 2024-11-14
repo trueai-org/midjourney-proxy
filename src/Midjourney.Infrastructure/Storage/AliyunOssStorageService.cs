@@ -24,76 +24,15 @@
 
 using Aliyun.OSS;
 using IdGen;
+using Microsoft.AspNetCore.Cors.Infrastructure;
 using Serilog;
 using System.Collections.Concurrent;
 using System.Text;
 
 using ILogger = Serilog.ILogger;
 
-namespace Midjourney.Infrastructure.Services
+namespace Midjourney.Infrastructure.Storage
 {
-    /// <summary>
-    /// 存储服务
-    /// </summary>
-    public interface IStorageService
-    {
-        /// <summary>
-        /// 上传
-        /// </summary>
-        /// <param name="mediaBinaryStream"></param>
-        /// <param name="param"></param>
-        /// <returns></returns>
-        UploadResult SaveAsync(Stream mediaBinaryStream, string key, string mimeType);
-
-        /// <summary>
-        /// 删除文件
-        /// </summary>
-        /// <param name="isDeleteMedia">是否标识删除记录</param>
-        /// <param name="keys"></param>
-        /// <returns></returns>
-        Task DeleteAsync(bool isDeleteMedia = false, params string[] keys);
-
-        /// <summary>
-        /// 获取阿里云文件流数据
-        /// </summary>
-        /// <param name="key"></param>
-        /// <returns></returns>
-        Stream GetObject(string key);
-
-        /// <summary>
-        /// 获取阿里云文件流数据,返回文件类型
-        /// </summary>
-        /// <param name="key"></param>
-        /// <param name="contentType"></param>
-        /// <returns></returns>
-        Stream GetObject(string key, out string contentType);
-
-        /// <summary>
-        /// 移动文件
-        /// </summary>
-        /// <param name="key"></param>
-        /// <param name="newKey"></param>
-        /// <param name="isCopy"></param>
-        /// <returns></returns>
-        /// <exception cref="Exception"></exception>
-        Task MoveAsync(string key, string newKey, bool isCopy = false);
-
-        /// <summary>
-        /// 判断文件是否在阿里云存在
-        /// </summary>
-        /// <param name="key"></param>
-        /// <returns></returns>
-        Task<bool> ExistsAsync(string key);
-
-        /// <summary>
-        /// 阿里云覆盖保存文件
-        /// </summary>
-        /// <param name="mediaBinaryStream"></param>
-        /// <param name="key"></param>
-        /// <exception cref="Exception"></exception>
-        void Overwrite(Stream mediaBinaryStream, string key, string mimeType);
-    }
-
     /// <summary>
     /// 阿里云存储服务
     /// </summary>
@@ -134,7 +73,6 @@ namespace Midjourney.Infrastructure.Services
             _accessKeySecret = ossOptions.AccessKeySecret!;
             _endpoint = ossOptions.Endpoint!;
         }
-
 
         public AliyunOssOptions Options => _ossOptions;
 
@@ -229,7 +167,7 @@ namespace Midjourney.Infrastructure.Services
             if (!string.IsNullOrWhiteSpace(fileName))
             {
                 var fname = fileName.Trim();
-                key += !string.IsNullOrWhiteSpace(exten) && fname.EndsWith(exten) ? fname : (fname + exten);
+                key += !string.IsNullOrWhiteSpace(exten) && fname.EndsWith(exten) ? fname : fname + exten;
             }
             else
             {
@@ -310,6 +248,8 @@ namespace Midjourney.Infrastructure.Services
             {
                 try
                 {
+                    var opt = GlobalConfiguration.Setting.AliyunOss;
+
                     var objectResult = client.PutObject(_bucketName, key, mediaBinaryStream, metadata);
                     if (objectResult?.HttpStatusCode == System.Net.HttpStatusCode.OK)
                     {
@@ -322,6 +262,7 @@ namespace Midjourney.Infrastructure.Services
                             Md5 = objectResult.ResponseMetadata["Content-MD5"],
                             Id = objectResult.ETag,
                             ContentType = mimeType,
+                            Url = GetSignKey(key, opt.ExpiredMinutes).ToString()
                         };
 
                         _logger.Information("上传成功 {@0}", key);
@@ -361,6 +302,13 @@ namespace Midjourney.Infrastructure.Services
         /// <returns></returns>
         public Uri GetSignKey(string key, int minutes = 60)
         {
+            if (minutes <= 0)
+            {
+                var ossOptions = GlobalConfiguration.Setting.AliyunOss;
+
+                return new Uri($"{ossOptions.CustomCdn}/{key}");
+            }
+
             var client = new OssClient(_endpoint, _accessKeyId, _accessKeySecret);
             var expiration = DateTime.Now.AddMinutes(minutes);
             if (minutes <= 0)

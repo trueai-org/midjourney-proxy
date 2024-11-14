@@ -99,7 +99,7 @@ namespace Midjourney.Infrastructure.Handle
             {
                 if (!string.IsNullOrWhiteSpace(fullPrompt))
                 {
-                    task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && c.BotType == botType && c.PromptFull == fullPrompt)
+                    task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && (c.BotType == botType || c.RealBotType == botType) && c.PromptFull == fullPrompt)
                     .OrderBy(c => c.StartTime).FirstOrDefault();
                 }
             }
@@ -112,7 +112,7 @@ namespace Midjourney.Infrastructure.Handle
                 {
                     task = instance
                         .FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) &&
-                        c.BotType == botType && !string.IsNullOrWhiteSpace(c.PromptEn)
+                        (c.BotType == botType || c.RealBotType == botType) && !string.IsNullOrWhiteSpace(c.PromptEn)
                         && (c.PromptEn.FormatPrompt() == prompt || c.PromptEn.FormatPrompt().EndsWith(prompt) || prompt.StartsWith(c.PromptEn.FormatPrompt())))
                         .OrderBy(c => c.StartTime).FirstOrDefault();
                 }
@@ -133,7 +133,7 @@ namespace Midjourney.Infrastructure.Handle
                 {
                     task = instance
                             .FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) &&
-                            c.BotType == botType && !string.IsNullOrWhiteSpace(c.PromptEn)
+                            (c.BotType == botType || c.RealBotType == botType) && !string.IsNullOrWhiteSpace(c.PromptEn)
                             && (c.PromptEn.FormatPromptParam() == prompt || c.PromptEn.FormatPromptParam().EndsWith(prompt) || prompt.StartsWith(c.PromptEn.FormatPromptParam())))
                             .OrderBy(c => c.StartTime).FirstOrDefault();
                 }

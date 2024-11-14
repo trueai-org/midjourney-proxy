@@ -131,14 +131,106 @@ namespace Midjourney.Infrastructure
         public string CaptchaNotifySecret { get; set; }
 
         /// <summary>
+        /// 图片存储方式
+        /// </summary>
+        public ImageStorageType ImageStorageType { get; set; } = ImageStorageType.NONE;
+
+        /// <summary>
         /// 阿里云存储配置
         /// </summary>
         public AliyunOssOptions AliyunOss { get; set; } = new AliyunOssOptions();
 
         /// <summary>
+        /// 腾讯云存储配置
+        /// </summary>
+        public TencentCosOptions TencentCos { get; set; } = new TencentCosOptions();
+
+        /// <summary>
         /// 换脸配置
         /// </summary>
         public ReplicateOptions Replicate { get; set; } = new ReplicateOptions();
+
+        /// <summary>
+        /// 本地存储配置
+        /// </summary>
+        public LocalStorageOptions LocalStorage { get; set; } = new LocalStorageOptions();
+    }
+
+    /// <summary>
+    /// 本地存储配置
+    /// </summary>
+    public class LocalStorageOptions
+    {
+        /// <summary>
+        /// 加速域名，可用于图片加速和图片审核使用
+        /// </summary>
+        public string CustomCdn { get; set; }
+    }
+
+    /// <summary>
+    /// 腾讯云存储配置
+    /// </summary>
+    public class TencentCosOptions
+    {
+        /// <summary>
+        /// Tencent Cloud Account APPID
+        /// </summary>
+        public string AppId { get; set; }
+
+        /// <summary>
+        /// Cloud API Secret Id
+        /// </summary>
+        public string SecretId { get; set; }
+
+        /// <summary>
+        /// Cloud API Secret Key
+        /// </summary>
+        public string SecretKey { get; set; }
+
+        /// <summary>
+        /// Bucket region ap-guangzhou ap-hongkong
+        /// en: https://intl.cloud.tencent.com/document/product/436/6224
+        /// zh: https://cloud.tencent.com/document/product/436/6224
+        /// </summary>
+        public string Region { get; set; }
+
+        /// <summary>
+        /// Bucket, format: BucketName-APPID
+        /// </summary>
+        public string Bucket { get; set; }
+
+        /// <summary>
+        /// 加速域名，可用于图片加速和图片审核使用
+        /// </summary>
+        public string CustomCdn { get; set; }
+
+        /// <summary>
+        /// 默认图片样式
+        /// </summary>
+        public string ImageStyle { get; set; }
+
+        /// <summary>
+        /// 默认缩略图图片样式
+        /// </summary>
+        public string ThumbnailImageStyle { get; set; }
+
+        /// <summary>
+        /// 视频截帧
+        /// https://cloud.tencent.com/document/product/436/55671
+        /// </summary>
+        public string VideoSnapshotStyle { get; set; }
+
+        ///// <summary>
+        ///// Storage class of the object
+        ///// en: https://intl.cloud.tencent.com/document/product/436/30925
+        ///// zh: https://cloud.tencent.com/document/product/436/33417
+        ///// </summary>
+        //public string StorageClass { get; set; }
+
+        /// <summary>
+        /// 链接默认有效时间
+        /// </summary>
+        public int ExpiredMinutes { get; set; } = 0;
     }
 
     /// <summary>
@@ -486,15 +578,15 @@ namespace Midjourney.Infrastructure
         /// </summary>
         public string UploadServer { get; set; }
 
-        /// <summary>
-        /// 自动下载图片并保存到本地
-        /// </summary>
-        public bool? SaveToLocal { get; set; }
+        ///// <summary>
+        ///// 自动下载图片并保存到本地
+        ///// </summary>
+        //public bool? SaveToLocal { get; set; }
 
-        /// <summary>
-        /// 自定义 CDN 加速地址
-        /// </summary>
-        public string CustomCdn { get; set; }
+        ///// <summary>
+        ///// 自定义 CDN 加速地址
+        ///// </summary>
+        //public string CustomCdn { get; set; }
     }
 
     /// <summary>
@@ -503,10 +595,10 @@ namespace Midjourney.Infrastructure
     /// </summary>
     public class AliyunOssOptions
     {
-        /// <summary>
-        /// 是否可用
-        /// </summary>
-        public bool Enable { get; set; }
+        ///// <summary>
+        ///// 是否可用
+        ///// </summary>
+        //public bool Enable { get; set; }
 
         ///// <summary>
         ///// 启动本地图片自动迁移，待定
@@ -518,10 +610,10 @@ namespace Midjourney.Infrastructure
         /// </summary>
         public string BucketName { get; set; }
 
-        /// <summary>
-        /// 地域表示 OSS 的数据中心所在物理位置。
-        /// </summary>
-        public string Region { get; set; }
+        ///// <summary>
+        ///// 地域表示 OSS 的数据中心所在物理位置。
+        ///// </summary>
+        //public string Region { get; set; }
 
         /// <summary>
         /// AccessKeyId用于标识用户，AccessKeySecret是用户用于加密签名字符串和OSS用来验证签名字符串的密钥，其中AccessKeySecret 必须保密。
@@ -559,15 +651,15 @@ namespace Midjourney.Infrastructure
         /// </summary>
         public string VideoSnapshotStyle { get; set; }
 
-        /// <summary>
-        /// 开启自动迁移本地文件到阿里云支持
-        /// </summary>
-        public bool IsAutoMigrationLocalFile { get; set; }
+        ///// <summary>
+        ///// 开启自动迁移本地文件到阿里云支持
+        ///// </summary>
+        //public bool IsAutoMigrationLocalFile { get; set; }
 
         /// <summary>
         /// 链接默认有效时间
         /// </summary>
-        public int ExpirationMinutes { get; set; } = 60;
+        public int ExpiredMinutes { get; set; } = 0;
     }
 
     /// <summary>

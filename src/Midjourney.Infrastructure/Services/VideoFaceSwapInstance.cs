@@ -25,6 +25,7 @@
 using Microsoft.Extensions.Caching.Memory;
 using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.Services;
+using Midjourney.Infrastructure.Storage;
 using Midjourney.Infrastructure.Util;
 using System.Diagnostics;
 using System.Text.RegularExpressions;
@@ -372,7 +373,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 }
 
                 var ff = new FileFetchHelper();
-                var aliOpt = GlobalConfiguration.Setting.AliyunOss;
+                //var aliOpt = GlobalConfiguration.Setting.AliyunOss;
 
                 info.Status = TaskStatus.SUBMITTED;
                 info.Progress = "0%";
@@ -385,15 +386,18 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     {
                         // 视频换脸必须使用外链，且无法使用官网提供的上传
                         // 因此这里上传到阿里云
-                        var ali = new AliyunOssStorageService();
+                        //var ali = new AliyunOssStorageService();
                         var fileName = Path.GetFileName(source);
                         var key = $"pri/pbxt/{fileName}";
 
-                        var res = ali.SaveAsync(File.OpenRead(source), key, ff.GetMimeType(fileName) ?? "image/jpeg");
-                        if (!string.IsNullOrWhiteSpace(res.Key))
+
+                        var upload = StorageHelper.Instance.SaveAsync(File.OpenRead(source), key, ff.GetMimeType(fileName) ?? "image/jpeg");
+                        if (!string.IsNullOrWhiteSpace(upload?.Url))
                         {
-                            var priUri = ali.GetSignKey(res.Key);
-                            source = $"{aliOpt.CustomCdn.TrimPath()}/{priUri.PathAndQuery.TrimStart('/')}";
+                            source = upload?.Url;
+
+                            //var priUri = ali.GetSignKey(res.Key);
+                            //source = $"{aliOpt.CustomCdn.TrimPath()}/{priUri.PathAndQuery.TrimStart('/')}";
                         }
                         else
                         {
@@ -429,15 +433,17 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     {
                         // 视频换脸必须使用外链，且无法使用官网提供的上传
                         // 因此这里上传到阿里云
-                        var ali = new AliyunOssStorageService();
+                        //var ali = new AliyunOssStorageService();
                         var fileName = Path.GetFileName(target);
                         var key = $"pri/pbxt/{fileName}";
 
-                        var res = ali.SaveAsync(File.OpenRead(target), key, ff.GetMimeType(fileName) ?? "video/mp4");
-                        if (!string.IsNullOrWhiteSpace(res.Key))
+                        var res = StorageHelper.Instance.SaveAsync(File.OpenRead(target), key, ff.GetMimeType(fileName) ?? "video/mp4");
+                        if (!string.IsNullOrWhiteSpace(res?.Url))
                         {
-                            var priUri = ali.GetSignKey(res.Key);
-                            target = $"{aliOpt.CustomCdn.TrimPath()}/{priUri.PathAndQuery.TrimStart('/')}";
+                            target = res.Url;
+
+                            //var priUri = ali.GetSignKey(res.Key);
+                            //target = $"{aliOpt.CustomCdn.TrimPath()}/{priUri.PathAndQuery.TrimStart('/')}";
                         }
                         else
                         {
@@ -519,14 +525,12 @@ namespace Midjourney.Infrastructure.LoadBalancer
                         if (res?.Status == "succeeded")
                         {
                             // 成功
-                            var customCdn = _discordHelper.GetCustomCdn();
-                            var toLocal = _discordHelper.GetSaveToLocal();
 
                             if (res.Output is Newtonsoft.Json.Linq.JArray arr && arr.Count > 0)
                             {
                                 var url = arr.First().ToString();
                                 info.ImageUrl = url;
-                                info.Success(customCdn, toLocal);
+                                info.Success();
                                 SaveAndNotify(info);
                                 return;
                             }

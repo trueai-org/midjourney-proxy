@@ -81,7 +81,7 @@ namespace Midjourney.Infrastructure.Handle
                 {
                     if (!string.IsNullOrWhiteSpace(fullPrompt))
                     {
-                        task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && c.BotType == botType && c.PromptFull == fullPrompt)
+                        task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && (c.BotType == botType || c.RealBotType == botType) && c.PromptFull == fullPrompt)
                         .OrderBy(c => c.StartTime).FirstOrDefault();
                     }
                 }
@@ -132,7 +132,7 @@ namespace Midjourney.Infrastructure.Handle
                 {
                     if (!string.IsNullOrWhiteSpace(fullPrompt))
                     {
-                        task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && c.BotType == botType && c.PromptFull == fullPrompt)
+                        task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && (c.BotType == botType || c.RealBotType == botType) && c.PromptFull == fullPrompt)
                         .OrderBy(c => c.StartTime).FirstOrDefault();
                     }
                 }

@@ -25,10 +25,8 @@
 using Microsoft.Extensions.Caching.Memory;
 using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.Dto;
-using Midjourney.Infrastructure.Services;
-using Midjourney.Infrastructure.Util;
+using Midjourney.Infrastructure.Storage;
 using Serilog;
-using System.Net;
 
 namespace Midjourney.Infrastructure.Models
 {
@@ -54,6 +52,13 @@ namespace Midjourney.Infrastructure.Models
         /// MID_JOURNEY | 枚举值: NIJI_JOURNEY
         /// </summary>
         public EBotType BotType { get; set; }
+
+        /// <summary>
+        /// 真实的 bot 类型，mj(默认)或niji
+        /// MID_JOURNEY | 枚举值: NIJI_JOURNEY
+        /// 当开启 niji 转 mj 时，这里记录的是 mj bot
+        /// </summary>
+        public EBotType? RealBotType { get; set; }
 
         /// <summary>
         /// 绘画用户 ID
@@ -277,160 +282,12 @@ namespace Midjourney.Infrastructure.Models
         /// <summary>
         /// 任务成功。
         /// </summary>
-        public void Success(string customCdn, bool downloadToLocal)
+        public void Success()
         {
             try
             {
-                // 如果启用了阿里云 OSS
-                if (GlobalConfiguration.Setting?.AliyunOss?.Enable == true && !string.IsNullOrWhiteSpace(ImageUrl))
-                {
-                    // 本地锁
-                    LocalLock.TryLock($"download:{ImageUrl}", TimeSpan.FromSeconds(10), () =>
-                    {
-                        var opt = GlobalConfiguration.Setting.AliyunOss;
-                        customCdn = opt.CustomCdn;
-
-                        // 如果不是以自定义 cdn 加速域名开头
-                        if (string.IsNullOrWhiteSpace(customCdn) || !ImageUrl.StartsWith(customCdn))
-                        {
-                            // 创建保存路径
-                            var uri = new Uri(ImageUrl);
-                            var localPath = uri.AbsolutePath.TrimStart('/');
-
-                            // 如果路径是 ephemeral-attachments 或 attachments 才处理
-                            if (localPath.StartsWith("ephemeral-attachments") || localPath.StartsWith("attachments") || IsReplicate)
-                            {
-                                var oss = new AliyunOssStorageService();
-
-                                // 换脸放到私有附件中
-                                if (IsReplicate)
-                                {
-                                    localPath = $"pri/{localPath}";
-                                }
-
-                                // 替换 url
-                                var url = $"{customCdn?.Trim()?.Trim('/')}/{localPath}{uri?.Query}";
-
-                                WebProxy webProxy = null;
-                                var proxy = GlobalConfiguration.Setting.Proxy;
-                                if (!string.IsNullOrEmpty(proxy?.Host))
-                                {
-                                    webProxy = new WebProxy(proxy.Host, proxy.Port ?? 80);
-                                }
-                                var hch = new HttpClientHandler
-                                {
-                                    UseProxy = webProxy != null,
-                                    Proxy = webProxy,
-                                };
-
-                                // 下载图片并保存
-                                using (HttpClient client = new HttpClient(hch))
-                                {
-                                    client.Timeout = TimeSpan.FromMinutes(15);
-
-                                    var response = client.GetAsync(ImageUrl).Result;
-                                    response.EnsureSuccessStatusCode();
-                                    var stream = response.Content.ReadAsStreamAsync().Result;
-
-                                    var mm = MimeKit.MimeTypes.GetMimeType(Path.GetFileName(localPath));
-                                    if (string.IsNullOrWhiteSpace(mm))
-                                    {
-                                        mm = "image/png";
-                                    }
-
-                                    oss.SaveAsync(stream, localPath, mm);
-
-                                    // 换脸放到私有附件中
-                                    if (IsReplicate)
-                                    {
-                                        var priUri = oss.GetSignKey(localPath, opt.ExpirationMinutes);
-                                        url = $"{customCdn?.Trim()?.Trim('/')}/{priUri.PathAndQuery.TrimStart('/')}";
-                                    }
-                                }
-
-
-                                if (Action == TaskAction.SWAP_VIDEO_FACE)
-                                {
-                                    ImageUrl = url;
-                                    ThumbnailUrl = url.ToStyle(opt.VideoSnapshotStyle);
-                                }
-                                else if (Action == TaskAction.SWAP_FACE)
-                                {
-                                    // 换脸不格式化
-                                    ImageUrl = url;
-                                    ThumbnailUrl = url;
-                                }
-                                else
-                                {
-                                    ImageUrl = url.ToStyle(opt.ImageStyle);
-                                    ThumbnailUrl = url.ToStyle(opt.ThumbnailImageStyle);
-                                }
-                            }
-                        }
-                    });
-                }
-                // https://cdn.discordapp.com/attachments/1265095688782614602/1266300100989161584/03ytbus_LOGO_design_A_warrior_frog_Muscles_like_Popeye_Freehand_06857373-4fd9-403d-a5df-c2f27f9be269.png?ex=66a4a55e&is=66a353de&hm=c597e9d6d128c493df27a4d0ae41204655ab73f7e885878fc1876a8057a7999f&
-                // 将图片保存到本地，并替换 url，并且保持原 url和参数
-                // 默认保存根目录为 /wwwroot
                 // 保存图片
-                // 如果处理过了，则不再处理
-                else if (downloadToLocal && !string.IsNullOrWhiteSpace(ImageUrl))
-                {
-                    // 本地锁
-                    LocalLock.TryLock($"download:{ImageUrl}", TimeSpan.FromSeconds(10), () =>
-                    {
-                        // 如果不是以自定义 cdn 加速域名开头
-                        if (string.IsNullOrWhiteSpace(customCdn) || !ImageUrl.StartsWith(customCdn))
-                        {
-                            // 创建保存路径
-                            var uri = new Uri(ImageUrl);
-                            var localPath = uri.AbsolutePath.TrimStart('/');
-
-                            // 如果路径是 ephemeral-attachments 或 attachments 才处理
-                            if (localPath.StartsWith("ephemeral-attachments") || localPath.StartsWith("attachments") || IsReplicate)
-                            {
-                                // 如果是本地文件，则依然放到 attachments
-                                // 换脸放到附件中
-                                if (IsReplicate)
-                                {
-                                    localPath = $"attachments/{localPath}";
-                                }
-
-                                var savePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", localPath);
-                                var directoryPath = Path.GetDirectoryName(savePath);
-
-                                if (!string.IsNullOrWhiteSpace(directoryPath))
-                                {
-                                    Directory.CreateDirectory(directoryPath);
-
-                                    WebProxy webProxy = null;
-                                    var proxy = GlobalConfiguration.Setting.Proxy;
-                                    if (!string.IsNullOrEmpty(proxy?.Host))
-                                    {
-                                        webProxy = new WebProxy(proxy.Host, proxy.Port ?? 80);
-                                    }
-                                    var hch = new HttpClientHandler
-                                    {
-                                        UseProxy = webProxy != null,
-                                        Proxy = webProxy
-                                    };
-
-                                    // 下载图片并保存
-                                    using (HttpClient client = new HttpClient(hch))
-                                    {
-                                        var response = client.GetAsync(ImageUrl).Result;
-                                        response.EnsureSuccessStatusCode();
-                                        var imageBytes = response.Content.ReadAsByteArrayAsync().Result;
-                                        File.WriteAllBytes(savePath, imageBytes);
-                                    }
-
-                                    // 替换 url
-                                    ImageUrl = $"{customCdn?.Trim()?.Trim('/')}/{localPath}{uri?.Query}";
-                                }
-                            }
-                        }
-                    });
-                }
+                StorageHelper.DownloadFile(this);
             }
             catch (Exception ex)
             {

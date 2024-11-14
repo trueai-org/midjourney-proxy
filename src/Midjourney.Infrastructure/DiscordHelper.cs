@@ -99,29 +99,29 @@ namespace Midjourney.Infrastructure
             return cdnUrl.EndsWith("/") ? cdnUrl.Substring(0, cdnUrl.Length - 1) : cdnUrl;
         }
 
-        /// <summary>
-        /// 获取自定义 CDN URL
-        /// </summary>
-        /// <returns></returns>
-        public string GetCustomCdn()
-        {
-            if (string.IsNullOrWhiteSpace(_properties.NgDiscord.CustomCdn))
-            {
-                return string.Empty;
-            }
+        ///// <summary>
+        ///// 获取自定义 CDN URL
+        ///// </summary>
+        ///// <returns></returns>
+        //public string GetCustomCdn()
+        //{
+        //    if (string.IsNullOrWhiteSpace(_properties.NgDiscord.CustomCdn))
+        //    {
+        //        return string.Empty;
+        //    }
 
-            string cdnUrl = _properties.NgDiscord.CustomCdn;
-            return cdnUrl.EndsWith("/") ? cdnUrl.Substring(0, cdnUrl.Length - 1) : cdnUrl;
-        }
+        //    string cdnUrl = _properties.NgDiscord.CustomCdn;
+        //    return cdnUrl.EndsWith("/") ? cdnUrl.Substring(0, cdnUrl.Length - 1) : cdnUrl;
+        //}
 
-        /// <summary>
-        /// 获取是否保存到本地。
-        /// </summary>
-        /// <returns></returns>
-        public bool GetSaveToLocal()
-        {
-            return _properties.NgDiscord.SaveToLocal == true;
-        }
+        ///// <summary>
+        ///// 获取是否保存到本地。
+        ///// </summary>
+        ///// <returns></returns>
+        //public bool GetSaveToLocal()
+        //{
+        //    return _properties.NgDiscord.SaveToLocal == true;
+        //}
 
         /// <summary>
         /// 获取 Discord WebSocket URL。
