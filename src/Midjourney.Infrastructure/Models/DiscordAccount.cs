@@ -632,7 +632,7 @@ namespace Midjourney.Infrastructure.Models
         /// </summary>
         public void SponsorValidate()
         {
-            if (DayDrawLimit < 10)
+            if (DayDrawLimit > 0 && DayDrawLimit < 10)
             {
                 DayDrawLimit = 10;
             }
