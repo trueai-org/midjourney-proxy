@@ -61,7 +61,7 @@ namespace Midjourney.API
             var ipBlackOpt = ipBlackSec.Get<IpBlackRateLimitingOptions>();
             services.Configure<IpBlackRateLimitingOptions>(ipBlackSec);
 
-            var setting = DbHelper.SettingStore.Get(Constants.DEFAULT_SETTING_ID);
+            var setting = LiteDBHelper.SettingStore.Get(Constants.DEFAULT_SETTING_ID);
             if (setting == null)
             {
                 setting = new Setting
@@ -87,7 +87,7 @@ namespace Midjourney.API
                     TranslateWay = configOpt.TranslateWay,
                     Smtp = configOpt.Smtp
                 };
-                DbHelper.SettingStore.Save(setting);
+                LiteDBHelper.SettingStore.Save(setting);
 
                 // 等待 1s
                 Thread.Sleep(1 * 1000);

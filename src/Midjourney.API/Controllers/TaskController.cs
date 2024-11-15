@@ -163,7 +163,7 @@ namespace Midjourney.API.Controllers
         [HttpGet("list")]
         public ActionResult<List<TaskInfo>> List()
         {
-            var data = TaskHelper.Instance.TaskStore.Where(c => true, t => t.SubmitTime, false, 100).ToList();
+            var data = DbHelper.Instance.TaskStore.Where(c => true, t => t.SubmitTime, false, 100).ToList();
             return Ok(data);
         }
 

@@ -169,7 +169,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                 c.SetAbsoluteExpiration(TimeSpan.FromMinutes(2));
 
                                 // 必须数据库中存在
-                                var acc = DbHelper.AccountStore.Get(_account.Id);
+                                var acc = DbHelper.Instance.AccountStore.Get(_account.Id);
                                 if (acc != null)
                                 {
                                     return acc;
@@ -419,13 +419,13 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     // 当前时间转为 Unix 时间戳
                     // 今日 0 点 Unix 时间戳
                     var now = new DateTimeOffset(DateTime.Now.Date).ToUnixTimeMilliseconds();
-                    var count = (int)TaskHelper.Instance.TaskStore.Count(c => c.SubmitTime >= now && c.InstanceId == Account.ChannelId);
+                    var count = (int)DbHelper.Instance.TaskStore.Count(c => c.SubmitTime >= now && c.InstanceId == Account.ChannelId);
 
                     if (Account.DayDrawCount != count)
                     {
                         Account.DayDrawCount = count;
 
-                        DbHelper.AccountStore.Update("DayDrawCount", Account);
+                        DbHelper.Instance.AccountStore.Update("DayDrawCount", Account);
                     }
                 }
                 catch (Exception ex)
@@ -1892,7 +1892,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                         Account.Enable = false;
                         Account.DisabledReason = "Http 请求没有操作权限，禁用账号";
-                        DbHelper.AccountStore.Update(Account);
+                        DbHelper.Instance.AccountStore.Update(Account);
                         ClearAccountCache(Account.Id);
 
                         return Message.Of(ReturnCode.FAILURE, "请求失败，禁用账号");
@@ -1988,7 +1988,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                             // 标记未用完快速
                             Account.FastExhausted = false;
-                            DbHelper.AccountStore.Update("FastExhausted", Account);
+                            DbHelper.Instance.AccountStore.Update("FastExhausted", Account);
 
                             // 如果开启了自动切换到快速，则自动切换到快速
                             try

@@ -21,30 +21,43 @@
 // The use of this software for any form of illegal face swapping,
 // invasion of privacy, or any other unlawful purposes is strictly prohibited. 
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
+
 namespace Midjourney.Infrastructure.Data
 {
     /// <summary>
-    /// 任务帮助类
+    /// Lite DB 数据库帮助类。
     /// </summary>
-    public class TaskHelper : SingletonBase<TaskHelper>
+    public class LiteDBHelper
     {
-        private readonly IDataHelper<TaskInfo> _dataHelper;
-
-        public TaskHelper()
-        {
-            if (GlobalConfiguration.Setting.IsMongo)
-            {
-                _dataHelper = new MongoDBRepository<TaskInfo>();
-            }
-            else
-            {
-                _dataHelper = DbHelper.TaskStore;
-            }
-        }
+        /// <summary>
+        /// 任务存储。
+        /// </summary>
+        public static LiteDBRepository<TaskInfo> TaskStore = new LiteDBRepository<TaskInfo>("data/mj.db");
 
         /// <summary>
-        /// 数据帮助类
+        /// Discord 账号存储。
         /// </summary>
-        public IDataHelper<TaskInfo> TaskStore => _dataHelper;
+        public static LiteDBRepository<DiscordAccount> AccountStore = new LiteDBRepository<DiscordAccount>("data/mj.db");
+
+        /// <summary>
+        /// User 账号存储。
+        /// </summary>
+        public static LiteDBRepository<User> UserStore = new LiteDBRepository<User>("data/mj.db");
+
+        /// <summary>
+        /// 领域标签存储。
+        /// </summary>
+        public static LiteDBRepository<DomainTag> DomainStore = new LiteDBRepository<DomainTag>("data/mj.db");
+
+        /// <summary>
+        /// 系统配置存储。
+        /// </summary>
+        public static LiteDBRepository<Setting> SettingStore = new LiteDBRepository<Setting>("data/mj.db");
+
+        /// <summary>
+        /// 禁用词存储。
+        /// </summary>
+        public static LiteDBRepository<BannedWord> BannedWordStore = new LiteDBRepository<BannedWord>("data/mj.db");
+
     }
 }

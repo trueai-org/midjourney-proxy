@@ -311,7 +311,7 @@ namespace Midjourney.Infrastructure
                                         Account.CfHashUrl = hashUrl;
                                         Account.CfHashCreated = DateTime.Now;
 
-                                        DbHelper.AccountStore.Update(Account);
+                                        DbHelper.Instance.AccountStore.Update(Account);
                                         _discordInstance.ClearAccountCache(Account.Id);
 
                                         try
@@ -406,7 +406,7 @@ namespace Midjourney.Infrastructure
 
                                                 Account.DisabledReason = "CF 人工验证...";
 
-                                                DbHelper.AccountStore.Update(Account);
+                                                DbHelper.Instance.AccountStore.Update(Account);
                                                 _discordInstance.ClearAccountCache(Account.Id);
                                             }
                                         }
@@ -526,7 +526,7 @@ namespace Midjourney.Infrastructure
                         }
                     }
 
-                    DbHelper.AccountStore.Update("Components,NijiComponents", Account);
+                    DbHelper.Instance.AccountStore.Update("Components,NijiComponents", Account);
                     _discordInstance.ClearAccountCache(Account.Id);
 
                     return;
@@ -541,13 +541,13 @@ namespace Midjourney.Infrastructure
                         if (applicationId == Constants.NIJI_APPLICATION_ID)
                         {
                             Account.NijiComponents = eventDataMsg.Components;
-                            DbHelper.AccountStore.Update("NijiComponents", Account);
+                            DbHelper.Instance.AccountStore.Update("NijiComponents", Account);
                             _discordInstance.ClearAccountCache(Account.Id);
                         }
                         else if (applicationId == Constants.MJ_APPLICATION_ID)
                         {
                             Account.Components = eventDataMsg.Components;
-                            DbHelper.AccountStore.Update("Components", Account);
+                            DbHelper.Instance.AccountStore.Update("Components", Account);
                             _discordInstance.ClearAccountCache(Account.Id);
                         }
                     }
@@ -675,7 +675,7 @@ namespace Midjourney.Infrastructure
                         }
                     }
 
-                    DbHelper.AccountStore.Update("Components,NijiComponents", Account);
+                    DbHelper.Instance.AccountStore.Update("Components,NijiComponents", Account);
                     _discordInstance.ClearAccountCache(Account.Id);
 
                     return;
@@ -829,7 +829,7 @@ namespace Midjourney.Infrastructure
                                                 }
                                             }
 
-                                            var db = DbHelper.AccountStore;
+                                            var db = DbHelper.Instance.AccountStore;
                                             Account.InfoUpdated = DateTime.Now;
 
                                             db.Update("InfoUpdated,Properties", Account);
@@ -852,7 +852,7 @@ namespace Midjourney.Infrastructure
                                     Account.NijiComponents = eventDataMsg.Components;
                                     Account.NijiSettingsMessageId = id;
 
-                                    DbHelper.AccountStore.Update("NijiComponents,NijiSettingsMessageId", Account);
+                                    DbHelper.Instance.AccountStore.Update("NijiComponents,NijiSettingsMessageId", Account);
                                     _discordInstance?.ClearAccountCache(Account.Id);
                                 }
                                 else if (applicationId == Constants.MJ_APPLICATION_ID)
@@ -860,7 +860,7 @@ namespace Midjourney.Infrastructure
                                     Account.Components = eventDataMsg.Components;
                                     Account.SettingsMessageId = id;
 
-                                    DbHelper.AccountStore.Update("Components,SettingsMessageId", Account);
+                                    DbHelper.Instance.AccountStore.Update("Components,SettingsMessageId", Account);
                                     _discordInstance?.ClearAccountCache(Account.Id);
                                 }
                             }
@@ -931,7 +931,7 @@ namespace Midjourney.Infrastructure
                                             }
                                         }
 
-                                        DbHelper.AccountStore.Update("AllowModes,FastExhausted,CoreSize", Account);
+                                        DbHelper.Instance.AccountStore.Update("AllowModes,FastExhausted,CoreSize", Account);
                                         _discordInstance?.ClearAccountCache(Account.Id);
 
                                         // 如果开启自动切换慢速模式
@@ -976,7 +976,7 @@ namespace Midjourney.Infrastructure
                                                     Account.Enable = false;
                                                     Account.DisabledReason = "账号用量已经用完";
 
-                                                    DbHelper.AccountStore.Update(Account);
+                                                    DbHelper.Instance.AccountStore.Update(Account);
                                                     _discordInstance?.ClearAccountCache(Account.Id);
                                                     _discordInstance?.Dispose();
 
@@ -1026,7 +1026,7 @@ namespace Midjourney.Infrastructure
                                                 Account.Enable = false;
                                                 Account.DisabledReason = $"{title}, {desc}";
 
-                                                DbHelper.AccountStore.Update(Account);
+                                                DbHelper.Instance.AccountStore.Update(Account);
 
                                                 _discordInstance?.ClearAccountCache(Account.Id);
                                                 _discordInstance?.Dispose();

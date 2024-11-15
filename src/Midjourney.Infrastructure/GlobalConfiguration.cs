@@ -40,7 +40,7 @@ namespace Midjourney.Infrastructure
         /// <summary>
         /// 版本号
         /// </summary>
-        public static string Version { get; set; } = "v6.0.0-beta.3";
+        public static string Version { get; set; } = "v6.0.0-beta.4";
 
         /// <summary>
         /// 全局配置项

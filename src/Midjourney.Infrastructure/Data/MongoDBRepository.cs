@@ -71,6 +71,38 @@ namespace Midjourney.Infrastructure.Data
             _collection.ReplaceOne(filter, entity);
         }
 
+        /// <summary>
+        /// 部分更新
+        /// </summary>
+        /// <param name="fields">BotToken,IsBlend,Properties</param>
+        /// <param name="item"></param>
+        /// <returns></returns>
+        public bool Update(string fields, T item)
+        {
+            // 获取现有文档
+            var model = _collection.Find(c => c.Id == item.Id).FirstOrDefault();
+            if (model == null)
+                return false;
+
+            // 将更新对象的字段值复制到现有文档
+            var fieldArray = fields.Split(',');
+            foreach (var field in fieldArray)
+            {
+                var prop = typeof(T).GetProperty(field.Trim());
+                if (prop != null)
+                {
+                    var newValue = prop.GetValue(item);
+                    prop.SetValue(model, newValue);
+                }
+            }
+
+            // 更新文档
+            _collection.ReplaceOne(c => c.Id == item.Id, model);
+
+            return true;
+        }
+
+
         public List<T> GetAll()
         {
             return _collection.Find(Builders<T>.Filter.Empty).ToList();

@@ -69,6 +69,14 @@ namespace Midjourney.Infrastructure.Data
         void Update(T entity);
 
         /// <summary>
+        /// 部分更新
+        /// </summary>
+        /// <param name="fields">BotToken,IsBlend,Properties</param>
+        /// <param name="item"></param>
+        /// <returns></returns>
+        bool Update(string fields, T item);
+        
+        /// <summary>
         /// 获取所有实体。
         /// </summary>
         /// <returns>实体列表。</returns>

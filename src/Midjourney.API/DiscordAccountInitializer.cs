@@ -93,9 +93,95 @@ namespace Midjourney.API
                 Environment.SetEnvironmentVariable("https_proxyPort", proxy.Port.ToString());
             }
 
+            // 判断是否启用了 mongodb
+            if (GlobalConfiguration.Setting.IsMongo)
+            {
+                // 迁移 account user domain banded
+                try
+                {
+                    // 如果 liteAccountIds 的数据在 mongoAccountIds 不存在，则迁移到 mongodb
+                    // account 迁移
+                    var liteAccountIds = LiteDBHelper.AccountStore.GetAllIds();
+                    var mongoAccountDb = new MongoDBRepository<DiscordAccount>();
+                    var mongoAccountIds = mongoAccountDb.GetAllIds();
+                    var accountIds = liteAccountIds.Except(mongoAccountIds).ToList();
+                    if (accountIds.Count > 0)
+                    {
+                        var liteAccounts = LiteDBHelper.AccountStore.GetAll();
+                        foreach (var id in accountIds)
+                        {
+                            var model = liteAccounts.FirstOrDefault(c => c.Id == id);
+                            if (model != null)
+                            {
+                                mongoAccountDb.Add(model);
+                            }
+                        }
+                    }
+
+                    // user 迁移
+                    var liteUserIds = LiteDBHelper.UserStore.GetAllIds();
+                    var mongoUserDb = new MongoDBRepository<User>();
+                    var mongoUserIds = mongoUserDb.GetAllIds();
+                    var userIds = liteUserIds.Except(mongoUserIds).ToList();
+                    if (userIds.Count > 0)
+                    {
+                        var liteUsers = LiteDBHelper.UserStore.GetAll();
+                        foreach (var id in userIds)
+                        {
+                            var model = liteUsers.FirstOrDefault(c => c.Id == id);
+                            if (model != null)
+                            {
+                                mongoUserDb.Add(model);
+                            }
+                        }
+                    }
+
+                    // domain 迁移
+                    var liteDomainIds = LiteDBHelper.DomainStore.GetAllIds();
+                    var mongoDomainDb = new MongoDBRepository<DomainTag>();
+                    var mongoDomainIds = mongoDomainDb.GetAllIds();
+                    var domainIds = liteDomainIds.Except(mongoDomainIds).ToList();
+                    if (domainIds.Count > 0)
+                    {
+                        var liteDomains = LiteDBHelper.DomainStore.GetAll();
+                        foreach (var id in domainIds)
+                        {
+                            var model = liteDomains.FirstOrDefault(c => c.Id == id);
+                            if (model != null)
+                            {
+                                mongoDomainDb.Add(model);
+                            }
+                        }
+                    }
+
+                    // banded 迁移
+                    var liteBannedIds = LiteDBHelper.BannedWordStore.GetAllIds();
+                    var mongoBannedDb = new MongoDBRepository<BannedWord>();
+                    var mongoBannedIds = mongoBannedDb.GetAllIds();
+                    var bannedIds = liteBannedIds.Except(mongoBannedIds).ToList();
+                    if (bannedIds.Count > 0)
+                    {
+                        var liteBanneds = LiteDBHelper.BannedWordStore.GetAll();
+                        foreach (var id in bannedIds)
+                        {
+                            var model = liteBanneds.FirstOrDefault(c => c.Id == id);
+                            if (model != null)
+                            {
+                                mongoBannedDb.Add(model);
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error(ex, "本地存储迁移到 mongodb 异常");
+                }
+            }
+
+
             // 初始化管理员用户
             // 判断超管是否存在
-            var admin = DbHelper.UserStore.Get(Constants.ADMIN_USER_ID);
+            var admin = DbHelper.Instance.UserStore.Get(Constants.ADMIN_USER_ID);
             if (admin == null)
             {
                 admin = new User
@@ -113,11 +199,11 @@ namespace Midjourney.API
                     admin.Token = "admin";
                 }
 
-                DbHelper.UserStore.Add(admin);
+                DbHelper.Instance.UserStore.Add(admin);
             }
 
             // 初始化普通用户
-            var user = DbHelper.UserStore.Get(Constants.DEFAULT_USER_ID);
+            var user = DbHelper.Instance.UserStore.Get(Constants.DEFAULT_USER_ID);
             var userToken = _configuration["UserToken"];
             if (user == null && !string.IsNullOrWhiteSpace(userToken))
             {
@@ -130,11 +216,11 @@ namespace Midjourney.API
                     Status = EUserStatus.NORMAL,
                     IsWhite = true
                 };
-                DbHelper.UserStore.Add(user);
+                DbHelper.Instance.UserStore.Add(user);
             }
 
             // 初始化领域标签
-            var defaultDomain = DbHelper.DomainStore.Get(Constants.DEFAULT_DOMAIN_ID);
+            var defaultDomain = DbHelper.Instance.DomainStore.Get(Constants.DEFAULT_DOMAIN_ID);
             if (defaultDomain == null)
             {
                 defaultDomain = new DomainTag
@@ -146,11 +232,11 @@ namespace Midjourney.API
                     Enable = true,
                     Keywords = WordsUtils.GetWords()
                 };
-                DbHelper.DomainStore.Add(defaultDomain);
+                DbHelper.Instance.DomainStore.Add(defaultDomain);
             }
 
             // 完整标签
-            var fullDomain = DbHelper.DomainStore.Get(Constants.DEFAULT_DOMAIN_FULL_ID);
+            var fullDomain = DbHelper.Instance.DomainStore.Get(Constants.DEFAULT_DOMAIN_FULL_ID);
             if (fullDomain == null)
             {
                 fullDomain = new DomainTag
@@ -162,11 +248,11 @@ namespace Midjourney.API
                     Enable = true,
                     Keywords = WordsUtils.GetWordsFull()
                 };
-                DbHelper.DomainStore.Add(fullDomain);
+                DbHelper.Instance.DomainStore.Add(fullDomain);
             }
 
             // 违规词
-            var bannedWord = DbHelper.BannedWordStore.Get(Constants.DEFAULT_BANNED_WORD_ID);
+            var bannedWord = DbHelper.Instance.BannedWordStore.Get(Constants.DEFAULT_BANNED_WORD_ID);
             if (bannedWord == null)
             {
                 bannedWord = new BannedWord
@@ -178,7 +264,7 @@ namespace Midjourney.API
                     Enable = true,
                     Keywords = BannedPromptUtils.GetStrings()
                 };
-                DbHelper.BannedWordStore.Add(bannedWord);
+                DbHelper.Instance.BannedWordStore.Add(bannedWord);
             }
 
             _ = Task.Run(() =>
@@ -281,7 +367,7 @@ namespace Midjourney.API
                 {
                     // 判断最后一条是否存在
                     var success = 0;
-                    var last = DbHelper.TaskStore.GetCollection().Query().OrderByDescending(c => c.SubmitTime).FirstOrDefault();
+                    var last = LiteDBHelper.TaskStore.GetCollection().Query().OrderByDescending(c => c.SubmitTime).FirstOrDefault();
                     if (last != null)
                     {
                         var coll = MongoHelper.GetCollection<TaskInfo>();
@@ -289,10 +375,10 @@ namespace Midjourney.API
                         if (lastMongo == null)
                         {
                             // 迁移数据
-                            var taskIds = DbHelper.TaskStore.GetCollection().Query().Select(c => c.Id).ToList();
+                            var taskIds = LiteDBHelper.TaskStore.GetCollection().Query().Select(c => c.Id).ToList();
                             foreach (var tid in taskIds)
                             {
-                                var info = DbHelper.TaskStore.Get(tid);
+                                var info = LiteDBHelper.TaskStore.Get(tid);
                                 if (info != null)
                                 {
                                     // 判断是否存在
@@ -500,18 +586,18 @@ namespace Midjourney.API
             }
             else
             {
-                var documentCount = DbHelper.TaskStore.GetCollection().Query().Count();
+                var documentCount = LiteDBHelper.TaskStore.GetCollection().Query().Count();
                 if (documentCount > maxCount)
                 {
                     var documentsToDelete = documentCount - maxCount;
-                    var ids = DbHelper.TaskStore.GetCollection().Query().OrderBy(c => c.SubmitTime)
+                    var ids = LiteDBHelper.TaskStore.GetCollection().Query().OrderBy(c => c.SubmitTime)
                         .Limit(documentsToDelete)
                         .ToList()
                         .Select(c => c.Id);
 
                     if (ids.Any())
                     {
-                        DbHelper.TaskStore.GetCollection().DeleteMany(c => ids.Contains(c.Id));
+                        LiteDBHelper.TaskStore.GetCollection().DeleteMany(c => ids.Contains(c.Id));
                     }
                 }
             }
@@ -525,7 +611,7 @@ namespace Midjourney.API
         {
             var isLock = await AsyncLocalLock.TryLockAsync("initialize:all", TimeSpan.FromSeconds(10), async () =>
             {
-                var db = DbHelper.AccountStore;
+                var db = DbHelper.Instance.AccountStore;
                 var accounts = db.GetAll().OrderBy(c => c.Sort).ToList();
 
                 // 将启动配置中的 account 添加到数据库
@@ -602,7 +688,7 @@ namespace Midjourney.API
                 var info = new StringBuilder();
                 info.AppendLine($"{account.Id}初始化中...");
 
-                var db = DbHelper.AccountStore;
+                var db = DbHelper.Instance.AccountStore;
                 DiscordInstance disInstance = null;
 
                 try
@@ -618,7 +704,7 @@ namespace Midjourney.API
 
                     // 判断是否在工作时间内
                     var now = new DateTimeOffset(DateTime.Now.Date).ToUnixTimeMilliseconds();
-                    var dayCount = (int)TaskHelper.Instance.TaskStore.Count(c => c.InstanceId == account.ChannelId && c.SubmitTime >= now);
+                    var dayCount = (int)DbHelper.Instance.TaskStore.Count(c => c.InstanceId == account.ChannelId && c.SubmitTime >= now);
 
                     sw.Stop();
                     info.AppendLine($"{account.Id}初始化中... 获取任务数耗时: {sw.ElapsedMilliseconds}ms");
@@ -918,7 +1004,7 @@ namespace Midjourney.API
         /// <param name="param"></param>
         public async Task UpdateAccount(DiscordAccount param)
         {
-            var model = DbHelper.AccountStore.Get(param.Id);
+            var model = DbHelper.Instance.AccountStore.Get(param.Id);
             if (model == null)
             {
                 throw new LogicException("账号不存在");
@@ -927,7 +1013,7 @@ namespace Midjourney.API
             // 更新一定要加锁，因为其他进程会修改 account 值，导致值覆盖
             var isLock = await AsyncLocalLock.TryLockAsync($"initialize:{model.Id}", TimeSpan.FromSeconds(5), async () =>
             {
-                model = DbHelper.AccountStore.Get(model.Id)!;
+                model = DbHelper.Instance.AccountStore.Get(model.Id)!;
 
                 // 渠道 ID 和 服务器 ID 禁止修改
                 //model.ChannelId = account.ChannelId;
@@ -1002,7 +1088,7 @@ namespace Midjourney.API
                 model.Mode = param.Mode;
                 model.Sponsor = param.Sponsor;
 
-                DbHelper.AccountStore.Update(model);
+                DbHelper.Instance.AccountStore.Update(model);
 
                 var disInstance = _discordLoadBalancer.GetDiscordInstance(model.ChannelId);
                 disInstance?.ClearAccountCache(model.Id);
@@ -1060,7 +1146,7 @@ namespace Midjourney.API
         /// <param name="id"></param>
         public void DeleteAccount(string id)
         {
-            var model = DbHelper.AccountStore.Get(id);
+            var model = DbHelper.Instance.AccountStore.Get(id);
 
             if (model != null)
             {
@@ -1077,7 +1163,7 @@ namespace Midjourney.API
                 {
                 }
 
-                DbHelper.AccountStore.Delete(id);
+                DbHelper.Instance.AccountStore.Delete(id);
             }
         }
 

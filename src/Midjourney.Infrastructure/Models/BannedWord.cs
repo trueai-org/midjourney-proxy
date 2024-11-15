@@ -21,11 +21,17 @@
 // The use of this software for any form of illegal face swapping,
 // invasion of privacy, or any other unlawful purposes is strictly prohibited. 
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
+
+using Midjourney.Infrastructure.Data;
+
 namespace Midjourney.Infrastructure.Models
 {
     /// <summary>
     /// 违规词管理
     /// </summary>
+    [BsonCollection("word")]
+    [MongoDB.Bson.Serialization.Attributes.BsonIgnoreExtraElements]
+    [Serializable]
     public class BannedWord : DomainObject
     {
         public BannedWord()

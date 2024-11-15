@@ -21,7 +21,10 @@
 // The use of this software for any form of illegal face swapping,
 // invasion of privacy, or any other unlawful purposes is strictly prohibited. 
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
+using LiteDB;
 using MongoDB.Driver;
+using MongoDB.Driver.Linq;
+using System.Linq.Expressions;
 
 namespace Midjourney.Infrastructure.Data
 {
@@ -47,6 +50,27 @@ namespace Midjourney.Infrastructure.Data
         public static IMongoCollection<TDocument> GetCollection<TDocument>(this IMongoDatabase database, MongoCollectionSettings settings = null)
         {
             return database.GetCollection<TDocument>(GetCollectionName<TDocument>(), settings);
+        }
+
+        /// <summary>
+        /// 排序条件扩展
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="query"></param>
+        /// <param name="where"></param>
+        /// <param name="keySelector"></param>
+        /// <param name="desc"></param>
+        /// <returns></returns>
+        public static IMongoQueryable<T> OrderByIf<T>(this IMongoQueryable<T> query, bool where, Expression<Func<T, object>> keySelector, bool desc = true)
+        {
+            if (desc)
+            {
+                return where ? query.OrderByDescending(keySelector) : query;
+            }
+            else
+            {
+                return where ? query.OrderBy(keySelector) : query;
+            }
         }
     }
 }

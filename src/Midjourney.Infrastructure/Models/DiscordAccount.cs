@@ -33,6 +33,9 @@ namespace Midjourney.Infrastructure.Models
     /// <summary>
     /// Discord账号类。
     /// </summary>
+    [BsonCollection("account")]
+    [MongoDB.Bson.Serialization.Attributes.BsonIgnoreExtraElements]
+    [Serializable]
     public class DiscordAccount : DomainObject
     {
         public DiscordAccount()

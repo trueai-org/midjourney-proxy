@@ -62,7 +62,7 @@ namespace Midjourney.Infrastructure.Services
             return _memoryCache.GetOrCreate("domains", c =>
             {
                 c.SetAbsoluteExpiration(TimeSpan.FromMinutes(30));
-                var list = DbHelper.DomainStore.GetAll().Where(c => c.Enable);
+                var list = DbHelper.Instance.DomainStore.GetAll().Where(c => c.Enable);
 
                 var dict = new Dictionary<string, HashSet<string>>();
                 foreach (var item in list)
@@ -92,7 +92,7 @@ namespace Midjourney.Infrastructure.Services
             return _memoryCache.GetOrCreate("bannedWords", c =>
             {
                 c.SetAbsoluteExpiration(TimeSpan.FromMinutes(30));
-                var list = DbHelper.BannedWordStore.GetAll().Where(c => c.Enable);
+                var list = DbHelper.Instance.BannedWordStore.GetAll().Where(c => c.Enable);
 
                 var dict = new Dictionary<string, HashSet<string>>();
                 foreach (var item in list)
@@ -1106,7 +1106,7 @@ namespace Midjourney.Infrastructure.Services
         /// <returns></returns>
         public async Task InfoSetting(string id)
         {
-            var model = DbHelper.AccountStore.Get(id);
+            var model = DbHelper.Instance.AccountStore.Get(id);
             if (model == null)
             {
                 throw new LogicException("未找到账号实例");
@@ -1161,7 +1161,7 @@ namespace Midjourney.Infrastructure.Services
         /// <returns></returns>
         public async Task AccountChangeVersion(string id, string version)
         {
-            var model = DbHelper.AccountStore.Get(id);
+            var model = DbHelper.Instance.AccountStore.Get(id);
             if (model == null)
             {
                 throw new LogicException("未找到账号实例");
@@ -1197,7 +1197,7 @@ namespace Midjourney.Infrastructure.Services
         /// <returns></returns>
         public async Task AccountAction(string id, string customId, EBotType botType)
         {
-            var model = DbHelper.AccountStore.Get(id);
+            var model = DbHelper.Instance.AccountStore.Get(id);
             if (model == null)
             {
                 throw new LogicException("未找到账号实例");
@@ -1247,7 +1247,7 @@ namespace Midjourney.Infrastructure.Services
                         // 账号迁移
                         if (true)
                         {
-                            var ids = DbHelper.AccountStore.GetAllIds().ToHashSet<string>();
+                            var ids = DbHelper.Instance.AccountStore.GetAllIds().ToHashSet<string>();
 
                             var path = "/mj/account/query";
                             var pageNumber = 0;
@@ -1320,7 +1320,7 @@ namespace Midjourney.Infrastructure.Services
 
                                     if (!ids.Contains(acc.Id))
                                     {
-                                        DbHelper.AccountStore.Add(acc);
+                                        DbHelper.Instance.AccountStore.Add(acc);
                                         ids.Add(acc.Id);
                                     }
                                 }
@@ -1337,9 +1337,9 @@ namespace Midjourney.Infrastructure.Services
                         // 任务迁移
                         if (true)
                         {
-                            var accounts = DbHelper.AccountStore.GetAll();
+                            var accounts = DbHelper.Instance.AccountStore.GetAll();
 
-                            var ids = TaskHelper.Instance.TaskStore.GetAllIds().ToHashSet<string>();
+                            var ids = DbHelper.Instance.TaskStore.GetAllIds().ToHashSet<string>();
 
                             var path = "/mj/task-admin/query";
                             var pageNumber = 0;
@@ -1402,7 +1402,7 @@ namespace Midjourney.Infrastructure.Services
 
                                     if (!ids.Contains(taskInfo.Id))
                                     {
-                                        TaskHelper.Instance.TaskStore.Add(taskInfo);
+                                        DbHelper.Instance.TaskStore.Add(taskInfo);
                                         ids.Add(taskInfo.Id);
                                     }
                                 }

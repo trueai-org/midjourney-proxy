@@ -70,12 +70,12 @@ namespace Midjourney.API.Controllers
                 var now = new DateTimeOffset(DateTime.Now.Date).ToUnixTimeMilliseconds();
                 var yesterday = new DateTimeOffset(DateTime.Now.Date.AddDays(-1)).ToUnixTimeMilliseconds();
 
-                dto.TodayDraw = (int)TaskHelper.Instance.TaskStore.Count(x => x.SubmitTime >= now);
-                dto.YesterdayDraw = (int)TaskHelper.Instance.TaskStore.Count(x => x.SubmitTime >= yesterday && x.SubmitTime < now);
-                dto.TotalDraw = (int)TaskHelper.Instance.TaskStore.Count(x => true);
+                dto.TodayDraw = (int)DbHelper.Instance.TaskStore.Count(x => x.SubmitTime >= now);
+                dto.YesterdayDraw = (int)DbHelper.Instance.TaskStore.Count(x => x.SubmitTime >= yesterday && x.SubmitTime < now);
+                dto.TotalDraw = (int)DbHelper.Instance.TaskStore.Count(x => true);
 
                 // 今日绘图客户端 top 10
-                var top10 = TaskHelper.Instance.TaskStore.Where(x => x.SubmitTime >= now)
+                var top10 = DbHelper.Instance.TaskStore.Where(x => x.SubmitTime >= now)
                     .ToList()
                     .GroupBy(c => string.Join(".", c.ClientIp?.Split('.')?.Take(2) ?? []) + ".x.x")
                     .Select(c => new

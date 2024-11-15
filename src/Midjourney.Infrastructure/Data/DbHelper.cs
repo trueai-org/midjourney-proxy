@@ -21,42 +21,71 @@
 // The use of this software for any form of illegal face swapping,
 // invasion of privacy, or any other unlawful purposes is strictly prohibited. 
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
+
 namespace Midjourney.Infrastructure.Data
 {
     /// <summary>
-    /// 数据库帮助类。
+    /// 任务帮助类
     /// </summary>
-    public class DbHelper
+    public class DbHelper : SingletonBase<DbHelper>
     {
-        /// <summary>
-        /// 任务存储。
-        /// </summary>
-        public static LiteDBRepository<TaskInfo> TaskStore = new LiteDBRepository<TaskInfo>("data/mj.db");
+        private readonly IDataHelper<TaskInfo> _taskStore;
+        private readonly IDataHelper<DiscordAccount> _accountStore;
+        private readonly IDataHelper<User> _userStore;
+        private readonly IDataHelper<DomainTag> _domainStore;
+        private readonly IDataHelper<BannedWord> _bannedWordStore;
+        //private readonly IDataHelper<Setting> _settingStore;
+
+        public DbHelper()
+        {
+            if (GlobalConfiguration.Setting.IsMongo)
+            {
+                _taskStore = new MongoDBRepository<TaskInfo>();
+                _accountStore = new MongoDBRepository<DiscordAccount>();
+                _userStore = new MongoDBRepository<User>();
+                _domainStore = new MongoDBRepository<DomainTag>();
+                _bannedWordStore = new MongoDBRepository<BannedWord>();
+                //_settingStore = new MongoDBRepository<Setting>();
+            }
+            else
+            {
+                _taskStore = LiteDBHelper.TaskStore;
+                _accountStore = LiteDBHelper.AccountStore;
+                _userStore = LiteDBHelper.UserStore;
+                _domainStore = LiteDBHelper.DomainStore;
+                _bannedWordStore = LiteDBHelper.BannedWordStore;
+                //_settingStore = LiteDBHelper.SettingStore;
+            }
+        }
 
         /// <summary>
-        /// Discord 账号存储。
+        /// Task 数据库操作
         /// </summary>
-        public static LiteDBRepository<DiscordAccount> AccountStore = new LiteDBRepository<DiscordAccount>("data/mj.db");
+        public IDataHelper<TaskInfo> TaskStore => _taskStore;
 
         /// <summary>
-        /// User 账号存储。
+        /// Discord 账号数据库操作
         /// </summary>
-        public static LiteDBRepository<User> UserStore = new LiteDBRepository<User>("data/mj.db");
+        public IDataHelper<DiscordAccount> AccountStore => _accountStore;
 
         /// <summary>
-        /// 领域标签存储。
+        /// User 数据库操作
         /// </summary>
-        public static LiteDBRepository<DomainTag> DomainStore = new LiteDBRepository<DomainTag>("data/mj.db");
+        public IDataHelper<User> UserStore => _userStore;
 
         /// <summary>
-        /// 系统配置存储。
+        /// 领域标签数据库操作
         /// </summary>
-        public static LiteDBRepository<Setting> SettingStore = new LiteDBRepository<Setting>("data/mj.db");
+        public IDataHelper<DomainTag> DomainStore => _domainStore;
 
         /// <summary>
-        /// 禁用词存储。
+        /// 禁用词数据库操作
         /// </summary>
-        public static LiteDBRepository<BannedWord> BannedWordStore = new LiteDBRepository<BannedWord>("data/mj.db");
+        public IDataHelper<BannedWord> BannedWordStore => _bannedWordStore;
 
+        ///// <summary>
+        ///// 系统配置数据库操作
+        ///// </summary>
+        //public IDataHelper<Setting> SettingStore => _settingStore;
     }
 }

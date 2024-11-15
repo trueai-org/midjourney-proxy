@@ -21,6 +21,7 @@
 // The use of this software for any form of illegal face swapping,
 // invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
+
 using LiteDB;
 using Midjourney.Infrastructure.Services;
 using System.Linq.Expressions;
@@ -40,19 +41,19 @@ namespace Midjourney.Infrastructure.Data
         public void Save(TaskInfo task)
         {
             //DbHelper.TaskStore.Save(task);
-            TaskHelper.Instance.TaskStore.Save(task);
+            DbHelper.Instance.TaskStore.Save(task);
         }
 
         public void Delete(string id)
         {
             //DbHelper.TaskStore.Delete(id);
-            TaskHelper.Instance.TaskStore.Delete(id);
+            DbHelper.Instance.TaskStore.Delete(id);
         }
 
         public TaskInfo Get(string id)
         {
             //return DbHelper.TaskStore.Get(id);
-            return TaskHelper.Instance.TaskStore.Get(id);
+            return DbHelper.Instance.TaskStore.Get(id);
         }
 
         public List<TaskInfo> GetList(List<string> ids)
@@ -62,7 +63,7 @@ namespace Midjourney.Infrastructure.Data
                 return new List<TaskInfo>();
             }
 
-            return TaskHelper.Instance.TaskStore.Where(c => ids.Contains(c.Id));
+            return DbHelper.Instance.TaskStore.Where(c => ids.Contains(c.Id));
         }
     }
 
