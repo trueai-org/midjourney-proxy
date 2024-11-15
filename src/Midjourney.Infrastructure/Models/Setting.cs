@@ -133,6 +133,12 @@ namespace Midjourney.Infrastructure.Models
         public bool EnableConvertNijiToMj { get; set; }
 
         /// <summary>
+        /// 转换 --niji 为 Niji Bot
+        /// 当 prompt 中包含 --niji 时，将会自动转换为 Niji·journey Bot 任务
+        /// </summary>
+        public bool EnableConvertNijiToNijiBot { get; set; }
+
+        /// <summary>
         /// 开启自动登录
         /// </summary>
         public bool EnableAutoLogin { get; set; }

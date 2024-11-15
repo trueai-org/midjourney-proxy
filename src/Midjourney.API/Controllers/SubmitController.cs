@@ -139,7 +139,15 @@ namespace Midjourney.API.Controllers
             task.Prompt = prompt;
             task.BotType = GetBotType(imagineDTO.BotType);
 
-            string promptEn = TranslatePrompt(prompt, task.BotType);
+            // 转换 --niji 为 Niji Bot
+            if (GlobalConfiguration.Setting.EnableConvertNijiToNijiBot
+                && prompt.Contains("--niji")
+                && task.BotType == EBotType.MID_JOURNEY)
+            {
+                task.BotType = EBotType.NIJI_JOURNEY;
+            }
+
+            string promptEn = TranslatePrompt(prompt, task.RealBotType ?? task.BotType);
             try
             {
                 _taskService.CheckBanned(promptEn);
@@ -151,8 +159,6 @@ namespace Midjourney.API.Controllers
                     .SetProperty("bannedWord", e.Message));
             }
 
-
-
             List<DataUrl> dataUrls = new List<DataUrl>();
             try
             {
@@ -163,7 +169,6 @@ namespace Midjourney.API.Controllers
                 _logger.LogError(e, "base64格式转换异常");
                 return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "base64格式错误"));
             }
-
 
             task.PromptEn = promptEn;
             task.Description = $"/imagine {prompt}";
@@ -358,6 +363,7 @@ namespace Midjourney.API.Controllers
 
             task.Action = changeDTO.Action;
             task.BotType = targetTask.BotType;
+            task.RealBotType = targetTask.RealBotType;
             task.ParentId = targetTask.Id;
             task.Prompt = targetTask.Prompt;
             task.PromptEn = targetTask.PromptEn;
@@ -445,7 +451,7 @@ namespace Midjourney.API.Controllers
             var prompt = dto.Prompt;
             task.Prompt = prompt;
 
-            var promptEn = TranslatePrompt(prompt, task.BotType);
+            var promptEn = TranslatePrompt(prompt, task.RealBotType ?? task.BotType);
             try
             {
                 _taskService.CheckBanned(promptEn);
@@ -543,6 +549,7 @@ namespace Midjourney.API.Controllers
             task.InstanceId = targetTask.InstanceId;
             task.ParentId = targetTask.Id;
             task.BotType = targetTask.BotType;
+            task.RealBotType = targetTask.RealBotType;
             task.SubInstanceId = targetTask.SubInstanceId;
 
             // 识别 mj action
@@ -648,7 +655,7 @@ namespace Midjourney.API.Controllers
             var prompt = actionDTO.Prompt;
             var task = targetTask;
 
-            var promptEn = TranslatePrompt(prompt, task.BotType);
+            var promptEn = TranslatePrompt(prompt, task.RealBotType ?? task.BotType);
             try
             {
                 _taskService.CheckBanned(promptEn);
@@ -865,12 +872,12 @@ namespace Midjourney.API.Controllers
             }
 
             // 未开启 mj 翻译
-            if (botType == EBotType.MID_JOURNEY && !prompt.Contains("--niji") && !setting.EnableMjTranslate)
+            if (botType == EBotType.MID_JOURNEY && !setting.EnableMjTranslate)
             {
                 return prompt;
             }
             // 未开启 niji 翻译
-            else if ((botType == EBotType.NIJI_JOURNEY || prompt.Contains("--niji")) && !setting.EnableNijiTranslate)
+            else if (botType == EBotType.NIJI_JOURNEY && !setting.EnableNijiTranslate)
             {
                 return prompt;
             }
