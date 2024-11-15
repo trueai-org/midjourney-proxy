@@ -225,11 +225,16 @@ namespace Midjourney.Infrastructure.Models
         {
             get
             {
+                // 如果工作时间段和摸鱼时间段都为空
                 if (string.IsNullOrWhiteSpace(WorkTime) && string.IsNullOrWhiteSpace(FishingTime))
                 {
-                    return true;
+                    if (DayDrawLimit <= -1 || DayDrawCount < DayDrawLimit)
+                    {
+                        return true;
+                    }
                 }
 
+                // 如果工作时间段内，且不是摸鱼时间段
                 if (DateTime.Now.IsInWorkTime(WorkTime) && !DateTime.Now.IsInFishTime(FishingTime))
                 {
                     if (DayDrawLimit <= -1 || DayDrawCount < DayDrawLimit)

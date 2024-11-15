@@ -454,12 +454,12 @@ namespace Midjourney.Infrastructure
         /// <returns></returns>
         public static bool IsInWorkTime(this DateTime dateTime, string input)
         {
-            var currentTime = dateTime.TimeOfDay;
             if (string.IsNullOrWhiteSpace(input))
             {
                 return true;
             }
 
+            var currentTime = dateTime.TimeOfDay;
             var ts = input.ToTimeSlots();
             foreach (var slot in ts)
             {
@@ -492,11 +492,12 @@ namespace Midjourney.Infrastructure
         /// <returns></returns>
         public static bool IsInFishTime(this DateTime dateTime, string input)
         {
-            var currentTime = dateTime.TimeOfDay;
             if (string.IsNullOrWhiteSpace(input))
             {
                 return false;
             }
+
+            var currentTime = dateTime.TimeOfDay;
 
             var ts = input.ToTimeSlots();
             foreach (var slot in ts)
