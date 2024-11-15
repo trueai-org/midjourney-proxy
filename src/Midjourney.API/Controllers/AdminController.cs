@@ -26,11 +26,13 @@ using LiteDB;
 using MailKit.Search;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.Extensions.Caching.Memory;
 using Midjourney.Infrastructure;
 using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.LoadBalancer;
+using Midjourney.Infrastructure.Models;
 using Midjourney.Infrastructure.Services;
 using Midjourney.Infrastructure.StandardTable;
 using Midjourney.Infrastructure.Storage;
@@ -663,9 +665,28 @@ namespace Midjourney.API.Controllers
         [HttpPost("account")]
         public Result AccountAdd([FromBody] DiscordAccountConfig accountConfig)
         {
-            if (_isAnonymous)
+            var setting = GlobalConfiguration.Setting;
+            var user = _workContext.GetUser();
+
+            if (user == null)
             {
                 return Result.Fail("演示模式，禁止操作");
+            }
+
+            if (!setting.EnableAccountSponsor && user.Role != EUserRole.ADMIN)
+            {
+                return Result.Fail("未开启赞助功能，禁止操作");
+            }
+
+            // 同一个用户每天最多只能赞助 10 个账号
+            var limitKey = $"{DateTime.Now:yyyyMMdd}:sponsor:{user.Id}";
+            var sponsorCount = 0;
+            if (setting.EnableAccountSponsor && user.Role != EUserRole.ADMIN)
+            {
+                if (_memoryCache.TryGetValue(limitKey, out sponsorCount) && sponsorCount > 10)
+                {
+                    Result.Fail("每天最多只能赞助 10 个账号");
+                }
             }
 
             var model = DbHelper.AccountStore.GetCollection()
@@ -679,10 +700,38 @@ namespace Midjourney.API.Controllers
             }
 
             var account = DiscordAccount.Create(accountConfig);
+
+            // 赞助账号
+            if (account.IsSponsor)
+            {
+                account.SponsorUserId = user.Id;
+
+                // 赞助者禁止配置的选项
+                if (user.Role != EUserRole.ADMIN)
+                {
+                    account.Sort = 0;
+                    account.SubChannels.Clear();
+                    account.WorkTime = null;
+                    account.FishingTime = null;
+                }
+
+                // 赞助者参数校验
+                account.SponsorValidate();
+            }
+
             DbHelper.AccountStore.Add(account);
 
             // 后台执行
             _ = _discordAccountInitializer.StartCheckAccount(account);
+
+
+            // 更新缓存
+            if (setting.EnableAccountSponsor && user.Role != EUserRole.ADMIN)
+            {
+                sponsorCount++;
+
+                _memoryCache.Set(limitKey, sponsorCount, TimeSpan.FromDays(1));
+            }
 
             return Result.Ok();
         }
@@ -695,15 +744,45 @@ namespace Midjourney.API.Controllers
         [HttpPut("account/{id}")]
         public async Task<Result> AccountEdit([FromBody] DiscordAccount param)
         {
-            if (_isAnonymous)
+            var setting = GlobalConfiguration.Setting;
+            var user = _workContext.GetUser();
+
+            if (user == null)
             {
                 return Result.Fail("演示模式，禁止操作");
             }
+
+            if (!setting.EnableAccountSponsor && user.Role != EUserRole.ADMIN)
+            {
+                return Result.Fail("未开启赞助功能，禁止操作");
+            }
+
+            //if (_isAnonymous)
+            //{
+            //    return Result.Fail("演示模式，禁止操作");
+            //}
 
             var model = DbHelper.AccountStore.Get(param.Id);
             if (model == null)
             {
                 throw new LogicException("账号不存在");
+            }
+
+            if (user.Role != EUserRole.ADMIN && model.SponsorUserId != user.Id)
+            {
+                return Result.Fail("无权限操作");
+            }
+
+            // 赞助者禁止配置的选项
+            if (user.Role != EUserRole.ADMIN)
+            {
+                param.Sort = model.Sort;
+                param.SubChannels = model.SubChannels;
+                param.WorkTime = model.WorkTime;
+                param.FishingTime = model.WorkTime;
+
+                // 赞助者参数校验
+                param.SponsorValidate();
             }
 
             model.NijiBotChannelId = param.NijiBotChannelId;
@@ -742,20 +821,34 @@ namespace Midjourney.API.Controllers
         [HttpPut("account-reconnect/{id}")]
         public async Task<Result> AccountReconnect(string id, [FromBody] DiscordAccount param)
         {
-            if (_isAnonymous)
-            {
-                return Result.Fail("演示模式，禁止操作");
-            }
-
             if (id != param.Id)
             {
                 throw new LogicException("参数错误");
             }
 
-            var model = DbHelper.AccountStore.Get(param.Id);
+            var setting = GlobalConfiguration.Setting;
+            var user = _workContext.GetUser();
+
+            if (user == null)
+            {
+                return Result.Fail("演示模式，禁止操作");
+            }
+
+            if (!setting.EnableAccountSponsor && user.Role != EUserRole.ADMIN)
+            {
+                return Result.Fail("未开启赞助功能，禁止操作");
+            }
+
+
+            var model = DbHelper.AccountStore.Get(id);
             if (model == null)
             {
                 throw new LogicException("账号不存在");
+            }
+
+            if (user.Role != EUserRole.ADMIN && model.SponsorUserId != user.Id)
+            {
+                return Result.Fail("无权限操作");
             }
 
             // 不可修改频道 ID
@@ -776,10 +869,35 @@ namespace Midjourney.API.Controllers
         [HttpDelete("account/{id}")]
         public Result AccountDelete(string id)
         {
-            if (_isAnonymous)
+            var setting = GlobalConfiguration.Setting;
+            var user = _workContext.GetUser();
+
+            if (user == null)
             {
                 return Result.Fail("演示模式，禁止操作");
             }
+
+            if (!setting.EnableAccountSponsor && user.Role != EUserRole.ADMIN)
+            {
+                return Result.Fail("未开启赞助功能，禁止操作");
+            }
+
+
+            var model = DbHelper.AccountStore.Get(id);
+            if (model == null)
+            {
+                throw new LogicException("账号不存在");
+            }
+
+            if (user.Role != EUserRole.ADMIN && model.SponsorUserId != user.Id)
+            {
+                return Result.Fail("无权限操作");
+            }
+
+            //if (_isAnonymous)
+            //{
+            //    return Result.Fail("演示模式，禁止操作");
+            //}
 
             _discordAccountInitializer.DeleteAccount(id);
 
@@ -793,6 +911,8 @@ namespace Midjourney.API.Controllers
         [HttpGet("accounts")]
         public ActionResult<List<DiscordAccount>> List()
         {
+            var user = _workContext.GetUser();
+
             var list = DbHelper.AccountStore.GetCollection().Query().Where(c => c.Enable == true)
                 .ToList()
                 .OrderBy(c => c.Sort).ThenBy(c => c.DateCreated).ToList();
@@ -805,7 +925,7 @@ namespace Midjourney.API.Controllers
                 item.QueueCount = inc?.GetQueueTasks().Count ?? 0;
                 item.Running = inc?.IsAlive ?? false;
 
-                if (_isAnonymous)
+                if (user == null || (user.Role != EUserRole.ADMIN && user.Id != item.SponsorUserId))
                 {
                     // Token 加密
                     item.UserToken = item.UserToken?.Substring(0, item.UserToken.Length / 5) + "****";
@@ -836,6 +956,9 @@ namespace Midjourney.API.Controllers
         [HttpPost("accounts")]
         public ActionResult<StandardTableResult<DiscordAccount>> Accounts([FromBody] StandardTableParam<DiscordAccount> request)
         {
+            var user = _workContext.GetUser();
+
+
             var page = request.Pagination;
             if (page.PageSize > 100)
             {
@@ -884,7 +1007,7 @@ namespace Midjourney.API.Controllers
                 item.QueueCount = inc?.GetQueueTasks().Count ?? 0;
                 item.Running = inc?.IsAlive ?? false;
 
-                if (_isAnonymous)
+                if (user == null || (user.Role != EUserRole.ADMIN && user.Id != item.SponsorUserId))
                 {
                     // Token 加密
                     item.UserToken = item.UserToken?.Substring(0, item.UserToken.Length / 5) + "****";
@@ -1476,7 +1599,7 @@ namespace Midjourney.API.Controllers
                     model.Replicate.Token = "****";
                 }
 
-                if(model.TencentCos!=null)
+                if (model.TencentCos != null)
                 {
                     model.TencentCos.SecretId = "****";
                     model.TencentCos.SecretKey = "****";

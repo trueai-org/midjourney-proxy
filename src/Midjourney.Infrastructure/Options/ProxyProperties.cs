@@ -435,6 +435,11 @@ namespace Midjourney.Infrastructure
         public string Sponsor { get; set; }
 
         /// <summary>
+        /// 是否赞助者
+        /// </summary>
+        public bool IsSponsor { get; set; }
+
+        /// <summary>
         /// 排序
         /// </summary>
         public int Sort { get; set; }
