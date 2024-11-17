@@ -319,6 +319,8 @@ namespace Midjourney.API.Controllers
                                 request.Success = false;
                                 request.Message = "CF 验证过期，超过 10 分钟";
                             }
+
+                            Log.Warning("CF 验证过期，超过 10 分钟 {@0}, time: {@1}", request, item.CfHashCreated);
                         }
 
                         if (request.Success)

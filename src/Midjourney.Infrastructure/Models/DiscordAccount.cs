@@ -25,6 +25,7 @@
 using LiteDB;
 using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.Dto;
+using MongoDB.Bson.Serialization.Attributes;
 using System.ComponentModel.DataAnnotations;
 using System.Text.RegularExpressions;
 
@@ -131,6 +132,7 @@ namespace Midjourney.Infrastructure.Models
         /// <summary>
         /// 真人验证 hash url 创建时间
         /// </summary>
+        [BsonDateTimeOptions(Kind = DateTimeKind.Local)]
         public DateTime? CfHashCreated { get; set; }
 
         /// <summary>
@@ -205,11 +207,13 @@ namespace Midjourney.Infrastructure.Models
         /// <summary>
         /// 添加时间
         /// </summary>
+        [BsonDateTimeOptions(Kind = DateTimeKind.Local)]
         public DateTime DateCreated { get; set; } = DateTime.Now;
 
         /// <summary>
         /// mj info 更新时间
         /// </summary>
+        [BsonDateTimeOptions(Kind = DateTimeKind.Local)]
         public DateTime? InfoUpdated { get; set; }
 
         /// <summary>
@@ -233,7 +237,8 @@ namespace Midjourney.Infrastructure.Models
         /// 2、处于非摸鱼时间段内
         /// 3、没有超出最大任务限制
         /// </summary>
-        [BsonIgnore]
+        [LiteDB.BsonIgnore]
+        [MongoDB.Bson.Serialization.Attributes.BsonIgnore]
         public bool IsAcceptNewTask
         {
             get
@@ -357,25 +362,29 @@ namespace Midjourney.Infrastructure.Models
         /// <summary>
         /// 执行中的任务数
         /// </summary>
-        [BsonIgnore]
+        [LiteDB.BsonIgnore]
+        [MongoDB.Bson.Serialization.Attributes.BsonIgnore]
         public int RunningCount { get; set; }
 
         /// <summary>
         /// 队列中的任务数
         /// </summary>
-        [BsonIgnore]
+        [LiteDB.BsonIgnore]
+        [MongoDB.Bson.Serialization.Attributes.BsonIgnore]
         public int QueueCount { get; set; }
 
         /// <summary>
         /// wss 是否运行中
         /// </summary>
-        [BsonIgnore]
+        [LiteDB.BsonIgnore]
+        [MongoDB.Bson.Serialization.Attributes.BsonIgnore]
         public bool Running { get; set; }
 
         /// <summary>
         /// Mj 按钮
         /// </summary>
-        [BsonIgnore]
+        [LiteDB.BsonIgnore]
+        [MongoDB.Bson.Serialization.Attributes.BsonIgnore]
         public List<CustomComponentModel> Buttons => Components.Where(c => c.Id != 1).SelectMany(x => x.Components)
             .Select(c =>
             {
@@ -392,20 +401,23 @@ namespace Midjourney.Infrastructure.Models
         /// <summary>
         /// MJ 是否开启 remix mode
         /// </summary>
-        [BsonIgnore]
+        [LiteDB.BsonIgnore]
+        [MongoDB.Bson.Serialization.Attributes.BsonIgnore]
         public bool MjRemixOn => Buttons.Any(x => x.Label == "Remix mode" && x.Style == 3);
 
         /// <summary>
         /// MJ 是否开启 fast mode
         /// </summary>
-        [BsonIgnore]
+        [LiteDB.BsonIgnore]
+        [MongoDB.Bson.Serialization.Attributes.BsonIgnore]
         public bool MjFastModeOn =>
             Buttons.Any(x => (x.Label == "Fast mode" || x.Label == "Turbo mode") && x.Style == 3);
 
         /// <summary>
         /// Niji 按钮
         /// </summary>
-        [BsonIgnore]
+        [LiteDB.BsonIgnore]
+        [MongoDB.Bson.Serialization.Attributes.BsonIgnore]
         public List<CustomComponentModel> NijiButtons => NijiComponents.SelectMany(x => x.Components)
             .Select(c =>
             {
@@ -422,7 +434,8 @@ namespace Midjourney.Infrastructure.Models
         /// <summary>
         /// Niji 是否开启 remix mode
         /// </summary>
-        [BsonIgnore]
+        [LiteDB.BsonIgnore]
+        [MongoDB.Bson.Serialization.Attributes.BsonIgnore]
         public bool NijiRemixOn => NijiButtons.Any(x => x.Label == "Remix mode" && x.Style == 3);
 
         /// <summary>
@@ -434,7 +447,8 @@ namespace Midjourney.Infrastructure.Models
         /// <summary>
         /// Mj 下拉框
         /// </summary>
-        [BsonIgnore]
+        [LiteDB.BsonIgnore]
+        [MongoDB.Bson.Serialization.Attributes.BsonIgnore]
         public List<CustomComponentModel> VersionSelector => Components.Where(c => c.Id == 1)
             .FirstOrDefault()?.Components?.FirstOrDefault()?.Options
             .Select(c =>
@@ -450,7 +464,8 @@ namespace Midjourney.Infrastructure.Models
         /// <summary>
         /// 默认下拉框值
         /// </summary>
-        [BsonIgnore]
+        [LiteDB.BsonIgnore]
+        [MongoDB.Bson.Serialization.Attributes.BsonIgnore]
         public string Version => Components.Where(c => c.Id == 1)
             .FirstOrDefault()?.Components?.FirstOrDefault()?.Options
             .Where(c => c.Default == true).FirstOrDefault()?.Value;
@@ -458,7 +473,8 @@ namespace Midjourney.Infrastructure.Models
         /// <summary>
         /// 显示信息。
         /// </summary>
-        [BsonIgnore]
+        [LiteDB.BsonIgnore]
+        [MongoDB.Bson.Serialization.Attributes.BsonIgnore]
         public Dictionary<string, object> Displays
         {
             get

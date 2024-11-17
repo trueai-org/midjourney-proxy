@@ -23,6 +23,7 @@
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
 using Midjourney.Infrastructure.Data;
+using MongoDB.Bson.Serialization.Attributes;
 
 namespace Midjourney.Infrastructure.Models
 {
@@ -71,6 +72,7 @@ namespace Midjourney.Infrastructure.Models
         /// <summary>
         /// 创建时间
         /// </summary>
+        [BsonDateTimeOptions(Kind = DateTimeKind.Local)]
         public DateTime CreateTime { get; set; } = DateTime.Now;
 
         /// <summary>
@@ -83,6 +85,7 @@ namespace Midjourney.Infrastructure.Models
         /// <summary>
         /// 更新时间
         /// </summary>
+        [BsonDateTimeOptions(Kind = DateTimeKind.Local)]
         public DateTime UpdateTime { get; set; } = DateTime.Now;
 
         /// <summary>
