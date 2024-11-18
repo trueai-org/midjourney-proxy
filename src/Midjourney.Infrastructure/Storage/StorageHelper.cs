@@ -228,6 +228,68 @@ namespace Midjourney.Infrastructure.Storage
                 });
 
             }
+            else if(setting.ImageStorageType == ImageStorageType.R2)
+            {
+                var opt = setting.CloudflareR2;
+                var cdn = opt.CustomCdn;
+
+                if (string.IsNullOrWhiteSpace(cdn) || imageUrl.StartsWith(cdn))
+                {
+                    return;
+                }
+
+                // 本地锁
+                LocalLock.TryLock(lockKey, TimeSpan.FromSeconds(10), () =>
+                {
+                    var r2 = new CloudflareR2StorageService();
+
+                    // 替换 url
+                    var url = $"{cdn?.Trim()?.Trim('/')}/{localPath}{uri?.Query}";
+
+                    // 下载图片并保存
+                    using (HttpClient client = new HttpClient(hch))
+                    {
+                        client.Timeout = TimeSpan.FromMinutes(15);
+
+                        var response = client.GetAsync(imageUrl).Result;
+                        response.EnsureSuccessStatusCode();
+                        var stream = response.Content.ReadAsStreamAsync().Result;
+
+                        var mm = MimeKit.MimeTypes.GetMimeType(Path.GetFileName(localPath));
+                        if (string.IsNullOrWhiteSpace(mm))
+                        {
+                            mm = "image/png";
+                        }
+
+                        r2.SaveAsync(stream, localPath, mm);
+
+                        // 如果配置了链接有效期，则生成带签名的链接
+                        if (opt.ExpiredMinutes > 0)
+                        {
+                            var priUri = r2.GetSignKey(localPath, opt.ExpiredMinutes);
+                            url = $"{cdn?.Trim()?.Trim('/')}/{priUri.PathAndQuery.TrimStart('/')}";
+                        }
+                    }
+
+                    if (action == TaskAction.SWAP_VIDEO_FACE)
+                    {
+                        imageUrl = url;
+                        thumbnailUrl = url.ToStyle(opt.VideoSnapshotStyle);
+                    }
+                    else if (action == TaskAction.SWAP_FACE)
+                    {
+                        // 换脸不格式化 url
+                        imageUrl = url;
+                        thumbnailUrl = url;
+                    }
+                    else
+                    {
+                        imageUrl = url.ToStyle(opt.ImageStyle);
+                        thumbnailUrl = url.ToStyle(opt.ThumbnailImageStyle);
+                    }
+                });
+
+            }
             // https://cdn.discordapp.com/attachments/1265095688782614602/1266300100989161584/03ytbus_LOGO_design_A_warrior_frog_Muscles_like_Popeye_Freehand_06857373-4fd9-403d-a5df-c2f27f9be269.png?ex=66a4a55e&is=66a353de&hm=c597e9d6d128c493df27a4d0ae41204655ab73f7e885878fc1876a8057a7999f&
             // 将图片保存到本地，并替换 url，并且保持原 url和参数
             // 默认保存根目录为 /wwwroot
