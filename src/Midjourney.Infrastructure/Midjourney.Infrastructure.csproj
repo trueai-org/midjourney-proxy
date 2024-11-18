@@ -35,6 +35,7 @@
 		<PackageReference Include="UAParser" Version="3.1.47" />
 		<PackageReference Include="MailKit" Version="4.4.0" />
 		<PackageReference Include="MimeKit" Version="4.7.1" />
+		<PackageReference Include="AWSSDK.S3" Version="3.7.406.2" />
 	</ItemGroup>
 
 	<ItemGroup>

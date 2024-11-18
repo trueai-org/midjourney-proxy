@@ -144,6 +144,11 @@ namespace Midjourney.Infrastructure
         /// 腾讯云 COS
         /// </summary>
         COS = 3,
+
+        /// <summary>
+        /// Cloudflare R2
+        /// </summary>
+        R2 = 4,
     }
 
     /// <summary>

@@ -55,6 +55,10 @@ namespace Midjourney.Infrastructure.Storage
             {
                 _instance = new TencentCosStorageService();
             }
+            else if (config.ImageStorageType == ImageStorageType.R2)
+            {
+                _instance = new CloudflareR2StorageService();
+            }
         }
 
         /// <summary>

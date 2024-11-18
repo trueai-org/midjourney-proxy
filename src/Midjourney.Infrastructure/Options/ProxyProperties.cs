@@ -146,6 +146,11 @@ namespace Midjourney.Infrastructure
         public TencentCosOptions TencentCos { get; set; } = new TencentCosOptions();
 
         /// <summary>
+        /// Cloudflare R2 存储配置
+        /// </summary>
+        public CloudflareR2Options CloudflareR2 { get; set; } = new CloudflareR2Options();
+
+        /// <summary>
         /// 换脸配置
         /// </summary>
         public ReplicateOptions Replicate { get; set; } = new ReplicateOptions();
@@ -165,6 +170,65 @@ namespace Midjourney.Infrastructure
         /// 加速域名，可用于图片加速和图片审核使用
         /// </summary>
         public string CustomCdn { get; set; }
+    }
+
+    /// <summary>
+    /// Cloudflare R2 存储配置
+    /// </summary>
+    public class CloudflareR2Options
+    {
+        /// <summary>
+        /// 
+        /// </summary>
+        public string AccountId { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public string AccessKey { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public string SecretKey { get; set; }
+
+        /// <summary>
+        /// Bucket
+        /// </summary>
+        public string Bucket { get; set; }
+
+        /// <summary>
+        /// 加速域名，可用于图片加速和图片审核使用
+        /// </summary>
+        public string CustomCdn { get; set; }
+
+        /// <summary>
+        /// 默认图片样式
+        /// </summary>
+        public string ImageStyle { get; set; }
+
+        /// <summary>
+        /// 默认缩略图图片样式
+        /// </summary>
+        public string ThumbnailImageStyle { get; set; }
+
+        /// <summary>
+        /// 视频截帧
+        /// https://cloud.tencent.com/document/product/436/55671
+        /// </summary>
+        public string VideoSnapshotStyle { get; set; }
+
+        ///// <summary>
+        ///// Storage class of the object
+        ///// en: https://intl.cloud.tencent.com/document/product/436/30925
+        ///// zh: https://cloud.tencent.com/document/product/436/33417
+        ///// </summary>
+        //public string StorageClass { get; set; }
+
+        /// <summary>
+        /// 链接默认有效时间
+        /// </summary>
+        public int ExpiredMinutes { get; set; } = 0;
     }
 
     /// <summary>

@@ -1698,6 +1698,12 @@ namespace Midjourney.API.Controllers
                     model.TencentCos.SecretKey = "****";
                 }
 
+                if (model.CloudflareR2 != null)
+                {
+                    model.CloudflareR2.AccessKey = "****";
+                    model.CloudflareR2.SecretKey = "****";
+                }
+
                 model.CaptchaNotifySecret = "****";
             }
 
