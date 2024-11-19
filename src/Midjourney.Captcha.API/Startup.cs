@@ -139,6 +139,9 @@ namespace Midjourney.Captcha.API
                 app.UseSwaggerUI();
             }
 
+            app.UseDefaultFiles(); // 启用默认文件（index.html）
+            app.UseStaticFiles(); // 配置提供静态文件
+
             app.UseCors(builder =>
             {
                 builder.AllowAnyMethod().AllowAnyHeader().SetIsOriginAllowed(origin => true).AllowCredentials();
