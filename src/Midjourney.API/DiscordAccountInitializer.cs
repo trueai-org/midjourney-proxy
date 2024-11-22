@@ -26,6 +26,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.LoadBalancer;
+using Midjourney.Infrastructure.Models;
 using Midjourney.Infrastructure.Services;
 using Midjourney.Infrastructure.Util;
 using MongoDB.Driver;
@@ -174,7 +175,12 @@ namespace Midjourney.API
                 }
                 catch (Exception ex)
                 {
-                    _logger.Error(ex, "本地存储迁移到 mongodb 异常");
+                    _logger.Error(ex, "本地存储迁移到 mongodb 异常，已重置为本地数据库");
+
+                    // 如果出现异常，则重置为本地存储
+                    GlobalConfiguration.Setting.MongoDefaultConnectionString = "";
+
+                    LiteDBHelper.SettingStore.Save(GlobalConfiguration.Setting);
                 }
             }
 
