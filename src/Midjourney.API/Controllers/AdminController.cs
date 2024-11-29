@@ -23,16 +23,12 @@
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
 using LiteDB;
-using MailKit.Search;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.Extensions.Caching.Memory;
-using Midjourney.Infrastructure;
 using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.LoadBalancer;
-using Midjourney.Infrastructure.Models;
 using Midjourney.Infrastructure.Services;
 using Midjourney.Infrastructure.StandardTable;
 using Midjourney.Infrastructure.Storage;
@@ -721,7 +717,6 @@ namespace Midjourney.API.Controllers
             // 后台执行
             _ = _discordAccountInitializer.StartCheckAccount(account);
 
-
             // 更新缓存
             if (setting.EnableAccountSponsor && user.Role != EUserRole.ADMIN)
             {
@@ -836,7 +831,6 @@ namespace Midjourney.API.Controllers
                 return Result.Fail("未开启赞助功能，禁止操作");
             }
 
-
             var model = DbHelper.Instance.AccountStore.Get(id);
             if (model == null)
             {
@@ -878,7 +872,6 @@ namespace Midjourney.API.Controllers
             {
                 return Result.Fail("未开启赞助功能，禁止操作");
             }
-
 
             var model = DbHelper.Instance.AccountStore.Get(id);
             if (model == null)
@@ -955,7 +948,6 @@ namespace Midjourney.API.Controllers
         {
             var user = _workContext.GetUser();
 
-
             var page = request.Pagination;
             if (page.PageSize > 100)
             {
@@ -1001,7 +993,6 @@ namespace Midjourney.API.Controllers
                     .Skip((page.Current - 1) * page.PageSize)
                     .Take(page.PageSize)
                     .ToList();
-
             }
             else
             {
@@ -1025,7 +1016,6 @@ namespace Midjourney.API.Controllers
                     .Limit(page.PageSize)
                     .ToList();
             }
-
 
             foreach (var item in list)
             {
@@ -1235,7 +1225,6 @@ namespace Midjourney.API.Controllers
                    .ToList();
             }
 
-
             if (_isAnonymous)
             {
                 // 对用户信息进行脱敏处理
@@ -1431,7 +1420,6 @@ namespace Midjourney.API.Controllers
                    .ToList();
             }
 
-
             var data = list.ToTableResult(request.Pagination.Current, request.Pagination.PageSize, count);
 
             return Ok(data);
@@ -1560,7 +1548,6 @@ namespace Midjourney.API.Controllers
                     .ToList();
             }
 
-
             var data = list.ToTableResult(request.Pagination.Current, request.Pagination.PageSize, count);
 
             return Ok(data);
@@ -1653,6 +1640,8 @@ namespace Midjourney.API.Controllers
             {
                 throw new LogicException("系统配置错误，请重启服务");
             }
+
+            model.IsMongo = GlobalConfiguration.Setting.IsMongo;
 
             // 演示模式，部分配置不可见
             if (_isAnonymous)
@@ -1757,6 +1746,29 @@ namespace Midjourney.API.Controllers
             await _taskService.MjPlusMigration(dto);
 
             return Result.Ok();
+        }
+
+        /// <summary>
+        /// 验证 mongo db 是否正常连接
+        /// </summary>
+        /// <returns></returns>
+        [HttpPost("verify-mongo")]
+        public Result ValidateMongo()
+        {
+            if (_isAnonymous)
+            {
+                return Result.Fail("演示模式，禁止操作");
+            }
+
+            if (string.IsNullOrWhiteSpace(GlobalConfiguration.Setting.MongoDefaultConnectionString)
+                || string.IsNullOrWhiteSpace(GlobalConfiguration.Setting.MongoDefaultDatabase))
+            {
+                return Result.Fail("MongoDB 配置错误，请保存配置后再验证");
+            }
+
+            var success = MongoHelper.Verify();
+
+            return success ? Result.Ok() : Result.Fail("连接失败");
         }
     }
 }

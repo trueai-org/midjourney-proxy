@@ -92,6 +92,30 @@ namespace Midjourney.API
                 // 等待 1s
                 Thread.Sleep(1 * 1000);
             }
+
+            GlobalConfiguration.Setting = setting;
+
+            // mongo 配置
+            if (!string.IsNullOrWhiteSpace(setting.MongoDefaultConnectionString)
+                && !string.IsNullOrWhiteSpace(setting.MongoDefaultDatabase))
+            {
+                var success = MongoHelper.Verify();
+                if (success)
+                {
+                    setting.IsMongo = true;
+                }
+                else
+                {
+                    setting.IsMongo = false;
+                }
+            }
+            else
+            {
+                setting.IsMongo = false;
+            }
+
+            // 更新数据库
+            LiteDBHelper.SettingStore.Save(setting);
             GlobalConfiguration.Setting = setting;
 
             // 缓存

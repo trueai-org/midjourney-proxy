@@ -46,7 +46,7 @@ namespace Midjourney.Infrastructure
         /// 是否使用
         /// </summary>
         [BsonIgnore]
-        public bool IsMongo => !string.IsNullOrWhiteSpace(MongoDefaultConnectionString) && !string.IsNullOrWhiteSpace(MongoDefaultDatabase);
+        public bool IsMongo { get; set; } 
 
         /// <summary>
         /// 是否启动本地数据自动迁移到 MongoDB

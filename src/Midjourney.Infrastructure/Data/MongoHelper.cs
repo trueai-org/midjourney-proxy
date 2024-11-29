@@ -21,7 +21,9 @@
 // The use of this software for any form of illegal face swapping,
 // invasion of privacy, or any other unlawful purposes is strictly prohibited. 
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
+using MongoDB.Bson;
 using MongoDB.Driver;
+using Serilog;
 
 namespace Midjourney.Infrastructure.Data
 {
@@ -108,6 +110,32 @@ namespace Midjourney.Infrastructure.Data
         public static void Initialization(IMongoDatabase database)
         {
             _instance = database;
+        }
+
+        /// <summary>
+        /// 验证 mongo 连接
+        /// </summary>
+        /// <returns></returns>
+        public static bool Verify()
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(GlobalConfiguration.Setting.MongoDefaultConnectionString)
+                    || string.IsNullOrWhiteSpace(GlobalConfiguration.Setting.MongoDefaultDatabase))
+                {
+                    return false;
+                }
+
+                var client = new MongoClient(GlobalConfiguration.Setting.MongoDefaultConnectionString);
+                var database = client.GetDatabase(GlobalConfiguration.Setting.MongoDefaultDatabase);
+                return database.RunCommandAsync((Command<BsonDocument>)"{ping:1}").Wait(1000);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "MongoDB 连接失败");
+
+                return false;
+            }
         }
     }
 }
