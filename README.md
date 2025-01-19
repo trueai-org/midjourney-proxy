@@ -114,12 +114,11 @@ The most powerful, complete, full-featured, completely free and open source Midj
 
 ## 客户端推荐
 
-- **GoAmzAI** ⭐⭐⭐⭐⭐: <https://github.com/Licoy/GoAmzAI>
-  -	打开后台 -> 绘画管理 -> 新增 -> MJ 绘画接口地址 -> <https://ai.trueai.org/mj>
-
-- **ChatGPT Midjourney**: <https://github.com/ChatAnyTeam/ChatAny>
+- **ChatAny**: <https://github.com/ChatAnyTeam/ChatAny>
   - 一键拥有你自己的 ChatGPT+StabilityAI+Midjourney 网页服务 -> <https://aidemo.xiazai.zip/#/mj>
   - 打开网站 -> 设置 -> 自定义接口 -> 模型(Midjourney) -> 接口地址 -> <https://ai.trueai.org/mj>
+
+- **GoAmzAI**: <https://github.com/Licoy/GoAmzAI>
 
 - **ChatGPT Web Midjourney Proxy**: <https://github.com/Dooy/chatgpt-web-midjourney-proxy> 
   - 打开网站 <https://vercel.ddaiai.com> -> 设置 -> MJ 绘画接口地址 -> <https://ai.trueai.org>
