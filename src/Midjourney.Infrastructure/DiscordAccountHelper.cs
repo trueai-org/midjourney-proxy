@@ -24,10 +24,13 @@
 
 using Microsoft.Extensions.Caching.Memory;
 using Midjourney.Infrastructure.Data;
+using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.Handle;
 using Midjourney.Infrastructure.LoadBalancer;
 using Midjourney.Infrastructure.Services;
 using Org.BouncyCastle.Cms;
+using RestSharp;
+using Serilog;
 using System.Net;
 using System.Reflection;
 using System.Text.Json;
@@ -260,6 +263,55 @@ namespace Midjourney.Infrastructure
             }
 
             throw new Exception($"获取私信 ID 失败 {response?.StatusCode}, {response?.Content}");
+        }
+
+        /// <summary>
+        /// 自动登录
+        /// </summary>
+        /// <param name="model"></param>
+        /// <param name="beforeEnable">登陆前账号是否启用</param>
+        /// <returns></returns>
+        public static bool AutoLogin(DiscordAccount model, bool beforeEnable = false)
+        {
+            if (string.IsNullOrWhiteSpace(model.LoginAccount)
+                || string.IsNullOrWhiteSpace(model.LoginPassword)
+                || string.IsNullOrWhiteSpace(model.Login2fa))
+            {
+                return false;
+            }
+
+            var setting = GlobalConfiguration.Setting;
+            var notifyUrl = $"{setting.CaptchaServer.Trim().TrimEnd('/')}/login/auto";
+            var client = new RestClient();
+            var request = new RestRequest(notifyUrl, Method.Post);
+            request.AddHeader("Content-Type", "application/json");
+            var body = new AutoLoginRequest
+            {
+                Login2fa = model.Login2fa,
+                LoginAccount = model.LoginAccount,
+                LoginPassword = model.LoginPassword,
+                LoginBeforeEnabled = beforeEnable,
+                State = model.ChannelId,
+                NotifyHook = setting.CaptchaNotifyHook,
+                Secret = setting.CaptchaNotifySecret,
+            };
+            var json = Newtonsoft.Json.JsonConvert.SerializeObject(body);
+            request.AddJsonBody(json);
+            var response = client.Execute(request);
+
+            if (response.StatusCode == HttpStatusCode.OK)
+            {
+                model.IsAutoLogining = true;
+                model.LoginStart = DateTime.Now;
+
+                DbHelper.Instance.AccountStore.Update("LoginStart,IsAutoLogining", model);
+
+                return true;
+            }
+
+            Log.Error($"自动登录失败 failed: {response.Content}");
+
+            return false;
         }
     }
 }

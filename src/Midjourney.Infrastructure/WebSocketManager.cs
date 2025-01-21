@@ -28,6 +28,7 @@ using Midjourney.Infrastructure.LoadBalancer;
 using Midjourney.Infrastructure.Util;
 using Serilog;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.IO.Compression;
 using System.Net;
 using System.Net.WebSockets;
@@ -918,6 +919,46 @@ namespace Midjourney.Infrastructure
 
                 _discordInstance?.ClearAccountCache(Account.Id);
                 _discordInstance?.Dispose();
+
+                // 尝试自动登录
+                var sw = new Stopwatch();
+                var setting = GlobalConfiguration.Setting;
+                var info = new StringBuilder(); 
+                var account = Account;
+                if (setting.EnableAutoLogin)
+                {
+                    sw.Stop();
+                    info.AppendLine($"{account.Id}尝试自动登录...");
+                    sw.Restart();
+
+                    try
+                    {
+                        // 开始尝试自动登录
+                        var suc = DiscordAccountHelper.AutoLogin(account, true);
+
+                        if (suc)
+                        {
+                            sw.Stop();
+                            info.AppendLine($"{account.Id}自动登录请求成功...");
+                            sw.Restart();
+                        }
+                        else
+                        {
+                            sw.Stop();
+                            info.AppendLine($"{account.Id}自动登录请求失败...");
+                            sw.Restart();
+                        }
+                    }
+                    catch (Exception exa)
+                    {
+                        _logger.Error(exa, "Account({@0}) auto login fail, disabled: {@1}", account.ChannelId, exa.Message);
+
+                        sw.Stop();
+                        info.AppendLine($"{account.Id}自动登录请求异常...");
+                        sw.Restart();
+                    }
+                }
+
             }
             catch (Exception ex)
             {

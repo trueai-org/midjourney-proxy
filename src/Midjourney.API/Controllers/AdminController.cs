@@ -526,35 +526,13 @@ namespace Midjourney.API.Controllers
                 return Result.Fail("账号、密码、2FA 不能为空");
             }
 
-            var setting = GlobalConfiguration.Setting;
-            var notifyUrl = $"{_properties.CaptchaServer.Trim().TrimEnd('/')}/login/auto";
-            var client = new RestClient();
-            var request = new RestRequest(notifyUrl, Method.Post);
-            request.AddHeader("Content-Type", "application/json");
-            var body = new AutoLoginRequest
+            var ok = DiscordAccountHelper.AutoLogin(model, model.Enable ?? false);
+            if (ok)
             {
-                Login2fa = model.Login2fa,
-                LoginAccount = model.LoginAccount,
-                LoginPassword = model.LoginPassword,
-                State = model.ChannelId,
-                NotifyHook = _properties.CaptchaNotifyHook,
-                Secret = _properties.CaptchaNotifySecret
-            };
-            var json = Newtonsoft.Json.JsonConvert.SerializeObject(body);
-            request.AddJsonBody(json);
-            var response = client.Execute(request);
-
-            if (response.StatusCode == HttpStatusCode.OK)
-            {
-                model.IsAutoLogining = true;
-                model.LoginStart = DateTime.Now;
-
-                DbHelper.Instance.AccountStore.Update("LoginStart,IsAutoLogining", model);
-
                 return Result.Ok("登录请求已发送，请稍后刷新列表！");
             }
 
-            return Result.Fail($"登录请求失败{response?.ErrorMessage}");
+            return Result.Fail($"登录请求失败，请稍后重试！");
         }
 
         /// <summary>
@@ -594,6 +572,12 @@ namespace Midjourney.API.Controllers
                             item.LoginEnd = null;
                             item.LoginMessage = request.Message;
                             item.UserToken = request.Token;
+
+                            // 如果登录成功，且登录前是启用状态，则更新为启用状态
+                            if (item.Enable != true && request.LoginBeforeEnabled)
+                            {
+                                item.Enable = request.LoginBeforeEnabled;
+                            }
                         }
                         else
                         {

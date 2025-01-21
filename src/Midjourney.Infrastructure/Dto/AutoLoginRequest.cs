@@ -50,6 +50,11 @@ namespace Midjourney.Infrastructure.Dto
         public string Login2fa { get; set; }
 
         /// <summary>
+        /// 登陆前的启用状态
+        /// </summary>
+        public bool LoginBeforeEnabled { get; set; }
+
+        /// <summary>
         /// 自定义参数 = ChannelId
         /// </summary>
         [MaxLength(4000)]
