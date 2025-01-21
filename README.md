@@ -95,7 +95,7 @@ The most powerful, complete, full-featured, completely free and open source Midj
 - [x] MJ 翻译、NIJI 翻译独立配置
 - [x] 转换 Niji 为 MJ：启用后将 Niji · journey 任务自动转为 Midjourney 任务，并对任务添加 --niji 后缀（转换后出图效果是一致的），即：不添加 Niji 机器人也可以通过 Niji 机器人绘图
 - [x] 转换 --niji 为 Niji Bot：启用后当 prompt 中包含 --niji 时，将会自动转换为 Niji·journey Bot 任务
-- [x] 支持账号自动登录功能（Discord 账号开启 2FA，登陆器配置 YesCaptchaKey）
+- [x] 支持账号自动登录功能（Discord 账号开启 2FA，登陆器配置 YesCaptchaKey <https://yescaptcha.com/i/4pizLQ>）
 - [ ] 自动加入频道、自动切换频道（暂未支持）
 
 ## 在线预览
@@ -367,7 +367,7 @@ docker run -d \
 "CaptchaNotifyHook": "https://ai.trueai.org"
 ```
 
-## CloudFlare 验证器
+## CloudFlare 验证器/自动登录器
 
 仅支持 Windows 部署（并且支持 TLS 1.3，系统要求 Windows11 或 Windows Server 2022），由于 CloudFlare 验证器需要使用到 Chrome 浏览器，所以需要在 Windows 环境下部署，而在 Linux 环境下部署会依赖很多库，所以暂时不支持 Linux 部署。
 
