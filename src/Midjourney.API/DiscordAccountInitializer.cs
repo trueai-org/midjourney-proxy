@@ -701,6 +701,20 @@ namespace Midjourney.API
                 {
                     // 获取获取值
                     account = db.Get(account.Id)!;
+
+                    // 如果账号处于登录中
+                    if (account.IsAutoLogining)
+                    {
+                        // 如果超过 10 分钟
+                        if (account.LoginStart.HasValue && account.LoginStart.Value.AddMinutes(10) < DateTime.Now)
+                        {
+                            account.IsAutoLogining = false;
+                            account.LoginMessage = "登录超时";
+
+                            db.Update("IsAutoLogining,LoginMessage", account);
+                        }
+                    }
+
                     if (account.Enable != true)
                     {
                         return;
