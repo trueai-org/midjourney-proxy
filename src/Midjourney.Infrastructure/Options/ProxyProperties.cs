@@ -547,6 +547,21 @@ namespace Midjourney.Infrastructure
         /// Remix 自动提交
         /// </summary>
         public bool RemixAutoSubmit { get; set; }
+
+        /// <summary>
+        /// 账号（用于自动登录）
+        /// </summary>
+        public string LoginAccount { get; set; }
+
+        /// <summary>
+        /// 密码（用于自动登录）
+        /// </summary>
+        public string LoginPassword { get; set; }
+
+        /// <summary>
+        /// 2FA 密钥（用于自动登录）
+        /// </summary>
+        public string Login2fa { get; set; }
     }
 
     /// <summary>

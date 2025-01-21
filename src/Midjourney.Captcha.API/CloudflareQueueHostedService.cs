@@ -34,16 +34,19 @@ using System.Text.Json;
 
 namespace Midjourney.Captcha.API
 {
-    public class QueueHostedService : BackgroundService
+    /// <summary>
+    /// Cloudflare 验证队列服务
+    /// </summary>
+    public class CloudflareQueueHostedService : BackgroundService
     {
         private static readonly ConcurrentQueue<CaptchaVerfyRequest> _queue = new();
 
-        private readonly ILogger<QueueHostedService> _logger;
+        private readonly ILogger<CloudflareQueueHostedService> _logger;
         private readonly SemaphoreSlim _concurrencySemaphore;
         private readonly IMemoryCache _memoryCache;
         private readonly CaptchaOption _captchaOption;
 
-        public QueueHostedService(ILogger<QueueHostedService> logger, IOptionsMonitor<CaptchaOption> optionsMonitor, IMemoryCache memoryCache)
+        public CloudflareQueueHostedService(ILogger<CloudflareQueueHostedService> logger, IOptionsMonitor<CaptchaOption> optionsMonitor, IMemoryCache memoryCache)
         {
             _logger = logger;
             _captchaOption = optionsMonitor.CurrentValue;
@@ -85,7 +88,7 @@ namespace Midjourney.Captcha.API
 
             _logger.LogInformation("浏览器下载完成");
 
-            _logger.LogInformation("服务运行中...");
+            _logger.LogInformation("自动验证服务运行中...");
 
             while (!stoppingToken.IsCancellationRequested)
             {
@@ -104,7 +107,7 @@ namespace Midjourney.Captcha.API
                                 _concurrencySemaphore.Release();
                             }, TaskContinuationOptions.OnlyOnRanToCompletion);
 
-                        _logger.LogInformation($"服务运行中... 待执行: {_queue.Count}");
+                        _logger.LogInformation($"CF 验证服务运行中... 待执行: {_queue.Count}");
                     }
                 }
                 catch (Exception ex)

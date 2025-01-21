@@ -632,6 +632,10 @@ namespace Midjourney.Infrastructure.Models
                 EnableFastToRelax = configAccount.EnableFastToRelax,
                 EnableRelaxToFast = configAccount.EnableRelaxToFast,
                 EnableAutoSetRelax = configAccount.EnableAutoSetRelax,
+
+                LoginAccount = configAccount.LoginAccount,
+                LoginPassword = configAccount.LoginPassword,
+                Login2fa = configAccount.Login2fa,
             };
         }
 

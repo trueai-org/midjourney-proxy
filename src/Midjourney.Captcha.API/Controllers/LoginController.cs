@@ -28,26 +28,36 @@ using Midjourney.Infrastructure.Dto;
 namespace Midjourney.Captcha.API.Controllers
 {
     /// <summary>
-    /// Cloudflare 自动验证控制器。
+    /// 自动登录控制器。
     /// </summary>
-    [Route("cf")]
+    [Route("login")]
     [ApiController]
-    public class CloudflareController : ControllerBase
+    public class LoginController : ControllerBase
     {
         /// <summary>
-        /// 校验 Cloudflare URL
+        /// 自动登录
         /// </summary>
         /// <param name="request"></param>
         /// <returns></returns>
-        [HttpPost("verify")]
-        public ActionResult Validate([FromBody] CaptchaVerfyRequest request)
+        [HttpPost("auto")]
+        public ActionResult AutoLogin([FromBody] AutoLoginRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.State))
             {
                 return BadRequest("State 不能为空");
             }
 
-            CloudflareQueueHostedService.EnqueueRequest(request);
+            if (string.IsNullOrWhiteSpace(request.LoginAccount) || string.IsNullOrWhiteSpace(request.LoginPassword))
+            {
+                return BadRequest("账号或密码不能为空");
+            }
+
+            if (string.IsNullOrWhiteSpace(request.Login2fa))
+            {
+                return BadRequest("2FA 密钥不能为空");
+            }
+
+            SeleniumLoginQueueHostedService.EnqueueRequest(request);
 
             return Ok();
         }

@@ -95,6 +95,8 @@ The most powerful, complete, full-featured, completely free and open source Midj
 - [x] MJ 翻译、NIJI 翻译独立配置
 - [x] 转换 Niji 为 MJ：启用后将 Niji · journey 任务自动转为 Midjourney 任务，并对任务添加 --niji 后缀（转换后出图效果是一致的），即：不添加 Niji 机器人也可以通过 Niji 机器人绘图
 - [x] 转换 --niji 为 Niji Bot：启用后当 prompt 中包含 --niji 时，将会自动转换为 Niji·journey Bot 任务
+- [x] 支持账号自动登录功能（Discord 账号开启 2FA，登陆器配置 YesCaptchaKey）
+- [ ] 自动加入频道、自动切换频道（暂未支持）
 
 ## 在线预览
 
@@ -105,8 +107,8 @@ The most powerful, complete, full-featured, completely free and open source Midj
 - 公益接口：<https://ai.trueai.org/mj>
 - 接口文档：<https://ai.trueai.org/swagger>
 - 接口密钥：`无`
-- CloudFlare 自动验证服务器地址：<http://47.76.110.222:8081>
-- CloudFlare 自动验证服务器文档：<http://47.76.110.222:8081/swagger>
+- 自动验证/自动登录服务器地址：<http://47.76.110.222:8081>
+- 自动验证/自动登录服务器文档：<http://47.76.110.222:8081/swagger>
 
 ## 预览截图
 

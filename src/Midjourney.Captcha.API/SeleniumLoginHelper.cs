@@ -1,4 +1,28 @@
-﻿using System.Diagnostics;
+﻿// Midjourney Proxy - Proxy for Midjourney's Discord, enabling AI drawings via API with one-click face swap. A free, non-profit drawing API project.
+// Copyright (C) 2024 trueai.org
+
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+// Additional Terms:
+// This software shall not be used for any illegal activities. 
+// Users must comply with all applicable laws and regulations,
+// particularly those related to image and video processing. 
+// The use of this software for any form of illegal face swapping,
+// invasion of privacy, or any other unlawful purposes is strictly prohibited. 
+// Violation of these terms may result in termination of the license and may subject the violator to legal action.
+
+using System.Diagnostics;
 using Midjourney.Infrastructure.Services;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
@@ -6,31 +30,42 @@ using OpenQA.Selenium.Support.UI;
 
 namespace Midjourney.Captcha.API
 {
-    public class SeleniumHelper
+    /// <summary>
+    /// Selenium 登录助手
+    /// </summary>
+    public class SeleniumLoginHelper
     {
         /// <summary>
-        ///
+        /// 登录
         /// </summary>
         /// <param name="contentRootPath"> </param>
         /// <param name="clientKey"></param>
         /// <param name="loginAccount"></param>
         /// <param name="loginPassword"></param>
         /// <param name="twofa"></param>
-        public static void Start(string contentRootPath, string clientKey, string loginAccount, string loginPassword, string twofa)
+        public static string Login(string contentRootPath, string clientKey, string loginAccount, string loginPassword, string twofa)
         {
+            ChromeDriver driver = null;
             try
             {
-                var configPath = Path.Combine(contentRootPath, "Extensions", "google_pro_1.1.57", "config-demo.js");
-                var configContent = File.ReadAllText(configPath);
-
-                if (configContent.Contains("$clientKey"))
+                var configPath = Path.Combine(contentRootPath, "Extensions", "google_pro_1.1.57", "config.js");
+                var configContent = "";
+                if (File.Exists(configPath))
                 {
-                    configContent = configContent.Replace("$clientKey", clientKey);
-                    var savePath = Path.Combine(contentRootPath, "Extensions", "google_pro_1.1.57", "config.js");
-                    File.WriteAllText(savePath, configContent);
+                    configContent = File.ReadAllText(configPath);
                 }
 
-                var driver = GetChrome(false, false, contentRootPath);
+                var configDemoPath = Path.Combine(contentRootPath, "Extensions", "google_pro_1.1.57", "config-demo.js");
+                var configDemoContent = File.ReadAllText(configDemoPath)
+                    .Replace("$clientKey", clientKey);
+
+                // 如果不一样，就写入
+                if (configDemoContent != configContent)
+                {
+                    File.WriteAllText(configPath, configDemoContent);
+                }
+
+                driver = GetChrome(false, false, contentRootPath);
                 driver.Navigate().GoToUrl("https://discord.com/login");
 
                 Thread.Sleep(5000);
@@ -134,7 +169,7 @@ window.webpackChunkdiscord_app.push([
                                 {
                                     Serilog.Log.Information($"token: {token}");
 
-                                    break;
+                                    return token;
                                 }
                             }
 
@@ -159,6 +194,13 @@ window.webpackChunkdiscord_app.push([
             {
                 Serilog.Log.Error(ex, "se 异常");
             }
+            finally
+            {
+                // 关闭浏览器
+                driver?.Quit();
+            }
+
+            return null;
         }
 
         /// <summary>
@@ -166,6 +208,7 @@ window.webpackChunkdiscord_app.push([
         /// </summary>
         /// <param name="isHeadless"></param>
         /// <param name="isMobile"></param>
+        /// <param name="contentRootPath"></param>
         /// <returns></returns>
         private static ChromeDriver GetChrome(bool isHeadless, bool isMobile, string contentRootPath)
         {

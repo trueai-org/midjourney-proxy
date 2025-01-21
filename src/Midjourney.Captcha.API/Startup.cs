@@ -125,8 +125,9 @@ namespace Midjourney.Captcha.API
                 }
             });
 
-            // 注册服务
-            services.AddHostedService<QueueHostedService>();
+            // 注册队列服务
+            services.AddHostedService<CloudflareQueueHostedService>();
+            services.AddHostedService<SeleniumLoginQueueHostedService>();
         }
 
         public void Configure(IApplicationBuilder app, IHostEnvironment env)

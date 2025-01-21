@@ -29,10 +29,12 @@ using Microsoft.Extensions.Caching.Memory;
 using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.LoadBalancer;
+using Midjourney.Infrastructure.Models;
 using Midjourney.Infrastructure.Services;
 using Midjourney.Infrastructure.StandardTable;
 using Midjourney.Infrastructure.Storage;
 using MongoDB.Driver;
+using RestSharp;
 using Serilog;
 using System.Net;
 using System.Text.Json;
@@ -493,6 +495,139 @@ namespace Midjourney.API.Controllers
         }
 
         /// <summary>
+        /// 账号登录（通过账号、密码、2FA）
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        [HttpPost("account-login/{id}")]
+        public Result AccountLogin(string id)
+        {
+            var user = _workContext.GetUser();
+            if (user == null)
+            {
+                return Result.Fail("演示模式，禁止操作");
+            }
+
+            var model = DbHelper.Instance.AccountStore.Get(id);
+            if (model == null)
+            {
+                throw new LogicException("账号不存在");
+            }
+
+            if (user.Role != EUserRole.ADMIN && model.SponsorUserId != user.Id)
+            {
+                return Result.Fail("无权限操作");
+            }
+
+            if (string.IsNullOrWhiteSpace(model.LoginAccount)
+                || string.IsNullOrWhiteSpace(model.LoginPassword)
+                || string.IsNullOrWhiteSpace(model.Login2fa))
+            {
+                return Result.Fail("账号、密码、2FA 不能为空");
+            }
+
+            var setting = GlobalConfiguration.Setting;
+            var notifyUrl = $"{_properties.CaptchaServer.Trim().TrimEnd('/')}/login/auto";
+            var client = new RestClient();
+            var request = new RestRequest(notifyUrl, Method.Post);
+            request.AddHeader("Content-Type", "application/json");
+            var body = new AutoLoginRequest
+            {
+                Login2fa = model.Login2fa,
+                LoginAccount = model.LoginAccount,
+                LoginPassword = model.LoginPassword,
+                State = model.ChannelId,
+                NotifyHook = _properties.CaptchaNotifyHook,
+                Secret = _properties.CaptchaNotifySecret
+            };
+            var json = Newtonsoft.Json.JsonConvert.SerializeObject(body);
+            request.AddJsonBody(json);
+            var response = client.Execute(request);
+
+            if (response.StatusCode == HttpStatusCode.OK)
+            {
+                model.IsAutoLogining = true;
+                model.LoginStart = DateTime.Now;
+
+                DbHelper.Instance.AccountStore.Update("LoginStart,IsAutoLogining", model);
+
+                return Result.Ok("登录请求已发送，请稍后刷新列表！");
+            }
+
+            return Result.Fail($"登录请求失败{response?.ErrorMessage}");
+        }
+
+        /// <summary>
+        /// 账号登录（通过账号、密码、2FA） - 登录完成回调
+        /// </summary>
+        /// <param name="request"></param>
+        /// <returns></returns>
+        [AllowAnonymous]
+        [HttpPost("account-login-notify")]
+        public ActionResult AccountLoginNotify([FromBody] AutoLoginRequest request)
+        {
+            if (!string.IsNullOrWhiteSpace(request.State) && !string.IsNullOrWhiteSpace(request.LoginAccount))
+            {
+                var item = DbHelper.Instance.AccountStore.Single(c => c.ChannelId == request.State && c.LoginAccount == request.LoginAccount);
+
+                if (item != null && item.IsAutoLogining == true)
+                {
+                    var secret = GlobalConfiguration.Setting.CaptchaNotifySecret;
+                    if (string.IsNullOrWhiteSpace(secret) || secret == request.Secret)
+                    {
+                        // 10 分钟之内有效
+                        if (item.LoginStart != null && (DateTime.Now - item.LoginStart.Value).TotalMinutes > 10)
+                        {
+                            if (request.Success)
+                            {
+                                request.Success = false;
+                                request.Message = "登录超时，超过 10 分钟";
+                            }
+
+                            Log.Warning("登录超时，超过 10 分钟 {@0}, time: {@1}", request, item.LoginStart);
+                        }
+
+                        if (request.Success && !string.IsNullOrWhiteSpace(request.Token))
+                        {
+                            item.IsAutoLogining = false;
+                            item.LoginStart = null;
+                            item.LoginEnd = null;
+                            item.LoginMessage = request.Message;
+                            item.UserToken = request.Token;
+                        }
+                        else
+                        {
+                            // 更新失败原因
+                            item.LoginMessage = request.Message;
+                        }
+
+                        // 更新账号信息
+                        DbHelper.Instance.AccountStore.Update(item);
+
+                        // 清空缓存
+                        var inc = _loadBalancer.GetDiscordInstance(item.ChannelId);
+                        inc?.ClearAccountCache(item.Id);
+
+                        if (!request.Success)
+                        {
+                            // 发送邮件
+                            EmailJob.Instance.EmailSend(_properties.Smtp, $"自动登录失败-{item.ChannelId}", $"自动登录失败-{item.ChannelId}, 请手动登录");
+                        }
+                    }
+                    else
+                    {
+                        // 签名错误
+                        Log.Warning("自动登录回调签名验证失败 {@0}", request);
+
+                        return Ok();
+                    }
+                }
+            }
+
+            return Ok();
+        }
+
+        /// <summary>
         /// 获取 cf 真人验证链接
         /// </summary>
         /// <param name="id"></param>
@@ -776,6 +911,14 @@ namespace Midjourney.API.Controllers
                 // 赞助者参数校验
                 param.SponsorValidate();
             }
+
+            model.LoginAccount = param.LoginAccount?.Trim();
+            model.LoginPassword = param.LoginPassword?.Trim();
+            model.Login2fa = param.Login2fa?.Trim();
+            model.IsAutoLogining = false; // 重置自动登录状态
+            model.LoginStart = null;
+            model.LoginEnd = null;
+            model.LoginMessage = null;
 
             model.NijiBotChannelId = param.NijiBotChannelId;
             model.PrivateChannelId = param.PrivateChannelId;
