@@ -49,14 +49,17 @@ namespace Midjourney.Captcha.API
             ChromeDriver driver = null;
             try
             {
-                var configPath = Path.Combine(contentRootPath, "Extensions", "google_pro_1.1.57", "config.js");
+                // 插件版本
+                var pluVersion = "google_pro_1.1.64";
+
+                var configPath = Path.Combine(contentRootPath, "Extensions", pluVersion, "config.js");
                 var configContent = "";
                 if (File.Exists(configPath))
                 {
                     configContent = File.ReadAllText(configPath);
                 }
 
-                var configDemoPath = Path.Combine(contentRootPath, "Extensions", "google_pro_1.1.57", "config-demo.js");
+                var configDemoPath = Path.Combine(contentRootPath, "Extensions", pluVersion, "config-demo.js");
                 var configDemoContent = File.ReadAllText(configDemoPath)
                     .Replace("$clientKey", clientKey);
 
@@ -66,7 +69,7 @@ namespace Midjourney.Captcha.API
                     File.WriteAllText(configPath, configDemoContent);
                 }
 
-                driver = GetChrome(false, false, contentRootPath);
+                driver = GetChrome(false, false, contentRootPath, pluVersion);
                 driver.Navigate().GoToUrl("https://discord.com/login");
 
                 Thread.Sleep(5000);
@@ -210,8 +213,9 @@ window.webpackChunkdiscord_app.push([
         /// <param name="isHeadless"></param>
         /// <param name="isMobile"></param>
         /// <param name="contentRootPath"></param>
+        /// <param name="pluVersion"></param>
         /// <returns></returns>
-        private static ChromeDriver GetChrome(bool isHeadless, bool isMobile, string contentRootPath)
+        private static ChromeDriver GetChrome(bool isHeadless, bool isMobile, string contentRootPath, string pluVersion)
         {
             //// 设置输出编码，否则可能浏览器乱码，在后台运行模式时
             //Console.OutputEncoding = System.Text.Encoding.UTF8;
@@ -235,7 +239,7 @@ window.webpackChunkdiscord_app.push([
             }
 
             // 加载解压后的扩展
-            var path = Path.Combine(contentRootPath, "Extensions", "google_pro_1.1.57");
+            var path = Path.Combine(contentRootPath, "Extensions", pluVersion);
             options.AddArgument($"--load-extension={path}");
 
             //options.AddArgument("--window-size=360,640");
