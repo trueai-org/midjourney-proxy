@@ -1847,7 +1847,12 @@ namespace Midjourney.API.Controllers
                 return Result.Fail("演示模式，禁止操作");
             }
 
+            var oldSetting = GlobalConfiguration.Setting;
+
             setting.Id = Constants.DEFAULT_SETTING_ID;
+
+            // 保留原来的配置
+            setting.IsMongo = oldSetting.IsMongo;
 
             LiteDBHelper.SettingStore.Update(setting);
 
