@@ -926,6 +926,10 @@ namespace Midjourney.API.Controllers
                     item.PermanentInvitationLink = "****";
                     item.Remark = "****";
 
+                    item.LoginAccount = "****";
+                    item.LoginPassword = "****";
+                    item.Login2fa = "****";
+
                     if (item.SubChannels.Count > 0)
                     {
                         // 加密
@@ -1035,6 +1039,10 @@ namespace Midjourney.API.Controllers
                     item.CfHashUrl = "****";
                     item.PermanentInvitationLink = "****";
                     item.Remark = "****";
+
+                    item.LoginAccount = "****";
+                    item.LoginPassword = "****";
+                    item.Login2fa = "****";
 
                     if (item.SubChannels.Count > 0)
                     {

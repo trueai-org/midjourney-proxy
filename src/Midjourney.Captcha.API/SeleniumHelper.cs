@@ -1,0 +1,214 @@
+﻿using System.Diagnostics;
+using Midjourney.Infrastructure.Services;
+using OpenQA.Selenium;
+using OpenQA.Selenium.Chrome;
+using OpenQA.Selenium.Support.UI;
+
+namespace Midjourney.Captcha.API
+{
+    public class SeleniumHelper
+    {
+        /// <summary>
+        ///
+        /// </summary>
+        /// <param name="contentRootPath"> </param>
+        /// <param name="clientKey"></param>
+        /// <param name="loginAccount"></param>
+        /// <param name="loginPassword"></param>
+        /// <param name="twofa"></param>
+        public static void Start(string contentRootPath, string clientKey, string loginAccount, string loginPassword, string twofa)
+        {
+            try
+            {
+                var configPath = Path.Combine(contentRootPath, "Extensions", "google_pro_1.1.57", "config-demo.js");
+                var configContent = File.ReadAllText(configPath);
+
+                if (configContent.Contains("$clientKey"))
+                {
+                    configContent = configContent.Replace("$clientKey", clientKey);
+                    var savePath = Path.Combine(contentRootPath, "Extensions", "google_pro_1.1.57", "config.js");
+                    File.WriteAllText(savePath, configContent);
+                }
+
+                var driver = GetChrome(false, false, contentRootPath);
+                driver.Navigate().GoToUrl("https://discord.com/login");
+
+                Thread.Sleep(5000);
+
+                // 判断是否加载网页完成
+                var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(60));
+                wait.Until(d => d.FindElement(By.CssSelector("input[name='email']")));
+
+                // 输入框
+                // 查找 name = email 的 input
+                var emailInput = driver.FindElement(By.Name("email"));
+                emailInput.SendKeys(loginAccount);
+
+                Thread.Sleep(1000);
+
+                // 查找 name = password 的 input
+                var passwordInput = driver.FindElement(By.Name("password"));
+                passwordInput.SendKeys(loginPassword);
+
+                Thread.Sleep(5000);
+
+                // 查找 type = submit 的 button
+                var submitButton = driver.FindElement(By.CssSelector("button[type='submit']"));
+                submitButton.Click();
+
+                Thread.Sleep(5000);
+
+                var sw = new Stopwatch();
+                sw.Start();
+
+                while (true)
+                {
+                    // placeholder="6位数字身份验证码"
+                    var codeInput = driver.FindElements(By.CssSelector("input[placeholder='6位数字身份验证码']"))
+                        ?.FirstOrDefault();
+
+                    // 如果找到了
+                    if (codeInput != null)
+                    {
+                        while (true)
+                        {
+                            var num = TwoFAHelper.GenerateOtp(twofa);
+
+                            // 清除
+                            codeInput.Clear();
+                            codeInput.SendKeys(num);
+
+                            Thread.Sleep(1000);
+
+                            // 查找 type = submit 的 button
+                            var submitButton2 = driver.FindElements(By.CssSelector("button[type='submit']"))
+                                .LastOrDefault();
+                            submitButton2.Click();
+
+                            // 从这里开始记录所有的网络请求
+                            driver.Manage().Logs.GetLog(LogType.Browser);
+
+                            Thread.Sleep(5000);
+
+                            // <div>双重认证码无效</div>
+                            // 查找 div 文本: 双重认证码无效
+                            var error = driver.FindElements(By.XPath("//div[contains(text(),'双重认证码无效')]"))?.FirstOrDefault();
+                            if (error == null)
+                            {
+                                // 等待并获取 token
+                                Thread.Sleep(5000);
+
+                                // 方式2
+                                // 可以通过获取网络请求头上的 authorization 字段，来获取 token
+
+                                var wait2 = new WebDriverWait(driver, TimeSpan.FromSeconds(30));
+                                wait2.Until(d => ((IJavaScriptExecutor)d).ExecuteScript("return document.readyState").ToString() == "complete");
+
+                                var sc = @"
+window.webpackChunkdiscord_app.push([
+  [Math.random()],
+  {},
+  (req) => {
+    for (const m of Object.keys(req.c)
+      .map((x) => req.c[x].exports)
+      .filter((x) => x)) {
+      if (m.default && m.default.getToken !== undefined) {
+        const token = m.default.getToken();
+        document.body.setAttribute('data-token', token);
+      }
+      if (m.getToken !== undefined) {
+        const token = m.getToken();
+        document.body.setAttribute('data-token', token);
+      }
+    }
+  },
+]);
+";
+                                // 通过控制台执行 sc 脚本获取 token
+                                driver.ExecuteScript(sc);
+
+                                Thread.Sleep(5000);
+
+                                var token = driver.FindElement(By.CssSelector("body")).GetAttribute("data-token");
+                                if (!string.IsNullOrEmpty(token))
+                                {
+                                    Serilog.Log.Information($"token: {token}");
+
+                                    break;
+                                }
+                            }
+
+                            if (sw.ElapsedMilliseconds > 120 * 1000)
+                            {
+                                break;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if (sw.ElapsedMilliseconds > 120 * 1000)
+                        {
+                            break;
+                        }
+
+                        Thread.Sleep(2000);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Serilog.Log.Error(ex, "se 异常");
+            }
+        }
+
+        /// <summary>
+        /// 获取 chrome
+        /// </summary>
+        /// <param name="isHeadless"></param>
+        /// <param name="isMobile"></param>
+        /// <returns></returns>
+        private static ChromeDriver GetChrome(bool isHeadless, bool isMobile, string contentRootPath)
+        {
+            //// 设置输出编码，否则可能浏览器乱码，在后台运行模式时
+            //Console.OutputEncoding = System.Text.Encoding.UTF8;
+
+            var options = new ChromeOptions();
+            if (isHeadless)
+            {
+                options.AddArgument("headless"); // 可选，如果设置将在后台模式下运行测试
+            }
+            options.AddArgument("disable-gpu"); // 可选，如果设置将禁用GPU硬件加速
+            options.AddArgument("lang=zh_CN.UTF-8"); // 可选，设置默认浏览器语言为zh_CN.UTF-8
+            options.AddArgument("--log-level=3"); // 设置日志级别为3。有效值从0到3：INFO = 0，WARNING = 1，LOG_ERROR = 2，LOG_FATAL = 3。
+
+            //options.AddArgument("--auto-open-devtools-for-tabs"); // 打开 DevTools（可选）
+
+            if (isMobile)
+            {
+                // Create a dictionary to store the parameters of the mobile emulation
+                // "iPhone X" "iPhone 6/7/8""iPhone 6/7/8 Plus""iPhone SE""iPad""iPad Pro""iPad Mini""Galaxy S5""Pixel 2""Pixel 2 XL""Nexus 6P""Nexus 5X"
+                options.EnableMobileEmulation("iPhone X");
+            }
+
+            // 加载解压后的扩展
+            var path = Path.Combine(contentRootPath, "Extensions", "google_pro_1.1.57");
+            options.AddArgument($"--load-extension={path}");
+
+            //options.AddArgument("--window-size=360,640");
+            //options.AddArgument("--user-agent=Mozilla/5.0 (Linux; Android 10; Pixel 3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.66 Mobile Safari/537.36");
+
+            // 在使用Selenium WebDriver时，可以通过设置ChromeDriverService属性来隐藏其后台运行的控制台窗口。
+            var driverService = ChromeDriverService.CreateDefaultService();
+
+            if (isHeadless)
+            {
+                driverService.HideCommandPromptWindow = true;
+            }
+
+            // 创建ChromeDriver实例
+            var driver = new ChromeDriver(driverService, options);
+
+            return driver;
+        }
+    }
+}

@@ -1057,6 +1057,15 @@ namespace Midjourney.API
                     }
                 }
 
+                model.LoginAccount = param.LoginAccount?.Trim();
+                model.LoginPassword = param.LoginPassword?.Trim();
+                model.Login2fa = param.Login2fa?.Trim();
+                model.IsAutoLogining = false; // 重置自动登录状态
+                model.LoginStart = null;
+                model.LoginEnd = null;
+                model.LoginMessage = null;
+
+
                 model.EnableAutoSetRelax = param.EnableAutoSetRelax;
                 model.EnableRelaxToFast = param.EnableRelaxToFast;
                 model.EnableFastToRelax = param.EnableFastToRelax;

@@ -329,6 +329,43 @@ namespace Midjourney.Infrastructure.Models
         public bool IsShorten { get; set; } = true;
 
         /// <summary>
+        /// 账号（用于自动登录）
+        /// </summary>
+        public string LoginAccount { get; set; }
+
+        /// <summary>
+        /// 密码（用于自动登录）
+        /// </summary>
+        public string LoginPassword { get; set; }
+
+        /// <summary>
+        /// 2FA 密钥（用于自动登录）
+        /// </summary>
+        public string Login2fa { get; set; }
+
+        /// <summary>
+        /// 是否自动登录中（用于自动登录）
+        /// </summary>
+        public bool IsAutoLogining { get; set; }
+
+        /// <summary>
+        /// 尝试登录时间（用于自动登录）
+        /// </summary>
+        [BsonDateTimeOptions(Kind = DateTimeKind.Local)]
+        public DateTime? LoginStart { get; set; }
+
+        /// <summary>
+        /// 登录结束时间（用于自动登录）
+        /// </summary>
+        [BsonDateTimeOptions(Kind = DateTimeKind.Local)]
+        public DateTime? LoginEnd { get; set; }
+
+        /// <summary>
+        /// 登录成功/失败消息（用于自动登录）
+        /// </summary>
+        public string LoginMessage { get; set; }
+
+        /// <summary>
         /// 日绘图最大次数限制，默认 -1 不限制
         /// </summary>
         public int DayDrawLimit { get; set; } = -1;

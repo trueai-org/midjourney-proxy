@@ -17,8 +17,17 @@
 	<ItemGroup>
 		<PackageReference Include="Swashbuckle.AspNetCore" Version="6.4.0" />
 		<PackageReference Include="PuppeteerSharp" Version="18.0.4" />
+		<PackageReference Include="Selenium.Support" Version="4.15.0" />
+		<PackageReference Include="Selenium.WebDriver" Version="4.15.0" />
 	</ItemGroup>
-	
+
+	<ItemGroup>
+		<None Include="Extensions\**\*">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+			<ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+		</None>
+	</ItemGroup>
+
 	<ItemGroup>
 	  <ProjectReference Include="..\Midjourney.Infrastructure\Midjourney.Infrastructure.csproj" />
 	</ItemGroup>

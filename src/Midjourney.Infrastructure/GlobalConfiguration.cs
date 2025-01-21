@@ -53,6 +53,16 @@ namespace Midjourney.Infrastructure
         public static IMemoryCache MemoryCache { get; set; }
 
         /// <summary>
+        /// 站点根目录 wwwroot
+        /// </summary>
+        public static string WebRootPath { get; set; }
+
+        /// <summary>
+        /// 静态文件根目录
+        /// </summary>
+        public static string ContentRootPath { get; set; }
+
+        /// <summary>
         /// 判断是否是 Windows 系统
         /// </summary>
         /// <returns></returns>

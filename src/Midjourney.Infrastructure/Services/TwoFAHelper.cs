@@ -17,6 +17,12 @@ namespace Midjourney.Infrastructure.Services
             return otp;
         }
 
+        /// <summary>
+        /// 生成 2fa 验证码
+        /// </summary>
+        /// <param name="secret"></param>
+        /// <param name="loadTime"></param>
+        /// <returns></returns>
         public static string GenerateOtp(string secret, long loadTime)
         {
             const int timeStep = 30;
@@ -43,6 +49,12 @@ namespace Midjourney.Infrastructure.Services
             return otp;
         }
 
+        /// <summary>
+        /// Base32 解码
+        /// </summary>
+        /// <param name="base32"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentException"></exception>
         private static byte[] Base32Decode(string base32)
         {
             const string alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
@@ -65,6 +77,11 @@ namespace Midjourney.Infrastructure.Services
             return byteList.ToArray();
         }
 
+        /// <summary>
+        /// 计算剩余时间
+        /// </summary>
+        /// <param name="loadTime"></param>
+        /// <returns></returns>
         public static int CalculateRemainingTime(long loadTime)
         {
             const int timeStep = 30;

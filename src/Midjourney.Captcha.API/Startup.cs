@@ -139,6 +139,8 @@ namespace Midjourney.Captcha.API
                 app.UseSwaggerUI();
             }
 
+            GlobalConfiguration.ContentRootPath = env.ContentRootPath;
+
             app.UseDefaultFiles(); // 启用默认文件（index.html）
             app.UseStaticFiles(); // 配置提供静态文件
 
