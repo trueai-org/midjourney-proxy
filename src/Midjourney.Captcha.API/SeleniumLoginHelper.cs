@@ -27,6 +27,7 @@ using Midjourney.Infrastructure.Services;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium.Support.UI;
+using Serilog;
 
 namespace Midjourney.Captcha.API
 {
@@ -167,7 +168,7 @@ window.webpackChunkdiscord_app.push([
                                 var token = driver.FindElement(By.CssSelector("body")).GetAttribute("data-token");
                                 if (!string.IsNullOrEmpty(token))
                                 {
-                                    Serilog.Log.Information($"token: {token}");
+                                    Log.Information($"token: {token}");
 
                                     return token;
                                 }
@@ -192,7 +193,7 @@ window.webpackChunkdiscord_app.push([
             }
             catch (Exception ex)
             {
-                Serilog.Log.Error(ex, "se 异常");
+                Log.Error(ex, "自动登录执行异常");
             }
             finally
             {
