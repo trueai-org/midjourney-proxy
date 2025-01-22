@@ -595,7 +595,7 @@ namespace Midjourney.API.Controllers
                         if (!request.Success)
                         {
                             // 发送邮件
-                            EmailJob.Instance.EmailSend(_properties.Smtp, $"自动登录失败-{item.ChannelId}", $"自动登录失败-{item.ChannelId}, 请手动登录");
+                            EmailJob.Instance.EmailSend(_properties.Smtp, $"自动登录失败-{item.ChannelId}", $"自动登录失败-{item.ChannelId}, {request.Message}, 请手动登录");
                         }
                     }
                     else

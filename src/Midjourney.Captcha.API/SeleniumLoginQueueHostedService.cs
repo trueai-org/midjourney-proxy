@@ -184,14 +184,14 @@ namespace Midjourney.Captcha.API
 
                         try
                         {
-                            var token = SeleniumLoginHelper.Login(root, _captchaOption.YesCaptchaKey,
+                            var (success, data) = SeleniumLoginHelper.Login(root, _captchaOption.YesCaptchaKey,
                                   request.LoginAccount, request.LoginPassword, request.Login2fa);
 
-                            if (!string.IsNullOrWhiteSpace(token))
+                            if (success == true && !string.IsNullOrWhiteSpace(data))
                             {
                                 finSuccess = true;
 
-                                request.Token = token;
+                                request.Token = data;
                                 request.Success = true;
                                 request.Message = "自动登录成功";
 
@@ -239,6 +239,8 @@ namespace Midjourney.Captcha.API
                             }
                             else
                             {
+                                request.Message = data ?? "登录失败";
+
                                 Log.Warning("自动登录失败 {@0}", request);
                             }
                         }
@@ -263,7 +265,8 @@ namespace Midjourney.Captcha.API
                         if (!finSuccess)
                         {
                             request.Success = false;
-                            request.Message = "自动登录失败，请手动登录";
+
+                            request.Message ??= "自动登录失败，请手动登录";
 
                             // 验证失败计数 10 分钟内，最多 3 次
                             if (_memoryCache.TryGetValue<int>(failKey, out var fc))
