@@ -24,6 +24,11 @@ The most powerful, complete, full-featured, completely free and open source Midj
 
 <img src="./docs/screenshots/565908696.png" alt="欢迎" width="360"/>
 
+## 路线图
+
+- [ ] 新增 Sqlite、MySQL、SqlServer、PostgreSQL 数据库支持；感谢 `@如风` 赞助此功能！
+- [ ] 新增 账号限制、并发、有效期等功能；感谢 `@TOOM` 赞助此功能！
+
 ## 主要功能
 
 - [x] 支持 Imagine 指令和相关动作 [V1/V2.../U1/U2.../R]
