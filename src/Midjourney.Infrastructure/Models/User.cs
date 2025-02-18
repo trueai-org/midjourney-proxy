@@ -15,12 +15,13 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Additional Terms:
-// This software shall not be used for any illegal activities. 
+// This software shall not be used for any illegal activities.
 // Users must comply with all applicable laws and regulations,
-// particularly those related to image and video processing. 
+// particularly those related to image and video processing.
 // The use of this software for any form of illegal face swapping,
-// invasion of privacy, or any other unlawful purposes is strictly prohibited. 
+// invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
+
 using Midjourney.Infrastructure.Data;
 using MongoDB.Bson.Serialization.Attributes;
 
@@ -36,7 +37,6 @@ namespace Midjourney.Infrastructure.Models
     {
         public User()
         {
-
         }
 
         /// <summary>
@@ -109,12 +109,65 @@ namespace Midjourney.Infrastructure.Models
         /// <summary>
         /// 日绘图最大次数限制，默认 0 不限制
         /// </summary>
-        public int DayDrawLimit { get; set; }
+        public int DayDrawLimit { get; set; } = -1;
+
+        /// <summary>
+        /// 用户最大绘图数量限制，默认 0 不限制
+        /// </summary>
+        public int TotalDrawLimit { get; set; } = -1;
+
+        /// <summary>
+        /// 今日绘图次数
+        /// </summary>
+        public int DayDrawCount { get; set; } = 0;
+
+        /// <summary>
+        /// 总绘图次数
+        /// </summary>
+        public int TotalDrawCount { get; set; } = 0;
+
+        /// <summary>
+        /// 用户并发绘图数量限制，默认 0 不限制
+        /// </summary>
+        public int CoreSize { get; set; } = 0;
+
+        /// <summary>
+        /// 用户队列绘图数量限制，默认 0 不限制
+        /// </summary>
+        public int QueueSize { get; set; } = 0;
 
         /// <summary>
         /// 白名单用户（加入白名单不受限流控制）
         /// </summary>
         public bool IsWhite { get; set; } = false;
+
+        /// <summary>
+        /// 账号有效开始时间
+        /// </summary>
+        [BsonDateTimeOptions(Kind = DateTimeKind.Local)]
+        public DateTime? ValidStartTime { get; set; }
+
+        /// <summary>
+        /// 账号有效开始时间
+        /// </summary>
+        public string ValidStartTimeFormat => ValidStartTime?.ToString("yyyy-MM-dd");
+
+        /// <summary>
+        /// 账号有效结束时间
+        /// </summary>
+        [BsonDateTimeOptions(Kind = DateTimeKind.Local)]
+        public DateTime? ValidEndTime { get; set; }
+
+        /// <summary>
+        /// 账号有效结束时间
+        /// </summary>
+        public string ValidEndTimeFormat => ValidEndTime?.ToString("yyyy-MM-dd");
+
+        /// <summary>
+        /// 账号是否可用（在有效期内）
+        /// </summary>
+        public bool IsAvailable => (ValidStartTime == null || ValidStartTime <= DateTime.Now)
+            && (ValidEndTime == null || ValidEndTime >= DateTime.Now);
 
         /// <summary>
         /// 创建时间

@@ -67,6 +67,36 @@ namespace Midjourney.Infrastructure.Models
         public int RegisterUserDefaultDayLimit { get; set; } = -1;
 
         /// <summary>
+        /// 注册用户默认总绘图限制
+        /// </summary>
+        public int RegisterUserDefaultTotalLimit { get; set; } = -1;
+
+        /// <summary>
+        /// 注册用户默认并发数
+        /// </summary>
+        public int RegisterUserDefaultCoreSize { get; set; } = -1;
+
+        /// <summary>
+        /// 注册用户默认队列数
+        /// </summary>
+        public int RegisterUserDefaultQueueSize { get; set; } = -1;
+
+        /// <summary>
+        /// 数据库类型
+        /// </summary>
+        public DatabaseType DatabaseType { get; set; } = DatabaseType.LiteDB;
+
+        /// <summary>
+        /// 数据库连接字符串
+        /// </summary>
+        public string DatabaseConnectionString { get; set; }
+
+        /// <summary>
+        /// 数据库名称
+        /// </summary>
+        public string DatabaseName { get; set; }
+
+        /// <summary>
         /// 开启访客
         /// </summary>
         public bool EnableGuest { get; set; }

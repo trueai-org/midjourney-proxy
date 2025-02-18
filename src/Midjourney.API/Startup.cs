@@ -72,6 +72,10 @@ namespace Midjourney.API
                     EnableRegister = true,
                     EnableGuest = true,
                     RegisterUserDefaultDayLimit = -1,
+                    RegisterUserDefaultCoreSize = -1,
+                    RegisterUserDefaultQueueSize = -1,
+                    RegisterUserDefaultTotalLimit = -1,
+
                     GuestDefaultDayLimit = -1,
 
                     AccountChooseRule = configOpt.AccountChooseRule,

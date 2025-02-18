@@ -387,6 +387,42 @@ namespace Midjourney.Infrastructure
         LANDSCAPE
     }
 
+    /// <summary>
+    /// 数据库类型
+    /// </summary>
+    public enum DatabaseType
+    {
+        /// <summary>
+        /// LiteDB
+        /// </summary>
+        LiteDB = 0,
+
+        /// <summary>
+        /// MongoDB
+        /// </summary>
+        MongoDB = 1,
+
+        /// <summary>
+        /// SQLite
+        /// </summary>
+        SQLite = 2,
+
+        /// <summary>
+        /// MySQL
+        /// </summary>
+        MySQL = 3,
+
+        /// <summary>
+        /// PostgreSQL
+        /// </summary>
+        PostgreSQL = 4,
+
+        /// <summary>
+        /// SQL Server
+        /// </summary>
+        SQLServer = 5
+    }
+
     public static class BlendDimensionsExtensions
     {
         /// <summary>

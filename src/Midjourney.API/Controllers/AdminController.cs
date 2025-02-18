@@ -197,6 +197,9 @@ namespace Midjourney.API.Controllers
                 Role = EUserRole.USER,
                 Status = EUserStatus.NORMAL,
                 DayDrawLimit = GlobalConfiguration.Setting.RegisterUserDefaultDayLimit,
+                TotalDrawLimit = GlobalConfiguration.Setting.RegisterUserDefaultTotalLimit,
+                CoreSize = GlobalConfiguration.Setting.RegisterUserDefaultCoreSize,
+                QueueSize = GlobalConfiguration.Setting.RegisterUserDefaultQueueSize,
                 Email = mail,
                 RegisterIp = ip,
                 RegisterTime = DateTime.Now,
@@ -1406,6 +1409,11 @@ namespace Midjourney.API.Controllers
                 }
 
                 oldToken = model?.Token;
+
+                user.ValidEndTime = model.ValidEndTime;
+                user.ValidStartTime = model.ValidStartTime;
+                user.CoreSize = model.CoreSize;
+                user.QueueSize = model.QueueSize;
 
                 user.LastLoginIp = model.LastLoginIp;
                 user.LastLoginTime = model.LastLoginTime;
