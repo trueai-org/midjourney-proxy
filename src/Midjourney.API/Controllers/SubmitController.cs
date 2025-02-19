@@ -819,6 +819,15 @@ namespace Midjourney.API.Controllers
                         throw new LogicException("今日绘图次数已达上限");
                     }
                 }
+
+                if (user.TotalDrawLimit > 0)
+                {
+                    var userTotalDrawCount = (int)DbHelper.Instance.TaskStore.Count(x => x.UserId == user.Id);
+                    if (userTotalDrawCount > user.TotalDrawLimit)
+                    {
+                        throw new LogicException("总绘图次数已达上限");
+                    }
+                }
             }
 
             var notifyHook = string.IsNullOrWhiteSpace(baseDTO.NotifyHook) ? _properties.NotifyHook : baseDTO.NotifyHook;

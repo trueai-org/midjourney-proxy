@@ -82,6 +82,16 @@ namespace Midjourney.Infrastructure.Models
         public int RegisterUserDefaultQueueSize { get; set; } = -1;
 
         /// <summary>
+        /// 访客并发数
+        /// </summary>
+        public int GuestDefaultCoreSize { get; set; } = -1;
+
+        /// <summary>
+        /// 访客队列数
+        /// </summary>
+        public int GuestDefaultQueueSize { get; set; } = -1;
+
+        /// <summary>
         /// 数据库类型
         /// </summary>
         public DatabaseType DatabaseType { get; set; } = DatabaseType.LiteDB;

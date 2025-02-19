@@ -21,6 +21,7 @@
 // The use of this software for any form of illegal face swapping,
 // invasion of privacy, or any other unlawful purposes is strictly prohibited. 
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
+
 using Microsoft.AspNetCore.Authorization;
 
 namespace Midjourney.API
@@ -75,7 +76,15 @@ namespace Midjourney.API
                 if (user?.Status == EUserStatus.DISABLED)
                 {
                     context.Response.StatusCode = 401;
-                    await context.Response.WriteAsync("Forbidden: User is disabled.");
+                    await context.Response.WriteAsync("账号已禁用");
+                    return;
+                }
+
+                // 如果账号不可用
+                if (user != null && !user.IsAvailable)
+                {
+                    context.Response.StatusCode = 403;
+                    await context.Response.WriteAsync("账号不可用");
                     return;
                 }
 
@@ -85,7 +94,7 @@ namespace Midjourney.API
                     if (user?.Role != EUserRole.ADMIN)
                     {
                         context.Response.StatusCode = 401;
-                        await context.Response.WriteAsync("Forbidden: Admin access required.");
+                        await context.Response.WriteAsync("账号无权限");
                         return;
                     }
                 }
