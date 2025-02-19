@@ -375,11 +375,11 @@ namespace Midjourney.Infrastructure.Dto
         [JsonPropertyName("clan")]
         public string Clan { get; set; }
 
-        /// <summary>
-        /// 头像装饰数据。
-        /// </summary>
-        [JsonPropertyName("avatar_decoration_data")]
-        public string AvatarDecorationData { get; set; }
+        ///// <summary>
+        ///// 头像装饰数据。
+        ///// </summary>
+        //[JsonPropertyName("avatar_decoration_data")]
+        //public string AvatarDecorationData { get; set; }
 
         /// <summary>
         /// 头像。
