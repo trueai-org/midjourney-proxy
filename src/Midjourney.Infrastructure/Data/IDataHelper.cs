@@ -75,7 +75,7 @@ namespace Midjourney.Infrastructure.Data
         /// <param name="item"></param>
         /// <returns></returns>
         bool Update(string fields, T item);
-        
+
         /// <summary>
         /// 获取所有实体。
         /// </summary>
@@ -140,6 +140,12 @@ namespace Midjourney.Infrastructure.Data
         /// <param name="predicate">查询条件表达式。</param>
         /// <returns>满足条件的实体数量。</returns>
         long Count(Expression<Func<T, bool>> predicate);
+
+        /// <summary>
+        /// 总数
+        /// </summary>
+        /// <returns></returns>
+        long Count();
 
         /// <summary>
         /// 保存（新增或更新）实体。

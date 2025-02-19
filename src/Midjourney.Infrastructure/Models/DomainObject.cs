@@ -22,6 +22,7 @@
 // invasion of privacy, or any other unlawful purposes is strictly prohibited. 
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
+using FreeSql.DataAnnotations;
 using Midjourney.Infrastructure.Data;
 using System.Runtime.Serialization;
 
@@ -44,6 +45,7 @@ namespace Midjourney.Infrastructure.Models
         /// 对象ID。
         /// </summary>
         [DataMember]
+        [Column(IsPrimary = true)]
         public string Id { get; set; }
 
         /// <summary>
@@ -173,6 +175,7 @@ namespace Midjourney.Infrastructure.Models
         /// 获取或初始化扩展属性字典。
         /// </summary>
         //[JsonIgnore]
+        [JsonMap]
         public Dictionary<string, object> Properties
         {
             get => _properties ??= new Dictionary<string, object>();

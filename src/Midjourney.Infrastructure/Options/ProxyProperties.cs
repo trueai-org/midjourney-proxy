@@ -43,15 +43,20 @@ namespace Midjourney.Infrastructure
         public string MongoDefaultDatabase { get; set; }
 
         /// <summary>
-        /// 是否使用
+        /// （废弃）是否使用
         /// </summary>
         [BsonIgnore]
-        public bool IsMongo { get; set; } 
+        public bool IsMongo { get; set; }
 
         /// <summary>
-        /// 是否启动本地数据自动迁移到 MongoDB
+        /// （废弃）是否启动本地数据自动迁移到 MongoDB
         /// </summary>
         public bool IsMongoAutoMigrate { get; set; }
+
+        /// <summary>
+        /// 本地数据库是否自动迁移到其他数据库
+        /// </summary>
+        public bool IsAutoMigrate { get; set; }
 
         /// <summary>
         /// 保存最大数据

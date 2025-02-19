@@ -337,6 +337,15 @@ namespace Midjourney.Infrastructure.Data
         }
 
         /// <summary>
+        /// 总数
+        /// </summary>
+        /// <returns></returns>
+        public long Count()
+        {
+            return _db.GetCollection<T>().Count();
+        }
+
+        /// <summary>
         /// 对数据库进行压缩。
         /// </summary>
         public void Compact()

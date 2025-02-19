@@ -22,6 +22,9 @@
 // invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
+using System.Net;
+using System.Text.Json;
+using System.Text.RegularExpressions;
 using LiteDB;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -29,16 +32,11 @@ using Microsoft.Extensions.Caching.Memory;
 using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.LoadBalancer;
-using Midjourney.Infrastructure.Models;
 using Midjourney.Infrastructure.Services;
 using Midjourney.Infrastructure.StandardTable;
 using Midjourney.Infrastructure.Storage;
 using MongoDB.Driver;
-using RestSharp;
 using Serilog;
-using System.Net;
-using System.Text.Json;
-using System.Text.RegularExpressions;
 
 namespace Midjourney.API.Controllers
 {
@@ -1897,7 +1895,7 @@ namespace Midjourney.API.Controllers
         }
 
         /// <summary>
-        /// 验证 mongo db 是否正常连接
+        /// 验证数据库是否正常连接
         /// </summary>
         /// <returns></returns>
         [HttpPost("verify-mongo")]
@@ -1908,13 +1906,7 @@ namespace Midjourney.API.Controllers
                 return Result.Fail("演示模式，禁止操作");
             }
 
-            if (string.IsNullOrWhiteSpace(GlobalConfiguration.Setting.MongoDefaultConnectionString)
-                || string.IsNullOrWhiteSpace(GlobalConfiguration.Setting.MongoDefaultDatabase))
-            {
-                return Result.Fail("MongoDB 配置错误，请保存配置后再验证");
-            }
-
-            var success = MongoHelper.Verify();
+            var success = DbHelper.Verify();
 
             return success ? Result.Ok() : Result.Fail("连接失败");
         }

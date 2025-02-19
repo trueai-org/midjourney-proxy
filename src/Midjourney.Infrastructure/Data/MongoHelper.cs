@@ -64,8 +64,8 @@ namespace Midjourney.Infrastructure.Data
                     {
                         if (typeof(TMark) == typeof(MongoHelper))
                         {
-                            var connectionString = GlobalConfiguration.Setting.MongoDefaultConnectionString;
-                            var name = GlobalConfiguration.Setting.MongoDefaultDatabase;
+                            var connectionString = GlobalConfiguration.Setting.DatabaseConnectionString;
+                            var name = GlobalConfiguration.Setting.DatabaseName;
 
                             if (!string.IsNullOrEmpty(connectionString) && !string.IsNullOrEmpty(name))
                             {
@@ -113,10 +113,10 @@ namespace Midjourney.Infrastructure.Data
         }
 
         /// <summary>
-        /// 验证 mongo 连接
+        /// 验证 mongo 连接 - 旧版连接
         /// </summary>
         /// <returns></returns>
-        public static bool Verify()
+        public static bool OldVerify()
         {
             try
             {
@@ -128,6 +128,35 @@ namespace Midjourney.Infrastructure.Data
 
                 var client = new MongoClient(GlobalConfiguration.Setting.MongoDefaultConnectionString);
                 var database = client.GetDatabase(GlobalConfiguration.Setting.MongoDefaultDatabase);
+
+                return database.RunCommandAsync((Command<BsonDocument>)"{ping:1}").Wait(1000);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "MongoDB 连接失败");
+
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 验证 mongo 连接
+        /// </summary>
+        /// <returns></returns>
+        public static bool Verify()
+        {
+            try
+            {
+                var setting = GlobalConfiguration.Setting;
+                if (string.IsNullOrWhiteSpace(setting.DatabaseConnectionString)
+                    || string.IsNullOrWhiteSpace(setting.DatabaseName))
+                {
+                    return false;
+                }
+
+                var client = new MongoClient(setting.DatabaseConnectionString);
+                var database = client.GetDatabase(setting.DatabaseName);
+
                 return database.RunCommandAsync((Command<BsonDocument>)"{ping:1}").Wait(1000);
             }
             catch (Exception ex)

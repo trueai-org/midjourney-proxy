@@ -23,6 +23,7 @@
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
 using Discord;
+using FreeSql.DataAnnotations;
 using LiteDB;
 using Microsoft.Extensions.Caching.Memory;
 using Midjourney.Infrastructure.Data;
@@ -38,6 +39,13 @@ namespace Midjourney.Infrastructure.Models
     [BsonCollection("task")]
     [MongoDB.Bson.Serialization.Attributes.BsonIgnoreExtraElements]
     [Serializable]
+    [Index("i_UserId", "UserId")]
+    [Index("i_ClientIp", "ClientIp")]
+    [Index("i_InstanceId", "InstanceId")]
+    [Index("i_SubmitTime", "SubmitTime")]
+    [Index("i_Status", "Status")]
+    [Index("i_Action", "Action")]
+    [Index("i_ParentId", "ParentId")]
     public class TaskInfo : DomainObject
     {
         public TaskInfo()
@@ -119,7 +127,9 @@ namespace Midjourney.Infrastructure.Models
         /// 消息 ID
         /// 创建消息 ID -> 进度消息 ID -> 完成消息 ID
         /// </summary>
+        [JsonMap]
         public List<string> MessageIds { get; set; } = new List<string>();
+
 
         /// <summary>
         /// 任务类型。
@@ -194,6 +204,7 @@ namespace Midjourney.Infrastructure.Models
         /// <summary>
         /// 按钮
         /// </summary>
+        [JsonMap]
         public List<CustomComponentModel> Buttons { get; set; } = new List<CustomComponentModel>();
 
         /// <summary>
@@ -202,6 +213,7 @@ namespace Midjourney.Infrastructure.Models
         [LiteDB.BsonIgnore]
         [MongoDB.Bson.Serialization.Attributes.BsonIgnore]
         [Newtonsoft.Json.JsonIgnore]
+        [Column(IsIgnore = true)]
         public Dictionary<string, object> Displays
         {
             get

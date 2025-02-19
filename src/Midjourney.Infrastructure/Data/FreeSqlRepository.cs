@@ -15,60 +15,54 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Additional Terms:
-// This software shall not be used for any illegal activities. 
+// This software shall not be used for any illegal activities.
 // Users must comply with all applicable laws and regulations,
-// particularly those related to image and video processing. 
+// particularly those related to image and video processing.
 // The use of this software for any form of illegal face swapping,
-// invasion of privacy, or any other unlawful purposes is strictly prohibited. 
+// invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
-using MongoDB.Driver;
 using System.Linq.Expressions;
 
 namespace Midjourney.Infrastructure.Data
 {
-    public class MongoDBRepository<T> : IDataHelper<T> where T : IBaseId
+    public class FreeSqlRepository<T> : IDataHelper<T> where T : class, IBaseId
     {
-        private readonly IMongoCollection<T> _collection;
+        private readonly IFreeSql _freeSql;
 
-        public MongoDBRepository()
+        public FreeSqlRepository()
         {
-            _collection = MongoHelper.GetCollection<T>();
+            _freeSql = FreeSqlHelper.FreeSql;
         }
-
-        public IMongoCollection<T> MongoCollection => _collection;
 
         public void Init()
         {
-            // MongoDB 不需要显式地创建索引，除非你需要额外的索引
+
         }
 
         public void Add(T entity)
         {
-            _collection.InsertOne(entity);
+            _freeSql.Insert(entity).ExecuteAffrows();
         }
 
         public void AddRange(IEnumerable<T> entities)
         {
-            _collection.InsertMany(entities);
+            _freeSql.Insert(entities).ExecuteAffrows();
         }
 
         public void Delete(T entity)
         {
-            var filter = Builders<T>.Filter.Eq("_id", entity.Id);
-            _collection.DeleteOne(filter);
+            _freeSql.Delete<T>(entity.Id).ExecuteAffrows();
         }
 
         public int Delete(Expression<Func<T, bool>> predicate)
         {
-            var result = _collection.DeleteMany(predicate);
-            return (int)result.DeletedCount;
+            return _freeSql.Delete<T>().Where(predicate).ExecuteAffrows();
         }
 
         public void Update(T entity)
         {
-            var filter = Builders<T>.Filter.Eq("_id", entity.Id);
-            _collection.ReplaceOne(filter, entity);
+            _freeSql.Update<T>().SetSource(entity).ExecuteAffrows();
         }
 
         /// <summary>
@@ -80,7 +74,7 @@ namespace Midjourney.Infrastructure.Data
         public bool Update(string fields, T item)
         {
             // 获取现有文档
-            var model = _collection.Find(c => c.Id == item.Id).FirstOrDefault();
+            var model = _freeSql.Select<T>().Where(c => c.Id == item.Id).First();
             if (model == null)
                 return false;
 
@@ -97,17 +91,15 @@ namespace Midjourney.Infrastructure.Data
             }
 
             // 更新文档
-            _collection.ReplaceOne(c => c.Id == item.Id, model);
+            _freeSql.Update(model);
 
             return true;
         }
 
-
         public List<T> GetAll()
         {
-            return _collection.Find(Builders<T>.Filter.Empty).ToList();
+            return _freeSql.Select<T>().ToList();
         }
-
 
         /// <summary>
         /// 获取所有实体的 ID 列表。
@@ -115,105 +107,97 @@ namespace Midjourney.Infrastructure.Data
         /// <returns></returns>
         public List<string> GetAllIds()
         {
-            return _collection.Find(Builders<T>.Filter.Empty).Project(x => x.Id).ToList();
+            return _freeSql.Queryable<T>().Select(x => x.Id).ToList();
         }
 
         public List<T> Where(Expression<Func<T, bool>> predicate)
         {
-            return _collection.Find(predicate).ToList();
+            return _freeSql.Select<T>().Where(predicate).ToList();
         }
 
         public List<T> Where(Expression<Func<T, bool>> filter, Expression<Func<T, object>> orderBy, bool orderByAsc = true)
         {
-            var query = _collection.Find(filter);
+            var query = _freeSql.Select<T>().Where(filter);
             if (orderByAsc)
             {
-                query = query.SortBy(orderBy);
+                query = query.OrderBy(orderBy);
             }
             else
             {
-                query = query.SortByDescending(orderBy);
+                query = query.OrderByDescending(orderBy);
             }
             return query.ToList();
         }
 
         public T Single(Expression<Func<T, bool>> predicate)
         {
-            return _collection.Find(predicate).FirstOrDefault();
+            return _freeSql.Select<T>().Where(predicate).First();
         }
 
         public T Single(Expression<Func<T, bool>> filter, Expression<Func<T, object>> orderBy, bool orderByAsc = true)
         {
-            var query = _collection.Find(filter);
+            var query = _freeSql.Select<T>().Where(filter);
             if (orderByAsc)
             {
-                query = query.SortBy(orderBy);
+                query = query.OrderBy(orderBy);
             }
             else
             {
-                query = query.SortByDescending(orderBy);
+                query = query.OrderByDescending(orderBy);
             }
-            return query.FirstOrDefault();
+            return query.First();
         }
 
         public bool Any(Expression<Func<T, bool>> predicate)
         {
-            return _collection.Find(predicate).Any();
+            return _freeSql.Select<T>().Where(predicate).Any();
         }
 
         public long Count(Expression<Func<T, bool>> predicate)
         {
-            return _collection.CountDocuments(predicate);
+            return _freeSql.Select<T>().Where(predicate).Count();
         }
 
         public long Count()
         {
-            return _collection.CountDocuments(c => true);
+            return _freeSql.Select<T>().Count();
         }
 
         public void Save(T entity)
         {
             if (entity != null && !string.IsNullOrEmpty(entity.Id))
             {
-                var model = _collection.Find(c => c.Id == entity.Id).FirstOrDefault();
-                if (model == null)
-                {
-                    _collection.InsertOne(entity);
-                }
-                else
-                {
-                    _collection.ReplaceOne(c => c.Id == entity.Id, entity);
-                }
+                _freeSql.InsertOrUpdate<T>().SetSource(entity).ExecuteAffrows();
             }
         }
 
         public void Delete(string id)
         {
-            var filter = Builders<T>.Filter.Eq("_id", id);
-            _collection.DeleteOne(filter);
+            _freeSql.Delete<T>().Where(c => c.Id == id).ExecuteAffrows();
         }
 
         public T Get(string id)
         {
-            return _collection.Find(Builders<T>.Filter.Eq("_id", id)).FirstOrDefault();
+            return _freeSql.Select<T>().Where(c => c.Id == id).First();
         }
 
         public List<T> List()
         {
-            return _collection.Find(Builders<T>.Filter.Empty).ToList();
+            return _freeSql.Select<T>().ToList();
         }
 
         public List<T> Where(Expression<Func<T, bool>> filter, Expression<Func<T, object>> orderBy, bool orderByAsc, int limit)
         {
-            var query = _collection.Find(filter);
+            var query = _freeSql.Select<T>().Where(filter);
             if (orderByAsc)
             {
-                return query.SortBy(orderBy).Limit(limit).ToList();
+                query = query.OrderBy(orderBy).Limit(limit);
             }
             else
             {
-                return query.SortByDescending(orderBy).Limit(limit).ToList();
+                query = query.OrderByDescending(orderBy).Limit(limit);
             }
+            return query.ToList();
         }
     }
 }

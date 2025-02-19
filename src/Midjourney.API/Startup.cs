@@ -25,6 +25,8 @@
 global using Midjourney.Infrastructure;
 global using Midjourney.Infrastructure.Models;
 
+using System.Reflection;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -32,8 +34,6 @@ using Microsoft.OpenApi.Models;
 using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.Options;
 using Serilog;
-using System.Reflection;
-using System.Text.Json.Serialization;
 
 namespace Midjourney.API
 {
@@ -69,14 +69,18 @@ namespace Midjourney.API
                     Id = Constants.DEFAULT_SETTING_ID,
                     IpRateLimiting = ipRateOpt,
                     IpBlackRateLimiting = ipBlackOpt,
+
                     EnableRegister = true,
                     EnableGuest = true,
+
                     RegisterUserDefaultDayLimit = -1,
                     RegisterUserDefaultCoreSize = -1,
                     RegisterUserDefaultQueueSize = -1,
                     RegisterUserDefaultTotalLimit = -1,
 
                     GuestDefaultDayLimit = -1,
+                    GuestDefaultCoreSize = -1,
+                    GuestDefaultQueueSize = -1,
 
                     AccountChooseRule = configOpt.AccountChooseRule,
                     BaiduTranslate = configOpt.BaiduTranslate,
@@ -92,34 +96,38 @@ namespace Midjourney.API
                     Smtp = configOpt.Smtp
                 };
                 LiteDBHelper.SettingStore.Save(setting);
-
-                // 等待 1s
-                Thread.Sleep(1 * 1000);
             }
 
             GlobalConfiguration.Setting = setting;
 
-            // mongo 配置
-            if (!string.IsNullOrWhiteSpace(setting.MongoDefaultConnectionString)
-                && !string.IsNullOrWhiteSpace(setting.MongoDefaultDatabase))
+            // 原始 Mongo 配置，旧版数据库配置
+            if (setting.DatabaseType == DatabaseType.NONE)
             {
-                var success = MongoHelper.Verify();
-                if (success)
+                if (MongoHelper.OldVerify())
                 {
-                    setting.IsMongo = true;
-                }
-                else
-                {
-                    setting.IsMongo = false;
+                    // 将原始 Mongo 配置转换为新配置
+                    setting.DatabaseConnectionString = setting.MongoDefaultConnectionString;
+                    setting.DatabaseName = setting.MongoDefaultDatabase;
+                    setting.DatabaseType = DatabaseType.MongoDB;
                 }
             }
-            else
+
+            // 如果未配置则为 None
+            if (setting.DatabaseType == DatabaseType.NONE)
             {
-                setting.IsMongo = false;
+                setting.DatabaseType = DatabaseType.LiteDB;
+            }
+
+            // 验证数据库是否可连接
+            if (!DbHelper.Verify())
+            {
+                // 切换为本地数据库
+                setting.DatabaseType = DatabaseType.LiteDB;
             }
 
             // 更新数据库
             LiteDBHelper.SettingStore.Save(setting);
+
             GlobalConfiguration.Setting = setting;
 
             // 缓存

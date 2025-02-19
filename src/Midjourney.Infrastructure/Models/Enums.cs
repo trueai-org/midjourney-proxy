@@ -393,34 +393,39 @@ namespace Midjourney.Infrastructure
     public enum DatabaseType
     {
         /// <summary>
+        /// NONE（未配置，或无法连接时使用，原默认值）
+        /// </summary>
+        NONE = 0,
+
+        /// <summary>
         /// LiteDB
         /// </summary>
-        LiteDB = 0,
+        LiteDB = 1,
 
         /// <summary>
         /// MongoDB
         /// </summary>
-        MongoDB = 1,
+        MongoDB = 2,
 
         /// <summary>
         /// SQLite
         /// </summary>
-        SQLite = 2,
+        SQLite = 3,
 
         /// <summary>
         /// MySQL
         /// </summary>
-        MySQL = 3,
+        MySQL = 4,
 
         /// <summary>
         /// PostgreSQL
         /// </summary>
-        PostgreSQL = 4,
+        PostgreSQL = 5,
 
         /// <summary>
         /// SQL Server
         /// </summary>
-        SQLServer = 5
+        SQLServer = 6
     }
 
     public static class BlendDimensionsExtensions

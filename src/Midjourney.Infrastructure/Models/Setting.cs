@@ -94,7 +94,7 @@ namespace Midjourney.Infrastructure.Models
         /// <summary>
         /// 数据库类型
         /// </summary>
-        public DatabaseType DatabaseType { get; set; } = DatabaseType.LiteDB;
+        public DatabaseType DatabaseType { get; set; } = DatabaseType.NONE;
 
         /// <summary>
         /// 数据库连接字符串
