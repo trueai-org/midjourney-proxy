@@ -276,11 +276,11 @@ namespace Midjourney.API
 
             _ = Task.Run(() =>
             {
+                // 索引
+                DBIndexInit();
+
                 if (GlobalConfiguration.Setting.IsMongo)
                 {
-                    // 索引
-                    MongoIndexInit();
-
                     // 自动迁移 task 数据
                     if (GlobalConfiguration.Setting.IsMongoAutoMigrate)
                     {
@@ -302,59 +302,84 @@ namespace Midjourney.API
         }
 
         /// <summary>
-        /// 初始化 mongodb 索引和最大数据限制
+        /// 初始化数据库索引
         /// </summary>
-        public void MongoIndexInit()
+        public void DBIndexInit()
         {
             try
             {
-                if (!GlobalConfiguration.Setting.IsMongo)
+                LocalLock.TryLock("DBIndexInit", TimeSpan.FromSeconds(10), () =>
                 {
-                    return;
-                }
+                    if (GlobalConfiguration.Setting.IsMongo)
+                    {
+                        // 不能固定大小，因为无法修改数据
+                        //var database = MongoHelper.Instance;
+                        //var collectionName = "task";
+                        //var collectionExists = database.ListCollectionNames().ToList().Contains(collectionName);
+                        //if (!collectionExists)
+                        //{
+                        //    var options = new CreateCollectionOptions
+                        //    {
+                        //        Capped = true,
+                        //        MaxSize = 1024L * 1024L * 1024L * 1024L,  // 1 TB 的集合大小，实际上不受大小限制
+                        //        MaxDocuments = 1000000
+                        //    };
+                        //    database.CreateCollection("task", options);
+                        //}
 
-                LocalLock.TryLock("MongoIndexInit", TimeSpan.FromSeconds(10), () =>
-                {
-                    // 不能固定大小，因为无法修改数据
-                    //var database = MongoHelper.Instance;
-                    //var collectionName = "task";
-                    //var collectionExists = database.ListCollectionNames().ToList().Contains(collectionName);
-                    //if (!collectionExists)
-                    //{
-                    //    var options = new CreateCollectionOptions
-                    //    {
-                    //        Capped = true,
-                    //        MaxSize = 1024L * 1024L * 1024L * 1024L,  // 1 TB 的集合大小，实际上不受大小限制
-                    //        MaxDocuments = 1000000
-                    //    };
-                    //    database.CreateCollection("task", options);
-                    //}
+                        var coll = MongoHelper.GetCollection<TaskInfo>();
 
-                    var coll = MongoHelper.GetCollection<TaskInfo>();
+                        var index1 = new CreateIndexModel<TaskInfo>(Builders<TaskInfo>.IndexKeys.Descending(c => c.SubmitTime));
+                        coll.Indexes.CreateOne(index1);
 
-                    var index1 = new CreateIndexModel<TaskInfo>(Builders<TaskInfo>.IndexKeys.Descending(c => c.SubmitTime));
-                    coll.Indexes.CreateOne(index1);
+                        var index2 = new CreateIndexModel<TaskInfo>(Builders<TaskInfo>.IndexKeys.Ascending(c => c.PromptEn));
+                        coll.Indexes.CreateOne(index2);
 
-                    var index2 = new CreateIndexModel<TaskInfo>(Builders<TaskInfo>.IndexKeys.Ascending(c => c.PromptEn));
-                    coll.Indexes.CreateOne(index2);
+                        var index3 = new CreateIndexModel<TaskInfo>(Builders<TaskInfo>.IndexKeys.Descending(c => c.Prompt));
+                        coll.Indexes.CreateOne(index3);
 
-                    var index3 = new CreateIndexModel<TaskInfo>(Builders<TaskInfo>.IndexKeys.Descending(c => c.Prompt));
-                    coll.Indexes.CreateOne(index3);
+                        var index4 = new CreateIndexModel<TaskInfo>(Builders<TaskInfo>.IndexKeys.Ascending(c => c.InstanceId));
+                        coll.Indexes.CreateOne(index4);
 
-                    var index4 = new CreateIndexModel<TaskInfo>(Builders<TaskInfo>.IndexKeys.Ascending(c => c.InstanceId));
-                    coll.Indexes.CreateOne(index4);
+                        var index5 = new CreateIndexModel<TaskInfo>(Builders<TaskInfo>.IndexKeys.Ascending(c => c.Status));
+                        coll.Indexes.CreateOne(index5);
 
-                    var index5 = new CreateIndexModel<TaskInfo>(Builders<TaskInfo>.IndexKeys.Ascending(c => c.Status));
-                    coll.Indexes.CreateOne(index5);
+                        var index6 = new CreateIndexModel<TaskInfo>(Builders<TaskInfo>.IndexKeys.Ascending(c => c.Action));
+                        coll.Indexes.CreateOne(index6);
 
-                    var index6 = new CreateIndexModel<TaskInfo>(Builders<TaskInfo>.IndexKeys.Ascending(c => c.Action));
-                    coll.Indexes.CreateOne(index6);
+                        var index7 = new CreateIndexModel<TaskInfo>(Builders<TaskInfo>.IndexKeys.Ascending(c => c.Description));
+                        coll.Indexes.CreateOne(index7);
 
-                    var index7 = new CreateIndexModel<TaskInfo>(Builders<TaskInfo>.IndexKeys.Ascending(c => c.Description));
-                    coll.Indexes.CreateOne(index7);
+                        var index8 = new CreateIndexModel<TaskInfo>(Builders<TaskInfo>.IndexKeys.Ascending(c => c.ImageUrl));
+                        coll.Indexes.CreateOne(index8);
 
-                    var index8 = new CreateIndexModel<TaskInfo>(Builders<TaskInfo>.IndexKeys.Ascending(c => c.ImageUrl));
-                    coll.Indexes.CreateOne(index8);
+                        var index9 = new CreateIndexModel<TaskInfo>(Builders<TaskInfo>.IndexKeys.Ascending(c => c.UserId));
+                        coll.Indexes.CreateOne(index9);
+
+                        var index10 = new CreateIndexModel<TaskInfo>(Builders<TaskInfo>.IndexKeys.Ascending(c => c.ClientIp));
+                        coll.Indexes.CreateOne(index10);
+                    }
+                    else
+                    {
+                        // LiteDB 索引
+                        var coll = LiteDBHelper.TaskStore.GetCollection();
+                        coll.EnsureIndex(c => c.SubmitTime);
+                        coll.EnsureIndex(c => c.Status);
+                        coll.EnsureIndex(c => c.Action);
+                        coll.EnsureIndex(c => c.UserId);
+                        coll.EnsureIndex(c => c.ClientIp);
+                        coll.EnsureIndex(c => c.InstanceId);
+
+                        //coll.DropIndex("PromptEn");
+                        //coll.DropIndex("Prompt");
+                        //coll.DropIndex("Description");
+                        //coll.DropIndex("ImageUrl");
+
+                        //coll.EnsureIndex("PromptEn", "PromptEn");
+                        //coll.EnsureIndex("Prompt", "Prompt");
+                        //coll.EnsureIndex("Description", "Description");
+                        //coll.EnsureIndex("ImageUrl", "ImageUrl");
+                    }
                 });
             }
             catch (Exception ex)

@@ -22,6 +22,8 @@
 // invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
+using Discord;
+using LiteDB;
 using Microsoft.Extensions.Caching.Memory;
 using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.Dto;
@@ -322,6 +324,8 @@ namespace Midjourney.Infrastructure.Models
             FinishTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
             Status = TaskStatus.SUCCESS;
             Progress = "100%";
+
+            UpdateUserDrawCount();
         }
 
         /// <summary>
@@ -366,6 +370,46 @@ namespace Midjourney.Infrastructure.Models
                         }
                     }
                 }
+            }
+
+            UpdateUserDrawCount();
+        }
+
+        /// <summary>
+        /// 更新用户绘图次数。
+        /// </summary>
+        public void UpdateUserDrawCount()
+        {
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(UserId))
+                {
+                    var model = DbHelper.Instance.UserStore.Get(UserId);
+                    if (model != null)
+                    {
+                        if (model.TotalDrawCount <= 0)
+                        {
+                            // 重新计算
+                            model.TotalDrawCount = (int)DbHelper.Instance.TaskStore.Count(x => x.UserId == UserId);
+                        }
+                        else
+                        {
+                            model.TotalDrawCount += 1;
+                        }
+
+                        // 今日日期
+                        var nowDate = new DateTimeOffset(DateTime.Now.Date).ToUnixTimeMilliseconds();
+
+                        // 计算今日绘图次数
+                        model.DayDrawCount = (int)DbHelper.Instance.TaskStore.Count(x => x.SubmitTime >= nowDate && x.UserId == UserId);
+
+                        DbHelper.Instance.UserStore.Update("DayDrawCount,TotalDrawCount", model);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "更新用户绘图次数失败");
             }
         }
     }

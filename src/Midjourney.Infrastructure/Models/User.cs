@@ -127,14 +127,14 @@ namespace Midjourney.Infrastructure.Models
         public int TotalDrawCount { get; set; } = 0;
 
         /// <summary>
-        /// 用户并发绘图数量限制，默认 0 不限制
+        /// 用户并发绘图数量限制，默认 -1 不限制
         /// </summary>
-        public int CoreSize { get; set; } = 0;
+        public int CoreSize { get; set; } = -1;
 
         /// <summary>
-        /// 用户队列绘图数量限制，默认 0 不限制
+        /// 用户队列绘图数量限制，默认 -1 不限制
         /// </summary>
-        public int QueueSize { get; set; } = 0;
+        public int QueueSize { get; set; } = -1;
 
         /// <summary>
         /// 白名单用户（加入白名单不受限流控制）
