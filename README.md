@@ -425,13 +425,13 @@ docker run -d \
 
 非常感谢赞助商和群友的帮助和支持！
 
-<a href="https://goapi.gptnb.ai"><img src="https://pic.scdn.app/images/2023/06/26/favicon.png" style="width: 60px;"></a>
-<a href="https://d.goamzai.com" target="_blank"><img src="https://d.goamzai.com/logo.png" style="width: 60px;"></a>
-<a href="https://api.ephone.ai" target="_blank"><img src="https://img.fy6b.com/2024/10/25/a0bc4cac5e72f.png" style="width: 60px;"></a>
-<a href="https://www.bzu.cn"><img src="https://image.bzu.cn/web_img/202502/2efb28c16704c17.png" style="height: 60px;"></a>
-<a href="https://rixapi.com" target="_blank"><img src="https://img.fy6b.com/2024/08/23/53d7e54cc31a2.png" style="width: 60px;"></a>
-<a href="https://api.mjdjourney.cn" target="_blank"><img src="https://api.mjdjourney.cn/fileSystem/download/20241220/1b2dd3d0-99ef-40c4-89b3-db11956a3299.png" style="width: 60px;"></a>
-<a href="https://ai.midjourneye.com" target="_blank"><img src="https://gofunai-1328239556.cos.accelerate.myqcloud.com/gofunai/logo.jpg" style="width: 60px;"></a>
+<a href="https://goapi.gptnb.ai"><img src="https://pic.scdn.app/images/2023/06/26/favicon.png" style="width: 90px;"></a>
+<a href="https://d.goamzai.com" target="_blank"><img src="https://d.goamzai.com/logo.png" style="width: 90px;"></a>
+<a href="https://api.ephone.ai" target="_blank"><img src="https://img.fy6b.com/2024/10/25/a0bc4cac5e72f.png" style="width: 90px;"></a>
+<a href="https://www.bzu.cn"><img src="https://image.bzu.cn/web_img/202502/2efb28c16704c17.png" style="height: 90px;"></a>
+<a href="https://rixapi.com" target="_blank"><img src="https://img.fy6b.com/2024/08/23/53d7e54cc31a2.png" style="width: 90px;"></a>
+<a href="https://api.mjdjourney.cn" target="_blank"><img src="https://api.mjdjourney.cn/fileSystem/download/20241220/1b2dd3d0-99ef-40c4-89b3-db11956a3299.png" style="width: 90px;"></a>
+<a href="https://ai.midjourneye.com" target="_blank"><img src="https://gofunai-1328239556.cos.accelerate.myqcloud.com/gofunai/logo.jpg" style="width: 90px;"></a>
 
 ## 安全协议
 
