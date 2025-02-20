@@ -252,7 +252,7 @@ namespace Midjourney.Infrastructure.Services
         public SubmitResultVO ShowImagine(TaskInfo info)
         {
             var instance = _discordLoadBalancer.ChooseInstance(info.AccountFilter,
-                botType:info.RealBotType ?? info.BotType);
+                botType: info.RealBotType ?? info.BotType);
 
             if (instance == null)
             {
@@ -265,7 +265,7 @@ namespace Midjourney.Infrastructure.Services
             return instance.SubmitTaskAsync(info, async () =>
             {
                 return await instance.ShowAsync(info.JobId,
-                    info.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default),info.RealBotType ?? info.BotType);
+                    info.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default), info.RealBotType ?? info.BotType);
             });
         }
 
@@ -1137,19 +1137,30 @@ namespace Midjourney.Infrastructure.Services
 
             if (discordInstance.Account.EnableNiji == true)
             {
-                var res2 = await discordInstance.SettingAsync(SnowFlake.NextId(), EBotType.NIJI_JOURNEY);
-                if (res2.Code != ReturnCode.SUCCESS)
+                try
                 {
-                    throw new LogicException(res2.Description);
-                }
-                Thread.Sleep(2500);
+                    // 如果没有开启 NIJI 转 MJ
+                    if (GlobalConfiguration.Setting.EnableConvertNijiToMj == false)
+                    {
+                        var res2 = await discordInstance.SettingAsync(SnowFlake.NextId(), EBotType.NIJI_JOURNEY);
+                        if (res2.Code != ReturnCode.SUCCESS)
+                        {
+                            throw new LogicException(res2.Description);
+                        }
+                        Thread.Sleep(2500);
 
-                var res = await discordInstance.InfoAsync(SnowFlake.NextId(), EBotType.NIJI_JOURNEY);
-                if (res.Code != ReturnCode.SUCCESS)
-                {
-                    throw new LogicException(res.Description);
+                        var res = await discordInstance.InfoAsync(SnowFlake.NextId(), EBotType.NIJI_JOURNEY);
+                        if (res.Code != ReturnCode.SUCCESS)
+                        {
+                            throw new LogicException(res.Description);
+                        }
+                        Thread.Sleep(2500);
+                    }
                 }
-                Thread.Sleep(2500);
+                catch (Exception ex)
+                {
+                    Log.Error(ex, "同步 Niji 信息异常");
+                }
             }
         }
 

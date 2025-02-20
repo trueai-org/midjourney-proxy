@@ -24,7 +24,6 @@
 
 using System.Diagnostics;
 using System.Text;
-using IdGen;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Midjourney.Infrastructure.Data;
