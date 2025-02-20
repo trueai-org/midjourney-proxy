@@ -123,6 +123,9 @@ namespace Midjourney.API
             {
                 // 切换为本地数据库
                 setting.DatabaseType = DatabaseType.LiteDB;
+
+                // 日志
+                Log.Error("数据库连接失败，自动切换为 LiteDB 数据库");
             }
 
             // 更新数据库

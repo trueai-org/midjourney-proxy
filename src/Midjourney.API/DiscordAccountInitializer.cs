@@ -24,6 +24,7 @@
 
 using System.Diagnostics;
 using System.Text;
+using IdGen;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Midjourney.Infrastructure.Data;
@@ -104,7 +105,6 @@ namespace Midjourney.API
                     // 如果 liteAccountIds 的数据在 mongoAccountIds 不存在，则迁移到 mongodb
                     // account 迁移
                     var liteAccountIds = LiteDBHelper.AccountStore.GetAllIds();
-
                     var accountStore = DbHelper.Instance.AccountStore;
                     var mongoAccountIds = accountStore.GetAllIds();
                     var accountIds = liteAccountIds.Except(mongoAccountIds).ToList();
@@ -441,17 +441,20 @@ namespace Midjourney.API
                 case DatabaseType.SQLServer:
                     {
                         var freeSql = FreeSqlHelper.FreeSql;
-                        var documentCount = freeSql.Queryable<TaskInfo>().Count();
-                        if (documentCount > maxCount)
+                        if (freeSql != null)
                         {
-                            var documentsToDelete = (int)documentCount - maxCount;
-                            var ids = freeSql.Queryable<TaskInfo>().OrderBy(c => c.SubmitTime)
-                                .Take(documentsToDelete)
-                                .ToList()
-                                .Select(c => c.Id);
-                            if (ids.Any())
+                            var documentCount = freeSql.Queryable<TaskInfo>().Count();
+                            if (documentCount > maxCount)
                             {
-                                freeSql.Delete<TaskInfo>().Where(c => ids.Contains(c.Id)).ExecuteAffrows();
+                                var documentsToDelete = (int)documentCount - maxCount;
+                                var ids = freeSql.Queryable<TaskInfo>().OrderBy(c => c.SubmitTime)
+                                    .Take(documentsToDelete)
+                                    .ToList()
+                                    .Select(c => c.Id);
+                                if (ids.Any())
+                                {
+                                    freeSql.Delete<TaskInfo>().Where(c => ids.Contains(c.Id)).ExecuteAffrows();
+                                }
                             }
                         }
                     }
@@ -470,6 +473,7 @@ namespace Midjourney.API
             var isLock = await AsyncLocalLock.TryLockAsync("initialize:all", TimeSpan.FromSeconds(10), async () =>
             {
                 var db = DbHelper.Instance.AccountStore;
+
                 var accounts = db.GetAll().OrderBy(c => c.Sort).ToList();
 
                 // 将启动配置中的 account 添加到数据库

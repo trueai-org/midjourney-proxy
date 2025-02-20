@@ -27,6 +27,7 @@ using LiteDB;
 using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.Dto;
 using MongoDB.Bson.Serialization.Attributes;
+using Newtonsoft.Json.Linq;
 using System.ComponentModel.DataAnnotations;
 using System.Text.RegularExpressions;
 
@@ -71,18 +72,21 @@ namespace Midjourney.Infrastructure.Models
         /// 用户Token。
         /// </summary>
         [Display(Name = "用户Token")]
+        [Column(StringLength = -1)]
         public string UserToken { get; set; }
 
         /// <summary>
         /// 机器人 Token
         /// </summary>
         [Display(Name = "机器人Token")]
+        [Column(StringLength = -1)]
         public string BotToken { get; set; }
 
         /// <summary>
         /// 用户UserAgent。
         /// </summary>
         [Display(Name = "用户UserAgent")]
+        [Column(StringLength = -1)]
         public string UserAgent { get; set; } = Constants.DEFAULT_DISCORD_USER_AGENT;
 
         /// <summary>
@@ -123,11 +127,13 @@ namespace Midjourney.Infrastructure.Models
         /// <summary>
         /// 禁用原因
         /// </summary>
+        [Column(StringLength = -1)]
         public string DisabledReason { get; set; }
 
         /// <summary>
         /// 当前频道的永久邀请链接
         /// </summary>
+        [Column(StringLength = 2000)]
         public string PermanentInvitationLink { get; set; }
 
         /// <summary>
@@ -139,11 +145,13 @@ namespace Midjourney.Infrastructure.Models
         /// <summary>
         /// 真人验证 hash Url
         /// </summary>
+        [Column(StringLength = -1)]
         public string CfHashUrl { get; set; }
 
         /// <summary>
         /// 真人验证 Url
         /// </summary>
+        [Column(StringLength = -1)]
         public string CfUrl { get; set; }
 
         /// <summary>
@@ -198,11 +206,13 @@ namespace Midjourney.Infrastructure.Models
         /// <summary>
         /// 备注
         /// </summary>
+        [Column(StringLength = -1)]
         public string Remark { get; set; }
 
         /// <summary>
         /// 赞助商（富文本）
         /// </summary>
+        [Column(StringLength = -1)]
         public string Sponsor { get; set; }
 
         /// <summary>
@@ -368,6 +378,7 @@ namespace Midjourney.Infrastructure.Models
         /// <summary>
         /// 登录成功/失败消息（用于自动登录）
         /// </summary>
+        [Column(StringLength = 2000)]
         public string LoginMessage { get; set; }
 
         /// <summary>

@@ -24,6 +24,7 @@
 
 using FreeSql.DataAnnotations;
 using Midjourney.Infrastructure.Data;
+using Newtonsoft.Json.Linq;
 using System.Runtime.Serialization;
 
 using JsonIgnoreAttribute = Newtonsoft.Json.JsonIgnoreAttribute;

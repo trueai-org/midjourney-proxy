@@ -49,31 +49,39 @@ namespace Midjourney.Infrastructure.Data
         /// <summary>
         /// 初始化 FreeSql
         /// </summary>
-        public static void Init()
+        public static IFreeSql Init(bool autoSyncStructure = false)
         {
             var setting = GlobalConfiguration.Setting;
 
             if (string.IsNullOrWhiteSpace(setting.DatabaseConnectionString))
             {
-                return;
+                return null;
             }
 
             var fsqlBuilder = new FreeSqlBuilder()
                 .UseLazyLoading(true); // 开启延时加载功能
 
-            // 监视 SQL 命令对象
-            //.UseMonitorCommand(cmd => Console.WriteLine(cmd.CommandText)) 
-
             // 生产环境注意
-            // 自动同步实体结构到数据库                            
-            fsqlBuilder.UseAutoSyncStructure(true);
+            // 自动同步实体结构到数据库
+            if (autoSyncStructure)
+            {
+                fsqlBuilder.UseAutoSyncStructure(true)
+                      // 监视 SQL 命令对象
+                      .UseMonitorCommand(cmd =>
+                      {
+                          Log.Information(cmd.CommandText);
+#if DEBUG
+                          Console.WriteLine(cmd.CommandText);
+#endif
+                      });
+            }
 
             switch (setting.DatabaseType)
             {
                 case DatabaseType.LiteDB:
                 case DatabaseType.MongoDB:
                     {
-                        return;
+                        return null;
                     }
                 case DatabaseType.SQLite:
                     {
@@ -123,10 +131,12 @@ namespace Midjourney.Infrastructure.Data
                 }
             };
 
-            Configure(fsql);
+            //Configure(fsql);
 
             //// 请务必定义成 Singleton 单例模式
             //services.AddSingleton(fsql);
+
+            return fsql;
         }
     }
 }

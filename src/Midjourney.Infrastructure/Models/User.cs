@@ -22,6 +22,7 @@
 // invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
+using FreeSql.DataAnnotations;
 using Midjourney.Infrastructure.Data;
 using MongoDB.Bson.Serialization.Attributes;
 
@@ -57,6 +58,7 @@ namespace Midjourney.Infrastructure.Models
         /// <summary>
         /// 头像
         /// </summary>
+        [Column(StringLength = 2000)]
         public string Avatar { get; set; }
 
         /// <summary>
@@ -72,6 +74,7 @@ namespace Midjourney.Infrastructure.Models
         /// <summary>
         /// 用户令牌
         /// </summary>
+        [Column(StringLength = 2000)]
         public string Token { get; set; }
 
         /// <summary>

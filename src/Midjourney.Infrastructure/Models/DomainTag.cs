@@ -25,6 +25,7 @@
 using FreeSql.DataAnnotations;
 using Midjourney.Infrastructure.Data;
 using MongoDB.Bson.Serialization.Attributes;
+using Newtonsoft.Json.Linq;
 
 namespace Midjourney.Infrastructure.Models
 {

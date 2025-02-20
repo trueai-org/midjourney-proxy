@@ -29,6 +29,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.Storage;
+using Newtonsoft.Json.Linq;
 using Serilog;
 
 namespace Midjourney.Infrastructure.Models
@@ -144,21 +145,25 @@ namespace Midjourney.Infrastructure.Models
         /// <summary>
         /// 提示词。
         /// </summary>
+        [Column(StringLength = -1)]
         public string Prompt { get; set; }
 
         /// <summary>
         /// 提示词（英文）。
         /// </summary>
+        [Column(StringLength = -1)]
         public string PromptEn { get; set; }
 
         /// <summary>
         /// 提示词（由 mj 返回的完整提示词）
         /// </summary>
+        [Column(StringLength = -1)]
         public string PromptFull { get; set; }
 
         /// <summary>
         /// 任务描述。
         /// </summary>
+        [Column(StringLength = -1)]
         public string Description { get; set; }
 
         /// <summary>
@@ -184,11 +189,13 @@ namespace Midjourney.Infrastructure.Models
         /// <summary>
         /// 图片URL。
         /// </summary>
+        [Column(StringLength = 2000)]
         public string ImageUrl { get; set; }
 
         /// <summary>
         /// 缩略图 url
         /// </summary>
+        [Column(StringLength = 2000)]
         public string ThumbnailUrl { get; set; }
 
         /// <summary>
@@ -199,6 +206,7 @@ namespace Midjourney.Infrastructure.Models
         /// <summary>
         /// 失败原因。
         /// </summary>
+        [Column(StringLength = -1)]
         public string FailReason { get; set; }
 
         /// <summary>
@@ -266,11 +274,13 @@ namespace Midjourney.Infrastructure.Models
         /// <summary>
         /// 人脸源图片
         /// </summary>
+        [Column(StringLength = 2000)]
         public string ReplicateSource { get; set; }
 
         /// <summary>
         /// 目标图片/目标视频
         /// </summary>
+        [Column(StringLength = 2000)]
         public string ReplicateTarget { get; set; }
 
         /// <summary>
@@ -281,6 +291,7 @@ namespace Midjourney.Infrastructure.Models
         /// <summary>
         /// 账号过滤
         /// </summary>
+        [JsonMap]
         public AccountFilter AccountFilter { get; set; }
 
         /// <summary>
