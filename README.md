@@ -24,11 +24,6 @@ The most powerful, complete, full-featured, completely free and open source Midj
 
 <img src="./docs/screenshots/565908696.png" alt="欢迎" width="360"/>
 
-## 路线图
-
-- [ ] 新增 Sqlite、MySQL、SqlServer、PostgreSQL 数据库支持；感谢 `@如风` 赞助此功能！
-- [ ] 新增 账号限制、并发、有效期等功能；感谢 `@TOOM` 赞助此功能！
-
 ## 主要功能
 
 - [x] 支持 Imagine 指令和相关动作 [V1/V2.../U1/U2.../R]
@@ -101,6 +96,8 @@ The most powerful, complete, full-featured, completely free and open source Midj
 - [x] 转换 Niji 为 MJ：启用后将 Niji · journey 任务自动转为 Midjourney 任务，并对任务添加 --niji 后缀（转换后出图效果是一致的），即：不添加 Niji 机器人也可以通过 Niji 机器人绘图
 - [x] 转换 --niji 为 Niji Bot：启用后当 prompt 中包含 --niji 时，将会自动转换为 Niji·journey Bot 任务
 - [x] 支持账号自动登录功能（Discord 账号开启 2FA <https://github.com/trueai-org/midjourney-proxy/wiki/2FAopen>，登陆器配置 YesCaptchaKey <https://yescaptcha.com/i/4pizLQ>）
+- [x] 新增 Sqlite、MySQL、SqlServer、PostgreSQL 数据库支持；感谢 `@如风` 赞助此功能！
+- [x] 新增 账号限制、并发、有效期等功能；感谢 `@TOOM` 赞助此功能！
 - [ ] 自动加入频道、自动切换频道（暂未支持）
 
 ## 在线预览
@@ -270,16 +267,16 @@ curl -o linux_install.sh https://raw.githubusercontent.com/trueai-org/midjourney
     - `/app/wwwroot/attachments` 绘图文件目录
     - `/app/wwwroot/ephemeral-attachments` describe 生成图片目录
 
-#### 角色说明
+### 角色说明
 
 - `普通用户`：只可用于绘图接口，无法登录后台。
 - `管理员`：可以登录后台，可以查看任务、配置等。
 
-#### 默认用户
+### 默认用户
 
 - 首次启动站点，默认管理员 token 为：`admin`，登录后请重置 `token`
 
-#### 阿里云 OSS 配置项
+### 阿里云 OSS 配置项
 
 ```json
 {
@@ -294,8 +291,16 @@ curl -o linux_install.sh https://raw.githubusercontent.com/trueai-org/midjourney
   "expiredMinutes": 0
 }
 ```
+### 数据库配置
 
-#### MongoDB 配置
+- `LiteDB`（不推荐）：本地数据库库，默认数据库，默认存储位置：`data/mj.db`
+- `Sqlite`：本地数据库，默认存储位置：`data/mj_sqlite.db`
+- `MongoDB`（推荐）：需要配置数据库连接字符串，示例：`mongodb://mongoadmin:***@192.168.3.241`，需要配置数据库名称：`mj`
+- `MySQL`：需要配置数据库连接字符串，示例：`Data Source=192.168.3.241;Port=3306;User ID=root;Password=xxx; Initial Catalog=mj;Charset=utf8mb4; SslMode=none;Min pool size=1`
+- `SqlServer`：需要配置数据库连接字符串，示例：`Data Source=192.168.3.241;User Id=sa;Password=xxx;Initial Catalog=mj;Encrypt=True;TrustServerCertificate=True;Pooling=true;Min Pool Size=1`
+- `PostgreSQL`：需要配置数据库连接字符串，示例：`Host=192.168.3.241;Port=5432;Username=mj;Password=xxx; Database=mj;ArrayNullabilityMode=Always;Pooling=true;Minimum Pool Size=1`
+
+### MongoDB 配置
 
 > 如果你的任务量未来可能超过 10 万，推荐 Docker 部署 MongoDB。
 
@@ -322,7 +327,7 @@ docker run -d \
 # 创建数据库（也可以通过 BT 创建数据库）（可选）
 ```
 
-#### 换脸配置
+### 换脸配置
 
 - 打开官网注册并复制 Token: https://replicate.com/codeplugtech/face-swap
 
@@ -345,7 +350,7 @@ docker run -d \
 }
 ```
 
-#### Banned prompt 限流配置
+### Banned prompt 限流配置
 
 - 当日触发触发 `Banned prompt detected` n 次后，封锁用户的时长（分钟）配置（白名单用户除外）。
 
