@@ -70,11 +70,19 @@ namespace Midjourney.Infrastructure.Data
                       .UseMonitorCommand(cmd =>
                       {
                           Log.Information(cmd.CommandText);
-#if DEBUG
-                          Console.WriteLine(cmd.CommandText);
-#endif
                       });
             }
+
+#if DEBUG
+            fsqlBuilder.UseAutoSyncStructure(true)
+                  // 监视 SQL 命令对象
+                  .UseMonitorCommand(cmd =>
+                  {
+                      Log.Information(cmd.CommandText);
+                      Console.WriteLine(cmd.CommandText);
+                  });
+#endif
+
 
             switch (setting.DatabaseType)
             {
