@@ -1951,6 +1951,11 @@ namespace Midjourney.API.Controllers
                     model.CloudflareR2.SecretKey = "****";
                 }
 
+                if (!string.IsNullOrWhiteSpace(model.DatabaseConnectionString))
+                {
+                    model.DatabaseConnectionString = "****";
+                }
+
                 model.CaptchaNotifySecret = "****";
             }
 
