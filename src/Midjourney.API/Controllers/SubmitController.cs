@@ -841,7 +841,7 @@ namespace Midjourney.API.Controllers
                 if (setting.GuestDefaultCoreSize > 0)
                 {
                     var ipTodayDrawCount = (int)DbHelper.Instance.TaskStore
-                        .Count(x => x.ClientIp == _ip && x.Status == TaskStatus.IN_PROGRESS);
+                        .Count(x => x.SubmitTime >= nowDate && x.ClientIp == _ip && x.Status == TaskStatus.IN_PROGRESS);
                     if (ipTodayDrawCount > setting.GuestDefaultCoreSize)
                     {
                         throw new LogicException("并发数已达上限");
@@ -852,7 +852,7 @@ namespace Midjourney.API.Controllers
                 if (setting.GuestDefaultQueueSize > 0)
                 {
                     var ipTodayDrawCount = (int)DbHelper.Instance.TaskStore
-                        .Count(x => x.ClientIp == _ip && (x.Status == TaskStatus.NOT_START || x.Status == TaskStatus.SUBMITTED));
+                        .Count(x => x.SubmitTime >= nowDate && x.ClientIp == _ip && (x.Status == TaskStatus.NOT_START || x.Status == TaskStatus.SUBMITTED));
                     if (ipTodayDrawCount > setting.GuestDefaultQueueSize)
                     {
                         throw new LogicException("队列数已达上限");
@@ -865,7 +865,7 @@ namespace Midjourney.API.Controllers
                 if (user.CoreSize > 0)
                 {
                     var userDrawCount = (int)DbHelper.Instance.TaskStore
-                        .Count(x => x.UserId == user.Id && x.Status == TaskStatus.IN_PROGRESS);
+                        .Count(x => x.SubmitTime >= nowDate && x.UserId == user.Id && x.Status == TaskStatus.IN_PROGRESS);
                     if (userDrawCount > user.CoreSize)
                     {
                         throw new LogicException("并发数已达上限");
@@ -876,7 +876,7 @@ namespace Midjourney.API.Controllers
                 if (user.QueueSize > 0)
                 {
                     var userDrawCount = (int)DbHelper.Instance.TaskStore
-                        .Count(x => x.UserId == user.Id && (x.Status == TaskStatus.NOT_START || x.Status == TaskStatus.SUBMITTED));
+                        .Count(x => x.SubmitTime >= nowDate && x.UserId == user.Id && (x.Status == TaskStatus.NOT_START || x.Status == TaskStatus.SUBMITTED));
                     if (userDrawCount > user.QueueSize)
                     {
                         throw new LogicException("队列数已达上限");
@@ -973,12 +973,19 @@ namespace Midjourney.API.Controllers
             }
             if (!string.IsNullOrWhiteSpace(paramStr))
             {
+                // 当有 --no 参数时, 翻译 --no 参数, 并替换原参数
+                // --sref https://mjcdn.googlec.cc/1.jpg --no aa, bb, cc
                 var paramNomatcher = Regex.Match(paramStr, "--no\\s+(.*?)(?=--|$)");
                 if (paramNomatcher.Success)
                 {
                     string paramNoStr = paramNomatcher.Groups[1].Value.Trim();
                     string paramNoStrEn = _translateService.TranslateToEnglish(paramNoStr).Trim();
-                    paramStr = paramNomatcher.Result("--no " + paramNoStrEn + " ");
+
+                    // 提取 --no 之前的参数
+                    paramStr = paramStr.Substring(0, paramNomatcher.Index);
+
+                    // 替换 --no 参数
+                    paramStr = paramStr + paramNomatcher.Result("--no " + paramNoStrEn + " ");
                 }
             }
             return string.Concat(imageUrls) + text + paramStr;
