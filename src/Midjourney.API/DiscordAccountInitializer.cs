@@ -52,6 +52,7 @@ namespace Midjourney.API
         private readonly Serilog.ILogger _logger = Log.Logger;
 
         private Timer _timer;
+        private DateTime? _userDayReset = null;
 
         public DiscordAccountInitializer(
             DiscordLoadBalancer discordLoadBalancer,
@@ -351,6 +352,21 @@ namespace Midjourney.API
                 {
                     try
                     {
+                        // 每日 0 点清除用户日绘图统计
+                        if (_userDayReset == null || _userDayReset.Value.Date != DateTime.Now.Date)
+                        {
+                            // 获取日绘图数量 > 0 的用户
+                            var users = DbHelper.Instance.UserStore.Where(c => c.DayDrawCount > 0).ToList();
+                            foreach (var user in users)
+                            {
+                                user.DayDrawCount = 0;
+                                DbHelper.Instance.UserStore.Update("DayDrawCount", user);
+                            }
+
+                            _userDayReset = DateTime.Now.Date;
+                        }
+
+
                         // 本地配置中的默认账号
                         var configAccounts = _properties.Accounts.ToList();
                         if (!string.IsNullOrEmpty(_properties.Discord?.ChannelId)
