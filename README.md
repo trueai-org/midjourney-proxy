@@ -329,13 +329,13 @@ docker run -d \
 
 ### 换脸配置
 
-- 打开官网注册并复制 Token: https://replicate.com/codeplugtech/face-swap
+- 打开官网注册并复制 Token: https://replicate.com/cdingram/face-swap
 
 ```json
 {
   "token": "****",
   "enableFaceSwap": true,
-  "faceSwapVersion": "278a81e7ebb22db98bcba54de985d22cc1abeead2754eb1f2af717247be69b34",
+  "faceSwapVersion": "d1d6ea8c8be89d664a07a457526f7128109dee7030fdac424788d762c71ed111",
   "faceSwapCoreSize": 3,
   "faceSwapQueueSize": 10,
   "faceSwapTimeoutMinutes": 10,
