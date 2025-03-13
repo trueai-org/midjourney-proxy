@@ -50,7 +50,7 @@ namespace Midjourney.API
                 {
                     var error = context.ModelState.Values.FirstOrDefault()?.Errors?.FirstOrDefault()?.ErrorMessage ?? "参数异常";
 
-                    Log.Logger.Warning("参数异常 {@0} - {@1}", context.HttpContext?.Request?.GetUrl() ?? "", error);
+                    Log.Logger.Warning("参数异常 {@0} - {@1} - RequestBody:{@2}", context.HttpContext?.Request?.GetUrl() ?? "", error, context.HttpContext?.Request?.GetRequestBody());
 
                     context.Result = new JsonResult(Result.Fail(error));
                 }
