@@ -253,7 +253,11 @@ namespace Midjourney.API
             if (env.IsDevelopment() || GlobalConfiguration.IsDemoMode == true || GlobalConfiguration.Setting?.EnableSwagger == true)
             {
                 app.UseSwagger();
-                app.UseSwaggerUI();
+                app.UseSwaggerUI(c =>
+                {
+                    c.EnablePersistAuthorization();
+                    c.DisplayRequestDuration();
+                });
             }
 
             app.UseDefaultFiles(); // 启用默认文件（index.html）
