@@ -56,7 +56,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         protected readonly HttpClient _httpClient;
         protected readonly IMemoryCache _cache;
 
-        protected readonly List<TaskInfo> _runningTasks = [];
+        protected readonly ConcurrentDictionary<TaskInfo, int> _runningTasks = [];
         protected readonly ConcurrentDictionary<string, Task> _taskFutureMap = new();
 
         protected ConcurrentQueue<TaskInfo> _queueTasks = new();
@@ -92,7 +92,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// 获取正在运行的任务列表。
         /// </summary>
         /// <returns>正在运行的任务列表</returns>
-        public List<TaskInfo> GetRunningTasks() => _runningTasks;
+        public List<TaskInfo> GetRunningTasks() => _runningTasks.Keys.ToList();
 
         /// <summary>
         /// 获取队列中的任务列表。
@@ -145,12 +145,12 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
         public void AddRunningTask(TaskInfo task)
         {
-            _runningTasks.Add(task);
+            _runningTasks.TryAdd(task, 0);
         }
 
         public void RemoveRunningTask(TaskInfo task)
         {
-            _runningTasks.Remove(task);
+            _runningTasks.TryRemove(task, out _);
         }
 
         /// <summary>

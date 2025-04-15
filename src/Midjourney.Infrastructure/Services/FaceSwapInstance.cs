@@ -354,7 +354,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                 await _semaphoreSlimLock.LockAsync();
 
-                _runningTasks.Add(info);
+                _runningTasks.TryAdd(info, 0);
 
                 // 判断当前实例是否可用
                 if (!IsAlive)
@@ -535,7 +535,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
             }
             finally
             {
-                _runningTasks.Remove(info);
+                _runningTasks.TryRemove(info, out _);
                 _taskFutureMap.TryRemove(info.Id, out _);
 
                 _semaphoreSlimLock.Unlock();
