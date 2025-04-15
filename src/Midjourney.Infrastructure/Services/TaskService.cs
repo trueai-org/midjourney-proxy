@@ -197,7 +197,7 @@ namespace Midjourney.Infrastructure.Services
                 }
             }
 
-            if (instance == null || !instance.Account.IsAcceptNewTask)
+            if (instance == null || instance?.Account?.IsAcceptNewTask != true)
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
@@ -329,7 +329,7 @@ namespace Midjourney.Infrastructure.Services
                 botType: task.RealBotType ?? task.BotType,
                 describe: true);
 
-            if (discordInstance == null)
+            if (discordInstance == null || discordInstance?.Account?.IsContinueDrawing != true)
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
@@ -388,7 +388,7 @@ namespace Midjourney.Infrastructure.Services
                 botType: task.RealBotType ?? task.BotType,
                 shorten: true);
 
-            if (discordInstance == null)
+            if (discordInstance == null || discordInstance?.Account?.IsContinueDrawing != true)
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
@@ -415,7 +415,7 @@ namespace Midjourney.Infrastructure.Services
                 botType: task.RealBotType ?? task.BotType,
                 blend: true);
 
-            if (discordInstance == null)
+            if (discordInstance == null || discordInstance?.Account?.IsContinueDrawing != true)
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
@@ -477,7 +477,7 @@ namespace Midjourney.Infrastructure.Services
                 }
             }
 
-            if (discordInstance == null)
+            if (discordInstance == null || discordInstance?.Account?.IsContinueDrawing != true)
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
@@ -774,7 +774,7 @@ namespace Midjourney.Infrastructure.Services
                 }
             }
 
-            if (discordInstance == null)
+            if (discordInstance == null || discordInstance?.Account?.IsContinueDrawing != true)
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
