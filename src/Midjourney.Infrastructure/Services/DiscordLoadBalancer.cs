@@ -85,6 +85,12 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 // 判断是否符合过滤条件
                 if (model != null)
                 {
+                    // 是否允许继续绘图
+                    if (model.Account.IsContinueDrawing != true)
+                    {
+                        return null;
+                    }
+
                     // 如果过滤 niji journey 的账号，但是账号未开启 niji journey，则不符合条件
                     if (botType == EBotType.NIJI_JOURNEY && model.Account.EnableNiji != true)
                     {
@@ -184,6 +190,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                     // 过滤有空闲队列的实例
                     .Where(c => c.IsIdleQueue)
+
+                    // 允许继续绘图
+                    .Where(c => c.Account.IsContinueDrawing)
 
                     // 指定速度模式过滤
                     .WhereIf(accountFilter?.Modes.Count > 0, c => c.Account.Mode == null || accountFilter.Modes.Contains(c.Account.Mode.Value))
