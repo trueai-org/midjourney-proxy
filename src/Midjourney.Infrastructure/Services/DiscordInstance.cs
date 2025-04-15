@@ -56,7 +56,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
         private readonly List<TaskInfo> _runningTasks = [];
         private readonly ConcurrentDictionary<string, Task> _taskFutureMap = [];
-        private readonly AsyncParallelLock _semaphoreSlimLock;
+        private AsyncParallelLock _semaphoreSlimLock;
 
         private readonly Task _longTask;
         private readonly Task _longTaskCache;
@@ -291,6 +291,28 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                         // 等待
                         Thread.Sleep(100);
+                    }
+
+                    // 判断信号最大值是否为 Account.CoreSize
+                    if (_semaphoreSlimLock.MaxParallelism != Account.CoreSize)
+                    {
+                        //// 如果任务并发从 12 变成了 3
+                        //// 则等待任务结束后，重置为 3
+                        //while (_runningTasks.Count > Account.CoreSize)
+                        //{
+                        //    // 等待
+                        //    Thread.Sleep(100);
+                        //}
+
+                        // 等待释放完
+                        while (_runningTasks.Count > 0)
+                        {
+                            // 等待
+                            Thread.Sleep(100);
+                        }
+
+                        // 重新设置信号量
+                        _semaphoreSlimLock = new AsyncParallelLock(Math.Max(1, Math.Min(Account.CoreSize, 12)));
                     }
 
                     //// 允许同时执行 N 个信号量的任务

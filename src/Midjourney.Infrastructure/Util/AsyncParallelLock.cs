@@ -30,6 +30,7 @@ namespace Midjourney.Infrastructure.Util
     public class AsyncParallelLock
     {
         private readonly SemaphoreSlim _semaphore;
+        private readonly int _maxCount; // 存储最大数量
 
         /// <summary>
         /// 构造并发锁，允许设置最大并发数量。
@@ -40,8 +41,14 @@ namespace Midjourney.Infrastructure.Util
             if (maxParallelism <= 0)
                 throw new ArgumentException("并行数必须大于0", nameof(maxParallelism));
 
+            _maxCount = maxParallelism;
             _semaphore = new SemaphoreSlim(maxParallelism, maxParallelism);
         }
+
+        /// <summary>
+        /// 最大并发数
+        /// </summary>
+        public int MaxParallelism => _maxCount;
 
         /// <summary>
         /// 异步等待获取锁。
