@@ -54,7 +54,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         private readonly ITaskStoreService _taskStoreService;
         private readonly INotifyService _notifyService;
 
-        private readonly List<TaskInfo> _runningTasks = [];
+        private readonly ConcurrentDictionary<TaskInfo, int> _runningTasks = [];
         private readonly ConcurrentDictionary<string, Task> _taskFutureMap = [];
         private AsyncParallelLock _semaphoreSlimLock;
 
@@ -220,7 +220,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// 获取正在运行的任务列表。
         /// </summary>
         /// <returns>正在运行的任务列表</returns>
-        public List<TaskInfo> GetRunningTasks() => _runningTasks;
+        public List<TaskInfo> GetRunningTasks() => _runningTasks.Keys.ToList();
 
         /// <summary>
         /// 获取队列中的任务列表。
@@ -572,7 +572,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
             {
                 await _semaphoreSlimLock.LockAsync();
 
-                _runningTasks.Add(info);
+                _runningTasks.TryAdd(info, 0);
 
                 // 判断当前实例是否可用
                 if (!IsAlive)
@@ -704,7 +704,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
             }
             finally
             {
-                _runningTasks.Remove(info);
+                _runningTasks.TryRemove(info, out _);
                 _taskFutureMap.TryRemove(info.Id, out _);
 
                 _semaphoreSlimLock.Unlock();
@@ -715,12 +715,12 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
         public void AddRunningTask(TaskInfo task)
         {
-            _runningTasks.Add(task);
+            _runningTasks.TryAdd(task, 0);
         }
 
         public void RemoveRunningTask(TaskInfo task)
         {
-            _runningTasks.Remove(task);
+            _runningTasks.TryRemove(task, out _);
         }
 
         /// <summary>
@@ -837,7 +837,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 // 释放未完成的任务
                 foreach (var runningTask in _runningTasks)
                 {
-                    runningTask.Fail("强制取消"); // 取消任务（假设TaskInfo有Cancel方法）
+                    runningTask.Key.Fail("强制取消"); // 取消任务（假设TaskInfo有Cancel方法）
                 }
 
                 // 清理任务队列
