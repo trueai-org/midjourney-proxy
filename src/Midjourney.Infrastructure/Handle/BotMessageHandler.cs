@@ -137,7 +137,7 @@ namespace Midjourney.Infrastructure.Handle
             {
                 if (!string.IsNullOrWhiteSpace(fullPrompt))
                 {
-                    task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && (c.BotType == botType || c.RealBotType == botType ) && c.PromptFull == fullPrompt)
+                    task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && (c.BotType == botType || c.RealBotType == botType) && c.PromptFull == fullPrompt)
                     .OrderBy(c => c.StartTime).FirstOrDefault();
                 }
             }
@@ -186,7 +186,7 @@ namespace Midjourney.Infrastructure.Handle
             if (task == null && action == TaskAction.SHOW)
             {
                 task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) &&
-                (c.BotType == botType || c.RealBotType == botType ) && c.Action == TaskAction.SHOW && c.JobId == messageHash).OrderBy(c => c.StartTime).FirstOrDefault();
+                (c.BotType == botType || c.RealBotType == botType) && c.Action == TaskAction.SHOW && c.JobId == messageHash).OrderBy(c => c.StartTime).FirstOrDefault();
             }
 
             if (task == null || task.Status == TaskStatus.SUCCESS || task.Status == TaskStatus.FAILURE)
@@ -214,6 +214,18 @@ namespace Midjourney.Infrastructure.Handle
 
         protected void FinishTask(TaskInfo task, SocketMessage message)
         {
+            // 设置图片信息
+            var image = message.Attachments?.FirstOrDefault();
+            if (task != null && image != null)
+            {
+                task.Width = image.Width;
+                task.Height = image.Height;
+                task.Url = image.Url;
+                task.ProxyUrl = image.ProxyUrl;
+                task.ContentType = image.ContentType;
+                task.Size = image.Size;
+            }
+
             task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_ID, message.Id.ToString());
             task.SetProperty(Constants.TASK_PROPERTY_FLAGS, Convert.ToInt32(message.Flags));
             task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_HASH, discordHelper.GetMessageHash(task.ImageUrl));

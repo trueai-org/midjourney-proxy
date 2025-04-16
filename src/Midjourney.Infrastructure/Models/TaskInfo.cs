@@ -22,14 +22,12 @@
 // invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
-using Discord;
+using System.Text.Json.Serialization;
 using FreeSql.DataAnnotations;
-using LiteDB;
 using Microsoft.Extensions.Caching.Memory;
 using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.Storage;
-using Newtonsoft.Json.Linq;
 using Serilog;
 
 namespace Midjourney.Infrastructure.Models
@@ -131,7 +129,6 @@ namespace Midjourney.Infrastructure.Models
         [JsonMap]
         public List<string> MessageIds { get; set; } = new List<string>();
 
-
         /// <summary>
         /// 任务类型。
         /// </summary>
@@ -189,13 +186,13 @@ namespace Midjourney.Infrastructure.Models
         /// <summary>
         /// 图片URL。
         /// </summary>
-        [Column(StringLength = 2000)]
+        [Column(StringLength = 1024)]
         public string ImageUrl { get; set; }
 
         /// <summary>
         /// 缩略图 url
         /// </summary>
-        [Column(StringLength = 2000)]
+        [Column(StringLength = 1024)]
         public string ThumbnailUrl { get; set; }
 
         /// <summary>
@@ -274,13 +271,13 @@ namespace Midjourney.Infrastructure.Models
         /// <summary>
         /// 人脸源图片
         /// </summary>
-        [Column(StringLength = 2000)]
+        [Column(StringLength = 1024)]
         public string ReplicateSource { get; set; }
 
         /// <summary>
         /// 目标图片/目标视频
         /// </summary>
-        [Column(StringLength = 2000)]
+        [Column(StringLength = 1024)]
         public string ReplicateTarget { get; set; }
 
         /// <summary>
@@ -293,6 +290,39 @@ namespace Midjourney.Infrastructure.Models
         /// </summary>
         [JsonMap]
         public AccountFilter AccountFilter { get; set; }
+
+        /// <summary>
+        /// 原始内容 - 获取图片的 URL
+        /// </summary>
+        [Column(StringLength = 1024)]
+        public string Url { get; set; }
+
+        /// <summary>
+        /// 原始内容 - 获取图片的代理 URL
+        /// </summary>
+        [Column(StringLength = 1024)]
+        public string ProxyUrl { get; set; }
+
+        /// <summary>
+        /// 原始内容 - 图片高度
+        /// </summary>
+        public int? Height { get; set; }
+
+        /// <summary>
+        /// 原始内容 - 图片宽度
+        /// </summary>
+        public int? Width { get; set; }
+
+        /// <summary>
+        /// 原始内容 - 图片大小
+        /// </summary>
+        public long? Size { get; set; }
+
+        /// <summary>
+        /// 原始内容 - 内容类型
+        /// </summary>
+        [Column(StringLength = 200)]
+        public string ContentType { get; set; }
 
         /// <summary>
         /// 启动任务。

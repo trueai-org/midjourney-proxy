@@ -29,7 +29,7 @@
 		</PackageReference>
 		<PackageReference Include="MongoDB.Driver" Version="2.28.0" />
 		<PackageReference Include="RestSharp" Version="112.0.0" />
-		<PackageReference Include="Discord.Net" Version="3.15.2" />
+		<PackageReference Include="Discord.Net" Version="3.17.2" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
 		<PackageReference Include="Swashbuckle.AspNetCore.Annotations" Version="6.6.2" />
 		<PackageReference Include="Serilog" Version="3.1.1" />

@@ -21,11 +21,13 @@
 // The use of this software for any form of illegal face swapping,
 // invasion of privacy, or any other unlawful purposes is strictly prohibited. 
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
+using Discord;
 using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.LoadBalancer;
 using Midjourney.Infrastructure.Util;
 using Serilog;
+using Attachment = Midjourney.Infrastructure.Dto.Attachment;
 
 namespace Midjourney.Infrastructure.Handle
 {
@@ -203,6 +205,18 @@ namespace Midjourney.Infrastructure.Handle
 
         protected void FinishTask(TaskInfo task, EventData message)
         {
+            // 设置图片信息
+            var image = message.Attachments?.FirstOrDefault();
+            if (task != null && image != null)
+            {
+                task.Width = image.Width;
+                task.Height = image.Height;
+                task.Url = image.Url;
+                task.ProxyUrl = image.ProxyUrl;
+                task.Size = image.Size;
+                task.ContentType = image.ContentType;
+            }
+
             task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_ID, message.Id);
             task.SetProperty(Constants.TASK_PROPERTY_FLAGS, Convert.ToInt32(message.Flags));
             task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_HASH, discordHelper.GetMessageHash(task.ImageUrl));
