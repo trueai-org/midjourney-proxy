@@ -1143,7 +1143,8 @@ namespace Midjourney.API.Controllers
 
                 if (allowModes.Length > 0)
                 {
-                    //query = query.Where(c => c.AllowModes.Any(x => allowModes.Contains(x)));
+                    var m1 = allowModes.First();
+                    query = query.Where(c => c.AllowModes.Contains(m1));
                 }
 
                 count = query.Count();
@@ -1206,6 +1207,11 @@ namespace Midjourney.API.Controllers
                             // Apply the raw SQL condition to the ISelect object
                             query = query.Where(rawSqlWhere, parameters);
                         }
+                    }
+                    else if (param.AllowModes?.Count > 0)
+                    {
+                        var m1 = allowModes.First();
+                        query = query.Where(c => c.AllowModes.Contains(m1));
                     }
 
                     count = (int)query.Count();

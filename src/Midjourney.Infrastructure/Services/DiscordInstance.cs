@@ -240,12 +240,12 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     return true;
                 }
 
-                if (Account.MaxQueueSize <= 0)
+                if (Account.QueueCount <= 0)
                 {
                     return true;
                 }
 
-                return _queueTasks.Count < Account.MaxQueueSize;
+                return _queueTasks.Count < Account.QueueSize;
             }
         }
 
@@ -264,31 +264,16 @@ namespace Midjourney.Infrastructure.LoadBalancer
                         break;
                     }
                 }
-                catch
-                {
-
-                }
+                catch { }
 
                 try
                 {
-                    //if (_longToken.Token.IsCancellationRequested)
-                    //{
-                    //    // 清理资源（如果需要）
-                    //    break;
-                    //}
-
                     // 等待信号通知
                     _mre.WaitOne();
 
                     // 判断是否还有资源可用
                     while (!_semaphoreSlimLock.IsLockAvailable())
                     {
-                        //if (_longToken.Token.IsCancellationRequested)
-                        //{
-                        //    // 清理资源（如果需要）
-                        //    break;
-                        //}
-
                         // 等待
                         Thread.Sleep(100);
                     }
@@ -296,14 +281,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     // 判断信号最大值是否为 Account.CoreSize
                     if (_semaphoreSlimLock.MaxParallelism != Account.CoreSize)
                     {
-                        //// 如果任务并发从 12 变成了 3
-                        //// 则等待任务结束后，重置为 3
-                        //while (_runningTasks.Count > Account.CoreSize)
-                        //{
-                        //    // 等待
-                        //    Thread.Sleep(100);
-                        //}
-
+                        // 如果任务并发变更
                         // 等待释放完
                         while (_runningTasks.Count > 0)
                         {
@@ -314,28 +292,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
                         // 重新设置信号量
                         _semaphoreSlimLock = new AsyncParallelLock(Math.Max(1, Math.Min(Account.CoreSize, 12)));
                     }
-
-                    //// 允许同时执行 N 个信号量的任务
-                    //while (_queueTasks.TryDequeue(out var info))
-                    //{
-                    //    // 判断是否还有资源可用
-                    //    while (!_semaphoreSlimLock.TryWait(100))
-                    //    {
-                    //        // 等待
-                    //        Thread.Sleep(100);
-                    //    }
-
-                    //    _taskFutureMap[info.Item1.Id] = ExecuteTaskAsync(info.Item1, info.Item2);
-                    //}
-
-                    // 允许同时执行 N 个信号量的任务
-                    //while (true)
-                    //{
-                    //if (_longToken.Token.IsCancellationRequested)
-                    //{
-                    //    // 清理资源（如果需要）
-                    //    break;
-                    //}
 
                     while (_queueTasks.TryPeek(out var info))
                     {
@@ -512,7 +468,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         {
             // 在任务提交时，前面的的任务数量
             var currentWaitNumbers = _queueTasks.Count;
-            if (Account.MaxQueueSize > 0 && currentWaitNumbers >= Account.MaxQueueSize)
+            if (Account.QueueSize > 0 && currentWaitNumbers >= Account.QueueSize)
             {
                 return SubmitResultVO.Fail(ReturnCode.FAILURE, "提交失败，队列已满，请稍后重试")
                     .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, ChannelId);
@@ -527,15 +483,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                 // 通知后台服务有新的任务
                 _mre.Set();
-
-                //// 当执行中的任务没有满时，重新计算队列中的任务数量
-                //if (_runningTasks.Count < _account.CoreSize)
-                //{
-                //    // 等待 10ms 检查
-                //    Thread.Sleep(10);
-                //}
-
-                //currentWaitNumbers = _queueTasks.Count;
 
                 if (currentWaitNumbers == 0)
                 {

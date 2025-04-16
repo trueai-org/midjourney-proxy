@@ -91,6 +91,12 @@ namespace Midjourney.Infrastructure.LoadBalancer
                         return null;
                     }
 
+                    // 是否有空闲队列
+                    if (!model.IsIdleQueue)
+                    {
+                        return null;
+                    }
+
                     // 如果过滤 niji journey 的账号，但是账号未开启 niji journey，则不符合条件
                     if (botType == EBotType.NIJI_JOURNEY && model.Account.EnableNiji != true)
                     {
