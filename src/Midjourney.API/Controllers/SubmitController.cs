@@ -401,25 +401,47 @@ namespace Midjourney.API.Controllers
         [HttpPost("describe")]
         public ActionResult<SubmitResultVO> Describe([FromBody] SubmitDescribeDTO describeDTO)
         {
-            if (string.IsNullOrWhiteSpace(describeDTO.Base64))
+            if (string.IsNullOrWhiteSpace(describeDTO.Base64)
+                && string.IsNullOrWhiteSpace(describeDTO.Link))
             {
-                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "base64不能为空"));
+                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "base64或link不能为空"));
             }
 
-            var setting = GlobalConfiguration.Setting;
-            if (!setting.EnableUserCustomUploadBase64)
+            if (!string.IsNullOrWhiteSpace(describeDTO.Link) &&
+                !Regex.IsMatch(describeDTO.Link, @"^https?://.+"))
             {
-                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "禁止上传"));
+                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "链接格式错误"));
             }
 
             DataUrl dataUrl;
-            try
+
+            var setting = GlobalConfiguration.Setting;
+            if (!string.IsNullOrWhiteSpace(describeDTO.Base64))
             {
-                dataUrl = DataUrl.Parse(describeDTO.Base64);
+                if (!setting.EnableUserCustomUploadBase64)
+                {
+                    return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "禁止上传"));
+                }
+
+                try
+                {
+                    dataUrl = DataUrl.Parse(describeDTO.Base64);
+                }
+                catch
+                {
+                    return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "base64格式错误"));
+                }
             }
-            catch
+            else if (!string.IsNullOrWhiteSpace(describeDTO.Link))
             {
-                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "base64格式错误"));
+                dataUrl = new DataUrl()
+                {
+                    Url = describeDTO.Link
+                };
+            }
+            else
+            {
+                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "base64或link不能为空"));
             }
 
             var task = NewTask(describeDTO);
@@ -427,7 +449,7 @@ namespace Midjourney.API.Controllers
             task.BotType = GetBotType(describeDTO.BotType);
             task.Action = TaskAction.DESCRIBE;
 
-            string taskFileName = $"{task.Id}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
+            string taskFileName = $"{task.Id}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType) ?? Path.GetExtension(dataUrl.Url)}";
             task.Description = $"/describe {taskFileName}";
 
             NewTaskDoFilter(task, describeDTO.AccountFilter);

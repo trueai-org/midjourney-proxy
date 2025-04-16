@@ -78,7 +78,7 @@ namespace Midjourney.Infrastructure.Util
                 return null;
             }
 
-            return suffixList.First();
+            return suffixList.FirstOrDefault();
         }
     }
 }

@@ -348,32 +348,45 @@ namespace Midjourney.Infrastructure.Services
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
+            if (!discordInstance.IsIdleQueue)
+            {
+                return SubmitResultVO.Fail(ReturnCode.FAILURE, "提交失败，队列已满，请稍后重试");
+            }
+
             task.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, discordInstance.ChannelId);
             task.InstanceId = discordInstance.ChannelId;
 
             return discordInstance.SubmitTaskAsync(task, async () =>
             {
-                var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
-                var uploadResult = await discordInstance.UploadAsync(taskFileName, dataUrl);
-                if (uploadResult.Code != ReturnCode.SUCCESS)
-                {
-                    return Message.Of(uploadResult.Code, uploadResult.Description);
-                }
-
                 var link = "";
-                if (uploadResult.Description.StartsWith("http"))
+                if (dataUrl.Url?.StartsWith("http", StringComparison.OrdinalIgnoreCase) == true)
                 {
-                    link = uploadResult.Description;
+                    // TODO 是否转换链接
+                    link = dataUrl.Url;
                 }
                 else
                 {
-                    var finalFileName = uploadResult.Description;
-                    var sendImageResult = await discordInstance.SendImageMessageAsync("upload image: " + finalFileName, finalFileName);
-                    if (sendImageResult.Code != ReturnCode.SUCCESS)
+                    var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
+                    var uploadResult = await discordInstance.UploadAsync(taskFileName, dataUrl);
+                    if (uploadResult.Code != ReturnCode.SUCCESS)
                     {
-                        return Message.Of(sendImageResult.Code, sendImageResult.Description);
+                        return Message.Of(uploadResult.Code, uploadResult.Description);
                     }
-                    link = sendImageResult.Description;
+
+                    if (uploadResult.Description.StartsWith("http"))
+                    {
+                        link = uploadResult.Description;
+                    }
+                    else
+                    {
+                        var finalFileName = uploadResult.Description;
+                        var sendImageResult = await discordInstance.SendImageMessageAsync("upload image: " + finalFileName, finalFileName);
+                        if (sendImageResult.Code != ReturnCode.SUCCESS)
+                        {
+                            return Message.Of(sendImageResult.Code, sendImageResult.Description);
+                        }
+                        link = sendImageResult.Description;
+                    }
                 }
 
                 //var taskFileName = $"{task.Id}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";

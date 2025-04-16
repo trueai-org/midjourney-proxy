@@ -28,7 +28,17 @@ namespace Midjourney.Infrastructure
     public class DataUrl
     {
         public string MimeType { get; private set; }
+
         public byte[] Data { get; private set; }
+
+        /// <summary>
+        /// 链接
+        /// </summary>
+        public string Url { get; set; }
+
+        public DataUrl()
+        {
+        }
 
         public DataUrl(string mimeType, byte[] data)
         {

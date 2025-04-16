@@ -44,6 +44,11 @@ namespace Midjourney.Infrastructure.Dto
         public string Base64 { get; set; }
 
         /// <summary>
+        /// 图片链接与 base64 二选一
+        /// </summary>
+        public string Link { get; set; }
+
+        /// <summary>
         /// 账号过滤支持
         /// </summary>
         public AccountFilter AccountFilter { get; set; }
