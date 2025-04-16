@@ -235,11 +235,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         {
             get
             {
-                if (_queueTasks.Count <= 0)
-                {
-                    return true;
-                }
-
+                // 如果没有设置队列大小，则默认没有限制
                 if (Account.QueueCount <= 0)
                 {
                     return true;
