@@ -1234,8 +1234,13 @@ namespace Midjourney.API.Controllers
             {
                 var inc = _loadBalancer.GetDiscordInstance(item.ChannelId);
 
+                // 当前执行中的任务数
                 item.RunningCount = inc?.GetRunningFutures().Count ?? 0;
+
+                // 当前队列中任务数
                 item.QueueCount = inc?.GetQueueTasks().Count ?? 0;
+
+                // 是否运行中
                 item.Running = inc?.IsAlive ?? false;
 
                 if (user == null || (user.Role != EUserRole.ADMIN && user.Id != item.SponsorUserId))

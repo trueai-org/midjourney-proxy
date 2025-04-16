@@ -231,19 +231,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <summary>
         /// 是否存在空闲队列，即：队列是否已满，是否可加入新的任务
         /// </summary>
-        public bool IsIdleQueue
-        {
-            get
-            {
-                // 如果没有设置队列大小，则默认没有限制
-                if (Account.QueueCount <= 0)
-                {
-                    return true;
-                }
-
-                return _queueTasks.Count < Account.QueueSize;
-            }
-        }
+        public bool IsIdleQueue => Account.QueueSize <= 0 || _queueTasks.Count < Account.QueueSize;
 
         /// <summary>
         /// 后台服务执行任务

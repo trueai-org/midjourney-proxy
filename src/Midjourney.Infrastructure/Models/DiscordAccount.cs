@@ -428,7 +428,7 @@ namespace Midjourney.Infrastructure.Models
         public Dictionary<string, string> SubChannelValues { get; set; } = new Dictionary<string, string>();
 
         /// <summary>
-        /// 执行中的任务数
+        /// 执行中的任务数 - 用于前台显示
         /// </summary>
         [LiteDB.BsonIgnore]
         [MongoDB.Bson.Serialization.Attributes.BsonIgnore]
@@ -436,7 +436,7 @@ namespace Midjourney.Infrastructure.Models
         public int RunningCount { get; set; }
 
         /// <summary>
-        /// 队列中的任务数
+        /// 队列中的任务数 - 用于前台显示
         /// </summary>
         [LiteDB.BsonIgnore]
         [MongoDB.Bson.Serialization.Attributes.BsonIgnore]
@@ -444,7 +444,7 @@ namespace Midjourney.Infrastructure.Models
         public int QueueCount { get; set; }
 
         /// <summary>
-        /// wss 是否运行中
+        /// 服务运行中 - 用于前台显示
         /// </summary>
         [LiteDB.BsonIgnore]
         [MongoDB.Bson.Serialization.Attributes.BsonIgnore]
