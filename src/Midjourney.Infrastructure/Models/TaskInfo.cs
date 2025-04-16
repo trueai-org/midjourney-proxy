@@ -325,6 +325,22 @@ namespace Midjourney.Infrastructure.Models
         public string ContentType { get; set; }
 
         /// <summary>
+        /// 原始内容 - 图片宽度
+        /// </summary>
+        [LiteDB.BsonIgnore]
+        [MongoDB.Bson.Serialization.Attributes.BsonIgnore]
+        [Column(IsIgnore = true)]
+        public int? ImageHeight => Height;
+
+        /// <summary>
+        /// 原始内容 - 图片高度
+        /// </summary>
+        [LiteDB.BsonIgnore]
+        [MongoDB.Bson.Serialization.Attributes.BsonIgnore]
+        [Column(IsIgnore = true)]
+        public int? ImageWidth => Width;
+
+        /// <summary>
         /// 启动任务。
         /// </summary>
         public void Start()
