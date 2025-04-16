@@ -1103,6 +1103,7 @@ namespace Midjourney.API.Controllers
 
             var list = new List<DiscordAccount>();
             var count = 0;
+            var allowModes = param.AllowModes?.ToArray() ?? [];
 
             var setting = GlobalConfiguration.Setting;
             if (setting.DatabaseType == DatabaseType.MongoDB)
@@ -1113,7 +1114,10 @@ namespace Midjourney.API.Controllers
                     .WhereIf(!string.IsNullOrWhiteSpace(param.ChannelId), c => c.ChannelId == param.ChannelId)
                     .WhereIf(param.Enable.HasValue, c => c.Enable == param.Enable)
                     .WhereIf(!string.IsNullOrWhiteSpace(param.Remark), c => c.Remark.Contains(param.Remark))
-                    .WhereIf(!string.IsNullOrWhiteSpace(param.Sponsor), c => c.Sponsor.Contains(param.Sponsor));
+                    .WhereIf(!string.IsNullOrWhiteSpace(param.Sponsor), c => c.Sponsor.Contains(param.Sponsor))
+                    .WhereIf(allowModes.Length == 3, c => c.AllowModes.Contains(allowModes[0]) || c.AllowModes.Contains(allowModes[1]) || c.AllowModes.Contains(allowModes[2]))
+                    .WhereIf(allowModes.Length == 2, c => c.AllowModes.Contains(allowModes[0]) || c.AllowModes.Contains(allowModes[1]))
+                    .WhereIf(allowModes.Length == 1, c => c.AllowModes.Contains(allowModes[0]));
 
                 count = query.Count();
                 list = query
@@ -1136,6 +1140,11 @@ namespace Midjourney.API.Controllers
                     .WhereIf(param.Enable.HasValue, c => c.Enable == param.Enable)
                     .WhereIf(!string.IsNullOrWhiteSpace(param.Remark), c => c.Remark.Contains(param.Remark))
                     .WhereIf(!string.IsNullOrWhiteSpace(param.Sponsor), c => c.Sponsor.Contains(param.Sponsor));
+
+                if (allowModes.Length > 0)
+                {
+                    //query = query.Where(c => c.AllowModes.Any(x => allowModes.Contains(x)));
+                }
 
                 count = query.Count();
                 list = query
@@ -1161,6 +1170,43 @@ namespace Midjourney.API.Controllers
                         .WhereIf(param.Enable.HasValue, c => c.Enable == param.Enable)
                         .WhereIf(!string.IsNullOrWhiteSpace(param.Remark), c => c.Remark.Contains(param.Remark))
                         .WhereIf(!string.IsNullOrWhiteSpace(param.Sponsor), c => c.Sponsor.Contains(param.Sponsor));
+
+                    // MYSQL
+                    if (param.AllowModes?.Count > 0 && setting.DatabaseType == DatabaseType.MySQL)
+                    {
+                        // 使用 in sql
+                        var allowModesConditions = new List<string>();
+                        var parameters = new Dictionary<string, object>();
+                        int paramIndex = 0;
+
+                        foreach (var mode in param.AllowModes)
+                        {
+                            string paramName = $"@p{paramIndex++}";
+
+                            // *** Determine how GenerationSpeedMode is stored in JSON ***
+                            // Option A: If stored as string (e.g., "Fast", "Relax")
+                            var paramValue = ((int)mode).ToString();
+
+                            // Option B: If stored as integer (e.g., 1, 0)
+                            // paramValue = (int)mode;
+
+                            parameters.Add(paramName, paramValue);
+
+                            // Build the JSON_CONTAINS check for this mode.
+                            // IMPORTANT: Do NOT include the table alias 'a.' here. FreeSql adds it.
+                            // Use the C# property name `AllowModes`. FreeSql maps it to the column.
+                            allowModesConditions.Add($"JSON_CONTAINS(`AllowModes`, {paramName})");
+                        }
+
+                        if (allowModesConditions.Count > 0)
+                        {
+                            // Combine the conditions with OR
+                            string rawSqlWhere = $"({string.Join(" OR ", allowModesConditions)} OR (JSON_LENGTH(`AllowModes`) = 0))";
+
+                            // Apply the raw SQL condition to the ISelect object
+                            query = query.Where(rawSqlWhere, parameters);
+                        }
+                    }
 
                     count = (int)query.Count();
 
