@@ -22,6 +22,12 @@
 // invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
+using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Net;
+using System.Net.Http.Headers;
+using System.Text;
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.Caching.Memory;
 using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.Services;
@@ -29,13 +35,6 @@ using Midjourney.Infrastructure.Storage;
 using Midjourney.Infrastructure.Util;
 using Newtonsoft.Json.Linq;
 using Serilog;
-using System.Collections.Concurrent;
-using System.Diagnostics;
-using System.Net;
-using System.Net.Http.Headers;
-using System.Text;
-using System.Text.RegularExpressions;
-
 using ILogger = Serilog.ILogger;
 
 namespace Midjourney.Infrastructure.LoadBalancer
@@ -46,7 +45,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
     /// </summary>
     public class DiscordInstance
     {
-
         private readonly object _lockAccount = new object();
 
         private readonly ILogger _logger = Log.Logger;
@@ -54,8 +52,16 @@ namespace Midjourney.Infrastructure.LoadBalancer
         private readonly ITaskStoreService _taskStoreService;
         private readonly INotifyService _notifyService;
 
-        private readonly ConcurrentDictionary<TaskInfo, int> _runningTasks = [];
+        /// <summary>
+        /// 正在运行的任务列表 key：任务ID，value：任务信息
+        /// </summary>
+        private readonly ConcurrentDictionary<string, TaskInfo> _runningTasks = [];
+
+        /// <summary>
+        /// 任务Future映射 key：任务ID，value：作业 Action
+        /// </summary>
         private readonly ConcurrentDictionary<string, Task> _taskFutureMap = [];
+
         private readonly AsyncParallelLock _semaphoreSlimLock;
 
         private readonly Task _longTask;
@@ -220,7 +226,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// 获取正在运行的任务列表。
         /// </summary>
         /// <returns>正在运行的任务列表</returns>
-        public List<TaskInfo> GetRunningTasks() => _runningTasks.Keys.ToList();
+        public List<TaskInfo> GetRunningTasks() => _runningTasks.Values.ToList();
 
         /// <summary>
         /// 获取队列中的任务列表。
@@ -484,7 +490,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
             {
                 await _semaphoreSlimLock.LockAsync();
 
-                _runningTasks.TryAdd(info, 0);
+                _runningTasks.TryAdd(info.Id, info);
 
                 // 判断当前实例是否可用
                 if (!IsAlive)
@@ -586,7 +592,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
             }
             finally
             {
-                _runningTasks.TryRemove(info, out _);
+                _runningTasks.TryRemove(info.Id, out _);
                 _taskFutureMap.TryRemove(info.Id, out _);
 
                 _semaphoreSlimLock.Unlock();
@@ -597,12 +603,12 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
         public void AddRunningTask(TaskInfo task)
         {
-            _runningTasks.TryAdd(task, 0);
+            _runningTasks.TryAdd(task.Id, task);
         }
 
         public void RemoveRunningTask(TaskInfo task)
         {
-            _runningTasks.TryRemove(task, out _);
+            _runningTasks.TryRemove(task.Id, out _);
         }
 
         /// <summary>
@@ -719,7 +725,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 // 释放未完成的任务
                 foreach (var runningTask in _runningTasks)
                 {
-                    runningTask.Key.Fail("强制取消"); // 取消任务（假设TaskInfo有Cancel方法）
+                    runningTask.Value.Fail("强制取消"); // 取消任务（假设TaskInfo有Cancel方法）
                 }
 
                 // 清理任务队列
@@ -729,7 +735,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 }
 
                 // 释放信号量
-                //_semaphoreSlimLock?.Dispose();
+                _semaphoreSlimLock?.Dispose();
 
                 // 释放信号
                 _mre?.Dispose();
@@ -758,7 +764,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
             {
             }
         }
-
 
         /// <summary>
         /// 绘画
@@ -1466,7 +1471,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
             var json = botType == EBotType.MID_JOURNEY || prompt.Contains("--niji") ? _paramsMap["shorten"] : _paramsMap["shortenniji"];
             var paramsStr = ReplaceInteractionParams(json, nonce);
 
-
             var obj = JObject.Parse(paramsStr);
             obj["data"]["options"][0]["value"] = prompt;
             paramsStr = obj.ToString();
@@ -1540,7 +1544,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
             {
                 str = str.Replace("$application_id", Constants.NIJI_APPLICATION_ID);
             }
-
 
             return str;
         }
