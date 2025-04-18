@@ -258,8 +258,11 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                 try
                 {
-                    // 等待信号通知
-                    _mre.WaitOne();
+                    // 如果队列中没有任务，则等待信号通知
+                    if (_queueTasks.Count <= 0)
+                    {
+                        _mre.WaitOne();
+                    }
 
                     // 判断是否还有资源可用
                     while (!_semaphoreSlimLock.IsLockAvailable())
@@ -491,6 +494,21 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 await _semaphoreSlimLock.LockAsync();
 
                 _runningTasks.TryAdd(info.Id, info);
+
+                // 判断当前实例是否可用，尝试最大等待 30s
+                var waitTime = 0;
+                while (!IsAlive)
+                {
+                    // 等待 1s
+                    await Task.Delay(1000);
+
+                    // 计算等待时间
+                    waitTime += 1000;
+                    if (waitTime > 30 * 1000)
+                    {
+                        break;
+                    }
+                }
 
                 // 判断当前实例是否可用
                 if (!IsAlive)
