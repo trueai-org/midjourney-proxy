@@ -629,6 +629,10 @@ namespace Midjourney.Infrastructure.Models
             {
                 configAccount.Interval = 1.2m;
             }
+            if (configAccount.CoreSize > 12)
+            {
+                configAccount.CoreSize = 12;
+            }
 
             return new DiscordAccount
             {

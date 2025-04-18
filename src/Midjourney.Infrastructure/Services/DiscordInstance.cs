@@ -56,7 +56,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
         private readonly ConcurrentDictionary<TaskInfo, int> _runningTasks = [];
         private readonly ConcurrentDictionary<string, Task> _taskFutureMap = [];
-        private AsyncParallelLock _semaphoreSlimLock;
+        private readonly AsyncParallelLock _semaphoreSlimLock;
 
         private readonly Task _longTask;
         private readonly Task _longTaskCache;
@@ -262,19 +262,18 @@ namespace Midjourney.Infrastructure.LoadBalancer
                         Thread.Sleep(100);
                     }
 
-                    // 判断信号最大值是否为 Account.CoreSize
-                    if (_semaphoreSlimLock.MaxParallelism != Account.CoreSize)
+                    // 如果并发数修改，判断信号最大值是否为 Account.CoreSize
+                    while (_semaphoreSlimLock.MaxParallelism != Account.CoreSize)
                     {
-                        // 如果任务并发变更
-                        // 等待释放完
-                        while (_runningTasks.Count > 0)
+                        // 重新设置信号量
+                        var oldMax = _semaphoreSlimLock.MaxParallelism;
+                        var newMax = Math.Max(1, Math.Min(Account.CoreSize, 12));
+                        if (_semaphoreSlimLock.SetMaxParallelism(newMax))
                         {
-                            // 等待
-                            Thread.Sleep(100);
+                            _logger.Information("频道 {@0} 信号量最大值修改成功，原值：{@1}，当前最大值：{@2}", Account.ChannelId, oldMax, newMax);
                         }
 
-                        // 重新设置信号量
-                        _semaphoreSlimLock = new AsyncParallelLock(Math.Max(1, Math.Min(Account.CoreSize, 12)));
+                        Thread.Sleep(500);
                     }
 
                     while (_queueTasks.TryPeek(out var info))
@@ -331,24 +330,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
                             Thread.Sleep(100);
                         }
                     }
-
-                    //else
-                    //{
-                    //    // 队列为空，退出循环
-                    //    break;
-                    //}
-                    //}
-
-                    //if (_longToken.Token.IsCancellationRequested)
-                    //{
-                    //    // 清理资源（如果需要）
-                    //    break;
-                    //}
-
-                    //// 等待
-                    //Thread.Sleep(100);
-
-
 
                     // 重新设置信号
                     _mre.Reset();
@@ -508,40 +489,12 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 // 判断当前实例是否可用
                 if (!IsAlive)
                 {
+                    _logger.Debug("[{@0}] task error, id: {@1}, status: {@2}", Account.GetDisplay(), info.Id, info.Status);
+
                     info.Fail("实例不可用");
                     SaveAndNotify(info);
-                    _logger.Debug("[{@0}] task error, id: {@1}, status: {@2}", Account.GetDisplay(), info.Id, info.Status);
                     return;
                 }
-
-                // banned 判断
-                // banned 会导致执行中的数量计算不准确问题，暂时不处理
-                //if (!info.IsWhite)
-                //{
-                //    if (!string.IsNullOrWhiteSpace(info.UserId))
-                //    {
-                //        var lockKey = $"banned:lock:{info.UserId}";
-                //        if (_cache.TryGetValue(lockKey, out int lockValue) && lockValue > 0)
-                //        {
-                //            info.Fail("账号已被临时封锁，请勿使用违规词作图");
-                //            SaveAndNotify(info);
-                //            _logger.Debug("[{@0}] task error, id: {@1}, status: {@2}", Account.GetDisplay(), info.Id, info.Status);
-                //            return;
-                //        }
-                //    }
-
-                //    if (true)
-                //    {
-                //        var lockKey = $"banned:lock:{info.ClientIp}";
-                //        if (_cache.TryGetValue(lockKey, out int lockValue) && lockValue > 0)
-                //        {
-                //            info.Fail("账号已被临时封锁，请勿使用违规词作图");
-                //            SaveAndNotify(info);
-                //            _logger.Debug("[{@0}] task error, id: {@1}, status: {@2}", Account.GetDisplay(), info.Id, info.Status);
-                //            return;
-                //        }
-                //    }
-                //}
 
                 info.Status = TaskStatus.SUBMITTED;
                 info.Progress = "0%";
@@ -552,9 +505,10 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 // 判断当前实例是否可用
                 if (!IsAlive)
                 {
+                    _logger.Debug("[{@0}] task error, id: {@1}, status: {@2}", Account.GetDisplay(), info.Id, info.Status);
+
                     info.Fail("实例不可用");
                     SaveAndNotify(info);
-                    _logger.Debug("[{@0}] task error, id: {@1}, status: {@2}", Account.GetDisplay(), info.Id, info.Status);
                     return;
                 }
 
@@ -562,9 +516,10 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                 if (result.Code != ReturnCode.SUCCESS)
                 {
+                    _logger.Debug("[{@0}] task finished, id: {@1}, status: {@2}", Account.GetDisplay(), info.Id, info.Status);
+
                     info.Fail(result.Description);
                     SaveAndNotify(info);
-                    _logger.Debug("[{@0}] task finished, id: {@1}, status: {@2}", Account.GetDisplay(), info.Id, info.Status);
                     return;
                 }
 
@@ -595,11 +550,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     }
                 }
 
-                // 不随机，直接读消息
                 // 任务完成后，自动读消息
-                // 随机 3 次，如果命中则读消息
-                //if (new Random().Next(0, 3) == 0)
-                //{
                 try
                 {
                     // 成功才都消息
@@ -620,15 +571,15 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 {
                     _logger.Error(ex, "自动读消息异常 {@0} - {@1}", info.InstanceId, info.Id);
                 }
-                //}
-
-                SaveAndNotify(info);
 
                 _logger.Debug("[{AccountDisplay}] task finished, id: {TaskId}, status: {TaskStatus}", Account.GetDisplay(), info.Id, info.Status);
+
+                SaveAndNotify(info);
             }
             catch (Exception ex)
             {
                 _logger.Error(ex, "[{AccountDisplay}] task execute error, id: {TaskId}", Account.GetDisplay(), info.Id);
+
                 info.Fail("[Internal Server Error] " + ex.Message);
 
                 SaveAndNotify(info);

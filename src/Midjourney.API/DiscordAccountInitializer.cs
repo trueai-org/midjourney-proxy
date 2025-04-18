@@ -956,6 +956,12 @@ namespace Midjourney.API
                     param.Interval = 1.2m;
                 }
 
+                // 最大并行数
+                if (param.CoreSize > 12)
+                {
+                    param.CoreSize = 12;
+                }
+
                 // 验证 WorkTime
                 if (!string.IsNullOrEmpty(param.WorkTime))
                 {
