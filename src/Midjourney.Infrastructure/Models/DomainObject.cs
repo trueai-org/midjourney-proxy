@@ -22,10 +22,9 @@
 // invasion of privacy, or any other unlawful purposes is strictly prohibited. 
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
+using System.Runtime.Serialization;
 using FreeSql.DataAnnotations;
 using Midjourney.Infrastructure.Data;
-using Newtonsoft.Json.Linq;
-using System.Runtime.Serialization;
 
 using JsonIgnoreAttribute = Newtonsoft.Json.JsonIgnoreAttribute;
 
@@ -79,12 +78,15 @@ namespace Midjourney.Infrastructure.Models
         /// <returns>当前对象实例。</returns>
         public DomainObject SetProperty(string name, object value)
         {
-            Properties[name] = value;
-
-            // 同时赋值将 Discord 实例 ID  = 频道 ID
-            if (name == Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID)
+            lock (_lock)
             {
-                Properties[Constants.TASK_PROPERTY_DISCORD_CHANNEL_ID] = value;
+                Properties[name] = value;
+
+                // 同时赋值将 Discord 实例 ID  = 频道 ID
+                if (name == Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID)
+                {
+                    Properties[Constants.TASK_PROPERTY_DISCORD_CHANNEL_ID] = value;
+                } 
             }
 
             return this;
@@ -97,7 +99,10 @@ namespace Midjourney.Infrastructure.Models
         /// <returns>当前对象实例。</returns>
         public DomainObject RemoveProperty(string name)
         {
-            Properties.Remove(name);
+            lock (_lock)
+            {
+                Properties.Remove(name); 
+            }
             return this;
         }
 
@@ -108,8 +113,11 @@ namespace Midjourney.Infrastructure.Models
         /// <returns>属性值。</returns>
         public object GetProperty(string name)
         {
-            Properties.TryGetValue(name, out var value);
-            return value;
+            lock (_lock)
+            {
+                Properties.TryGetValue(name, out var value);
+                return value; 
+            }
         }
 
         /// <summary>
@@ -120,7 +128,10 @@ namespace Midjourney.Infrastructure.Models
         /// <returns>属性值。</returns>
         public T GetPropertyGeneric<T>(string name)
         {
-            return (T)GetProperty(name);
+            lock (_lock)
+            {
+                return (T)GetProperty(name); 
+            }
         }
 
         /// <summary>
@@ -132,38 +143,39 @@ namespace Midjourney.Infrastructure.Models
         /// <returns>属性值或默认值。</returns>
         public T GetProperty<T>(string name, T defaultValue)
         {
-            // return Properties.TryGetValue(name, out var value) ? (T)value : defaultValue;
-
-            if (Properties.TryGetValue(name, out var value))
+            lock (_lock)
             {
-                try
+                if (Properties.TryGetValue(name, out var value))
                 {
-                    // 检查值是否是目标类型
-                    if (value is T t)
+                    try
                     {
-                        return t; // 类型一致，直接返回
+                        // 检查值是否是目标类型
+                        if (value is T t)
+                        {
+                            return t; // 类型一致，直接返回
+                        }
+
+                        // 如果类型不一致，尝试强制转换
+                        return (T)Convert.ChangeType(value, typeof(T));
                     }
+                    catch (InvalidCastException)
+                    {
+                        // 捕获转换异常，返回默认值
+                        return defaultValue;
+                    }
+                    catch (FormatException)
+                    {
+                        // 捕获格式异常，返回默认值
+                        return defaultValue;
+                    }
+                    catch (Exception)
+                    {
+                        return defaultValue;
+                    }
+                }
 
-                    // 如果类型不一致，尝试强制转换
-                    return (T)Convert.ChangeType(value, typeof(T));
-                }
-                catch (InvalidCastException)
-                {
-                    // 捕获转换异常，返回默认值
-                    return defaultValue;
-                }
-                catch (FormatException)
-                {
-                    // 捕获格式异常，返回默认值
-                    return defaultValue;
-                }
-                catch (Exception)
-                {
-                    return defaultValue;
-                }
+                return defaultValue; 
             }
-
-            return defaultValue;
         }
 
         public void GetObjectData(SerializationInfo info, StreamingContext context)
@@ -179,8 +191,20 @@ namespace Midjourney.Infrastructure.Models
         [JsonMap]
         public Dictionary<string, object> Properties
         {
-            get => _properties ??= new Dictionary<string, object>();
-            set => _properties = value;
+            get
+            {
+                lock (_lock)
+                {
+                    return _properties ??= new Dictionary<string, object>();
+                }
+            }
+            set
+            {
+                lock (_lock)
+                {
+                    _properties = value;
+                }
+            }
         }
 
         /// <summary>
