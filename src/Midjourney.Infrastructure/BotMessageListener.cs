@@ -916,7 +916,6 @@ namespace Midjourney.Infrastructure
                                             task.Fail("账号用量已经用完");
                                         }
 
-
                                         // 标记快速模式已经用完了
                                         Account.FastExhausted = true;
 

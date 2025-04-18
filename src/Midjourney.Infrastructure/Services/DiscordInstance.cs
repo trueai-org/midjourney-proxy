@@ -1235,6 +1235,15 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 }
             }
 
+            // 如果快速模式用完了，且启用自动切换慢速
+            if (Account.FastExhausted && Account.EnableAutoSetRelax == true)
+            {
+                // 移除 prompt 可能的的参数
+                prompt = prompt.Replace("--fast", "").Replace("--relax", "").Replace("--turbo", "");
+
+                prompt += " --relax";
+            }
+
             // 指定生成速度模式
             if (Account.Mode != null)
             {
@@ -1258,15 +1267,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     default:
                         break;
                 }
-            }
-
-            // 如果快速模式用完了，则指定慢速
-            if (Account.FastExhausted)
-            {
-                // 移除 prompt 可能的的参数
-                prompt = prompt.Replace("--fast", "").Replace("--relax", "").Replace("--turbo", "");
-
-                prompt += " --relax";
             }
 
             //// 处理转义字符引号等
