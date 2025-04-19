@@ -757,7 +757,7 @@ namespace Midjourney.API.Controllers
                         var ipTodayDrawCount = (int)DbHelper.Instance.TaskStore.Count(x => x.SubmitTime >= nowDate && x.ClientIp == _ip);
                         if (ipTodayDrawCount > GlobalConfiguration.Setting.GuestDefaultDayLimit)
                         {
-                            throw new LogicException("今日绘图次数已达上限");
+                            throw new LogicException("访客今日绘图次数已达上限");
                         }
                     }
                 }
@@ -840,7 +840,7 @@ namespace Midjourney.API.Controllers
                     var userTodayDrawCount = (int)DbHelper.Instance.TaskStore.Count(x => x.SubmitTime >= nowDate && x.UserId == user.Id);
                     if (userTodayDrawCount > user.DayDrawLimit)
                     {
-                        throw new LogicException("今日绘图次数已达上限");
+                        throw new LogicException("用户今日绘图次数已达上限");
                     }
                 }
 
