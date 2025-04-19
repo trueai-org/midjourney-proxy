@@ -230,5 +230,10 @@ namespace Midjourney.Infrastructure.Storage
                 throw new Exception("生成签名 URL 异常", ex);
             }
         }
+
+        public string GetCustomCdn()
+        {
+            return _cosOptions.CustomCdn;
+        }
     }
 }

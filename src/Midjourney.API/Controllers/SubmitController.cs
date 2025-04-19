@@ -226,7 +226,7 @@ namespace Midjourney.API.Controllers
                     return Ok(Message.Of(uploadResult.Code, uploadResult.Description));
                 }
 
-                if (uploadResult.Description.StartsWith("http"))
+                if (uploadResult.Description.StartsWith("http", StringComparison.OrdinalIgnoreCase))
                 {
                     imageUrls.Add(uploadResult.Description);
                 }

@@ -21,7 +21,11 @@
 // The use of this software for any form of illegal face swapping,
 // invasion of privacy, or any other unlawful purposes is strictly prohibited. 
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
+
+using Microsoft.IdentityModel.Logging;
+using Midjourney.Infrastructure.Storage;
 using MimeDetective;
+using Serilog;
 using System.Net;
 using System.Net.Http.Headers;
 
@@ -145,6 +149,85 @@ namespace Midjourney.Infrastructure.Util
             catch (Exception ex)
             {
                 return new FetchFileResult { Success = false, Msg = $"Error fetching file: {ex.Message}" };
+            }
+        }
+
+        /// <summary>
+        /// 异步获取文件并存储到文件存储
+        /// </summary>
+        /// <param name="url">https://mp-70570b1c-bf6a-40fe-9635-8e5c1901c65d.cdn.bspapp.com/temp/1723592564348_0.png</param>
+        /// <returns></returns>
+        public async Task<string> FetchFileToStorageAsync(string url)
+        {
+            if (string.IsNullOrWhiteSpace(url) || !Uri.IsWellFormedUriString(url, UriKind.Absolute))
+            {
+                return null;
+            }
+
+            try
+            {
+                var host = new Uri(url).Host;
+
+                var cdn = StorageHelper.Instance?.GetCustomCdn();
+                if (string.IsNullOrWhiteSpace(cdn))
+                {
+                    return null;
+                }
+                var cdnHost = new Uri(cdn).Host;
+
+                // 如果与加速链接相同，则返回
+                if (cdnHost.Equals(host, StringComparison.OrdinalIgnoreCase))
+                {
+                    return url;
+                }
+
+                if (_maxFileSize > 0)
+                {
+                    _httpClient.DefaultRequestHeaders.Range = new RangeHeaderValue(0, _maxFileSize - 1);
+                }
+
+                var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
+                if (!response.IsSuccessStatusCode)
+                {
+                    Log.Warning($"{url} Failed to fetch file. Status: {response.StatusCode}");
+                    return null;
+                }
+
+                var fileBytes = await response.Content.ReadAsByteArrayAsync();
+                if (fileBytes.Length >= _maxFileSize)
+                {
+                    Log.Warning($"{url} File size exceeds limit.");
+                    return null;
+                }
+
+                var contentType = response.Content.Headers.ContentType?.MediaType;
+                var fileName = GetFileNameFromUrlOrHeaders(url, response.Content.Headers);
+                var fileExtension = DetermineFileExtension(contentType, fileBytes, fileName);
+
+                fileName = $"{Guid.NewGuid()}{fileExtension}";
+
+                // 再根据扩展名获取 MIME 类型
+                var mm = MimeKit.MimeTypes.GetMimeType(fileName);
+                if (!string.IsNullOrWhiteSpace(mm))
+                {
+                    contentType = mm;
+                }
+
+                var saveFileName = $"attachments/fetchs/{DateTime.Now:yyyyMMdd}/{Guid.NewGuid():N}{fileExtension}";
+                var res = StorageHelper.Instance?.SaveAsync(new MemoryStream(fileBytes), saveFileName, mm);
+                if (!string.IsNullOrWhiteSpace(res?.Url))
+                {
+                    return res.Url;
+                }
+
+                LogHelper.LogWarning($"{url} Failed to save file to storage.");
+
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, $"Error fetching file: {url}");
+                return null;
             }
         }
 

@@ -147,14 +147,35 @@ namespace Midjourney.Infrastructure.Models
         public bool EnableUserCustomUploadBase64 { get; set; } = true;
 
         /// <summary>
-        /// 启用转换官方链接
+        /// 启用转换官方链接，上传到 discord 服务器
         /// </summary>
         public bool EnableConvertOfficialLink { get; set; } = true;
 
         /// <summary>
         /// 启用转换云/加速链接/OSS/COS/CDN
         /// </summary>
+        [Obsolete("废弃")]
         public bool EnableConvertAliyunLink { get; set; }
+
+        /// <summary>
+        /// 保存用户上传的 link 到文件存储（例如：describe） 
+        /// </summary>
+        public bool EnableSaveUserUploadLink { get; set; } = true;
+
+        /// <summary>
+        /// 保存用户上传的 base64 到文件存储（例如：垫图、混图等）
+        /// </summary>
+        public bool EnableSaveUserUploadBase64 { get; set; } = true;
+
+        /// <summary>
+        /// 保存生成的图片到文件存储（discord 最终图片）
+        /// </summary>
+        public bool EnableSaveGeneratedImage { get; set; } = true;
+
+        /// <summary>
+        /// 保存过程中间图片到文件存储（discord 进度图片）
+        /// </summary>
+        public bool EnableSaveIntermediateImage { get; set; } = false;
 
         /// <summary>
         /// 开启 mj 翻译

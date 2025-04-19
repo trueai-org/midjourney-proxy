@@ -22,8 +22,8 @@
 // invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
-using Midjourney.Infrastructure.Util;
 using System.Net;
+using Midjourney.Infrastructure.Util;
 
 namespace Midjourney.Infrastructure.Storage
 {
@@ -59,6 +59,10 @@ namespace Midjourney.Infrastructure.Storage
             {
                 _instance = new CloudflareR2StorageService();
             }
+            else
+            {
+                _instance = null;
+            }
         }
 
         /// <summary>
@@ -67,6 +71,12 @@ namespace Midjourney.Infrastructure.Storage
         /// <param name="taskInfo"></param>
         public static void DownloadFile(TaskInfo taskInfo)
         {
+            // 是否启用保存到文件存储
+            if (!GlobalConfiguration.Setting.EnableSaveGeneratedImage)
+            {
+                return;
+            }
+
             var imageUrl = taskInfo.ImageUrl;
             var isReplicate = taskInfo.IsReplicate;
             var thumbnailUrl = taskInfo.ThumbnailUrl;
@@ -95,7 +105,6 @@ namespace Midjourney.Infrastructure.Storage
             // 创建保存路径
             var uri = new Uri(imageUrl);
             var localPath = uri.AbsolutePath.TrimStart('/');
-
 
             // 换脸放到私有附件中
             if (isReplicate)
@@ -226,9 +235,8 @@ namespace Midjourney.Infrastructure.Storage
                         thumbnailUrl = url.ToStyle(opt.ThumbnailImageStyle);
                     }
                 });
-
             }
-            else if(setting.ImageStorageType == ImageStorageType.R2)
+            else if (setting.ImageStorageType == ImageStorageType.R2)
             {
                 var opt = setting.CloudflareR2;
                 var cdn = opt.CustomCdn;
@@ -288,7 +296,6 @@ namespace Midjourney.Infrastructure.Storage
                         thumbnailUrl = url.ToStyle(opt.ThumbnailImageStyle);
                     }
                 });
-
             }
             // https://cdn.discordapp.com/attachments/1265095688782614602/1266300100989161584/03ytbus_LOGO_design_A_warrior_frog_Muscles_like_Popeye_Freehand_06857373-4fd9-403d-a5df-c2f27f9be269.png?ex=66a4a55e&is=66a353de&hm=c597e9d6d128c493df27a4d0ae41204655ab73f7e885878fc1876a8057a7999f&
             // 将图片保存到本地，并替换 url，并且保持原 url和参数

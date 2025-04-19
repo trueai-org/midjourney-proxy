@@ -85,5 +85,11 @@ namespace Midjourney.Infrastructure.Storage
         /// <param name="key"></param>
         /// <param name="mimeType"></param>
         void Overwrite(Stream mediaBinaryStream, string key, string mimeType);
+
+        /// <summary>
+        /// 获取自定义加速域名
+        /// </summary>
+        /// <returns></returns>
+        string GetCustomCdn();
     }
 }

@@ -1566,15 +1566,21 @@ namespace Midjourney.Infrastructure.LoadBalancer
             return str;
         }
 
+ 
+        /// <summary>
+        /// 上传文件到 Discord 或 文件存储
+        /// </summary>
+        /// <param name="fileName"></param>
+        /// <param name="dataUrl"></param>
+        /// <param name="useDiscordUpload"></param>
+        /// <returns></returns>
         public async Task<Message> UploadAsync(string fileName, DataUrl dataUrl, bool useDiscordUpload = false)
         {
-            // 启用转为云链接
-            if (GlobalConfiguration.Setting.EnableConvertAliyunLink && !useDiscordUpload)
+            // 保存用户上传的 base64 到文件存储
+            if (GlobalConfiguration.Setting.EnableSaveUserUploadBase64 && !useDiscordUpload)
             {
                 try
                 {
-                    //var oss = new AliyunOssStorageService();
-
                     var localPath = $"attachments/{DateTime.Now:yyyyMMdd}/{fileName}";
 
                     var mt = MimeKit.MimeTypes.GetMimeType(Path.GetFileName(localPath));
@@ -1584,20 +1590,11 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     }
 
                     var stream = new MemoryStream(dataUrl.Data);
-                    var res = StorageHelper.Instance.SaveAsync(stream, localPath, dataUrl.MimeType ?? mt);
+                    var res = StorageHelper.Instance?.SaveAsync(stream, localPath, dataUrl.MimeType ?? mt);
                     if (string.IsNullOrWhiteSpace(res?.Url))
                     {
                         throw new Exception("上传图片到加速站点失败");
                     }
-
-                    //// 替换 url
-                    //var customCdn = oss.Options.CustomCdn;
-                    //if (string.IsNullOrWhiteSpace(customCdn))
-                    //{
-                    //    customCdn = oss.Options.Endpoint;
-                    //}
-
-                    //var url = $"{customCdn?.Trim()?.Trim('/')}/{res.Key}";
 
                     var url = res.Url;
 

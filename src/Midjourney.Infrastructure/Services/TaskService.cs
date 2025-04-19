@@ -201,6 +201,10 @@ namespace Midjourney.Infrastructure.Services
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
+            if (!instance.IsIdleQueue)
+            {
+                return SubmitResultVO.Fail(ReturnCode.FAILURE, "提交失败，队列已满，请稍后重试");
+            }
 
             info.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, instance.ChannelId);
             info.InstanceId = instance.ChannelId;
@@ -361,8 +365,19 @@ namespace Midjourney.Infrastructure.Services
                 var link = "";
                 if (dataUrl.Url?.StartsWith("http", StringComparison.OrdinalIgnoreCase) == true)
                 {
-                    // TODO 是否转换链接
+                    // 是否转换链接
                     link = dataUrl.Url;
+
+                    // 如果转换用户链接到文件存储
+                    if (GlobalConfiguration.Setting.EnableSaveUserUploadLink)
+                    {
+                        var ff = new FileFetchHelper();
+                        var url = await ff.FetchFileToStorageAsync(link);
+                        if (!string.IsNullOrWhiteSpace(url))
+                        {
+                            link = url;
+                        }
+                    }
                 }
                 else
                 {

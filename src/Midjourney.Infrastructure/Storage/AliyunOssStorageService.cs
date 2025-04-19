@@ -542,6 +542,11 @@ namespace Midjourney.Infrastructure.Storage
                 }
             }
         }
+
+        public string GetCustomCdn()
+        {
+            return string.IsNullOrWhiteSpace(_ossOptions?.CustomCdn) ? _ossOptions.CustomCdn : string.Empty;
+        }
     }
 
     /// <summary>

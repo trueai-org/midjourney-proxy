@@ -147,6 +147,18 @@ namespace Midjourney.Infrastructure.Handle
                 task.Progress = parseData.Status;
 
                 string imageUrl = GetImageUrl(message);
+
+                // 如果启用保存过程图片
+                if (GlobalConfiguration.Setting.EnableSaveIntermediateImage)
+                {
+                    var ff = new FileFetchHelper();
+                    var url = ff.FetchFileToStorageAsync(imageUrl).ConfigureAwait(false).GetAwaiter().GetResult();
+                    if (!string.IsNullOrWhiteSpace(url))
+                    {
+                        imageUrl = url;
+                    }
+                }
+
                 task.ImageUrl = imageUrl;
                 task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_HASH, discordHelper.GetMessageHash(imageUrl));
                 task.Awake();

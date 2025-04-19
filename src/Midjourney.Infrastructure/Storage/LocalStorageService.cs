@@ -208,5 +208,10 @@ namespace Midjourney.Infrastructure.Storage
         {
             return Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", key.Replace("/", Path.DirectorySeparatorChar.ToString()));
         }
+
+        public string GetCustomCdn()
+        {
+            return GlobalConfiguration.Setting.LocalStorage.CustomCdn;
+        }
     }
 }

@@ -391,7 +391,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                         var key = $"pri/pbxt/{fileName}";
 
 
-                        var upload = StorageHelper.Instance.SaveAsync(File.OpenRead(source), key, ff.GetMimeType(fileName) ?? "image/jpeg");
+                        var upload = StorageHelper.Instance?.SaveAsync(File.OpenRead(source), key, ff.GetMimeType(fileName) ?? "image/jpeg");
                         if (!string.IsNullOrWhiteSpace(upload?.Url))
                         {
                             source = upload?.Url;
@@ -437,7 +437,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                         var fileName = Path.GetFileName(target);
                         var key = $"pri/pbxt/{fileName}";
 
-                        var res = StorageHelper.Instance.SaveAsync(File.OpenRead(target), key, ff.GetMimeType(fileName) ?? "video/mp4");
+                        var res = StorageHelper.Instance?.SaveAsync(File.OpenRead(target), key, ff.GetMimeType(fileName) ?? "video/mp4");
                         if (!string.IsNullOrWhiteSpace(res?.Url))
                         {
                             target = res.Url;
