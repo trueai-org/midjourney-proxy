@@ -35,13 +35,19 @@ namespace Midjourney.API
 
             // 配置 Serilog
             var logger = new LoggerConfiguration()
-                .ReadFrom.Configuration(builder.Services.GetService<IConfiguration>());
+                .ReadFrom.Configuration(builder.Services.GetService<IConfiguration>())
+
+                // 添加明确的 error.txt 配置
+                .WriteTo.Logger(lc => lc
+                    .Filter.ByIncludingOnly(evt => evt.Level == Serilog.Events.LogEventLevel.Error)
+                    .WriteTo.File("logs/error.txt", rollingInterval: RollingInterval.Day));
 
             if (env.IsDevelopment())
             {
+#if DEBUG
                 logger.MinimumLevel.Debug()
-                      .Enrich.FromLogContext();
-
+                          .Enrich.FromLogContext();
+#endif
                 // 使用 Serilog.Debugging.SelfLog.Enable(Console.Error) 来启用 Serilog 的自我诊断，这将帮助诊断配置问题。
                 SelfLog.Enable(Console.Error);
             }

@@ -418,9 +418,10 @@ namespace Midjourney.API.Controllers
         /// 获取日志
         /// </summary>
         /// <param name="tail"></param>
+        /// <param name="level">0: 默认, 1: 错误</param>
         /// <returns></returns>
         [HttpGet("probe")]
-        public IActionResult GetLogs([FromQuery] int tail = 1000)
+        public IActionResult GetLogs([FromQuery] int tail = 1000, [FromQuery] int level = 0)
         {
             // 演示模式 100 条
             if (_isAnonymous)
@@ -428,12 +429,20 @@ namespace Midjourney.API.Controllers
                 tail = 100;
             }
 
+            var logName = "log";
+            if (level >= 1)
+            {
+                logName = "error";
+            }
+
             // 项目目录，而不是 AppContext.BaseDirectory
-            var logFilePath = Path.Combine(Directory.GetCurrentDirectory(), $"logs/log{DateTime.Now:yyyyMMdd}.txt");
+            var logFilePath = Path.Combine(Directory.GetCurrentDirectory(), $"logs/{logName}{DateTime.Now:yyyyMMdd}.txt");
 
             if (!System.IO.File.Exists(logFilePath))
             {
-                return NotFound("Log file not found.");
+                //return NotFound("Log file not found.");
+
+                return Ok("Log file not found.");
             }
 
             try

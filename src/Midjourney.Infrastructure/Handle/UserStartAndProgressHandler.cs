@@ -157,7 +157,8 @@ namespace Midjourney.Infrastructure.Handle
                 string imageUrl = GetImageUrl(message);
 
                 // 如果启用保存过程图片
-                if (GlobalConfiguration.Setting.EnableSaveIntermediateImage)
+                if (GlobalConfiguration.Setting.EnableSaveIntermediateImage
+                    && !string.IsNullOrWhiteSpace(imageUrl))
                 {
                     var ff = new FileFetchHelper();
                     var url = ff.FetchFileToStorageAsync(imageUrl).ConfigureAwait(false).GetAwaiter().GetResult();
@@ -165,11 +166,21 @@ namespace Midjourney.Infrastructure.Handle
                     {
                         imageUrl = url;
                     }
-                }
 
-                task.ImageUrl = imageUrl;
-                task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_HASH, discordHelper.GetMessageHash(imageUrl));
-                task.Awake();
+                    // 必须确保任务仍是 IN_PROGRESS 状态
+                    if (task.Status == TaskStatus.IN_PROGRESS)
+                    {
+                        task.ImageUrl = imageUrl;
+                        task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_HASH, discordHelper.GetMessageHash(imageUrl));
+                        task.Awake();
+                    }
+                }
+                else
+                {
+                    task.ImageUrl = imageUrl;
+                    task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_HASH, discordHelper.GetMessageHash(imageUrl));
+                    task.Awake();
+                }
             }
         }
     }
