@@ -161,26 +161,75 @@ namespace Midjourney.Captcha.API
                                 var wait2 = new WebDriverWait(driver, TimeSpan.FromSeconds(30));
                                 wait2.Until(d => ((IJavaScriptExecutor)d).ExecuteScript("return document.readyState").ToString() == "complete");
 
-                                var sc = @"
+                                var sc = """
 window.webpackChunkdiscord_app.push([
   [Math.random()],
   {},
   (req) => {
-    for (const m of Object.keys(req.c)
-      .map((x) => req.c[x].exports)
-      .filter((x) => x)) {
-      if (m.default && m.default.getToken !== undefined) {
-        const token = m.default.getToken();
-        document.body.setAttribute('data-token', token);
+    try {
+      // 更宽松的Token格式检查
+      const isLikelyToken = (token) => {
+        if (!token || typeof token !== 'string') return false;
+        // 检查字符串长度以及是否包含点(.)分隔符
+        return token.length > 20 && token.includes('.');
+      };
+
+      // 遍历所有模块并提取所有可能的token
+      let tokenFound = false;
+
+      for (const m of Object.keys(req.c).map((x) => req.c[x].exports).filter(Boolean)) {
+        try {
+          // 尝试从default.getToken获取
+          if (m.default && typeof m.default.getToken === 'function') {
+            try {
+              const token = m.default.getToken();
+              console.log("获取到潜在Token (default):", token);
+
+              if (isLikelyToken(token)) {
+                document.body.setAttribute('data-token', token);
+                console.log("找到有效Token！");
+                tokenFound = true;
+                return; // 立即退出整个函数
+              }
+            } catch (e) { /* 忽略单个函数调用错误 */ }
+          }
+
+          // 尝试从m.getToken获取
+          if (typeof m.getToken === 'function') {
+            try {
+              const token = m.getToken();
+              console.log("获取到潜在Token (直接):", token);
+
+              if (isLikelyToken(token)) {
+                document.body.setAttribute('data-token', token);
+                console.log("找到有效Token！");
+                tokenFound = true;
+                return; // 立即退出整个函数
+              }
+            } catch (e) { /* 忽略单个函数调用错误 */ }
+          }
+
+          // 检查已知的token位置
+          if (m.default?.token && isLikelyToken(m.default.token)) {
+            document.body.setAttribute('data-token', m.default.token);
+            console.log("找到有效Token！");
+            tokenFound = true;
+            return;
+          }
+        } catch (moduleError) {
+          // 忽略单个模块错误
+        }
       }
-      if (m.getToken !== undefined) {
-        const token = m.getToken();
-        document.body.setAttribute('data-token', token);
+
+      if (!tokenFound) {
+        console.log("未找到有效的Discord Token");
       }
+    } catch (error) {
+      console.error("脚本执行错误:", error);
     }
-  },
+  }
 ]);
-";
+""";
                                 // 通过控制台执行 sc 脚本获取 token
                                 driver.ExecuteScript(sc);
 
