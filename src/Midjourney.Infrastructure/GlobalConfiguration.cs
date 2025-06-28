@@ -43,6 +43,11 @@ namespace Midjourney.Infrastructure
         public static string Version { get; set; } = "v7.0.1";
 
         /// <summary>
+        /// 程序启动时间
+        /// </summary>
+        public static DateTime ProgramStartTime { get; set; } = DateTime.Now;
+
+        /// <summary>
         /// 全局配置项
         /// </summary>
         public static Setting Setting { get; set; }
