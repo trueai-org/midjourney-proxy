@@ -66,8 +66,10 @@ namespace Midjourney.Infrastructure.Services
         {
             _httpClient = httpClient;
 
-            // 不适用项目目录
+            // 不使用项目目录
             //_upgradePath = Path.Combine(Directory.GetCurrentDirectory(), UpgradeDirectory);
+
+            // 使用应用程序基目录
             _upgradePath = Path.Combine(AppContext.BaseDirectory, UpgradeDirectory);
 
             // 初始化升级信息
@@ -418,7 +420,7 @@ namespace Midjourney.Infrastructure.Services
                 Log.Information("开始执行升级: {File}", upgradeFilePath);
 
                 var fileName = Path.GetFileName(upgradeFilePath);
-                var extractPath = Path.Combine(_upgradePath, "extract", fileName);
+                var extractPath = Path.Combine(_upgradePath, "extract");
 
                 // 清理旧的解压目录
                 if (Directory.Exists(extractPath))
@@ -602,7 +604,8 @@ namespace Midjourney.Infrastructure.Services
                 }
                 else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                 {
-                    await ExecuteLinuxUpgradeScript(extractPath);
+                    // 不需要执行
+                    //await ExecuteLinuxUpgradeScript(extractPath);
                 }
                 else
                 {
@@ -657,6 +660,9 @@ namespace Midjourney.Infrastructure.Services
             };
 
             Process.Start(startInfo);
+
+            // 输出脚本日志
+            Log.Information("脚本 {@0}", startInfo);
 
             // 等待脚本启动
             await Task.Delay(500);
