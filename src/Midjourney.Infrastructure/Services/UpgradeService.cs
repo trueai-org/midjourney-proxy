@@ -257,7 +257,9 @@ namespace Midjourney.Infrastructure.Services
             }
 
             var files = Directory.GetFiles(_upgradePath, pattern);
-            return files.FirstOrDefault();
+
+            // 最后一个包
+            return files.OrderBy(c => c).LastOrDefault();
         }
 
         private string ExtractVersionFromFileName(string fileName)
