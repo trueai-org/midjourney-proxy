@@ -41,13 +41,11 @@ namespace Midjourney.API.Controllers
     {
         private readonly IUpgradeService _upgradeService;
         private readonly UpgradeOptions _options;
-        private readonly Serilog.ILogger _logger;
 
-        public UpgradeController(IUpgradeService upgradeService, IOptions<UpgradeOptions> options, Serilog.ILogger logger)
+        public UpgradeController(IUpgradeService upgradeService, IOptions<UpgradeOptions> options)
         {
             _upgradeService = upgradeService;
             _options = options.Value;
-            _logger = logger;
         }
 
         /// <summary>
@@ -64,7 +62,7 @@ namespace Midjourney.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "获取当前版本失败");
+                Log.Error(ex, "获取当前版本失败");
                 return StatusCode(500, new { message = "获取当前版本失败", error = ex.Message });
             }
         }
@@ -83,7 +81,7 @@ namespace Midjourney.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "获取最新版本失败");
+                Log.Error(ex, "获取最新版本失败");
                 return StatusCode(500, new { message = "获取最新版本失败", error = ex.Message });
             }
         }
@@ -112,7 +110,7 @@ namespace Midjourney.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "检查更新失败");
+                Log.Error(ex, "检查更新失败");
                 return StatusCode(500, new { message = "检查更新失败", error = ex.Message });
             }
         }
@@ -158,7 +156,7 @@ namespace Midjourney.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "启动升级失败");
+                Log.Error(ex, "启动升级失败");
                 return StatusCode(500, new { message = "启动升级失败", error = ex.Message });
             }
         }
@@ -183,7 +181,7 @@ namespace Midjourney.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "获取升级状态失败: {TaskId}", taskId);
+                Log.Error(ex, "获取升级状态失败: {TaskId}", taskId);
                 return StatusCode(500, new { message = "获取升级状态失败", error = ex.Message });
             }
         }
@@ -213,7 +211,7 @@ namespace Midjourney.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "取消升级失败: {TaskId}", taskId);
+                Log.Error(ex, "取消升级失败: {TaskId}", taskId);
                 return StatusCode(500, new { message = "取消升级失败", error = ex.Message });
             }
         }
@@ -232,7 +230,7 @@ namespace Midjourney.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "获取升级任务列表失败");
+                Log.Error(ex, "获取升级任务列表失败");
                 return StatusCode(500, new { message = "获取升级任务列表失败", error = ex.Message });
             }
         }
@@ -257,7 +255,7 @@ namespace Midjourney.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "验证升级权限失败");
+                Log.Error(ex, "验证升级权限失败");
                 return StatusCode(500, new { message = "验证升级权限失败", error = ex.Message });
             }
         }
@@ -284,7 +282,7 @@ namespace Midjourney.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "获取升级配置失败");
+                Log.Error(ex, "获取升级配置失败");
                 return StatusCode(500, new { message = "获取升级配置失败", error = ex.Message });
             }
         }

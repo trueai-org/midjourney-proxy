@@ -41,15 +41,13 @@ namespace Midjourney.Infrastructure.Services
     public class UpgradeService : IUpgradeService
     {
         private readonly UpgradeOptions _options;
-        private readonly Serilog.ILogger _logger;
         private readonly HttpClient _httpClient;
         private readonly ConcurrentDictionary<string, UpgradeStatus> _upgradeTasks;
         private readonly ConcurrentDictionary<string, CancellationTokenSource> _cancellationTokens;
 
-        public UpgradeService(IOptions<UpgradeOptions> options, Serilog.ILogger logger, HttpClient httpClient)
+        public UpgradeService(IOptions<UpgradeOptions> options, HttpClient httpClient)
         {
             _options = options.Value;
-            _logger = logger;
             _httpClient = httpClient;
             _upgradeTasks = new ConcurrentDictionary<string, UpgradeStatus>();
             _cancellationTokens = new ConcurrentDictionary<string, CancellationTokenSource>();
@@ -62,7 +60,7 @@ namespace Midjourney.Infrastructure.Services
         {
             try
             {
-                _logger.Information("获取最新版本信息");
+                Log.Information("获取最新版本信息");
                 
                 var response = await _httpClient.GetStringAsync(_options.VersionCheckUrl);
                 var releaseInfo = JsonConvert.DeserializeObject<dynamic>(response);
@@ -76,12 +74,12 @@ namespace Midjourney.Infrastructure.Services
                     IsLatest = true
                 };
 
-                _logger.Information("最新版本: {Version}", version.Version);
+                Log.Information("最新版本: {Version}", version.Version);
                 return version;
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "获取最新版本信息失败");
+                Log.Error(ex, "获取最新版本信息失败");
                 throw new Exception("获取最新版本信息失败", ex);
             }
         }
@@ -106,7 +104,7 @@ namespace Midjourney.Infrastructure.Services
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "获取当前版本信息失败");
+                Log.Error(ex, "获取当前版本信息失败");
                 throw new Exception("获取当前版本信息失败", ex);
             }
         }
@@ -124,14 +122,14 @@ namespace Midjourney.Infrastructure.Services
                 // 简单版本比较，可以改进为更复杂的版本比较逻辑
                 var hasUpdate = !string.Equals(latestVersion.Version, currentVersion.Version, StringComparison.OrdinalIgnoreCase);
                 
-                _logger.Information("版本检查: 当前版本 {CurrentVersion}, 最新版本 {LatestVersion}, 有更新: {HasUpdate}", 
+                Log.Information("版本检查: 当前版本 {CurrentVersion}, 最新版本 {LatestVersion}, 有更新: {HasUpdate}", 
                     currentVersion.Version, latestVersion.Version, hasUpdate);
                 
                 return hasUpdate;
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "检查更新失败");
+                Log.Error(ex, "检查更新失败");
                 return false;
             }
         }
@@ -208,7 +206,7 @@ namespace Midjourney.Infrastructure.Services
         {
             try
             {
-                _logger.Information("开始执行升级任务: {TaskId}", taskId);
+                Log.Information("开始执行升级任务: {TaskId}", taskId);
                 
                 await UpdateUpgradeStatus(taskId, UpgradeState.Initializing, 5, "初始化升级环境");
 
@@ -268,17 +266,17 @@ namespace Midjourney.Infrastructure.Services
 
                 await UpdateUpgradeStatus(taskId, UpgradeState.Completed, 100, "升级完成");
                 
-                _logger.Information("升级任务完成: {TaskId}", taskId);
+                Log.Information("升级任务完成: {TaskId}", taskId);
             }
             catch (OperationCanceledException)
             {
                 await UpdateUpgradeStatus(taskId, UpgradeState.Cancelled, 0, "升级已取消", "用户取消或超时");
-                _logger.Warning("升级任务被取消: {TaskId}", taskId);
+                Log.Warning("升级任务被取消: {TaskId}", taskId);
             }
             catch (Exception ex)
             {
                 await UpdateUpgradeStatus(taskId, UpgradeState.Failed, 0, "升级失败", ex.Message);
-                _logger.Error(ex, "升级任务失败: {TaskId}", taskId);
+                Log.Error(ex, "升级任务失败: {TaskId}", taskId);
             }
             finally
             {
@@ -304,7 +302,7 @@ namespace Midjourney.Infrastructure.Services
                 }
 
                 _upgradeTasks.TryUpdate(taskId, status, status);
-                _logger.Information("升级状态更新: {TaskId} - {State} - {Progress}% - {Message}", taskId, state, progress, message);
+                Log.Information("升级状态更新: {TaskId} - {State} - {Progress}% - {Message}", taskId, state, progress, message);
             }
             
             await Task.CompletedTask;
@@ -435,7 +433,7 @@ namespace Midjourney.Infrastructure.Services
             }
             catch (Exception ex)
             {
-                _logger.Warning(ex, "清理旧镜像失败");
+                Log.Warning(ex, "清理旧镜像失败");
             }
         }
 
@@ -483,14 +481,14 @@ namespace Midjourney.Infrastructure.Services
                 var allOutput = output.ToString() + error.ToString();
                 var success = process.ExitCode == 0;
 
-                _logger.Information("Docker命令执行: {Command}, 成功: {Success}, 输出: {Output}", 
+                Log.Information("Docker命令执行: {Command}, 成功: {Success}, 输出: {Output}", 
                     $"docker {arguments}", success, allOutput);
 
                 return (success, allOutput);
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "执行Docker命令失败: {Command}", $"docker {arguments}");
+                Log.Error(ex, "执行Docker命令失败: {Command}", $"docker {arguments}");
                 return (false, ex.Message);
             }
         }
@@ -534,7 +532,7 @@ namespace Midjourney.Infrastructure.Services
                 var dockerSocketExists = File.Exists(_options.DockerSocketPath);
                 if (!dockerSocketExists)
                 {
-                    _logger.Warning("Docker socket不存在: {Path}", _options.DockerSocketPath);
+                    Log.Warning("Docker socket不存在: {Path}", _options.DockerSocketPath);
                     return false;
                 }
 
@@ -542,7 +540,7 @@ namespace Midjourney.Infrastructure.Services
                 var dockerAvailable = await IsDockerAvailableAsync();
                 if (!dockerAvailable)
                 {
-                    _logger.Warning("Docker命令不可用");
+                    Log.Warning("Docker命令不可用");
                     return false;
                 }
 
@@ -550,7 +548,7 @@ namespace Midjourney.Infrastructure.Services
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "验证升级权限失败");
+                Log.Error(ex, "验证升级权限失败");
                 return false;
             }
         }
