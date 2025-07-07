@@ -28,4 +28,11 @@ RUN dotnet publish "./Midjourney.API.csproj" -c $BUILD_CONFIGURATION -o /app/pub
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "Midjourney.API.dll"]
+
+#ENTRYPOINT ["dotnet", "Midjourney.API.dll"]
+
+# 设置脚本执行权限
+RUN chmod +x /app/startup.sh
+
+# 使用启动脚本作为入口点
+ENTRYPOINT ["/app/startup.sh"]
