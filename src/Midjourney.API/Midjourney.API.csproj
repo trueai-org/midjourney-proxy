@@ -9,7 +9,7 @@
 		<IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
 		<EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
 		<SatelliteResourceLanguages>zh-Hans</SatelliteResourceLanguages>
-		<AssemblyVersion>8.0.18</AssemblyVersion>
+		<AssemblyVersion>8.0.19</AssemblyVersion>
 		<DockerfileContext>..\..</DockerfileContext>
 	</PropertyGroup>
 
@@ -44,6 +44,9 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <None Update="startup.sh">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </None>
 	  <None Update="Upgrade\linux-upgrade.sh">
 	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 	  </None>
