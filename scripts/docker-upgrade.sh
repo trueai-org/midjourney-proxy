@@ -7,13 +7,6 @@ CONTAINER_NAME="mjopen"
 # 打印信息
 echo "开始更新 ${CONTAINER_NAME} 容器..."
 
-# 验证Docker是否安装
-if ! command -v docker &> /dev/null
-then
-    echo "Docker 未安装，请先安装 Docker。"
-    exit 1
-fi
-
 # 拉取最新镜像
 echo "拉取最新的镜像 ${IMAGE_NAME}..."
 docker pull ${IMAGE_NAME}
