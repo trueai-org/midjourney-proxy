@@ -121,6 +121,9 @@ namespace Midjourney.API
 
             // 任务服务
             services.AddSingleton<ITaskService, TaskService>();
+
+            // 升级服务
+            services.AddSingleton<IUpgradeService, UpgradeService>();
         }
     }
 }

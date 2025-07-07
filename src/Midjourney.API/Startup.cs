@@ -61,6 +61,11 @@ namespace Midjourney.API
             var ipBlackOpt = ipBlackSec.Get<IpBlackRateLimitingOptions>();
             services.Configure<IpBlackRateLimitingOptions>(ipBlackSec);
 
+            // 升级配置
+            var upgradeSec = Configuration.GetSection("Upgrade");
+            var upgradeOpt = upgradeSec.Get<UpgradeOptions>() ?? new UpgradeOptions();
+            services.Configure<UpgradeOptions>(upgradeSec);
+
             var setting = LiteDBHelper.SettingStore.Get(Constants.DEFAULT_SETTING_ID);
             if (setting == null)
             {
