@@ -91,7 +91,21 @@ namespace Midjourney.Infrastructure.Services
             get
             {
                 var platform = GetCurrentPlatform();
-                return platform == "win-x64" || platform == "linux-x64";
+                return platform == "linux-x64" && IsDockerEnvironment();
+            }
+        }
+
+        private bool IsDockerEnvironment()
+        {
+            try
+            {
+                return System.IO.File.Exists("/.dockerenv") ||
+                Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true" ||
+                Environment.GetEnvironmentVariable("DOCKER_CONTAINER") != null;
+            }
+            catch
+            {
+                return false;
             }
         }
 
