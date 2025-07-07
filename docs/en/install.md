@@ -21,6 +21,10 @@ wget -O docker-upgrade.sh https://raw.githubusercontent.com/trueai-org/midjourne
 
 # 2. To update/upgrade in the future, simply run this script
 sh docker-upgrade.sh
+
+# 3. Online upgrade (NEW): You can now upgrade directly from the admin panel
+# Use the admin API endpoint: POST /mj/admin/upgrade with admin token
+# See docs/online-upgrade.md for detailed instructions
 ```
 
 ```bash
