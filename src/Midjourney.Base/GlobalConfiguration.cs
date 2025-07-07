@@ -36,7 +36,7 @@ namespace Midjourney.Base
         /// <summary>
         /// 版本号
         /// </summary>
-        public static string Version { get; set; } = $"v{(Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly()).GetName().Version} Plus";
+        public static string Version { get; set; } = $"v{(Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly()).GetName().Version}";
 
         /// <summary>
         /// 今日绘图
