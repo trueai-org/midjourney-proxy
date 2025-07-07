@@ -248,7 +248,7 @@ namespace Midjourney.Infrastructure.Services
         {
             var platform = GetCurrentPlatform();
 
-            var pattern = $"midjourney-proxy-{platform}-v*.tar.gz";
+            var pattern = $"midjourney-proxy-{platform}-v*-docker.tar.gz";
             if (platform == "win-x64")
             {
                 pattern = $"midjourney-proxy-{platform}-v*.zip";
@@ -331,8 +331,8 @@ namespace Midjourney.Infrastructure.Services
             var sufix = platform switch
             {
                 "win-x64" => ".zip",
-                "linux-x64" => ".tar.gz",
-                _ => ".tar.gz"
+                "linux-x64" => "-docker.tar.gz",
+                _ => "-docker.tar.gz"
             };
             var fileName = $"midjourney-proxy-{platform}-{_upgradeInfo.LatestVersion}{sufix}";
 
