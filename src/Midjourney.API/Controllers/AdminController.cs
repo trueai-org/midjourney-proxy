@@ -2095,5 +2095,195 @@ namespace Midjourney.API.Controllers
 
             return success ? Result.Ok() : Result.Fail("连接失败");
         }
+
+        /// <summary>
+        /// 在线升级容器
+        /// </summary>
+        /// <returns></returns>
+        [HttpPost("upgrade")]
+        public async Task<Result> UpgradeContainer()
+        {
+            if (_isAnonymous)
+            {
+                return Result.Fail("演示模式，禁止操作");
+            }
+
+            try
+            {
+                Log.Information("开始执行在线升级");
+
+                // 检查是否在Docker容器中运行
+                if (!IsRunningInDocker())
+                {
+                    return Result.Fail("此功能仅在Docker容器中可用");
+                }
+
+                // 执行升级脚本
+                var upgradeResult = await ExecuteUpgradeScript();
+                
+                if (!upgradeResult.success)
+                {
+                    Log.Error("升级失败: {Error}", upgradeResult.error);
+                    return Result.Fail($"升级失败: {upgradeResult.error}");
+                }
+
+                Log.Information("升级命令已执行，容器将在数秒后重启");
+                return Result.Ok("升级命令已执行，容器将在数秒后重启");
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "执行在线升级时发生异常");
+                return Result.Fail($"升级过程中发生错误: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 检查是否在Docker容器中运行
+        /// </summary>
+        /// <returns></returns>
+        private bool IsRunningInDocker()
+        {
+            try
+            {
+                // 检查/.dockerenv文件是否存在
+                if (System.IO.File.Exists("/.dockerenv"))
+                {
+                    return true;
+                }
+
+                // 检查/proc/1/cgroup文件中是否包含docker
+                if (System.IO.File.Exists("/proc/1/cgroup"))
+                {
+                    var content = System.IO.File.ReadAllText("/proc/1/cgroup");
+                    return content.Contains("docker") || content.Contains("containerd");
+                }
+
+                return false;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 执行升级脚本
+        /// </summary>
+        /// <returns></returns>
+        private async Task<(bool success, string error)> ExecuteUpgradeScript()
+        {
+            try
+            {
+                // 创建升级脚本目录
+                var upgradeDir = "/tmp/upgrade";
+                if (!Directory.Exists(upgradeDir))
+                {
+                    Directory.CreateDirectory(upgradeDir);
+                }
+
+                var upgradeScriptPath = Path.Combine(upgradeDir, "container-upgrade.sh");
+
+                // 下载最新的容器升级脚本
+                var scriptUrl = "https://raw.githubusercontent.com/trueai-org/midjourney-proxy/main/scripts/container-upgrade.sh";
+                
+                Log.Information("正在下载升级脚本从: {Url}", scriptUrl);
+
+                using var httpClient = new HttpClient();
+                httpClient.Timeout = TimeSpan.FromSeconds(30);
+                
+                try
+                {
+                    var scriptContent = await httpClient.GetStringAsync(scriptUrl);
+                    
+                    if (string.IsNullOrWhiteSpace(scriptContent))
+                    {
+                        return (false, "下载的升级脚本为空");
+                    }
+
+                    // 写入升级脚本
+                    await System.IO.File.WriteAllTextAsync(upgradeScriptPath, scriptContent);
+                    Log.Information("升级脚本已下载到: {Path}", upgradeScriptPath);
+                }
+                catch (HttpRequestException ex)
+                {
+                    Log.Error(ex, "下载升级脚本失败");
+                    return (false, $"下载升级脚本失败: {ex.Message}");
+                }
+                catch (TaskCanceledException)
+                {
+                    return (false, "下载升级脚本超时");
+                }
+
+                // 设置脚本执行权限
+                var chmodProcess = new System.Diagnostics.Process
+                {
+                    StartInfo = new System.Diagnostics.ProcessStartInfo
+                    {
+                        FileName = "chmod",
+                        Arguments = $"+x {upgradeScriptPath}",
+                        UseShellExecute = false,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true
+                    }
+                };
+
+                chmodProcess.Start();
+                await chmodProcess.WaitForExitAsync();
+
+                if (chmodProcess.ExitCode != 0)
+                {
+                    var chmodError = await chmodProcess.StandardError.ReadToEndAsync();
+                    return (false, $"设置脚本权限失败: {chmodError}");
+                }
+
+                // 执行升级脚本
+                var process = new System.Diagnostics.Process
+                {
+                    StartInfo = new System.Diagnostics.ProcessStartInfo
+                    {
+                        FileName = "/bin/bash",
+                        Arguments = upgradeScriptPath,
+                        UseShellExecute = false,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true
+                    }
+                };
+
+                Log.Information("开始执行升级脚本: {Path}", upgradeScriptPath);
+                process.Start();
+
+                // 等待一小段时间确保脚本开始执行
+                await Task.Delay(3000);
+
+                if (!process.HasExited)
+                {
+                    // 脚本仍在运行，这是正常的，因为它会在后台启动升级
+                    Log.Information("升级脚本正在后台运行");
+                    return (true, null);
+                }
+
+                // 如果脚本很快退出，检查是否有错误
+                var output = await process.StandardOutput.ReadToEndAsync();
+                var error = await process.StandardError.ReadToEndAsync();
+
+                Log.Information("升级脚本输出: {Output}", output);
+                if (!string.IsNullOrEmpty(error))
+                {
+                    Log.Warning("升级脚本错误输出: {Error}", error);
+                }
+
+                if (process.ExitCode != 0)
+                {
+                    return (false, $"脚本退出代码: {process.ExitCode}, 错误: {error}");
+                }
+
+                return (true, null);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "执行升级脚本时发生异常");
+                return (false, ex.Message);
+            }
+        }
     }
 }
