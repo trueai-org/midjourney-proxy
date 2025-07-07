@@ -15,24 +15,39 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Additional Terms:
-// This software shall not be used for any illegal activities. 
+// This software shall not be used for any illegal activities.
 // Users must comply with all applicable laws and regulations,
-// particularly those related to image and video processing. 
+// particularly those related to image and video processing.
 // The use of this software for any form of illegal face swapping,
-// invasion of privacy, or any other unlawful purposes is strictly prohibited. 
+// invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
+global using Midjourney.Base;
+global using Midjourney.Base.Data;
+global using Midjourney.Base.Dto;
+global using Midjourney.Base.Models;
+global using Midjourney.Base.Options;
+global using Midjourney.Base.Services;
+global using Midjourney.Base.StandardTable;
+global using Midjourney.Base.Storage;
+global using Midjourney.Base.Util;
 global using Midjourney.Infrastructure;
-global using Midjourney.Infrastructure.Models;
+
+global using ILogger = Serilog.ILogger;
+global using TaskStatus = Midjourney.Base.TaskStatus;
 
 using System.Reflection;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
-using Midjourney.Infrastructure.Data;
-using Midjourney.Infrastructure.Options;
+using Midjourney.Infrastructure.Services;
+using Midjourney.License;
+using MongoDB.Driver;
 using Serilog;
 
 namespace Midjourney.API
@@ -48,27 +63,13 @@ namespace Midjourney.API
 
         public void ConfigureServices(IServiceCollection services)
         {
-            // 启动时，优先初始化全局配置项
-            var configSec = Configuration.GetSection("mj");
-            var configOpt = configSec.Get<ProxyProperties>();
-            services.Configure<ProxyProperties>(configSec);
-
-            var ipSec = Configuration.GetSection("IpRateLimiting");
-            var ipRateOpt = ipSec.Get<IpRateLimitingOptions>();
-            services.Configure<IpRateLimitingOptions>(ipSec);
-
-            var ipBlackSec = Configuration.GetSection("IpBlackRateLimiting");
-            var ipBlackOpt = ipBlackSec.Get<IpBlackRateLimitingOptions>();
-            services.Configure<IpBlackRateLimitingOptions>(ipBlackSec);
-
+            // 初始化全局配置项
             var setting = LiteDBHelper.SettingStore.Get(Constants.DEFAULT_SETTING_ID);
             if (setting == null)
             {
                 setting = new Setting
                 {
                     Id = Constants.DEFAULT_SETTING_ID,
-                    IpRateLimiting = ipRateOpt,
-                    IpBlackRateLimiting = ipBlackOpt,
 
                     EnableRegister = true,
                     EnableGuest = true,
@@ -81,23 +82,9 @@ namespace Midjourney.API
                     GuestDefaultDayLimit = -1,
                     GuestDefaultCoreSize = -1,
                     GuestDefaultQueueSize = -1,
-
-                    AccountChooseRule = configOpt.AccountChooseRule,
-                    BaiduTranslate = configOpt.BaiduTranslate,
-                    CaptchaNotifyHook = configOpt.CaptchaNotifyHook,
-                    CaptchaNotifySecret = configOpt.CaptchaNotifySecret,
-                    CaptchaServer = configOpt.CaptchaServer,
-                    NgDiscord = configOpt.NgDiscord,
-                    NotifyHook = configOpt.NotifyHook,
-                    NotifyPoolSize = configOpt.NotifyPoolSize,
-                    Openai = configOpt.Openai,
-                    Proxy = configOpt.Proxy,
-                    TranslateWay = configOpt.TranslateWay,
-                    Smtp = configOpt.Smtp
                 };
                 LiteDBHelper.SettingStore.Save(setting);
             }
-
             GlobalConfiguration.Setting = setting;
 
             // 原始 Mongo 配置，旧版数据库配置
@@ -119,34 +106,27 @@ namespace Midjourney.API
             }
 
             // 验证数据库是否可连接
+            GlobalConfiguration.Setting = setting;
             if (!DbHelper.Verify())
             {
                 // 切换为本地数据库
                 setting.DatabaseType = DatabaseType.LiteDB;
-
-                // 日志
                 Log.Error("数据库连接失败，自动切换为 LiteDB 数据库");
             }
 
-            // 更新数据库
-            LiteDBHelper.SettingStore.Save(setting);
+            Log.Information("数据库类型：{0}", setting.DatabaseType);
 
+            if (string.IsNullOrWhiteSpace(setting.LicenseKey))
+            {
+                // 默认授权
+                setting.LicenseKey = "trueai.org";
+            }
+
+            LicenseKeyHelper.LicenseKey = setting.LicenseKey;
+            LiteDBHelper.SettingStore.Save(setting);
             GlobalConfiguration.Setting = setting;
 
-            // 缓存
             services.AddMemoryCache();
-
-            // 是否为演示模式
-            var isDemoMode = Configuration.GetSection("Demo").Get<bool?>();
-            if (isDemoMode != true)
-            {
-                if (bool.TryParse(Environment.GetEnvironmentVariable("DEMO"), out var demo) && demo)
-                {
-                    isDemoMode = demo;
-                }
-            }
-            GlobalConfiguration.IsDemoMode = isDemoMode;
-
             services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
             services.AddTransient<WorkContext>();
 
@@ -160,6 +140,10 @@ namespace Midjourney.API
             {
                 // 配置枚举序列化为字符串
                 options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+
+                //// 全局配置
+                //options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+                //options.JsonSerializerOptions.Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping;
             });
 
             // 添加授权服务
@@ -172,7 +156,7 @@ namespace Midjourney.API
                 options.InvalidModelStateResponseFactory = (context) =>
                 {
                     var error = context.ModelState.Values.FirstOrDefault()?.Errors?.FirstOrDefault()?.ErrorMessage ?? "参数异常";
-                    Log.Logger.Warning("参数异常 {@0} - {@1}", context.HttpContext?.Request?.GetUrl() ?? "", error);
+                    Log.Warning("参数异常 {@0} - {@1}", context.HttpContext?.Request?.GetUrl() ?? "", error);
                     return new JsonResult(Result.Fail(error));
                 };
             });
@@ -180,12 +164,31 @@ namespace Midjourney.API
             // 注册 HttpClient
             services.AddHttpClient();
 
+            // 升级服务
+            services.TryAddSingleton<IUpgradeService, UpgradeService>();
+
             // 注册 Midjourney 服务
             services.AddMidjourneyServices(setting);
+
+            // 配置 Consul
+            //var consulOpt = Configuration.GetSection(nameof(ConsulOptions));
+            //var consulOptions = consulOpt.Get<ConsulOptions>();
+            if (GlobalConfiguration.Setting.ConsulOptions?.Enable == true)
+            {
+                //services.Configure<ConsulOptions>(consulOpt);
+                //var opt = Options.Create(GlobalConfiguration.Setting.ConsulOptions);
+
+                // 注册服务
+                services.AddSingleton<IConsulService, ConsulService>();
+                services.AddHostedService<ConsulHostedService>();
+            }
 
             // 注册 Discord 账号初始化器
             services.AddSingleton<DiscordAccountInitializer>();
             services.AddHostedService(provider => provider.GetRequiredService<DiscordAccountInitializer>());
+
+            // 添加健康检查
+            services.AddHealthChecks();
 
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             services.AddEndpointsApiExplorer();
@@ -260,6 +263,9 @@ namespace Midjourney.API
                 });
             }
 
+            SystemInfo.GetCurrentSystemInfo();
+            GlobalConfiguration.ContentRootPath = env.ContentRootPath;
+
             app.UseDefaultFiles(); // 启用默认文件（index.html）
             app.UseStaticFiles(); // 配置提供静态文件
 
@@ -281,7 +287,23 @@ namespace Midjourney.API
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
+
+                endpoints.MapHealthChecks("/health");
             });
+
+            //// 优雅关闭处理
+            //// 在应用程序停止时注销 Consul 服务
+            //// 判断是否启用 Consul
+            //// if (Configuration.GetSection(nameof(ConsulOptions)).Get<ConsulOptions>()?.Enable == true)
+            //if (GlobalConfiguration.Setting.ConsulOptions?.Enable == true)
+            //{
+            //    var lifetime = app.ApplicationServices.GetRequiredService<IHostApplicationLifetime>();
+            //    lifetime.ApplicationStopping.Register(async () =>
+            //    {
+            //        var consulService = app.ApplicationServices.GetRequiredService<IConsulService>();
+            //        await consulService.DeregisterServiceAsync();
+            //    });
+            //}
         }
     }
 }

@@ -1,0 +1,30 @@
+{
+    "GlobalConfiguration": {
+        "ServiceDiscoveryProvider": {
+            "Host": "192.168.3.241",
+            "Port": 8500,
+            "Type": "Consul"
+        },
+        "LoadBalancerOptions": {
+            "Type": "RoundRobin"
+        },
+        "DownstreamScheme": "http"
+    },
+    "Routes": [
+        {
+            "UpstreamPathTemplate": "/{everything}",
+            "UpstreamHttpMethod": [ "Get", "Post", "Put", "Delete", "Options" ],
+            "DownstreamPathTemplate": "/{everything}",
+            "DownstreamScheme": "http",
+            "ServiceName": "midjourney-proxy",
+            "LoadBalancerOptions": {
+                "Type": "RoundRobin"
+            },
+            "QoSOptions": {
+                "ExceptionsAllowedBeforeBreaking": 3,
+                "DurationOfBreak": 10000,
+                "TimeoutValue": 30000
+            }
+        }
+    ]
+}

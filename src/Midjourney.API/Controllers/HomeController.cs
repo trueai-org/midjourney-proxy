@@ -25,8 +25,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
-using Midjourney.Infrastructure.Data;
-using Midjourney.Infrastructure.Dto;
 
 namespace Midjourney.API.Controllers
 {
@@ -91,6 +89,7 @@ namespace Midjourney.API.Controllers
 
                 return dto;
             });
+            data.SystemInfo = SystemInfo.GetCurrentSystemInfo();
 
             return Result.Ok(data);
         }

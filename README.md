@@ -296,7 +296,7 @@ curl -o linux_install.sh https://raw.githubusercontent.com/trueai-org/midjourney
 - `LiteDB`（不推荐）：本地数据库库，默认数据库，默认存储位置：`data/mj.db`
 - `Sqlite`：本地数据库，默认存储位置：`data/mj_sqlite.db`
 - `MongoDB`（推荐）：需要配置数据库连接字符串，示例：`mongodb://mongoadmin:***@192.168.3.241`，需要配置数据库名称：`mj`
-- `MySQL`：需要配置数据库连接字符串，示例：`Data Source=192.168.3.241;Port=3306;User ID=root;Password=xxx; Initial Catalog=mj;Charset=utf8mb4; SslMode=none;Min pool size=1`
+- `MySQL(建议使用 8.x 版本)`：需要配置数据库连接字符串，示例：`Data Source=192.168.3.241;Port=3306;User ID=root;Password=xxx; Initial Catalog=mj;Charset=utf8mb4; SslMode=none;Min pool size=1`
 - `SqlServer`：需要配置数据库连接字符串，示例：`Data Source=192.168.3.241;User Id=sa;Password=xxx;Initial Catalog=mj;Encrypt=True;TrustServerCertificate=True;Pooling=true;Min Pool Size=1`
 - `PostgreSQL`：需要配置数据库连接字符串，示例：`Host=192.168.3.241;Port=5432;Username=mj;Password=xxx; Database=mj;ArrayNullabilityMode=Always;Pooling=true;Minimum Pool Size=1`，需要启动扩展支持字典类型 `CREATE EXTENSION hstore`
 
@@ -414,6 +414,30 @@ docker run -d \
 - 每日最大 200 张
 - 每日工作时间，建议 9：10~22：50
 - 如果有多个账号，则建议开启垂直领域功能，每个账号只做某一类作品
+
+## Consul 配置
+
+```bash
+
+docker stop consul && docker rm consul
+docker run -d --name consul --restart always --network host hashicorp/consul agent -server -ui -node=server-1 -bootstrap-expect=1 -client=0.0.0.0 -bind=172.17.1.99
+
+docker run -d --name consul --network host hashicorp/consul agent -server -ui -node=server-1 -bootstrap-expect=1 -client=0.0.0.0 -bind=172.19.38.1
+
+docker run -d --name consul -p 9500:8500 -p 9600:8600/udp hashicorp/consul agent -server -ui -node=server-1 -bootstrap-expect=1 -client=0.0.0.0 -bind=0.0.0.0
+
+docker run -d --name consul -p 9500:8500 -p 9600:8600/udp hashicorp/consul agent -server -ui -node=server-1 -bootstrap-expect=1 -client=0.0.0.0 -bind=172.19.38.1
+
+docker run -d --name consul --network host hashicorp/consul:latest agent -server -ui -node=server-1 -bootstrap-expect=1 -client=0.0.0.0 -bind=172.19.38.1
+
+docker run -d --name consul --network host hashicorp/consul:latest agent -server -ui -node=server-1 -bootstrap-expect=1 -client=0.0.0.0 -bind=192.168.3.241
+
+docker run -d --name consul --network host hashicorp/consul:latest agent -server -ui -node=server-1 -bootstrap-expect=1 "-client=0.0.0.0"
+
+docker run -d --name consul -p 8500:8500 -p 8600:8600/udp hashicorp/consul:latest agent -server -ui -node=server-1 -bootstrap-expect=1 "-client=0.0.0.0"
+
+docker run -d --name consul -p 8500:8500 -p 8600:8600/udp consul:latest agent -server -ui -node=server-1 -bootstrap-expect=1 "-client=0.0.0.0"
+```
 
 ## 支持与赞助
 

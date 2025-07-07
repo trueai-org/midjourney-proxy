@@ -15,17 +15,32 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Additional Terms:
-// This software shall not be used for any illegal activities. 
+// This software shall not be used for any illegal activities.
 // Users must comply with all applicable laws and regulations,
-// particularly those related to image and video processing. 
+// particularly those related to image and video processing.
 // The use of this software for any form of illegal face swapping,
-// invasion of privacy, or any other unlawful purposes is strictly prohibited. 
+// invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
-using RestSharp;
-using Serilog;
-using Serilog.Debugging;
+
+global using Midjourney.Base;
+global using Midjourney.Base.Data;
+global using Midjourney.Base.Dto;
+global using Midjourney.Base.Models;
+global using Midjourney.Base.Options;
+global using Midjourney.Base.Services;
+global using Midjourney.Base.StandardTable;
+global using Midjourney.Base.Storage;
+global using Midjourney.Base.Util;
+global using Midjourney.Infrastructure;
+
+global using ILogger = Serilog.ILogger;
+global using TaskStatus = Midjourney.Base.TaskStatus;
+
 using System.Net;
 using System.Net.Security;
+using Serilog;
+using Serilog.Debugging;
+using Serilog.Events;
 
 namespace Midjourney.Captcha.API
 {
@@ -37,54 +52,95 @@ namespace Midjourney.Captcha.API
             //ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
             //ServicePointManager.SecurityProtocol = SecurityProtocolType.SystemDefault;
 
-            var builder = CreateHostBuilder(args).Build();
-            var env = builder.Services.GetService<IWebHostEnvironment>();
-
-            // 配置 Serilog
-            var logger = new LoggerConfiguration()
-                .ReadFrom.Configuration(builder.Services.GetService<IConfiguration>());
-
-            if (env.IsDevelopment())
-            {
-                logger.MinimumLevel.Debug()
-                      .Enrich.FromLogContext();
-
-                // 使用 Serilog.Debugging.SelfLog.Enable(Console.Error) 来启用 Serilog 的自我诊断，这将帮助诊断配置问题。
-                SelfLog.Enable(Console.Error);
-            }
-
-            Log.Logger = logger.CreateLogger();
-
-            // 确保在应用程序结束时关闭并刷新日志
-            AppDomain.CurrentDomain.ProcessExit += (s, e) => Log.CloseAndFlush();
-
             try
             {
-                Log.Information($"Current: {Directory.GetCurrentDirectory()}");
+                // 创建并运行主机
+                var host = CreateHostBuilder(args).Build();
 
-                //// 使用 Serilog
-                //builder.Host.UseSerilog();
+                // 确保在应用程序结束时关闭并刷新日志
+                AppDomain.CurrentDomain.ProcessExit += (s, e) => Log.CloseAndFlush();
 
-                var app = builder;
+                // 记录当前目录
+                Log.Information($"Current directory: {Directory.GetCurrentDirectory()}");
 
-                app.Run();
+                host.Run();
             }
             catch (Exception ex)
             {
-                Log.Fatal(ex, "应用启动失败");
+                Log.Fatal(ex, "应用程序启动失败");
             }
             finally
             {
+                // 确保日志被刷新和关闭
                 Log.CloseAndFlush();
             }
         }
 
         public static IHostBuilder CreateHostBuilder(string[] args) =>
-            Host.CreateDefaultBuilder(args)
-                .ConfigureWebHostDefaults(webBuilder =>
+          Host.CreateDefaultBuilder(args)
+            .ConfigureAppConfiguration((hostingContext, config) =>
+            {
+                // 配置读取完成后，可以在主机配置完成前访问配置
+                var configuration = config.Build();
+
+                // 可以在这里调整日志器，使用配置信息
+                ConfigureInitialLogger(configuration, hostingContext.HostingEnvironment.IsDevelopment());
+            })
+            .ConfigureLogging((hostContext, loggingBuilder) =>
+            {
+                // 禁用默认日志提供程序，完全依赖 Serilog
+                loggingBuilder.ClearProviders();
+            })
+            .UseSerilog()
+            .ConfigureWebHostDefaults(webBuilder =>
+            {
+                webBuilder.UseStartup<Startup>();
+            });
+
+        /// <summary>
+        /// 读取配置并更新初始日志器
+        /// </summary>
+        /// <param name="configuration"></param>
+        /// <param name="isDevelopment"></param>
+        private static void ConfigureInitialLogger(IConfiguration configuration, bool isDevelopment)
+        {
+            // 基本日志配置
+            var loggerConfiguration = new LoggerConfiguration()
+                  .ReadFrom.Configuration(configuration)
+                  .Enrich.FromLogContext();
+
+            // 开发环境特定配置
+            if (isDevelopment)
+            {
+                loggerConfiguration.MinimumLevel.Debug();
+
+                // 如果配置中没有设置控制台日志，则添加
+                // 否则，不要在代码中添加，避免重复
+                bool hasConsoleInConfig = configuration
+                    .GetSection("Serilog:WriteTo")
+                    .GetChildren()
+                    .Any(section => section["Name"]?.Equals("Console", StringComparison.OrdinalIgnoreCase) == true);
+
+                if (!hasConsoleInConfig)
                 {
-                    webBuilder.UseStartup<Startup>();
-                })
-                .UseSerilog();
+                    loggerConfiguration.WriteTo.Console();
+                }
+
+                // 启用 Serilog 自我诊断
+                SelfLog.Enable(Console.Error);
+            }
+            else
+            {
+                // 生产环境使用 appsettings.json 中的最小日志级别配置
+                loggerConfiguration.WriteTo.Console(restrictedToMinimumLevel: LogEventLevel.Information);
+            }
+
+            // 所有环境都记录错误到单独文件
+            loggerConfiguration.WriteTo.Logger(lc => lc
+                .Filter.ByIncludingOnly(evt => evt.Level >= LogEventLevel.Error)
+                .WriteTo.File("logs/error.txt", rollingInterval: RollingInterval.Day));
+
+            Log.Logger = loggerConfiguration.CreateLogger();
+        }
     }
 }

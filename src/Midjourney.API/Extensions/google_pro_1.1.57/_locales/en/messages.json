@@ -1,0 +1,254 @@
+{
+	"name": {
+		"message": "YesCaptcha assistant"
+	},
+	"pluginDesc": {
+		"message": "reCaptcha/hCaptcha auto solver"
+	},
+	"popup_header_title": {
+		"message": "YesCaptcha assistant"
+	},
+	"popup_header_balance_error": {
+		"message": "error"
+	},
+	"popup_balance": {
+		"message": "Balance"
+	},
+	"popup_panel_title": {
+		"message": "Setting Panel"
+	},
+	"popup_panel_key": {
+		"message": "key"
+	},
+	"popup_panel_address": {
+		"message": "node"
+	},
+	"popup_panel_click_speed": {
+		"message": "click speed"
+	},
+	"popup_panel_click_speed_tool_tip": {
+		"message": "The interval between clicking images, in milliseconds"
+	},
+	"popup_panel_click_speed_helptext": {
+		"message": "Less than 200ms may fail to identify(hcaptcha)"
+	},
+	"popup_panel_end_times": {
+		"message": "Times limit"
+	},
+	"popup_panel_end_times_tooltip": {
+		"message": "Stop after the set number of automatic identifications,Off means unlimited automatic identification.After stopping, it will prompt 'Limit exceeded'"
+	},
+	"popup_panel_check_box": {
+		"message": "Auto-open"
+	},
+	"popup_panel_check_box_tooltip": {
+		"message": "Whether to click the check box, the value is the click delay (ms)"
+	},
+	"popup_panel_save": {
+		"message": "save"
+	},
+	"popup_switch_title": {
+		"message": "Switch"
+	},
+	"popup_switch_label_1": {
+		"message": "reCaptcha"
+	},
+	"popup_switch_label_1_new_version": {
+		"message": "new script"
+	},
+	"popup_switch_label_1_old_version": {
+		"message": "old script"
+	},
+	"popup_switch_label_2": {
+		"message": "hCaptcha"
+	},
+	"popup_switch_label_3": {
+		"message": "coinlist words"
+	},
+	"popup_switch_label_4": {
+		"message": "coinlist pink button"
+	},
+	"popup_switch_label_5": {
+		"message": "Text verification code"
+	},
+	"popup_switch_label_6": {
+		"message": "Cloudflare"
+	},
+	"popup_switch_label_7": {
+		"message": "Funcaptcha"
+	},
+	"popup_alert_network": {
+		"message": "network error"
+	},
+	"popup_advanced_setting": {
+		"message": "advanced setting"
+	},
+	"content_message_0": {
+		"message": "Please fill in ClientKey first"
+	},
+	"content_message_1": {
+		"message": "Insufficient balance"
+	},
+	"content_message_2": {
+		"message": "Automatic recognition has been activated"
+	},
+	"content_message_3": {
+		"message": "Automatic recognition is being recognized"
+	},
+	"content_message_4": {
+		"message": "Automatic recognition completed"
+	},
+	"content_message_5": {
+		"message": "Automatic identification submit image interface identification"
+	},
+	"content_message_6": {
+		"message": "Automatic recognition automatic click"
+	},
+	"content_message_7": {
+		"message": "Automatically recognize click submit"
+	},
+	"content_message_8": {
+		"message": "verify fail"
+	},
+	"content_message_9": {
+		"message": "network error"
+	},
+	"content_message_10": {
+		"message": "single recognition exceeded"
+	},
+	"content_message_11": {
+		"message": "Limit exceeded"
+	},
+	"context_menu_1": {
+		"message": "Mark as captcha source"
+	},
+	"context_menu_2": {
+		"message": "Put captcha answer here"
+	},
+	"popup_add_fund": {
+		"message": "recharge"
+	},
+	"popup_register": {
+		"message": "register"
+	},
+	"popup_newVersionNotice": {
+		"message": "has new version"
+	},
+	"option_general_navword": {
+		"message": "general"
+	},
+	"option_general_ms": {
+		"message": "main switch"
+	},
+	"option_general_clientKey": {
+		"message": "clientKey"
+	},
+	"option_general_host": {
+		"message": "host"
+	},
+	"option_general_cp": {
+		"message": "click speed"
+	},
+	"option_general_tl": {
+		"message": "Times limit"
+	},
+	"option_general_istl": {
+		"message": "isOpenTimesLimit"
+	},
+	"option_general_iscb": {
+		"message": "is Auto-open"
+	},
+	"option_general_cbdl": {
+		"message": "Auto-open delay"
+	},
+	"option_general_atsm": {
+		"message": "is Auto-Submit"
+	},
+	"option_isopen": {
+		"message": "is Open"
+	},
+	"option_recaptcha_title": {
+		"message": "recaptcha config"
+	},
+	"option_recaptcha_invisible": {
+		"message": "adapt invisible"
+	},
+	"option_general_workStatusFlag": {
+		"message": "workStatus flag"
+	},
+	"option_general_jsControlObjectName": {
+		"message": "jsControl ObjectName"
+	},
+	"option_general_inject_js": {
+		"message": "js injection"
+	},
+	"option_recaptcha_nsc": {
+		"message": "use newScript"
+	},
+	"option_recaptcha_1x1dealy": {
+		"message": "singleImage fade-in delay"
+	},
+	"option_network_title": {
+		"message": "network config"
+	},
+	"option_network_hd": {
+		"message": "hcaptcha request delay(ms)"
+	},
+	"option_network_ht": {
+		"message": "hcaptcha request try"
+	},
+	"option_network_rd": {
+		"message": "rechaptcha request delay(ms)"
+	},
+	"option_network_rt": {
+		"message": "rechaptcha request try"
+	},
+	"option_network_fd": {
+		"message": "funcaptcha request delay(ms)"
+	},
+	"option_network_ft": {
+		"message": "funcaptcha request try"
+	},
+	"option_hcaptcha_title": {
+		"message": "hcaptcha config"
+	},
+	"option_hcaptcha_iorl": {
+		"message": "isOpenRecognitionLimit"
+	},
+	"option_hcaptcha_rmt": {
+		"message": "recognitionMaxTimes"
+	},
+	"option_hcaptcha_isrefresh": {
+		"message": "failRefresh"
+	},
+	"option_hcaptcha_aarmt": {
+		"message": "actionAfterRecognitionMaxTimes"
+	},
+	"option_funcaptcha_title": {
+		"message": "funcaptcha config"
+	},
+	"option_funcaptcha_aars": {
+		"message": "actionAfterRecSuccess"
+	},
+	"option_funcaptcha_aaorf": {
+		"message": "actionAfterOneRecFail"
+	},
+	"option_funcaptcha_aarf": {
+		"message": "actionAfterRecFail"
+	},
+	"option_funcaptcha_ad": {
+		"message": "actionDelay"
+	},
+	"option_cloudflare_title": {
+		"message": "cloudflare config"
+	},
+	"option_textcaptcha_title": {
+		"message": "textcaptcha config"
+	},
+	"option_submit_delay_time": {
+		"message": "submitDelayTime"
+	},
+	"option_submit_delay_float_rate": {
+		"message": "submitDelayFloatRate"
+	}
+}

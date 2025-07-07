@@ -22,20 +22,20 @@
 // invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
+using System.Diagnostics;
 using System.Net;
+using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using Discord;
 using LiteDB;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
-using Midjourney.Infrastructure.Data;
-using Midjourney.Infrastructure.Dto;
+using Midjourney.Base.Models;
 using Midjourney.Infrastructure.LoadBalancer;
 using Midjourney.Infrastructure.Services;
-using Midjourney.Infrastructure.StandardTable;
-using Midjourney.Infrastructure.Storage;
+using Midjourney.License;
 using MongoDB.Driver;
 using Serilog;
 
@@ -57,8 +57,10 @@ namespace Midjourney.API.Controllers
 
         private readonly DiscordLoadBalancer _loadBalancer;
         private readonly DiscordAccountInitializer _discordAccountInitializer;
-        private readonly ProxyProperties _properties;
+        private readonly Setting _properties;
         private readonly WorkContext _workContext;
+
+        private readonly IUpgradeService _upgradeService;
 
         public AdminController(
             ITaskService taskService,
@@ -66,8 +68,10 @@ namespace Midjourney.API.Controllers
             DiscordAccountInitializer discordAccountInitializer,
             IMemoryCache memoryCache,
             WorkContext workContext,
-            IHttpContextAccessor context)
+            IHttpContextAccessor context,
+            IUpgradeService upgradeService)
         {
+            _upgradeService = upgradeService;
             _memoryCache = memoryCache;
             _loadBalancer = loadBalancer;
             _taskService = taskService;
@@ -96,46 +100,6 @@ namespace Midjourney.API.Controllers
                 }
             }
         }
-
-        ///// <summary>
-        ///// 重启
-        ///// </summary>
-        ///// <returns></returns>
-        //[HttpPost("restart")]
-        //public Result Restart()
-        //{
-        //    try
-        //    {
-        //        if (_isAnonymous)
-        //        {
-        //            return Result.Fail("演示模式，禁止操作");
-        //        }
-
-        //        // 使用 dotnet 命令启动 DLL
-        //        var fileName = "dotnet";
-        //        var arguments = Path.GetFileName(Assembly.GetExecutingAssembly().Location);
-
-        //        var processStartInfo = new ProcessStartInfo
-        //        {
-        //            FileName = fileName,
-        //            Arguments = arguments,
-        //            WorkingDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location),
-        //            UseShellExecute = true
-        //        };
-        //        Process.Start(processStartInfo);
-
-        //        // 退出当前应用程序
-        //        Environment.Exit(0);
-
-        //        return Result.Ok("Application is restarting...");
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        Log.Error(ex, "系统自动重启异常");
-
-        //        return Result.Fail("重启失败，请手动重启");
-        //    }
-        //}
 
         /// <summary>
         /// 注册用户
@@ -427,6 +391,7 @@ namespace Midjourney.API.Controllers
             if (_isAnonymous)
             {
                 tail = 100;
+                return Ok("演示模式，禁止操作");
             }
 
             var logName = "log";
@@ -481,8 +446,8 @@ namespace Midjourney.API.Controllers
             if (_isAnonymous)
             {
                 // Token 加密
-                item.UserToken = item.UserToken?.Substring(0, 4) + "****" + item.UserToken?.Substring(item.UserToken.Length - 4);
-                item.BotToken = item.BotToken?.Substring(0, 4) + "****" + item.BotToken?.Substring(item.BotToken.Length - 4);
+                item.UserToken = "***";
+                item.BotToken = "***";
             }
 
             return Ok(item);
@@ -815,11 +780,13 @@ namespace Midjourney.API.Controllers
                 }
             }
 
-            var model = DbHelper.Instance.AccountStore.Single(c => c.ChannelId == accountConfig.ChannelId);
-
-            if (model != null)
+            if (!accountConfig.IsYouChuan && !accountConfig.IsOfficial)
             {
-                throw new LogicException("渠道已存在");
+                var model = DbHelper.Instance.AccountStore.Single(c => c.ChannelId == accountConfig.ChannelId);
+                if (model != null)
+                {
+                    throw new LogicException("渠道已存在");
+                }
             }
 
             var account = DiscordAccount.Create(accountConfig);
@@ -840,6 +807,15 @@ namespace Midjourney.API.Controllers
 
                 // 赞助者参数校验
                 account.SponsorValidate();
+            }
+
+            // 悠船账号
+            if (account.IsYouChuan || account.IsOfficial)
+            {
+                account.ChannelId = Guid.NewGuid().ToString("N").Substring(0, 16);
+                account.GuildId = Guid.NewGuid().ToString("N").Substring(0, 16);
+                account.EnableMj = true;
+                account.EnableNiji = true;
             }
 
             DbHelper.Instance.AccountStore.Add(account);
@@ -934,6 +910,13 @@ namespace Midjourney.API.Controllers
             model.IsShorten = param.IsShorten;
             model.DayDrawLimit = param.DayDrawLimit;
 
+            // 如果是悠船、官方
+            // 清除禁用原因
+            if (model.IsYouChuan || model.IsOfficial)
+            {
+                model.DisabledReason = null;
+            }
+
             // 初始化子频道
             model.InitSubChannels();
 
@@ -978,6 +961,15 @@ namespace Midjourney.API.Controllers
             if (user.Role != EUserRole.ADMIN && model.SponsorUserId != user.Id)
             {
                 return Result.Fail("无权限操作");
+            }
+
+            // 悠船
+            if (model.IsYouChuan || model.IsOfficial)
+            {
+                param.ChannelId = model.ChannelId;
+                param.GuildId = model.GuildId;
+                param.EnableMj = true;
+                param.EnableNiji = true;
             }
 
             // 不可修改频道 ID
@@ -1049,15 +1041,15 @@ namespace Midjourney.API.Controllers
             {
                 var inc = _loadBalancer.GetDiscordInstance(item.ChannelId);
 
-                item.RunningCount = inc?.GetRunningFutures().Count ?? 0;
-                item.QueueCount = inc?.GetQueueTasks().Count ?? 0;
+                item.RunningCount = inc?.GetRunningTaskCount ?? 0;
+                item.QueueCount = inc?.GetQueueTaskCount ?? 0;
                 item.Running = inc?.IsAlive ?? false;
 
                 if (user == null || (user.Role != EUserRole.ADMIN && user.Id != item.SponsorUserId))
                 {
                     // Token 加密
-                    item.UserToken = item.UserToken?.Substring(0, item.UserToken.Length / 5) + "****";
-                    item.BotToken = item.BotToken?.Substring(0, item.BotToken.Length / 5) + "****";
+                    item.UserToken = "****";
+                    item.BotToken = "****";
 
                     item.CfUrl = "****";
                     item.CfHashUrl = "****";
@@ -1244,10 +1236,10 @@ namespace Midjourney.API.Controllers
                 var inc = _loadBalancer.GetDiscordInstance(item.ChannelId);
 
                 // 当前执行中的任务数
-                item.RunningCount = inc?.GetRunningFutures().Count ?? 0;
+                item.RunningCount = inc?.GetRunningTaskCount ?? 0;
 
                 // 当前队列中任务数
-                item.QueueCount = inc?.GetQueueTasks().Count ?? 0;
+                item.QueueCount = inc?.GetQueueTaskCount ?? 0;
 
                 // 是否运行中
                 item.Running = inc?.IsAlive ?? false;
@@ -1255,8 +1247,8 @@ namespace Midjourney.API.Controllers
                 if (user == null || (user.Role != EUserRole.ADMIN && user.Id != item.SponsorUserId))
                 {
                     // Token 加密
-                    item.UserToken = item.UserToken?.Substring(0, item.UserToken.Length / 5) + "****";
-                    item.BotToken = item.BotToken?.Substring(0, item.BotToken.Length / 5) + "****";
+                    item.UserToken = "****";
+                    item.BotToken = "****";
 
                     item.CfUrl = "****";
                     item.CfHashUrl = "****";
@@ -1377,7 +1369,6 @@ namespace Midjourney.API.Controllers
                     return Ok(data);
                 }
             }
-
 
             return Ok(new StandardTableResult<TaskInfo>()
             {
@@ -2023,7 +2014,15 @@ namespace Midjourney.API.Controllers
                 }
 
                 model.CaptchaNotifySecret = "****";
+                model.LicenseKey = "****";
+
+                if (model.ConsulOptions != null)
+                {
+                    model.ConsulOptions.ConsulUrl = "****";
+                }
             }
+
+            model.UpgradeInfo = _upgradeService.UpgradeInfo;
 
             return Result.Ok(model);
         }
@@ -2034,11 +2033,27 @@ namespace Midjourney.API.Controllers
         /// <param name="setting"></param>
         /// <returns></returns>
         [HttpPost("setting")]
-        public Result SettingEdit([FromBody] Setting setting)
+        public async Task<Result> SettingEdit([FromBody] Setting setting)
         {
             if (_isAnonymous)
             {
                 return Result.Fail("演示模式，禁止操作");
+            }
+
+            try
+            {
+                // 保存时验证授权
+                var success = await LicenseKeyHelper.Validate(setting.EnableYouChuan, setting.EnableOfficial, setting.LicenseKey);
+                if (!success)
+                {
+                    return Result.Fail("授权验证失败，请检查授权码是否正确，如果没有授权码，请输入默认授权码：trueai.org");
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "授权验证失败");
+
+                return Result.Fail("授权验证失败，请检查授权码是否正确，如果没有授权码，请输入默认授权码：trueai.org");
             }
 
             setting.Id = Constants.DEFAULT_SETTING_ID;
@@ -2046,6 +2061,8 @@ namespace Midjourney.API.Controllers
             LiteDBHelper.SettingStore.Update(setting);
 
             GlobalConfiguration.Setting = setting;
+
+            LicenseKeyHelper.LicenseKey = GlobalConfiguration.Setting.LicenseKey;
 
             // 存储服务
             StorageHelper.Configure();
@@ -2058,6 +2075,42 @@ namespace Midjourney.API.Controllers
 
             _memoryCache.Remove(key);
 
+            return Result.Ok();
+        }
+
+        /// <summary>
+        /// 检查升级
+        /// </summary>
+        /// <returns></returns>
+        [HttpGet("check")]
+        public async Task<Result<UpgradeInfo>> CheckForUpdates()
+        {
+            if (_isAnonymous)
+            {
+                return Result.Fail<UpgradeInfo>("演示模式，禁止操作");
+            }
+
+            var upgradeInfo = await _upgradeService.CheckForUpdatesAsync();
+            if (upgradeInfo.HasUpdate)
+            {
+                await _upgradeService.StartDownloadAsync();
+            }
+
+            return Result.Ok(upgradeInfo);
+        }
+
+        /// <summary>
+        /// 取消更新
+        /// </summary>
+        /// <returns></returns>
+        [HttpPost("cancel-update")]
+        public Result CancelUpdate()
+        {
+            if (_isAnonymous)
+            {
+                return Result.Fail("演示模式，禁止操作");
+            }
+            _upgradeService.CancelUpdate();
             return Result.Ok();
         }
 
@@ -2094,6 +2147,232 @@ namespace Midjourney.API.Controllers
             var success = DbHelper.Verify();
 
             return success ? Result.Ok() : Result.Fail("连接失败");
+        }
+
+        /// <summary>
+        /// 重启应用程序
+        /// </summary>
+        /// <returns></returns>
+        [HttpPost("restart")]
+        public Result Restart()
+        {
+            try
+            {
+                if (_isAnonymous)
+                {
+                    return Result.Fail("演示模式，禁止操作");
+                }
+
+                // 记录重启日志
+                Log.Information("系统重启请求，操作者IP: {IP}", _workContext.GetIp());
+
+                // 异步执行重启，避免阻塞当前请求
+                Task.Run(async () =>
+                {
+                    try
+                    {
+                        // 等待一段时间让响应返回给客户端
+                        await Task.Delay(2000);
+
+                        // 执行重启逻辑
+                        await RestartApplicationAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Error(ex, "重启应用程序时发生错误");
+                    }
+                });
+
+                return Result.Ok("应用程序重启命令已发送，请稍候...");
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "系统重启异常");
+                return Result.Fail("重启失败，请手动重启");
+            }
+        }
+
+        /// <summary>
+        /// 执行应用程序重启
+        /// </summary>
+        /// <returns></returns>
+        private async Task RestartApplicationAsync()
+        {
+            try
+            {
+                var isInContainer = IsDockerEnvironment();
+                if (isInContainer)
+                {
+                    // Docker 环境重启
+                    await RestartInDockerAsync();
+                }
+                else
+                {
+                    // 系统环境重启
+                    await RestartInSystemAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "重启应用程序失败");
+                throw;
+            }
+        }
+
+        private bool IsDockerEnvironment()
+        {
+            try
+            {
+                return System.IO.File.Exists("/.dockerenv") ||
+                Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true" ||
+                Environment.GetEnvironmentVariable("DOCKER_CONTAINER") != null;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Docker 环境重启
+        /// </summary>
+        /// <returns></returns>
+        private async Task RestartInDockerAsync()
+        {
+            Log.Information("检测到 Docker 环境，准备重启容器");
+
+            // 在 Docker 环境中，最安全的方式是退出应用程序
+            // 让容器的重启策略来处理重启
+            await Task.Delay(1000);
+
+            // 优雅关闭应用程序
+            Environment.Exit(0);
+        }
+
+        /// <summary>
+        /// 系统环境重启
+        /// </summary>
+        /// <returns></returns>
+        private async Task RestartInSystemAsync()
+        {
+            Log.Information("检测到系统环境，准备重启应用程序");
+
+            var currentProcess = Process.GetCurrentProcess();
+            var currentAssemblyPath = Assembly.GetExecutingAssembly().Location;
+            var currentDirectory = Path.GetDirectoryName(currentAssemblyPath);
+
+            ProcessStartInfo processStartInfo;
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                // Windows 环境
+                processStartInfo = CreateWindowsRestartInfo(currentAssemblyPath, currentDirectory);
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                // Linux 环境
+                processStartInfo = CreateLinuxRestartInfo(currentAssemblyPath, currentDirectory);
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                // macOS 环境
+                processStartInfo = CreateMacOSRestartInfo(currentAssemblyPath, currentDirectory);
+            }
+            else
+            {
+                throw new PlatformNotSupportedException("不支持的操作系统平台");
+            }
+
+            // 启动新进程
+            Process.Start(processStartInfo);
+
+            // 等待一秒后退出当前进程
+            await Task.Delay(1000);
+            Environment.Exit(0);
+        }
+
+        /// <summary>
+        /// 创建 Windows 重启信息
+        /// </summary>
+        /// <param name="assemblyPath"></param>
+        /// <param name="workingDirectory"></param>
+        /// <returns></returns>
+        private ProcessStartInfo CreateWindowsRestartInfo(string assemblyPath, string workingDirectory)
+        {
+            var fileName = "dotnet";
+            var arguments = $"\"{assemblyPath}\"";
+
+            // 检查是否是单文件发布
+            if (assemblyPath.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+            {
+                fileName = assemblyPath;
+                arguments = "";
+            }
+
+            return new ProcessStartInfo
+            {
+                FileName = fileName,
+                Arguments = arguments,
+                WorkingDirectory = workingDirectory,
+                UseShellExecute = true,
+                CreateNoWindow = false
+            };
+        }
+
+        /// <summary>
+        /// 创建 Linux 重启信息
+        /// </summary>
+        /// <param name="assemblyPath"></param>
+        /// <param name="workingDirectory"></param>
+        /// <returns></returns>
+        private ProcessStartInfo CreateLinuxRestartInfo(string assemblyPath, string workingDirectory)
+        {
+            var fileName = "dotnet";
+            var arguments = $"\"{assemblyPath}\"";
+
+            // 检查是否是单文件发布
+            if (!assemblyPath.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
+            {
+                fileName = assemblyPath;
+                arguments = "";
+            }
+
+            return new ProcessStartInfo
+            {
+                FileName = fileName,
+                Arguments = arguments,
+                WorkingDirectory = workingDirectory,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+        }
+
+        /// <summary>
+        /// 创建 macOS 重启信息
+        /// </summary>
+        /// <param name="assemblyPath"></param>
+        /// <param name="workingDirectory"></param>
+        /// <returns></returns>
+        private ProcessStartInfo CreateMacOSRestartInfo(string assemblyPath, string workingDirectory)
+        {
+            var fileName = "dotnet";
+            var arguments = $"\"{assemblyPath}\"";
+
+            // 检查是否是单文件发布
+            if (!assemblyPath.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
+            {
+                fileName = assemblyPath;
+                arguments = "";
+            }
+
+            return new ProcessStartInfo
+            {
+                FileName = fileName,
+                Arguments = arguments,
+                WorkingDirectory = workingDirectory,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
         }
     }
 }

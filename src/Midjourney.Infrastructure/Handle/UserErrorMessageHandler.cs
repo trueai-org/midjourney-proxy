@@ -22,8 +22,6 @@
 // invasion of privacy, or any other unlawful purposes is strictly prohibited. 
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 using Microsoft.Extensions.Logging;
-using Midjourney.Infrastructure.Data;
-using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.LoadBalancer;
 
 namespace Midjourney.Infrastructure.Handle

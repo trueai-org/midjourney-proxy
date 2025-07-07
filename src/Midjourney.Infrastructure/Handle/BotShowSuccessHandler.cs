@@ -23,7 +23,6 @@
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 using Discord.WebSocket;
 using Midjourney.Infrastructure.LoadBalancer;
-using Midjourney.Infrastructure.Util;
 
 namespace Midjourney.Infrastructure.Handle
 {

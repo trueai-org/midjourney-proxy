@@ -22,11 +22,6 @@
 // invasion of privacy, or any other unlawful purposes is strictly prohibited. 
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
-using Microsoft.Extensions.Caching.Memory;
-using Midjourney.Infrastructure.Data;
-using Midjourney.Infrastructure.LoadBalancer;
-using Midjourney.Infrastructure.Util;
-using Serilog;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO.Compression;
@@ -34,6 +29,9 @@ using System.Net;
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
+using Microsoft.Extensions.Caching.Memory;
+using Midjourney.Infrastructure.LoadBalancer;
+using Serilog;
 using UAParser;
 
 namespace Midjourney.Infrastructure

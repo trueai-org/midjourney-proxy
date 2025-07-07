@@ -22,24 +22,18 @@
 // invasion of privacy, or any other unlawful purposes is strictly prohibited. 
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
+using System.Net;
+using System.Text.Json;
+using System.Text.RegularExpressions;
 using Discord;
 using Discord.Commands;
 using Discord.Net.Rest;
 using Discord.Net.WebSockets;
 using Discord.WebSocket;
-using Midjourney.Infrastructure.Data;
-using Midjourney.Infrastructure.Dto;
 using Midjourney.Infrastructure.Handle;
 using Midjourney.Infrastructure.LoadBalancer;
-using Midjourney.Infrastructure.Util;
 using RestSharp;
 using Serilog;
-using System.Diagnostics.Metrics;
-using System.Net;
-using System.Text.Json;
-using System.Text.RegularExpressions;
-
-using EventData = Midjourney.Infrastructure.Dto.EventData;
 
 namespace Midjourney.Infrastructure
 {
@@ -52,7 +46,7 @@ namespace Midjourney.Infrastructure
 
         private readonly WebProxy _webProxy;
         private readonly DiscordHelper _discordHelper;
-        private readonly ProxyProperties _properties;
+        private readonly Setting _setting;
 
         private DiscordInstance _discordInstance;
         private IEnumerable<BotMessageHandler> _botMessageHandlers;
@@ -60,7 +54,7 @@ namespace Midjourney.Infrastructure
 
         public BotMessageListener(DiscordHelper discordHelper, WebProxy webProxy = null)
         {
-            _properties = GlobalConfiguration.Setting;
+            _setting = GlobalConfiguration.Setting;
             _webProxy = webProxy;
             _discordHelper = discordHelper;
         }
@@ -317,7 +311,7 @@ namespace Midjourney.Infrastructure
                                         try
                                         {
                                             // 通知验证服务器
-                                            if (!string.IsNullOrWhiteSpace(_properties.CaptchaNotifyHook) && !string.IsNullOrWhiteSpace(_properties.CaptchaServer))
+                                            if (!string.IsNullOrWhiteSpace(_setting.CaptchaNotifyHook) && !string.IsNullOrWhiteSpace(_setting.CaptchaServer))
                                             {
                                                 // 使用 restsharp 通知，最多 3 次
                                                 var notifyCount = 0;
@@ -329,7 +323,7 @@ namespace Midjourney.Infrastructure
                                                     }
 
                                                     notifyCount++;
-                                                    var notifyUrl = $"{_properties.CaptchaServer.Trim().TrimEnd('/')}/cf/verify";
+                                                    var notifyUrl = $"{_setting.CaptchaServer.Trim().TrimEnd('/')}/cf/verify";
                                                     var client = new RestClient();
                                                     var request = new RestRequest(notifyUrl, Method.Post);
                                                     request.AddHeader("Content-Type", "application/json");
@@ -337,8 +331,8 @@ namespace Midjourney.Infrastructure
                                                     {
                                                         Url = hashUrl,
                                                         State = Account.ChannelId,
-                                                        NotifyHook = _properties.CaptchaNotifyHook,
-                                                        Secret = _properties.CaptchaNotifySecret
+                                                        NotifyHook = _setting.CaptchaNotifyHook,
+                                                        Secret = _setting.CaptchaNotifySecret
                                                     };
                                                     var json = Newtonsoft.Json.JsonConvert.SerializeObject(body);
                                                     request.AddJsonBody(json);
@@ -355,7 +349,7 @@ namespace Midjourney.Infrastructure
                                                 } while (true);
 
                                                 // 发送邮件
-                                                EmailJob.Instance.EmailSend(_properties.Smtp, $"CF自动真人验证-{Account.ChannelId}", hashUrl);
+                                                EmailJob.Instance.EmailSend(_setting.Smtp, $"CF自动真人验证-{Account.ChannelId}", hashUrl);
                                             }
                                             else
                                             {
@@ -399,7 +393,7 @@ namespace Midjourney.Infrastructure
                                                             Account.CfUrl = url;
 
                                                             // 发送邮件
-                                                            EmailJob.Instance.EmailSend(_properties.Smtp, $"CF手动真人验证-{Account.ChannelId}", url);
+                                                            EmailJob.Instance.EmailSend(_setting.Smtp, $"CF手动真人验证-{Account.ChannelId}", url);
                                                         }
                                                     }
                                                 }
@@ -981,7 +975,7 @@ namespace Midjourney.Infrastructure
 
 
                                                     // 发送邮件
-                                                    EmailJob.Instance.EmailSend(_properties.Smtp, $"MJ账号禁用通知-{Account.ChannelId}",
+                                                    EmailJob.Instance.EmailSend(_setting.Smtp, $"MJ账号禁用通知-{Account.ChannelId}",
                                                         $"{Account.ChannelId}, {Account.DisabledReason}");
                                                 }
                                                 catch (Exception ex)
@@ -1031,7 +1025,7 @@ namespace Midjourney.Infrastructure
                                                 _discordInstance?.Dispose();
 
                                                 // 发送邮件
-                                                EmailJob.Instance.EmailSend(_properties.Smtp, $"MJ账号禁用通知-{Account.ChannelId}",
+                                                EmailJob.Instance.EmailSend(_setting.Smtp, $"MJ账号禁用通知-{Account.ChannelId}",
                                                     $"{Account.ChannelId}, {Account.DisabledReason}");
                                             }
                                             catch (Exception ex)

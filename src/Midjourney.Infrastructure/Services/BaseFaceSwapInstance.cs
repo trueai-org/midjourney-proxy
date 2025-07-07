@@ -22,14 +22,11 @@
 // invasion of privacy, or any other unlawful purposes is strictly prohibited. 
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
+using System.Collections.Concurrent;
 using Microsoft.Extensions.Caching.Memory;
-using Midjourney.Infrastructure.Services;
 using Newtonsoft.Json;
 using RestSharp;
 using Serilog;
-using System.Collections.Concurrent;
-
-using ILogger = Serilog.ILogger;
 using WebProxy = System.Net.WebProxy;
 
 namespace Midjourney.Infrastructure.LoadBalancer

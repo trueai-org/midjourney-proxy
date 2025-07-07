@@ -1,0 +1,16 @@
+version: '3'
+services:
+  mjplusyarp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mjplusyarp
+    restart: always
+    environment:
+      - TZ=Asia/Shanghai
+    ports:
+      - "8083:8080"
+    volumes:
+      - /root/mjplusyarp/logs:/app/logs:rw
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro

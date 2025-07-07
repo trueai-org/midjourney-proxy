@@ -23,19 +23,18 @@
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 using Discord.WebSocket;
 using Microsoft.Extensions.Logging;
-using Midjourney.Infrastructure.Data;
 using Midjourney.Infrastructure.LoadBalancer;
 
 namespace Midjourney.Infrastructure.Handle
 {
     public class BotErrorMessageHandler : BotMessageHandler
     {
-        private readonly ILogger<BotErrorMessageHandler> _logger;
+        private readonly ILogger _logger = Serilog.Log.Logger;
 
-        public BotErrorMessageHandler(DiscordLoadBalancer discordLoadBalancer, DiscordHelper discordHelper, ILogger<BotErrorMessageHandler> logger)
+        public BotErrorMessageHandler(DiscordLoadBalancer discordLoadBalancer, DiscordHelper discordHelper)
             : base(discordLoadBalancer, discordHelper)
         {
-            _logger = logger;
+
         }
 
         public override int Order() => 2;
@@ -85,11 +84,11 @@ namespace Midjourney.Infrastructure.Handle
 
             if (color == 16239475)
             {
-                _logger.LogWarning($"{instance.ChannelId} - MJ警告信息: {title}\n{description}\nfooter: {footerText}");
+                _logger.Warning($"{instance.ChannelId} - MJ警告信息: {title}\n{description}\nfooter: {footerText}");
             }
             else if (color == 16711680)
             {
-                _logger.LogError($"{instance.ChannelId} - MJ异常信息: {title}\n{description}\nfooter: {footerText}");
+                _logger.Error($"{instance.ChannelId} - MJ异常信息: {title}\n{description}\nfooter: {footerText}");
 
                 var taskInfo = FindTaskWhenError(instance, messageType, message);
                 if (taskInfo == null && message is SocketUserMessage umsg && umsg != null && umsg.InteractionMetadata?.Id != null)
@@ -127,7 +126,7 @@ namespace Midjourney.Infrastructure.Handle
                     if (!taskInfo.MessageIds.Contains(msgId))
                         taskInfo.MessageIds.Add(msgId);
 
-                    _logger.LogWarning($"{instance.ChannelId} - MJ可能的异常信息: {title}\n{description}\nfooter: {footerText}");
+                    _logger.Warning($"{instance.ChannelId} - MJ可能的异常信息: {title}\n{description}\nfooter: {footerText}");
 
                     taskInfo.SetProperty(Constants.MJ_MESSAGE_HANDLED, true);
                     taskInfo.Fail($"[{title}] {description}");

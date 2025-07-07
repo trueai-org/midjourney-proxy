@@ -22,17 +22,12 @@
 // invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Caching.Memory;
-using Midjourney.Infrastructure.Data;
-using Midjourney.Infrastructure.Dto;
-using Midjourney.Infrastructure.LoadBalancer;
-using Midjourney.Infrastructure.Services;
-using Midjourney.Infrastructure.Util;
 using System.Net;
 using System.Text.RegularExpressions;
-
-using TaskStatus = Midjourney.Infrastructure.TaskStatus;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
+using Midjourney.Infrastructure.LoadBalancer;
+using Midjourney.License;
 
 namespace Midjourney.API.Controllers
 {
@@ -50,7 +45,7 @@ namespace Midjourney.API.Controllers
         private readonly ITaskStoreService _taskStoreService;
 
         private readonly DiscordHelper _discordHelper;
-        private readonly ProxyProperties _properties;
+        private readonly Setting _properties;
         private readonly ITaskService _taskService;
         private readonly ILogger<SubmitController> _logger;
         private readonly string _ip;
@@ -117,66 +112,91 @@ namespace Midjourney.API.Controllers
         /// <param name="imagineDTO">提交Imagine任务的DTO</param>
         /// <returns>提交结果</returns>
         [HttpPost("imagine")]
-        public ActionResult<SubmitResultVO> Imagine([FromBody] SubmitImagineDTO imagineDTO)
+        public async Task<ActionResult<SubmitResultVO>> Imagine([FromBody] SubmitImagineDTO imagineDTO)
         {
-            string prompt = imagineDTO.Prompt;
-            if (string.IsNullOrWhiteSpace(prompt))
-            {
-                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "prompt不能为空"));
-            }
-
-            var base64Array = imagineDTO.Base64Array ?? [];
-
-            var setting = GlobalConfiguration.Setting;
-            if (!setting.EnableUserCustomUploadBase64 && base64Array.Count > 0)
-            {
-                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "禁止上传"));
-            }
-
-            prompt = prompt.Trim();
-            var task = NewTask(imagineDTO);
-            task.Action = TaskAction.IMAGINE;
-            task.Prompt = prompt;
-            task.BotType = GetBotType(imagineDTO.BotType);
-
-            // 转换 --niji 为 Niji Bot
-            if (GlobalConfiguration.Setting.EnableConvertNijiToNijiBot
-                && prompt.Contains("--niji")
-                && task.BotType == EBotType.MID_JOURNEY)
-            {
-                task.BotType = EBotType.NIJI_JOURNEY;
-            }
-
-            string promptEn = TranslatePrompt(prompt, task.RealBotType ?? task.BotType);
             try
             {
-                _taskService.CheckBanned(promptEn);
+                try
+                {
+                    // 验证许可证密钥
+                    await LicenseKeyHelper.Validate();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "许可证验证失败");
+
+                    return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "许可证验证失败"));
+                }
+
+                string prompt = imagineDTO.Prompt;
+                if (string.IsNullOrWhiteSpace(prompt))
+                {
+                    return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "prompt不能为空"));
+                }
+
+                var base64Array = imagineDTO.Base64Array ?? [];
+
+                var setting = GlobalConfiguration.Setting;
+                if (!setting.EnableUserCustomUploadBase64 && base64Array.Count > 0)
+                {
+                    return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "禁止上传"));
+                }
+
+                prompt = prompt.Trim();
+                var task = NewTask(imagineDTO);
+                task.Action = TaskAction.IMAGINE;
+                task.Prompt = prompt;
+                task.BotType = GetBotType(imagineDTO.BotType);
+
+                // 转换 --niji 为 Niji Bot
+                if (GlobalConfiguration.Setting.EnableConvertNijiToNijiBot
+                    && prompt.Contains("--niji")
+                    && task.BotType == EBotType.MID_JOURNEY)
+                {
+                    task.BotType = EBotType.NIJI_JOURNEY;
+                }
+
+                string promptEn = TranslatePrompt(prompt, task.RealBotType ?? task.BotType);
+                try
+                {
+                    _taskService.CheckBanned(promptEn);
+                }
+                catch (BannedPromptException e)
+                {
+                    return Ok(SubmitResultVO.Fail(ReturnCode.BANNED_PROMPT, "可能包含敏感词")
+                        .SetProperty("promptEn", promptEn)
+                        .SetProperty("bannedWord", e.Message));
+                }
+
+                List<DataUrl> dataUrls = new List<DataUrl>();
+                try
+                {
+                    dataUrls = ConvertUtils.ConvertBase64Array(base64Array);
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError(e, "base64格式转换异常");
+                    return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "base64格式错误"));
+                }
+
+                task.PromptEn = promptEn;
+                task.Description = $"/imagine {prompt}";
+
+                NewTaskDoFilter(task, imagineDTO.AccountFilter);
+
+                var data = _taskService.SubmitImagine(task, dataUrls);
+                return Ok(data);
             }
-            catch (BannedPromptException e)
+            catch (LogicException lex)
             {
-                return Ok(SubmitResultVO.Fail(ReturnCode.BANNED_PROMPT, "可能包含敏感词")
-                    .SetProperty("promptEn", promptEn)
-                    .SetProperty("bannedWord", e.Message));
+                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, lex.Message));
             }
-
-            List<DataUrl> dataUrls = new List<DataUrl>();
-            try
+            catch (Exception ex)
             {
-                dataUrls = ConvertUtils.ConvertBase64Array(base64Array);
+                _logger.LogError(ex, "提交Imagine任务异常");
+
+                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "提交Imagine任务异常"));
             }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "base64格式转换异常");
-                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "base64格式错误"));
-            }
-
-            task.PromptEn = promptEn;
-            task.Description = $"/imagine {prompt}";
-
-            NewTaskDoFilter(task, imagineDTO.AccountFilter);
-
-            var data = _taskService.SubmitImagine(task, dataUrls);
-            return Ok(data);
         }
 
         /// <summary>
@@ -374,6 +394,12 @@ namespace Midjourney.API.Controllers
 
             task.InstanceId = targetTask.InstanceId;
             task.Description = description;
+
+            // 如果 mode = null, 则使用目标任务的 mode
+            if (task.Mode == null)
+            {
+                task.Mode = targetTask.Mode;
+            }
 
             var messageFlags = targetTask.GetProperty<string>(Constants.TASK_PROPERTY_FLAGS, default)?.ToInt() ?? 0;
             var messageId = targetTask.GetProperty<string>(Constants.TASK_PROPERTY_MESSAGE_ID, default);
@@ -584,12 +610,35 @@ namespace Midjourney.API.Controllers
 
                 // 在进行 U 时，记录目标图片的 U 的 customId
                 task.SetProperty(Constants.TASK_PROPERTY_REMIX_U_CUSTOM_ID, actionDTO.CustomId);
+
+                // 使用正则提取 U index
+                var match = Regex.Match(actionDTO.CustomId, @"MJ::JOB::upsample::(\d+)");
+                if (match.Success)
+                {
+                    var index = match.Groups[1].Value;
+                    if (int.TryParse(index, out int result) && result > 0)
+                    {
+                        task.SetProperty(Constants.TASK_PROPERTY_ACTION_INDEX, result);
+                    }
+                }
+
             }
             // 微调
             // MJ::JOB::variation::2::898416ec-7c18-4762-bf03-8e428fee1860
             else if (actionDTO.CustomId.StartsWith("MJ::JOB::variation::"))
             {
                 task.Action = TaskAction.VARIATION;
+
+                // 使用正则提取 V index
+                var match = Regex.Match(actionDTO.CustomId, @"MJ::JOB::variation::(\d+)");
+                if (match.Success)
+                {
+                    var index = match.Groups[1].Value;
+                    if (int.TryParse(index, out int result) && result > 0)
+                    {
+                        task.SetProperty(Constants.TASK_PROPERTY_ACTION_INDEX, result);
+                    }
+                }
             }
             // 重绘
             // MJ::JOB::reroll::0::898416ec-7c18-4762-bf03-8e428fee1860::SOLO
@@ -864,7 +913,15 @@ namespace Midjourney.API.Controllers
                 {
                     var ipTodayDrawCount = (int)DbHelper.Instance.TaskStore
                         .Count(x => x.SubmitTime >= nowDate && x.ClientIp == _ip && x.Status == TaskStatus.IN_PROGRESS);
-                    if (ipTodayDrawCount > setting.GuestDefaultCoreSize)
+                    if (ipTodayDrawCount >= setting.GuestDefaultCoreSize)
+                    {
+                        throw new LogicException("并发数已达上限");
+                    }
+
+                    // 获取执行中的任务数
+                    var rs = _discordLoadBalancer.GetRunningTasks();
+                    var taskCount = rs.Count(x => x.ClientIp == _ip);
+                    if (taskCount >= setting.GuestDefaultCoreSize)
                     {
                         throw new LogicException("并发数已达上限");
                     }
@@ -875,7 +932,15 @@ namespace Midjourney.API.Controllers
                 {
                     var ipTodayDrawCount = (int)DbHelper.Instance.TaskStore
                         .Count(x => x.SubmitTime >= nowDate && x.ClientIp == _ip && (x.Status == TaskStatus.NOT_START || x.Status == TaskStatus.SUBMITTED));
-                    if (ipTodayDrawCount > setting.GuestDefaultQueueSize)
+                    if (ipTodayDrawCount >= setting.GuestDefaultQueueSize)
+                    {
+                        throw new LogicException("队列数已达上限");
+                    }
+
+                    // 获取队列中的任务数
+                    var qs = _discordLoadBalancer.GetQueueTasks();
+                    var taskCount = qs.Count(x => x.ClientIp == _ip);
+                    if (taskCount >= setting.GuestDefaultQueueSize)
                     {
                         throw new LogicException("队列数已达上限");
                     }
@@ -887,8 +952,16 @@ namespace Midjourney.API.Controllers
                 if (user.CoreSize > 0)
                 {
                     var userDrawCount = (int)DbHelper.Instance.TaskStore
-                        .Count(x => x.SubmitTime >= nowDate && x.UserId == user.Id && x.Status == TaskStatus.IN_PROGRESS);
-                    if (userDrawCount > user.CoreSize)
+                        .Count(x => x.SubmitTime >= nowDate && x.UserId == user.Id && (x.Status == TaskStatus.NOT_START || x.Status == TaskStatus.IN_PROGRESS || x.Status == TaskStatus.SUBMITTED));
+                    if (userDrawCount >= user.CoreSize)
+                    {
+                        throw new LogicException("并发数已达上限");
+                    }
+
+                    // 获取执行中的任务数
+                    var rs = _discordLoadBalancer.GetRunningTasks();
+                    var taskCount = rs.Count(x => x.UserId == user.Id);
+                    if (taskCount >= user.CoreSize)
                     {
                         throw new LogicException("并发数已达上限");
                     }
@@ -899,7 +972,15 @@ namespace Midjourney.API.Controllers
                 {
                     var userDrawCount = (int)DbHelper.Instance.TaskStore
                         .Count(x => x.SubmitTime >= nowDate && x.UserId == user.Id && (x.Status == TaskStatus.NOT_START || x.Status == TaskStatus.SUBMITTED));
-                    if (userDrawCount > user.QueueSize)
+                    if (userDrawCount >= user.QueueSize)
+                    {
+                        throw new LogicException("队列数已达上限");
+                    }
+
+                    // 获取队列中的任务数
+                    var qs = _discordLoadBalancer.GetQueueTasks();
+                    var taskCount = qs.Count(x => x.UserId == user.Id);
+                    if (taskCount >= user.QueueSize)
                     {
                         throw new LogicException("队列数已达上限");
                     }
@@ -927,17 +1008,23 @@ namespace Midjourney.API.Controllers
             task.AccountFilter = accountFilter;
             task.SetProperty(Constants.TASK_PROPERTY_BOT_TYPE, task.BotType.GetDescription());
 
+            if (task.AccountFilter == null)
+            {
+                task.AccountFilter = new AccountFilter();
+            }
+
+            // 如果路径中有速度模式
             if (_mode != null)
             {
-                if (task.AccountFilter == null)
-                {
-                    task.AccountFilter = new AccountFilter();
-                }
-
                 if (!task.AccountFilter.Modes.Contains(_mode.Value))
                 {
                     task.AccountFilter.Modes.Add(_mode.Value);
                 }
+            }
+
+            if (task.Mode == null)
+            {
+                task.Mode = task.GetMode();
             }
         }
 

@@ -21,4 +21,19 @@
 // The use of this software for any form of illegal face swapping,
 // invasion of privacy, or any other unlawful purposes is strictly prohibited. 
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
-global using Midjourney.Infrastructure.Models;
+
+global using Midjourney.Base;
+global using Midjourney.Base.Models;
+global using Midjourney.Base.StandardTable;
+global using Midjourney.Base.Options;
+global using Midjourney.Base.Services;
+global using Midjourney.Base.Storage;
+global using Midjourney.Base.Util;
+global using Midjourney.Base.Data;
+global using Midjourney.Base.Dto;
+
+global using TaskStatus = Midjourney.Base.TaskStatus;
+global using ILogger = Serilog.ILogger;
+global using MessageType = Midjourney.Base.MessageType;
+
+

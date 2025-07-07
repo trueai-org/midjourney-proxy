@@ -22,15 +22,12 @@
 // invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
-using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Options;
-using Midjourney.Infrastructure.Dto;
-using Midjourney.Infrastructure.Options;
-using Midjourney.Infrastructure.Util;
-using RestSharp;
-using Serilog;
 using System.Collections.Concurrent;
 using System.Text.Json;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Options;
+using RestSharp;
+using Serilog;
 
 namespace Midjourney.Captcha.API
 {

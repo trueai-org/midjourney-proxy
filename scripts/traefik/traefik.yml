@@ -1,0 +1,47 @@
+# Traefik 静态配置文件
+global:
+  checkNewVersion: false
+  sendAnonymousUsage: false
+
+# API 和仪表板
+api:
+  dashboard: true
+  insecure: true  # 生产环境建议设置为 false 并配置认证
+
+# 入口点配置
+entryPoints:
+  web:
+    address: ":80"
+  websecure:
+    address: ":443"
+
+# 服务发现提供商 - Consul
+providers:
+  consul:
+    endpoints:
+      - "192.168.3.241:8500"
+    exposedByDefault: false
+    watch: true
+    # Consul 服务发现配置
+    defaultRule: "Host(`localhost`)"
+    
+  # 可选：文件提供商用于静态配置
+  file:
+    filename: /etc/traefik/dynamic.yml
+    watch: true
+
+# 日志配置
+log:
+  level: INFO
+  
+accessLog:
+  format: json
+
+# 证书解析器 (可选，用于 HTTPS)
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      email: your-email@example.com
+      storage: /data/acme.json
+      httpChallenge:
+        entryPoint: web

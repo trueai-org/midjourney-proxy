@@ -9,9 +9,9 @@
 		<SatelliteResourceLanguages>zh-Hans</SatelliteResourceLanguages>
 		<EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
 	</PropertyGroup>
-
+	
 	<PropertyGroup>
-		<NoWarn>1701;1702;1591</NoWarn>
+		<NoWarn>1701;1702;1591;1572;1573;</NoWarn>
 	</PropertyGroup>
 	
 	<ItemGroup>

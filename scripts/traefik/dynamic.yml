@@ -1,0 +1,46 @@
+# Traefik 动态配置文件
+http:
+  # 中间件定义
+  middlewares:
+    # 速率限制
+    rate-limit:
+      rateLimit:
+        burst: 100
+        average: 50
+        
+    # CORS 支持
+    cors-headers:
+      headers:
+        accessControlAllowMethods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - OPTIONS
+        accessControlAllowHeaders:
+          - "*"
+        accessControlAllowOriginList:
+          - "*"
+        accessControlMaxAge: 100
+        addVaryHeader: true
+        
+    # 安全头
+    security-headers:
+      headers:
+        frameDeny: true
+        sslRedirect: false
+        browserXssFilter: true
+        contentTypeNosniff: true
+        forceSTSHeader: true
+        stsIncludeSubdomains: true
+        stsPreload: true
+        stsSeconds: 31536000
+
+  # 路由定义 (这些将被 Consul 中的服务覆盖)
+  routers:
+    # 默认路由到控制台
+    api:
+      rule: "Host(`traefik.local`)"
+      service: "api@internal"
+      middlewares:
+        - "security-headers"

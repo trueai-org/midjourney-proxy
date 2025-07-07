@@ -9,13 +9,21 @@
 		<IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
 		<EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
 		<SatelliteResourceLanguages>zh-Hans</SatelliteResourceLanguages>
+		<AssemblyVersion>8.0.11</AssemblyVersion>
 		<DockerfileContext>..\..</DockerfileContext>
 	</PropertyGroup>
 
 	<PropertyGroup>
-		<NoWarn>1701;1702;1591</NoWarn>
+		<NoWarn>1701;1702;1591;1572;1573;</NoWarn>
 	</PropertyGroup>
 
+	<ItemGroup>
+		<None Include="Extensions\**\*">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+			<ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+		</None>
+	</ItemGroup>
+	
 	<ItemGroup>
 		<PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.19.5" />
 		<PackageReference Include="Swashbuckle.AspNetCore" Version="6.4.0" />
@@ -23,6 +31,25 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\Midjourney.Infrastructure\Midjourney.Infrastructure.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Upgrade\" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Reference Include="Midjourney.License">
+	    <HintPath>..\lib\Midjourney.License.dll</HintPath>
+	  </Reference>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Update="Upgrade\linux-upgrade.sh">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </None>
+	  <None Update="Upgrade\win-upgrade.bat">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </None>
 	</ItemGroup>
 
 </Project>

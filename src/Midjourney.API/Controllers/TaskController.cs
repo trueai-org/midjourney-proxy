@@ -22,12 +22,9 @@
 // invasion of privacy, or any other unlawful purposes is strictly prohibited. 
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
-using Microsoft.AspNetCore.Mvc;
-using Midjourney.Infrastructure.Data;
-using Midjourney.Infrastructure.Dto;
-using Midjourney.Infrastructure.LoadBalancer;
-using Midjourney.Infrastructure.Services;
 using System.Net;
+using Microsoft.AspNetCore.Mvc;
+using Midjourney.Infrastructure.LoadBalancer;
 
 namespace Midjourney.API.Controllers
 {
@@ -43,7 +40,6 @@ namespace Midjourney.API.Controllers
     {
         private readonly ITaskStoreService _taskStoreService;
         private readonly ITaskService _taskService;
-
         private readonly DiscordLoadBalancer _discordLoadBalancer;
         private readonly WorkContext _workContext;
 

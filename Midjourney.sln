@@ -21,6 +21,14 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "doc", "doc", "{D2283666-695
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Midjourney.Captcha.API", "src\Midjourney.Captcha.API\Midjourney.Captcha.API.csproj", "{13660D62-42AF-4019-BF88-90C0CF79A853}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Midjourney.Base", "src\Midjourney.Base\Midjourney.Base.csproj", "{211E3D61-A419-CBFC-94FF-4A061DF7795A}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Midjourney.YarpProxy", "src\Midjourney.YarpProxy\Midjourney.YarpProxy.csproj", "{8E871CC8-C0B3-40E9-B742-AA2FA456B49E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Midjourney.OcelotProxy", "src\Midjourney.OcelotProxy\Midjourney.OcelotProxy.csproj", "{53AC240C-5D18-4263-B52F-C64A68C93D1C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,9 +47,29 @@ Global
 		{13660D62-42AF-4019-BF88-90C0CF79A853}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{13660D62-42AF-4019-BF88-90C0CF79A853}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{13660D62-42AF-4019-BF88-90C0CF79A853}.Release|Any CPU.Build.0 = Release|Any CPU
+		{211E3D61-A419-CBFC-94FF-4A061DF7795A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{211E3D61-A419-CBFC-94FF-4A061DF7795A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{211E3D61-A419-CBFC-94FF-4A061DF7795A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{211E3D61-A419-CBFC-94FF-4A061DF7795A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8E871CC8-C0B3-40E9-B742-AA2FA456B49E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8E871CC8-C0B3-40E9-B742-AA2FA456B49E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8E871CC8-C0B3-40E9-B742-AA2FA456B49E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8E871CC8-C0B3-40E9-B742-AA2FA456B49E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{53AC240C-5D18-4263-B52F-C64A68C93D1C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{53AC240C-5D18-4263-B52F-C64A68C93D1C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{53AC240C-5D18-4263-B52F-C64A68C93D1C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{53AC240C-5D18-4263-B52F-C64A68C93D1C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{D58E9E83-1F78-4E72-AE5B-C31FB9199F31} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{6812FA3A-CB56-42A2-BA01-3D31C36E0AFB} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{13660D62-42AF-4019-BF88-90C0CF79A853} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{211E3D61-A419-CBFC-94FF-4A061DF7795A} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{8E871CC8-C0B3-40E9-B742-AA2FA456B49E} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{53AC240C-5D18-4263-B52F-C64A68C93D1C} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {2B9B805F-CE67-43CA-B757-F4A3F1CF72AD}

@@ -24,7 +24,6 @@
 
 using Discord.WebSocket;
 using Midjourney.Infrastructure.LoadBalancer;
-using Midjourney.Infrastructure.Util;
 
 namespace Midjourney.Infrastructure.Handle
 {

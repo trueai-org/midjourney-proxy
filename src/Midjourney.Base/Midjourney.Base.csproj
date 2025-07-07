@@ -1,0 +1,139 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<GenerateDocumentationFile>True</GenerateDocumentationFile>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<NoWarn>1701;1702;1591;1572;1573;1711;1712;</NoWarn>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Consul" Version="1.7.14.7" />
+		<PackageReference Include="Selenium.Support" Version="4.15.0" />
+		<PackageReference Include="Selenium.WebDriver" Version="4.15.0" />
+		<PackageReference Include="PuppeteerSharp" Version="18.0.4" />
+		<PackageReference Include="Aliyun.OSS.SDK.NetCore" Version="2.14.1" />
+		<PackageReference Include="FreeSql" Version="3.5.106" />
+		<PackageReference Include="FreeSql.Extensions.JsonMap" Version="3.5.106" />
+		<PackageReference Include="FreeSql.Extensions.Linq" Version="3.5.106" />
+		<PackageReference Include="FreeSql.Provider.MySqlConnector" Version="3.5.106" />
+		<PackageReference Include="FreeSql.Provider.PostgreSQL" Version="3.5.106" />
+		<PackageReference Include="FreeSql.Provider.Sqlite" Version="3.5.106" />
+		<PackageReference Include="FreeSql.Provider.SqlServer" Version="3.5.106" />
+		<PackageReference Include="IPNetwork2" Version="3.0.667" />
+		<PackageReference Include="IdGen" Version="3.0.7" />
+		<PackageReference Include="LiteDB" Version="5.0.21" />
+		<PackageReference Include="Mime-Detective" Version="24.7.1" />
+		<PackageReference Include="MimeTypes" Version="2.5.2">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="MongoDB.Driver" Version="2.28.0" />
+		<PackageReference Include="RestSharp" Version="112.0.0" />
+		<PackageReference Include="Discord.Net" Version="3.17.2" />
+		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+		<PackageReference Include="SixLabors.ImageSharp" Version="3.1.8" />
+		<PackageReference Include="Swashbuckle.AspNetCore.Annotations" Version="6.6.2" />
+		<PackageReference Include="Serilog" Version="3.1.1" />
+		<PackageReference Include="Serilog.Extensions.Hosting" Version="8.0.0" />
+		<PackageReference Include="Serilog.Extensions.Logging" Version="8.0.0" />
+		<PackageReference Include="Serilog.Settings.Configuration" Version="8.0.0" />
+		<PackageReference Include="Serilog.Sinks.Console" Version="5.0.1" />
+		<PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
+		<PackageReference Include="System.Management" Version="9.0.5" />
+		<PackageReference Include="Tencent.QCloud.Cos.Sdk" Version="5.4.40" />
+		<PackageReference Include="UAParser" Version="3.1.47" />
+		<PackageReference Include="MailKit" Version="4.4.0" />
+		<PackageReference Include="MimeKit" Version="4.7.1" />
+		<PackageReference Include="AWSSDK.S3" Version="3.7.406.2" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Content Remove="Resources\ApiParams\blend.json" />
+		<Content Remove="Resources\ApiParams\describe.json" />
+		<Content Remove="Resources\ApiParams\imagine.json" />
+		<Content Remove="Resources\ApiParams\message.json" />
+		<Content Remove="Resources\ApiParams\reroll.json" />
+		<Content Remove="Resources\ApiParams\upscale.json" />
+		<Content Remove="Resources\ApiParams\variation.json" />
+		<Content Remove="Resources\ApiParams\action.json" />
+		<Content Remove="Resources\ApiParams\zoom.json" />
+		<Content Remove="Resources\ApiParams\seed.json" />
+		<Content Remove="Resources\ApiParams\info.json" />
+		<Content Remove="Resources\ApiParams\setting.json" />
+		<Content Remove="Resources\ApiParams\settingbutton.json" />
+		<Content Remove="Resources\ApiParams\settingniji.json" />
+		<Content Remove="Resources\ApiParams\settingselect.json" />
+		<Content Remove="Resources\ApiParams\infoniji.json" />
+		<Content Remove="Resources\ApiParams\imagineniji.json" />
+		<Content Remove="Resources\ApiParams\blendniji.json" />
+		<Content Remove="Resources\ApiParams\describeniji.json" />
+		<Content Remove="Resources\ApiParams\seedniji.json" />
+		<Content Remove="Resources\ApiParams\remix.json" />
+		<Content Remove="Resources\ApiParams\picreader.json" />
+		<Content Remove="Resources\ApiParams\show.json" />
+		<Content Remove="Resources\ApiParams\showniji.json" />
+		<Content Remove="Resources\mime.types" />
+		<Content Remove="Resources\words.txt" />
+		<Content Remove="Resources\wordsfull.txt" />
+		<Content Remove="Resources\ApiParams\shorten.json" />
+		<Content Remove="Resources\ApiParams\shortenniji.json" />
+		<Content Remove="Resources\ApiParams\fast.json" />
+		<Content Remove="Resources\ApiParams\fastniji.json" />
+		<Content Remove="Resources\ApiParams\relax.json" />
+		<Content Remove="Resources\ApiParams\relaxniji.json" />
+		<Content Remove="Resources\ApiParams\describelink.json" />
+		<Content Remove="Resources\ApiParams\describenijilink.json" />
+		<Content Remove="Resources\ApiParams\upscale_buttons.json" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<EmbeddedResource Include="Resources\ApiParams\describelink.json" />
+		<EmbeddedResource Include="Resources\ApiParams\describenijilink.json" />
+		<EmbeddedResource Include="Resources\ApiParams\fast.json" />
+		<EmbeddedResource Include="Resources\ApiParams\fastniji.json" />
+		<EmbeddedResource Include="Resources\ApiParams\relaxniji.json" />
+		<EmbeddedResource Include="Resources\ApiParams\relax.json" />
+		<EmbeddedResource Include="Resources\ApiParams\shortenniji.json" />
+		<EmbeddedResource Include="Resources\ApiParams\shorten.json" />
+		<EmbeddedResource Include="Resources\ApiParams\remix.json" />
+		<EmbeddedResource Include="Resources\ApiParams\blendniji.json" />
+		<EmbeddedResource Include="Resources\ApiParams\describeniji.json" />
+		<EmbeddedResource Include="Resources\ApiParams\imagineniji.json" />
+		<EmbeddedResource Include="Resources\ApiParams\infoniji.json" />
+		<EmbeddedResource Include="Resources\ApiParams\seedniji.json" />
+		<EmbeddedResource Include="Resources\ApiParams\showniji.json" />
+		<EmbeddedResource Include="Resources\ApiParams\show.json" />
+		<EmbeddedResource Include="Resources\ApiParams\settingniji.json" />
+		<EmbeddedResource Include="Resources\ApiParams\settingselect.json" />
+		<EmbeddedResource Include="Resources\ApiParams\settingbutton.json" />
+		<EmbeddedResource Include="Resources\ApiParams\setting.json" />
+		<EmbeddedResource Include="Resources\ApiParams\info.json" />
+		<EmbeddedResource Include="Resources\ApiParams\seed.json" />
+		<EmbeddedResource Include="Resources\ApiParams\picreader.json" />
+		<EmbeddedResource Include="Resources\ApiParams\zoom.json" />
+		<EmbeddedResource Include="Resources\ApiParams\reroll.json" />
+		<EmbeddedResource Include="Resources\ApiParams\upscale.json" />
+		<EmbeddedResource Include="Resources\ApiParams\action.json" />
+		<EmbeddedResource Include="Resources\ApiParams\variation.json" />
+		<EmbeddedResource Include="Resources\ApiParams\blend.json" />
+		<EmbeddedResource Include="Resources\ApiParams\describe.json" />
+		<EmbeddedResource Include="Resources\ApiParams\imagine.json" />
+		<EmbeddedResource Include="Resources\ApiParams\message.json" />
+		<EmbeddedResource Include="Resources\ApiParams\upscale_buttons.json" />
+		<EmbeddedResource Include="Resources\mime.types" />
+		<EmbeddedResource Include="Resources\words.txt" />
+		<EmbeddedResource Include="Resources\wordsfull.txt" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Update="Resources\bannedWords.txt">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
+
+
+</Project>

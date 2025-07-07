@@ -22,11 +22,8 @@
 // invasion of privacy, or any other unlawful purposes is strictly prohibited. 
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
-using Microsoft.Extensions.Caching.Memory;
-using Midjourney.Infrastructure.Dto;
-using Midjourney.Infrastructure.Services;
-using Midjourney.Infrastructure.Util;
 using System.Diagnostics;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace Midjourney.Infrastructure.LoadBalancer
 {

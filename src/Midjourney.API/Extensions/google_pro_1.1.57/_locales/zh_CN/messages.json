@@ -1,0 +1,251 @@
+{
+	"name": {
+		"message": "YesCaptcha 人机助手"
+	},
+	"pluginDesc": {
+		"message": "reCaptcha/hCaptcha 自动验证"
+	},
+	"popup_header_title": {
+		"message": "YesCaptcha 人机助手"
+	},
+	"popup_header_balance_error": {
+		"message": "错误"
+	},
+	"popup_balance": {
+		"message": "余额"
+	},
+	"popup_panel_title": {
+		"message": "设置面板"
+	},
+	"popup_panel_key": {
+		"message": "密钥"
+	},
+	"popup_panel_address": {
+		"message": "节点"
+	},
+	"popup_panel_click_speed": {
+		"message": "点击速度"
+	},
+	"popup_panel_click_speed_tool_tip": {
+		"message": "点击图片的间隔时间，单位为毫秒"
+	},
+	"popup_panel_click_speed_helptext": {
+		"message": "hcaptcha低于200ms可能会识别失败"
+	},
+	"popup_panel_end_times": {
+		"message": "次数限制"
+	},
+	"popup_panel_end_times_tooltip": {
+		"message": "经过设定次数的自动识别后停止,关闭表示无限制自动识别，停止之后会提示“超过最多成功次数”"
+	},
+	"popup_panel_check_box": {
+		"message": "自动开启"
+	},
+	"popup_panel_check_box_tooltip": {
+		"message": "是否点击勾选框，数值为点击延迟(ms)"
+	},
+	"popup_panel_save": {
+		"message": "保存"
+	},
+	"popup_switch_title": {
+		"message": "开关"
+	},
+	"popup_switch_label_1": {
+		"message": "reCaptcha"
+	},
+	"popup_switch_label_1_new_version": {
+		"message": "新脚本"
+	},
+	"popup_switch_label_1_old_version": {
+		"message": "旧脚本"
+	},
+	"popup_switch_label_2": {
+		"message": "hCaptcha"
+	},
+	"popup_switch_label_3": {
+		"message": "Coinlist英文数字人机自动识别"
+	},
+	"popup_switch_label_4": {
+		"message": "Coinlist排队时粉色按钮自动点击"
+	},
+	"popup_switch_label_5": {
+		"message": "文字验证码"
+	},
+	"popup_switch_label_6": {
+		"message": "Cloudflare"
+	},
+	"popup_switch_label_7": {
+		"message": "Funcaptcha"
+	},
+	"popup_advanced_setting": {
+		"message": "高级设置"
+	},
+	"popup_alert_network": {
+		"message": "网络错误，请检查网络"
+	},
+	"content_message_0": {
+		"message": "请先填写密钥ClientKey"
+	},
+	"content_message_1": {
+		"message": "余额不足"
+	},
+	"content_message_2": {
+		"message": "自动识别已经启动"
+	},
+	"content_message_3": {
+		"message": "自动识别正在识别中"
+	},
+	"content_message_4": {
+		"message": "自动识别已完成"
+	},
+	"content_message_5": {
+		"message": "自动识别提交图像接口识别中"
+	},
+	"content_message_6": {
+		"message": "自动识别自动点击中"
+	},
+	"content_message_7": {
+		"message": "自动识别点击提交"
+	},
+	"content_message_8": {
+		"message": "识别失败"
+	},
+	"content_message_9": {
+		"message": "网络错误"
+	},
+	"content_message_10": {
+		"message": "超过最多单次识别次数"
+	},
+	"content_message_11": {
+		"message": "超过最多成功次数"
+	},
+	"context_menu_1": {
+		"message": "标记为验证码"
+	},
+	"context_menu_2": {
+		"message": "输入验证码"
+	},
+	"popup_add_fund": {
+		"message": "充值"
+	},
+	"popup_register": {
+		"message": "注册账户"
+	},
+	"popup_newVersionNotice": {
+		"message": "有新版本"
+	},
+	"option_general_navword": {
+		"message": "通用"
+	},
+	"option_general_workStatusFlag": {
+		"message": "工作状态flag"
+	},
+	"option_general_jsControlObjectName": {
+		"message": "js控制对象名"
+	},
+	"option_general_ms": {
+		"message": "总开关"
+	},
+	"option_general_clientKey": {
+		"message": "密钥"
+	},
+	"option_general_cp": {
+		"message": "点击速度"
+	},
+	"option_general_tl": {
+		"message": "次数限制"
+	},
+	"option_general_istl": {
+		"message": "开启次数限制"
+	},
+	"option_general_iscb": {
+		"message": "开启自动识别"
+	},
+	"option_general_cbdl": {
+		"message": "自动识别延迟"
+	},
+	"option_general_atsm": {
+		"message": "开启自动提交"
+	},
+	"option_general_inject_js": {
+		"message": "注入js上下文"
+	},
+	"option_isopen": {
+		"message": "开启"
+	},
+	"option_recaptcha_title": {
+		"message": "recaptcha 设置"
+	},
+	"option_recaptcha_invisible": {
+		"message": "适应invisible模式"
+	},
+	"option_recaptcha_nsc": {
+		"message": "新脚本"
+	},
+	"option_recaptcha_1x1dealy": {
+		"message": "单图淡入延迟"
+	},
+	"option_network_title": {
+		"message": "network 设置"
+	},
+	"option_network_hd": {
+		"message": "hcaptcha请求延迟(ms)"
+	},
+	"option_network_ht": {
+		"message": "hcaptcha请求重试次数"
+	},
+	"option_network_rd": {
+		"message": "rechaptcha请求延迟(ms)"
+	},
+	"option_network_rt": {
+		"message": "rechaptcha请求重试次数"
+	},
+	"option_network_fd": {
+		"message": "funcaptcha请求延迟(ms)"
+	},
+	"option_network_ft": {
+		"message": "funcaptcha请求重试次数"
+	},
+	"option_hcaptcha_title": {
+		"message": "hcaptcha 设置"
+	},
+	"option_hcaptcha_isrefresh": {
+		"message": "失败刷新"
+	},
+	"option_hcaptcha_iorl": {
+		"message": "是否开启识别限制"
+	},
+	"option_hcaptcha_rmt": {
+		"message": "次数限制（单个九宫格）"
+	},
+	"option_hcaptcha_aarmt": {
+		"message": "超过后触发的逻辑"
+	},
+	"option_funcaptcha_title": {
+		"message": "funcaptcha 设置"
+	},
+	"option_funcaptcha_aars": {
+		"message": "识别成功后动作"
+	},
+	"option_funcaptcha_aaorf": {
+		"message": "单次识别失败后动作"
+	},
+	"option_funcaptcha_aarf": {
+		"message": "识别失败后动作"
+	},
+	"option_funcaptcha_ad": {
+		"message": "动作延迟"
+	},
+	"option_cloudflare_title": {
+		"message": "cloudflare 设置"
+	},
+	"option_textcaptcha_title": {
+		"message": "textcaptcha 设置"
+	},
+	"option_submit_delay_time": {
+		"message": "提交延迟ms"
+	},
+	"option_submit_delay_float_rate": {
+		"message": "提交延迟浮动0~1"
+	}
+}

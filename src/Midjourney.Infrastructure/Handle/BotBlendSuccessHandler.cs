@@ -21,10 +21,10 @@
 // The use of this software for any form of illegal face swapping,
 // invasion of privacy, or any other unlawful purposes is strictly prohibited. 
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
+
+using System.Text.RegularExpressions;
 using Discord.WebSocket;
 using Midjourney.Infrastructure.LoadBalancer;
-using Midjourney.Infrastructure.Util;
-using System.Text.RegularExpressions;
 
 namespace Midjourney.Infrastructure.Handle
 {
