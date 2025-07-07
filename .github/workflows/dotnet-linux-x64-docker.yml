@@ -1,4 +1,4 @@
-name: Release Linux x64 .NET Application
+name: Release Linux x64 Dependence .NET Application
 
 on:
   release:

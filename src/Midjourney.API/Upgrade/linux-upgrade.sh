@@ -38,7 +38,7 @@ if [ ! -d "$SOURCE_DIR" ]; then
 fi
 
 # 复制文件
-if cp -r "$SOURCE_DIR"/* ./; then
+if cp -r "$SOURCE_DIR"/* /app; then
     echo "文件复制完成"
 else
     echo "文件复制失败"
@@ -46,7 +46,7 @@ else
 fi
 
 # 设置可执行权限
-chmod +x Midjourney.API 2>/dev/null || true
+# chmod +x Midjourney.API 2>/dev/null || true
 
 # 清理解压目录
 if [ -d "$SOURCE_DIR" ]; then
@@ -55,7 +55,7 @@ if [ -d "$SOURCE_DIR" ]; then
 fi
 
 # 清理升级包文件
-rm -f upgrade/*.zip upgrade/*.tar.gz 2>/dev/null || true
+rm -f /app/Upgrade/*.zip /app/Upgrade/*.tar.gz 2>/dev/null || true
 
 # echo "重启应用程序..."
 # nohup ./Midjourney.API > /dev/null 2>&1 &

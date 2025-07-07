@@ -251,7 +251,7 @@ namespace Midjourney.Infrastructure.Services
             var pattern = $"midjourney-proxy-{platform}-v*-docker.tar.gz";
             if (platform == "win-x64")
             {
-                pattern = $"midjourney-proxy-{platform}-v*.zip";
+                pattern = $"midjourney-proxy-{platform}-v*-docker.zip";
             }
 
             var files = Directory.GetFiles(_upgradePath, pattern);
@@ -330,7 +330,7 @@ namespace Midjourney.Infrastructure.Services
 
             var sufix = platform switch
             {
-                "win-x64" => ".zip",
+                "win-x64" => "-docker.zip",
                 "linux-x64" => "-docker.tar.gz",
                 _ => "-docker.tar.gz"
             };
