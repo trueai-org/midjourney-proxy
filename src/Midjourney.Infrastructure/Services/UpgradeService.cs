@@ -13,11 +13,6 @@ namespace Midjourney.Infrastructure.Services
     public interface IUpgradeService
     {
         /// <summary>
-        /// 启动时检查升级文件
-        /// </summary>
-        Task CheckAndPerformStartupUpgradeAsync();
-
-        /// <summary>
         /// 检查最新版本
         /// </summary>
         Task<UpgradeInfo> CheckForUpdatesAsync();
@@ -49,11 +44,17 @@ namespace Midjourney.Infrastructure.Services
     }
 
     /// <summary>
-    /// 检查升级服务 - 适用于 win-x64/linux-x64/docker
+    /// 检查升级服务 - 适用于 docker linux-x64
     /// </summary>
     public class UpgradeService : IUpgradeService
     {
+        // 升级目录
         private const string UpgradeDirectory = "Upgrade";
+
+        // 解压目录
+        private const string ExtractDirectory = "Extract";
+
+        // GitHub API URL
         private const string GitHubApiUrlProxy = "https://api.github.com/repos/trueai-org/midjourney-proxy/releases/latest";
 
         private readonly string _upgradePath;
@@ -433,7 +434,7 @@ namespace Midjourney.Infrastructure.Services
             {
                 Log.Information("开始执行升级: {File}", upgradeFilePath);
 
-                var extractPath = Path.Combine(_upgradePath, "extract");
+                var extractPath = Path.Combine(_upgradePath, ExtractDirectory);
 
                 // 解压升级包
                 await ExtractTarGzAsync(upgradeFilePath);
@@ -475,7 +476,7 @@ namespace Midjourney.Infrastructure.Services
             try
             {
                 // 下载完成后解压文件
-                var extractPath = Path.Combine(_upgradePath, "extract");
+                var extractPath = Path.Combine(_upgradePath, ExtractDirectory);
 
                 // 清理旧的解压目录
                 if (Directory.Exists(extractPath))
