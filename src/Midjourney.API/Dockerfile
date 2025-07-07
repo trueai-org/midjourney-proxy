@@ -32,7 +32,7 @@ COPY --from=publish /app/publish .
 #ENTRYPOINT ["dotnet", "Midjourney.API.dll"]
 
 # 设置脚本执行权限
-RUN chmod +x /app/startup.sh
+# RUN chmod +x startup.sh
 
 # 使用启动脚本作为入口点
-ENTRYPOINT ["/app/startup.sh"]
+ENTRYPOINT ["sh", "startup.sh"]
