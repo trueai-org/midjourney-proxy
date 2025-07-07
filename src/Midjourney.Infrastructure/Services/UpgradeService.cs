@@ -380,10 +380,6 @@ namespace Midjourney.Infrastructure.Services
                     }
                 }
 
-                _upgradeInfo.Status = UpgradeStatus.ReadyToRestart;
-                _upgradeInfo.Progress = 100;
-                _upgradeInfo.Message = "升级包下载完成，重启应用程序即可升级";
-
                 // 释放文件流
                 fileStream.Close();
 
@@ -395,6 +391,26 @@ namespace Midjourney.Infrastructure.Services
                 File.Move(tmpPath, targetPath);
 
                 Log.Information("升级包下载完成: {Path}", targetPath);
+
+                _upgradeInfo.Progress = 99;
+
+                // 下载完成后解压文件
+                var extractPath = Path.Combine(_upgradePath, "extract");
+
+                // 清理旧的解压目录
+                if (Directory.Exists(extractPath))
+                {
+                    Directory.Delete(extractPath, true);
+                }
+
+                Directory.CreateDirectory(extractPath);
+
+                // 解压升级包
+                await ExtractTarGzAsync(targetPath, extractPath);
+
+                _upgradeInfo.Status = UpgradeStatus.ReadyToRestart;
+                _upgradeInfo.Progress = 100;
+                _upgradeInfo.Message = "升级包下载完成，重启应用程序即可升级";
             }
             catch (OperationCanceledException)
             {
