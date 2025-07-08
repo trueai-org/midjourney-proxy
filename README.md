@@ -24,6 +24,12 @@ The most powerful, complete, full-featured, completely free and open source Midj
 
 <img src="./docs/screenshots/565908696.png" alt="欢迎" width="360"/>
 
+## 悠船接入文档
+
+- https://trueai-org.feishu.cn/docx/KrdIdOKm4otVmwxdv3AcLjsEnXf
+ 
+<img src="./docs/screenshots/youchuanhezuo.jpg" alt="悠船合作群" width="360"/>
+
 ## 主要功能
 
 - [x] 支持 Imagine 指令和相关动作 [V1/V2.../U1/U2.../R]
