@@ -51,7 +51,9 @@ namespace Midjourney.API.Controllers
         public Result<HomeDto> Info()
         {
             var now = DateTime.Now.ToString("yyyyMMdd");
-            var data = _memoryCache.GetOrCreate($"{now}_home", c =>
+            var homeKey = $"{now}_home";
+
+            var data = _memoryCache.GetOrCreate(homeKey, c =>
             {
                 c.SetAbsoluteExpiration(TimeSpan.FromMinutes(10));
 
@@ -73,19 +75,57 @@ namespace Midjourney.API.Controllers
                 dto.TotalDraw = (int)DbHelper.Instance.TaskStore.Count(x => true);
 
                 // 今日绘图客户端 top 10
-                var top10 = DbHelper.Instance.TaskStore.Where(x => x.SubmitTime >= now)
-                    .ToList()
-                    .GroupBy(c => string.Join(".", c.ClientIp?.Split('.')?.Take(2) ?? []) + ".x.x")
-                    .Select(c => new
+                var setting = GlobalConfiguration.Setting;
+
+
+                var top = GlobalConfiguration.Setting.HomeTopCount;
+                if (top <= 0)
+                {
+                    top = 10; // 默认取前10
+                }
+                if (top > 100)
+                {
+                    top = 100; // 最多取前100
+                }
+
+                var todayList = DbHelper.Instance.TaskStore.Where(x => x.SubmitTime >= now).ToList();
+                var tops = todayList
+                .GroupBy(c =>
+                {
+                    if (setting.HomeDisplayRealIP)
+                    {
+                        return c.ClientIp ?? "null";
+                    }
+
+                    // 如果不显示真实IP，则只显示前两段IP地址
+                    // 只显示前两段IP地址
+                    return string.Join(".", c.ClientIp?.Split('.')?.Take(2) ?? []) + ".x.x";
+                })
+                .Select(c =>
+                {
+                    // 如果显示 ip 对应的身份
+                    if (setting.HomeDisplayUserIPState)
+                    {
+                        var item = todayList.FirstOrDefault(u => u.ClientIp == c.Key && !string.IsNullOrWhiteSpace(u.State));
+
+                        return new
+                        {
+                            ip = (c.Key ?? "null") + " - " + item?.State,
+                            count = c.Count(),
+                        };
+                    }
+
+                    return new
                     {
                         ip = c.Key ?? "null",
                         count = c.Count()
-                    })
-                    .OrderByDescending(c => c.count)
-                    .Take(10)
-                    .ToDictionary(c => c.ip, c => c.count);
+                    };
+                })
+                .OrderByDescending(c => c.count)
+                .Take(top)
+                .ToDictionary(c => c.ip, c => c.count);
 
-                dto.Tops = top10;
+                dto.Tops = tops;
 
                 return dto;
             });

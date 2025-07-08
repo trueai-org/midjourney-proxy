@@ -34,6 +34,21 @@ namespace Midjourney.Base.Models
     public class Setting : DomainObject
     {
         /// <summary>
+        /// 首页统计显示真实 IP
+        /// </summary>
+        public bool HomeDisplayRealIP { get; set; } = false;
+
+        /// <summary>
+        /// 首页统计显示真实 IP 用户对应的身份
+        /// </summary>
+        public bool HomeDisplayUserIPState { get; set; } = false;
+
+        /// <summary>
+        /// 首页统计默认数量 TOP 10
+        /// </summary>
+        public int HomeTopCount { get; set; } = 10;
+
+        /// <summary>
         /// 启用更新检查
         /// </summary>
         public bool EnableUpdateCheck { get; set; } = true;
