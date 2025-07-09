@@ -32,6 +32,12 @@ The most powerful, complete, full-featured, completely free and open source Midj
 
 ## 主要功能
 
+- [x] 支持 Discord 绘图。
+- [x] 支持悠船绘图。
+- [x] 支持官网 Midjourney 绘图（内测中）。
+- [x] 增加在线升级功能。
+- [x] 增加在线重启功能。
+- [x] 支持弹性部署，负载均衡，支持 Consul 配置中心。
 - [x] 支持 Imagine 指令和相关动作 [V1/V2.../U1/U2.../R]
 - [x] Imagine 时支持添加图片 base64，作为垫图
 - [x] 支持 Blend (图片混合)、Describe (图生文) 指令、Shorten (提示词分析) 指令
