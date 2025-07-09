@@ -178,6 +178,7 @@ namespace Midjourney.Infrastructure.Services
                 }
 
                 _upgradeInfo.LatestVersion = latestRelease.TagName;
+                _upgradeInfo.Body = latestRelease.Body;
                 _upgradeInfo.HasUpdate = IsNewerVersion(_upgradeInfo.LatestVersion, _upgradeInfo.CurrentVersion);
 
                 if (_upgradeInfo.HasUpdate)

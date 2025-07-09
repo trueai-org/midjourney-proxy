@@ -71,6 +71,11 @@ namespace Midjourney.Base.Models
         public string LatestVersion { get; set; } = string.Empty;
 
         /// <summary>
+        /// 版本描述
+        /// </summary>
+        public string Body { get; set; } = string.Empty;
+
+        /// <summary>
         /// 是否有可用更新
         /// </summary>
         public bool HasUpdate { get; set; } = false;
