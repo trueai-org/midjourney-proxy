@@ -91,6 +91,13 @@ namespace Midjourney.Infrastructure.Services
             get
             {
                 var platform = GetCurrentPlatform();
+
+#if DEBUG
+                // 开发模式允许 linux-x64 win-x64
+                return platform == "linux-x64" || platform == "win-x64";
+#endif
+
+                // 生产环境只支持 linux-x64
                 return platform == "linux-x64" && IsDockerEnvironment();
             }
         }
