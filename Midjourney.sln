@@ -14,6 +14,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "doc", "doc", "{D2283666-695
 		CHANGELOG.md = CHANGELOG.md
 		docs\discord-bot.md = docs\discord-bot.md
 		docs\discord-params.md = docs\discord-params.md
+		scripts\docker-compose.yml = scripts\docker-compose.yml
 		scripts\docker-upgrade.sh = scripts\docker-upgrade.sh
 		README.en.md = README.en.md
 		README.md = README.md

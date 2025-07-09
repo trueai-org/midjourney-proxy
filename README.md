@@ -159,6 +159,8 @@ The most powerful, complete, full-featured, completely free and open source Midj
 注意：一定确认映射文件和路径不要出错⚠
 
 ```bash
+# 提示：官方镜像需要更多内存，服务器最低：2GB 内存
+# 官方镜像（完整版，支持Discord、悠船、官方绘图，包含更多依赖）
 # 自动安装并启动
 # 推荐使用一键升级脚本
 # 1.首次下载（下载后可以编辑此脚本，进行自定义配置，例如：路径、端口、内存等配置，默认8086端口）
@@ -166,6 +168,12 @@ wget -O docker-upgrade.sh https://raw.githubusercontent.com/trueai-org/midjourne
 
 # 2.更新升级（以后升级只需要执行此脚本即可）
 sh docker-upgrade.sh
+```
+
+```bash
+# 基础镜像（轻量版，支持Discord、悠船绘图）
+docker pull registry.cn-guangzhou.aliyuncs.com/trueai-org/midjourney-proxy:lite
+docker pull registry.cn-guangzhou.aliyuncs.com/trueai-org/midjourney-proxy:lite-{version}
 ```
 
 ```bash
