@@ -816,6 +816,7 @@ namespace Midjourney.API.Controllers
                 account.GuildId = Guid.NewGuid().ToString("N").Substring(0, 16);
                 account.EnableMj = true;
                 account.EnableNiji = true;
+                account.IsShorten = false;
             }
 
             DbHelper.Instance.AccountStore.Add(account);
@@ -970,6 +971,7 @@ namespace Midjourney.API.Controllers
                 param.GuildId = model.GuildId;
                 param.EnableMj = true;
                 param.EnableNiji = true;
+                param.IsShorten = false;
             }
 
             // 不可修改频道 ID
