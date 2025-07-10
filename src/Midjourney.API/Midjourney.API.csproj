@@ -9,7 +9,7 @@
 		<IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
 		<EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
 		<SatelliteResourceLanguages>zh-Hans</SatelliteResourceLanguages>
-		<AssemblyVersion>8.1.5</AssemblyVersion>
+		<AssemblyVersion>8.2.0</AssemblyVersion>
 		<DockerfileContext>..\..</DockerfileContext>
 	</PropertyGroup>
 
@@ -30,12 +30,17 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\..\src\Midjourney.License\Midjourney.License.csproj" />
 		<ProjectReference Include="..\Midjourney.Infrastructure\Midjourney.Infrastructure.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
 	  <Folder Include="Upgrade\" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Reference Include="Midjourney.License">
+	    <HintPath>..\lib\Midjourney.License.dll</HintPath>
+	  </Reference>
 	</ItemGroup>
 
 	<ItemGroup>

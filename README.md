@@ -24,6 +24,10 @@ The most powerful, complete, full-featured, completely free and open source Midj
 
 <img src="./docs/screenshots/565908696.png" alt="欢迎" width="360"/>
 
+## Midjourney 官网绘图接入文档
+
+- https://trueai-org.feishu.cn/docx/ZDeUdPCBho4IE0xJHxpcXbdYnKd
+
 ## 悠船接入文档
 
 - https://trueai-org.feishu.cn/docx/KrdIdOKm4otVmwxdv3AcLjsEnXf
