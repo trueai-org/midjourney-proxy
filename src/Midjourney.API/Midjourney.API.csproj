@@ -30,17 +30,12 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<ProjectReference Include="..\..\..\src\Midjourney.License\Midjourney.License.csproj" />
 		<ProjectReference Include="..\Midjourney.Infrastructure\Midjourney.Infrastructure.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
 	  <Folder Include="Upgrade\" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <Reference Include="Midjourney.License">
-	    <HintPath>..\lib\Midjourney.License.dll</HintPath>
-	  </Reference>
 	</ItemGroup>
 
 	<ItemGroup>
