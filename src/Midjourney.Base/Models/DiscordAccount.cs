@@ -472,35 +472,38 @@ namespace Midjourney.Base.Models
         /// <summary>
         /// 传入速度模式，判断是否允许继续绘图（仅适用于悠船账号，如果没有速度模式，表示允许继续绘图）
         /// </summary>
-        /// <param name="mode"></param>
+        /// <param name="speed"></param>
         /// <returns></returns>
-        public bool IsYouChuanContinueDrawing(GenerationSpeedMode? mode)
+        public bool IsYouChuanContinueDrawing(GenerationSpeedMode? speed)
         {
             if (!IsYouChuan)
             {
                 return true;
             }
 
-            var anyRelax = (YouChuanRelaxedReset == null || YouChuanRelaxedReset <= DateTime.Now.Date);
+            if (AllowModes == null || AllowModes.Count == 0 || speed == null || AllowModes.Contains(speed.Value))
+            {
+                var anyRelax = YouChuanRelaxedReset == null || YouChuanRelaxedReset <= DateTime.Now.Date;
 
-            if (mode == GenerationSpeedMode.FAST)
-            {
-                // 剩余时长 60s 以上，或者指定了慢速且慢速有时间
-                return YouChuanFastRemaining > 60 || (Mode == GenerationSpeedMode.RELAX && anyRelax);
-            }
-            else if (mode == GenerationSpeedMode.TURBO)
-            {
-                // 剩余时长 180s 以上，或者指定了慢速且慢速有时间
-                return YouChuanFastRemaining > 180 || (Mode == GenerationSpeedMode.RELAX && anyRelax);
-            }
-            else if (mode == GenerationSpeedMode.RELAX && anyRelax)
-            {
-                return true;
-            }
-            else if (mode == null)
-            {
-                // 如果没有速度模式
-                return YouChuanFastRemaining > 60 || anyRelax;
+                if (speed == GenerationSpeedMode.FAST)
+                {
+                    // 剩余时长 60s 以上，或者指定了慢速且慢速有时间
+                    return YouChuanFastRemaining > 60 || (Mode == GenerationSpeedMode.RELAX && anyRelax);
+                }
+                else if (speed == GenerationSpeedMode.TURBO)
+                {
+                    // 剩余时长 180s 以上，或者指定了慢速且慢速有时间
+                    return YouChuanFastRemaining > 180 || (Mode == GenerationSpeedMode.RELAX && anyRelax);
+                }
+                else if (speed == GenerationSpeedMode.RELAX && anyRelax)
+                {
+                    return true;
+                }
+                else if (speed == null)
+                {
+                    // 如果没有速度模式
+                    return YouChuanFastRemaining > 60 || anyRelax;
+                }
             }
 
             return false;
