@@ -52,10 +52,10 @@ namespace Midjourney.Base.Services
         Task UpdateStatus(TaskInfo info);
 
         /// <summary>
-        /// 悠同步账号信息
+        /// 悠船每 1 分钟同步一次账号信息
         /// </summary>
         /// <returns></returns>
-        Task YouChuanSyncInfo();
+        Task YouChuanSyncInfo(bool isClearCache = false);
 
         /// <summary>
         /// 获取种子
