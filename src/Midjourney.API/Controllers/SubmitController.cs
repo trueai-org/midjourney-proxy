@@ -621,7 +621,6 @@ namespace Midjourney.API.Controllers
                         task.SetProperty(Constants.TASK_PROPERTY_ACTION_INDEX, result);
                     }
                 }
-
             }
             // 微调
             // MJ::JOB::variation::2::898416ec-7c18-4762-bf03-8e428fee1860
