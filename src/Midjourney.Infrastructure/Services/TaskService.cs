@@ -391,14 +391,44 @@ namespace Midjourney.Infrastructure.Services
 
                 if (task.IsPartner || task.IsOfficial)
                 {
-                    if (dataUrl.Url?.StartsWith("http", StringComparison.OrdinalIgnoreCase) == true)
+                    if (task.IsPartner)
                     {
-                        link = dataUrl.Url;
+                        // 悠船
+                        if (dataUrl.Url?.StartsWith("http", StringComparison.OrdinalIgnoreCase) == true)
+                        {
+                            link = dataUrl.Url;
+                        }
+                        else
+                        {
+                            var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
+                            link = await discordInstance.YmTaskService.UploadFileAsync(task, dataUrl.Data, taskFileName);
+                        }
                     }
                     else
                     {
-                        var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
-                        link = await discordInstance.YmTaskService.UploadFileAsync(task, dataUrl.Data, taskFileName);
+                        // 官方
+                        if (dataUrl.Url?.StartsWith("http", StringComparison.OrdinalIgnoreCase) == true)
+                        {
+                            link = dataUrl.Url;
+                        }
+                        else
+                        {
+                            var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
+                            var uploadResult = await discordInstance.UploadAsync(taskFileName, dataUrl);
+                            if (uploadResult.Code != ReturnCode.SUCCESS)
+                            {
+                                return Message.Of(uploadResult.Code, uploadResult.Description);
+                            }
+
+                            if (uploadResult.Description.StartsWith("http"))
+                            {
+                                link = uploadResult.Description;
+                            }
+                            else
+                            {
+                                return Message.Of(ReturnCode.FAILURE, "上传失败，未返回有效链接");
+                            }
+                        }
                     }
 
                     task.ImageUrl = link;
@@ -431,8 +461,6 @@ namespace Midjourney.Infrastructure.Services
                 //var finalFileName = uploadResult.Description;
                 //return await discordInstance.DescribeAsync(finalFileName, task.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default),
                 //  task.RealBotType ?? task.BotType);
-
-
 
                 if (dataUrl.Url?.StartsWith("http", StringComparison.OrdinalIgnoreCase) == true)
                 {
@@ -567,12 +595,15 @@ namespace Midjourney.Infrastructure.Services
                             case BlendDimensions.PORTRAIT:
                                 task.PromptEn += " --ar 2:3";
                                 break;
+
                             case BlendDimensions.SQUARE:
                                 task.PromptEn += " --ar 1:1";
                                 break;
+
                             case BlendDimensions.LANDSCAPE:
                                 task.PromptEn += " --ar 3:2";
                                 break;
+
                             default:
                                 break;
                         }
