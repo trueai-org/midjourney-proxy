@@ -205,6 +205,16 @@ namespace Midjourney.Base
                 }
                 return imageUrl.Substring(hashStartIndex + 1, imageUrl.Length - hashStartIndex - 1 - "_0_0.png".Length);
             }
+            // e7321c76-becf-473b-b14d-32b846dc70ad_0.mp4
+            else if (imageUrl.EndsWith("_0.mp4"))
+            {
+                int hashStartIndex = imageUrl.LastIndexOf("/");
+                if (hashStartIndex < 0)
+                {
+                    return null;
+                }
+                return imageUrl.Substring(hashStartIndex + 1, imageUrl.Length - hashStartIndex - 1 - "_0.mp4".Length);
+            }
 
             int startIndex = imageUrl.LastIndexOf("_");
             if (startIndex < 0)

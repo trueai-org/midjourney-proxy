@@ -34,6 +34,11 @@ namespace Midjourney.Base.Models
     public class Setting : DomainObject
     {
         /// <summary>
+        /// 开启视频生成功能
+        /// </summary>
+        public bool EnableVideo { get; set; } = true;
+
+        /// <summary>
         /// 首页统计显示真实 IP
         /// </summary>
         public bool HomeDisplayRealIP { get; set; } = false;
@@ -198,6 +203,11 @@ namespace Midjourney.Base.Models
         /// Cloudflare R2 存储配置
         /// </summary>
         public CloudflareR2Options CloudflareR2 { get; set; } = new CloudflareR2Options();
+
+        /// <summary>
+        /// S3 兼容存储配置 (支持 MinIO)
+        /// </summary>
+        public S3StorageOptions S3Storage { get; set; } = new S3StorageOptions();
 
         /// <summary>
         /// 换脸配置
@@ -482,6 +492,77 @@ namespace Midjourney.Base.Models
         /// 链接默认有效时间
         /// </summary>
         public int ExpiredMinutes { get; set; } = 0;
+    }
+
+    /// <summary>
+    /// S3 兼容存储配置 (支持 MinIO)
+    /// </summary>
+    public class S3StorageOptions
+    {
+        /// <summary>
+        /// 服务端点 (例如: http://localhost:9000 或 https://s3.amazonaws.com)
+        /// </summary>
+        public string Endpoint { get; set; }
+
+        /// <summary>
+        /// 访问密钥ID
+        /// </summary>
+        public string AccessKey { get; set; }
+
+        /// <summary>
+        /// 秘密访问密钥
+        /// </summary>
+        public string SecretKey { get; set; }
+
+        /// <summary>
+        /// 存储桶名称
+        /// </summary>
+        public string Bucket { get; set; }
+
+        /// <summary>
+        /// 区域 (可选，默认为 us-east-1)
+        /// </summary>
+        public string Region { get; set; } = "us-east-1";
+
+        /// <summary>
+        /// 是否使用 HTTPS (默认为 true)
+        /// </summary>
+        public bool UseHttps { get; set; } = true;
+
+        /// <summary>
+        /// 是否强制路径样式 (MinIO 通常需要设置为 true)
+        /// </summary>
+        public bool ForcePathStyle { get; set; } = true;
+
+        /// <summary>
+        /// 自定义CDN域名，用于图片加速和图片审核
+        /// </summary>
+        public string CustomCdn { get; set; }
+
+        /// <summary>
+        /// 默认图片样式参数
+        /// </summary>
+        public string ImageStyle { get; set; }
+
+        /// <summary>
+        /// 默认缩略图图片样式参数
+        /// </summary>
+        public string ThumbnailImageStyle { get; set; }
+
+        /// <summary>
+        /// 视频截帧样式参数
+        /// </summary>
+        public string VideoSnapshotStyle { get; set; }
+
+        /// <summary>
+        /// 预签名链接有效时间（分钟，0表示不使用预签名）
+        /// </summary>
+        public int ExpiredMinutes { get; set; } = 0;
+
+        /// <summary>
+        /// 是否启用预签名URL（默认false，使用公共访问）
+        /// </summary>
+        public bool EnablePresignedUrl { get; set; } = false;
     }
 
     /// <summary>

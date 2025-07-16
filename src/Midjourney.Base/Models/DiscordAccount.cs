@@ -460,6 +460,7 @@ namespace Midjourney.Base.Models
         /// <summary>
         /// 悠船到期时间
         /// </summary>
+        [BsonDateTimeOptions(Kind = DateTimeKind.Local)]
         public DateTime? YouChuanExpire { get; set; }
 
         /// <summary>
@@ -467,6 +468,7 @@ namespace Midjourney.Base.Models
         /// 当前账号今日可能存在relax异常使用,请明日再试或联系客服
         /// 当时间为 null 或小于等于当天时间时，表示允许绘图
         /// </summary>
+        [BsonDateTimeOptions(Kind = DateTimeKind.Local)]
         public DateTime? YouChuanRelaxedReset { get; set; }
 
         /// <summary>

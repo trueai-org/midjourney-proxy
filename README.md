@@ -107,7 +107,7 @@ The most powerful, complete, full-featured, completely free and open source Midj
 - [x] 自动过 Tos not accepted 验证
 - [x] 2FA 验证器，示例：<http://47.76.110.222:8081/code>，详情：<http://47.76.110.222:8081/swagger/index.html>
 - [x] 赞助账号功能
-- [x] 阿里云存储、腾讯云存储、本地存储、Cloudflare R2（不限流量！详情：<https://developers.cloudflare.com/r2/>）
+- [x] 阿里云存储、腾讯云存储、本地存储、S3存储（感谢`@八级大狂风`赞助支持）、Cloudflare R2（不限流量！详情：<https://developers.cloudflare.com/r2/>）
 - [x] MJ 翻译、NIJI 翻译独立配置
 - [x] 转换 Niji 为 MJ：启用后将 Niji · journey 任务自动转为 Midjourney 任务，并对任务添加 --niji 后缀（转换后出图效果是一致的），即：不添加 Niji 机器人也可以通过 Niji 机器人绘图
 - [x] 转换 --niji 为 Niji Bot：启用后当 prompt 中包含 --niji 时，将会自动转换为 Niji·journey Bot 任务
@@ -461,6 +461,32 @@ docker run -d --name consul --network host hashicorp/consul:latest agent -server
 docker run -d --name consul -p 8500:8500 -p 8600:8600/udp hashicorp/consul:latest agent -server -ui -node=server-1 -bootstrap-expect=1 "-client=0.0.0.0"
 
 docker run -d --name consul -p 8500:8500 -p 8600:8600/udp consul:latest agent -server -ui -node=server-1 -bootstrap-expect=1 "-client=0.0.0.0"
+```
+## S3 - MINIO
+
+https://min.io/docs/minio/linux/reference/minio-mc-admin/mc-admin-user.html
+
+> 示例
+
+```bash
+# 启动容器
+docker run -d -p 9000:9000 -p 9001:9001 \
+  --name minio-test \
+  -e "MINIO_ROOT_USER=minioadmin" \
+  -e "MINIO_ROOT_PASSWORD=minioadmin" \
+  quay.io/minio/minio:latest server /data --console-address ":9001"
+
+# 你必须先用 mc 设置 MinIO 服务的别名，并且该别名要指向你的 MinIO 服务地址。
+mc alias set myminio http://192.168.3.241:9000 minioadmin minioadmin
+
+# 命令确认
+mc ls myminio
+
+# 如果没有 test 桶，需要先创建
+mc mb myminio/test
+
+# 设置匿名只读策略
+mc anonymous set download myminio/test
 ```
 
 ## 支持与赞助

@@ -149,6 +149,11 @@ namespace Midjourney.Base
         /// Cloudflare R2
         /// </summary>
         R2 = 4,
+
+        /// <summary>
+        /// S3 兼容存储 (包括 MinIO)
+        /// </summary>
+        S3 = 5,
     }
 
     /// <summary>
@@ -289,7 +294,17 @@ namespace Midjourney.Base
         /// <summary>
         /// 视频换脸任务
         /// </summary>
-        SWAP_VIDEO_FACE
+        SWAP_VIDEO_FACE,
+
+        /// <summary>
+        /// 视频任务
+        /// </summary>
+        VIDEO,
+
+        /// <summary>
+        /// 视频拓展
+        /// </summary>
+        VIDEO_EXTEND,
     }
 
     /// <summary>

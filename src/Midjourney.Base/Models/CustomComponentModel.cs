@@ -22,6 +22,7 @@
 // invasion of privacy, or any other unlawful purposes is strictly prohibited. 
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 using System.Text.Json.Serialization;
+using IdGen;
 
 namespace Midjourney.Base.Models
 {
@@ -39,5 +40,31 @@ namespace Midjourney.Base.Models
         public int Style { get; set; }
 
         public int Type { get; set; }
+
+        /// <summary>
+        /// 创建视频组件
+        /// </summary>
+        /// <param name="id"></param>
+        /// <param name="low"></param>
+        /// <param name="auto"></param>
+        /// <param name="videoType"></param>
+        /// <returns></returns>
+        public static CustomComponentModel CreateVideo(string id, string low = "Low", string auto = "Auto", string videoType = "vid_1.1_i2v_480")
+        {
+            var prefix = "";
+            if (videoType.Contains("extend"))
+            {
+                prefix = "Extend ";
+            }
+
+            return new CustomComponentModel
+            {
+                CustomId = $"MJ::JOB::video::{low.ToLower()}::{id}::{videoType}::{auto.ToLower()}",
+                Label = $"{prefix}{auto} {low} Motion",
+                Emoji = "",
+                Style = 2,
+                Type = 2
+            };
+        }
     }
 }

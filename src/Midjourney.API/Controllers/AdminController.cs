@@ -2010,6 +2010,12 @@ namespace Midjourney.API.Controllers
                     model.CloudflareR2.SecretKey = "****";
                 }
 
+                if (model.S3Storage != null)
+                {
+                    model.S3Storage.AccessKey = "****";
+                    model.S3Storage.SecretKey = "****";
+                }
+
                 if (!string.IsNullOrWhiteSpace(model.DatabaseConnectionString))
                 {
                     model.DatabaseConnectionString = "****";

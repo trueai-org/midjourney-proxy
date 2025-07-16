@@ -264,6 +264,12 @@ namespace Midjourney.Base.Models
         /// </summary>
         [JsonPropertyName("videoGenMode")]
         public string VideoGenMode { get; set; }
+
+        /// <summary>
+        /// 视频帧数
+        /// </summary>
+        [JsonPropertyName("frame_count")]
+        public int? FrameCount { get; set; }
     }
 
     /// <summary>

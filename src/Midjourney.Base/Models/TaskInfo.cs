@@ -22,6 +22,7 @@
 // invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
+using System.Text.Json.Serialization;
 using FreeSql.DataAnnotations;
 using Microsoft.Extensions.Caching.Memory;
 using Midjourney.Base.Data;
@@ -431,6 +432,28 @@ namespace Midjourney.Base.Models
             };
         }
 
+
+        /// <summary>
+        /// 视频生成原始图像URL
+        /// </summary>
+        public string VideoGenOriginImageUrl { get; set; }
+
+        /// <summary>
+        /// 视频时长 s
+        /// </summary>
+        public int? VideoDuration { get; set; }
+
+        /// <summary>
+        /// 视频帧数
+        /// </summary>
+        public int? FrameCount { get; set; }
+
+        /// <summary>
+        /// 视频列表
+        /// </summary>
+        [JsonMap]
+        public List<TaskInfoVideoUrl> VideoUrls { get; set; }
+
         /// <summary>
         /// 启动任务。
         /// </summary>
@@ -615,6 +638,18 @@ namespace Midjourney.Base.Models
                     Style = 2,
                     Type = 2
                 });
+
+                // 开启视频绘图，增加视频操作
+                if (GlobalConfiguration.Setting.EnableVideo)
+                {
+                    // 增加视频操作 - 自动
+                    Buttons.Add(CustomComponentModel.CreateVideo(id, "Low", "Auto", "vid_1.1_i2v_480"));
+                    Buttons.Add(CustomComponentModel.CreateVideo(id, "High", "Auto", "vid_1.1_i2v_480"));
+
+                    // 增加视频操作 - 手动
+                    Buttons.Add(CustomComponentModel.CreateVideo(id, "Low", "Manual", "vid_1.1_i2v_480"));
+                    Buttons.Add(CustomComponentModel.CreateVideo(id, "High", "Manual", "vid_1.1_i2v_480"));
+                }
             }
             catch (Exception ex)
             {
@@ -710,5 +745,21 @@ namespace Midjourney.Base.Models
                 Log.Error(ex, "设置描述按钮失败，JSON 解析错误");
             }
         }
+    }
+
+    /// <summary>
+    /// 每个视频对象对应的操作按钮
+    /// </summary>
+    public class TaskInfoVideoUrl
+    {
+        /// <summary>
+        /// 
+        /// </summary>
+        public string Url { get; set; } = string.Empty;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public List<CustomComponentModel> Buttons { get; set; } = new List<CustomComponentModel>();
     }
 }

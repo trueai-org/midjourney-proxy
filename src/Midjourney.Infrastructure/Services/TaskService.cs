@@ -717,6 +717,7 @@ namespace Midjourney.Infrastructure.Services
                 }
             }
 
+
             // 如果是 Modal 作业，则直接返回
             if (submitAction.CustomId.StartsWith("MJ::CustomZoom::")
                 || submitAction.CustomId.StartsWith("MJ::Inpaint::"))
@@ -731,6 +732,42 @@ namespace Midjourney.Infrastructure.Services
 
                 task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_ID, targetTask.MessageId);
                 task.SetProperty(Constants.TASK_PROPERTY_FLAGS, messageFlags);
+
+                _taskStoreService.Save(task);
+
+                // 状态码为 21
+                // 重绘、自定义变焦始终 remix 为true
+                return SubmitResultVO.Of(ReturnCode.EXISTED, "Waiting for window confirm", task.Id)
+                    .SetProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, task.PromptEn)
+                    .SetProperty(Constants.TASK_PROPERTY_REMIX, true);
+            }
+            // 手动视频
+            else if (submitAction.CustomId.StartsWith("MJ::JOB::video::")
+                && submitAction.CustomId.Contains("::manual"))
+            {
+                var cmd = targetTask.PartnerTaskInfo.FullCommand;
+
+                if (submitAction.CustomId.Contains("::low::") && !cmd.Contains("--motion"))
+                {
+                    cmd += " --motion low --video 1";
+                }
+                else
+                {
+                    cmd += " --motion high --video 1";
+                }
+
+                task.Prompt = cmd;
+                task.PromptEn = cmd;
+                task.Status = TaskStatus.MODAL;
+
+                if (submitAction.CustomId.Contains("entend"))
+                {
+                    task.Action = TaskAction.VIDEO_EXTEND;
+                }
+                else
+                {
+                    task.Action = TaskAction.VIDEO;
+                }
 
                 _taskStoreService.Save(task);
 

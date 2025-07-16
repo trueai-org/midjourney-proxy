@@ -22,6 +22,7 @@
 // invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
+using System.IO;
 using System.Net;
 using Midjourney.Base.Util;
 using Serilog;
@@ -59,6 +60,10 @@ namespace Midjourney.Base.Storage
             else if (config.ImageStorageType == ImageStorageType.R2)
             {
                 _instance = new CloudflareR2StorageService();
+            }
+            else if (config.ImageStorageType == ImageStorageType.S3)
+            {
+                _instance = new S3StorageService();
             }
             else
             {
@@ -304,6 +309,99 @@ namespace Midjourney.Base.Storage
                     }
                 });
             }
+
+            // S3 兼容存储 (包括 MinIO)
+            else if (setting.ImageStorageType == ImageStorageType.S3)
+            {
+                var opt = setting.S3Storage;
+                var cdn = opt.CustomCdn;
+
+                if (string.IsNullOrWhiteSpace(cdn) && !opt.EnablePresignedUrl)
+                {
+                    // 如果没有CDN且不使用预签名，构建默认URL
+                    if (opt.ForcePathStyle)
+                    {
+                        cdn = $"{opt.Endpoint.TrimEnd('/')}/{opt.Bucket}";
+                    }
+                    else
+                    {
+                        cdn = opt.Endpoint.Replace("://", $"://{opt.Bucket}.");
+                    }
+                }
+
+                // 本地锁
+                LocalLock.TryLock(lockKey, TimeSpan.FromSeconds(10), () =>
+                {
+                    // 替换 url
+                    var url = $"{cdn?.Trim()?.Trim('/')}/{localPath}{uri?.Query}";
+
+                    // 下载图片并保存
+                    using (HttpClient client = new HttpClient(hch))
+                    {
+                        client.Timeout = TimeSpan.FromMinutes(15);
+
+                        var response = client.GetAsync(imageUrl).Result;
+                        response.EnsureSuccessStatusCode();
+                        var stream = response.Content.ReadAsStreamAsync().Result;
+
+                        var mm = MimeKit.MimeTypes.GetMimeType(Path.GetFileName(localPath));
+                        if (string.IsNullOrWhiteSpace(mm))
+                        {
+                            mm = "image/png";
+                        }
+
+                        _instance.SaveAsync(stream, localPath, mm);
+
+                        // 构建访问URL
+                        if (opt.EnablePresignedUrl && opt.ExpiredMinutes > 0)
+                        {
+                            var priUri = _instance.GetSignKey(localPath, opt.ExpiredMinutes);
+                            url = priUri.ToString();
+                        }
+                        else if (!string.IsNullOrWhiteSpace(cdn))
+                        {
+                            url = $"{cdn.TrimEnd('/')}/{localPath}";
+                        }
+                        else
+                        {
+                            // 使用默认S3 URL
+                            if (opt.ForcePathStyle)
+                            {
+                                url = $"{opt.Endpoint.TrimEnd('/')}/{opt.Bucket}/{localPath}";
+                            }
+                            else
+                            {
+                                var baseUrl = opt.Endpoint.Replace("://", $"://{opt.Bucket}.");
+                                url = $"{baseUrl.TrimEnd('/')}/{localPath}";
+                            }
+                        }
+
+                        // 根据内容类型应用不同的样式
+                        if (mm == "image/webp" || mm.StartsWith("image/"))
+                        {
+                            url = url.ToStyle(opt.ImageStyle);
+                        }
+                    }
+
+                    if (action == TaskAction.SWAP_VIDEO_FACE)
+                    {
+                        imageUrl = url;
+                        thumbnailUrl = url.ToStyle(opt.VideoSnapshotStyle);
+                    }
+                    else if (action == TaskAction.SWAP_FACE)
+                    {
+                        // 换脸不格式化 url
+                        imageUrl = url;
+                        thumbnailUrl = url;
+                    }
+                    else
+                    {
+                        imageUrl = url.ToStyle(opt.ImageStyle);
+                        thumbnailUrl = url.ToStyle(opt.ThumbnailImageStyle);
+                    }
+                });
+            }
+
             // https://cdn.discordapp.com/attachments/1265095688782614602/1266300100989161584/03ytbus_LOGO_design_A_warrior_frog_Muscles_like_Popeye_Freehand_06857373-4fd9-403d-a5df-c2f27f9be269.png?ex=66a4a55e&is=66a353de&hm=c597e9d6d128c493df27a4d0ae41204655ab73f7e885878fc1876a8057a7999f&
             // 将图片保存到本地，并替换 url，并且保持原 url和参数
             // 默认保存根目录为 /wwwroot
@@ -388,6 +486,12 @@ namespace Midjourney.Base.Storage
                 // 构建存储路径 - 使用一个固定的目录结构
                 string path = $"attachments/merges/{DateTime.UtcNow:yyyy/MM/dd}/{filename}";
 
+                // 视频保持原路径
+                if (contentType == "video/mp4")
+                {
+                    path = $"attachments/{filename}";
+                }
+
                 // 阿里云 OSS
                 if (setting.ImageStorageType == ImageStorageType.OSS)
                 {
@@ -450,6 +554,35 @@ namespace Midjourney.Base.Storage
                 else if (setting.ImageStorageType == ImageStorageType.R2)
                 {
                     var opt = setting.CloudflareR2;
+                    var cdn = opt.CustomCdn;
+
+                    if (string.IsNullOrWhiteSpace(cdn))
+                    {
+                        return null;
+                    }
+
+                    _instance.SaveAsync(stream, path, contentType);
+
+                    // 构建访问URL
+                    resultUrl = $"{cdn.Trim().TrimEnd('/')}/{path}";
+
+                    // 如果配置了链接有效期，则生成带签名的链接
+                    if (opt.ExpiredMinutes > 0)
+                    {
+                        var priUri = _instance.GetSignKey(path, opt.ExpiredMinutes);
+                        resultUrl = $"{cdn.Trim().TrimEnd('/')}/{priUri.PathAndQuery.TrimStart('/')}";
+                    }
+
+                    // 根据内容类型应用不同的样式
+                    if (contentType == "image/webp" || contentType.StartsWith("image/"))
+                    {
+                        resultUrl = resultUrl.ToStyle(opt.ImageStyle);
+                    }
+                }
+                // S3
+                else if (setting.ImageStorageType == ImageStorageType.S3)
+                {
+                    var opt = setting.S3Storage;
                     var cdn = opt.CustomCdn;
 
                     if (string.IsNullOrWhiteSpace(cdn))
