@@ -43,6 +43,10 @@ namespace Midjourney.API.Controllers
         private readonly DiscordLoadBalancer _discordLoadBalancer;
         private readonly WorkContext _workContext;
 
+        // 是否匿名用户
+        private readonly bool _isAnonymous;
+
+
         public TaskController(
             ITaskStoreService taskStoreService,
             DiscordLoadBalancer discordLoadBalancer,
@@ -58,9 +62,10 @@ namespace Midjourney.API.Controllers
 
             var user = _workContext.GetUser();
 
+            _isAnonymous = user?.Role != EUserRole.ADMIN;
+
             // 如果非演示模式、未开启访客，如果没有登录，直接返回 403 错误
-            if (GlobalConfiguration.IsDemoMode != true
-                && GlobalConfiguration.Setting.EnableGuest != true)
+            if (GlobalConfiguration.IsDemoMode != true && GlobalConfiguration.Setting.EnableGuest != true)
             {
                 if (user == null)
                 {
@@ -92,17 +97,41 @@ namespace Midjourney.API.Controllers
         [HttpPost("{id}/cancel")]
         public ActionResult<TaskInfo> Cancel(string id)
         {
-            if (GlobalConfiguration.IsDemoMode == true)
+            if (_isAnonymous)
             {
-                // 直接抛出错误
                 return BadRequest("演示模式，禁止操作");
             }
+
+            var user = _workContext.GetUser();
 
             var queueTask = _discordLoadBalancer.GetQueueTasks().FirstOrDefault(t => t.Id == id);
             if (queueTask != null)
             {
-                queueTask.Fail("主动取消任务");
+                if (user.Id == queueTask.UserId || user.Role == EUserRole.ADMIN)
+                {
+                    queueTask.Fail("主动取消任务");
+                }
             }
+            else
+            {
+                var targetTask = _discordLoadBalancer.GetRunningTasks().FirstOrDefault(t => t.Id == id);
+
+                // 如果任务不在队列中，则从存储中获取
+                if (targetTask == null)
+                {
+                    targetTask = _taskStoreService.Get(id);
+                }
+
+                if (targetTask != null)
+                {
+                    if (user.Id == targetTask.UserId || user.Role == EUserRole.ADMIN)
+                    {
+                        targetTask.Fail("取消任务");
+                        _taskStoreService.Save(targetTask);
+                    }
+                }
+            }
+
 
             return Ok();
         }

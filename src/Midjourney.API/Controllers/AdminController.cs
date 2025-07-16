@@ -32,7 +32,6 @@ using LiteDB;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
-using Midjourney.Base.Models;
 using Midjourney.Infrastructure.LoadBalancer;
 using Midjourney.Infrastructure.Services;
 using Midjourney.License;
@@ -757,8 +756,8 @@ namespace Midjourney.API.Controllers
         public Result AccountAdd([FromBody] DiscordAccountConfig accountConfig)
         {
             var setting = GlobalConfiguration.Setting;
-            var user = _workContext.GetUser();
 
+            var user = _workContext.GetUser();
             if (user == null)
             {
                 return Result.Fail("演示模式，禁止操作");
