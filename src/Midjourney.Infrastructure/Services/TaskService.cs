@@ -745,7 +745,9 @@ namespace Midjourney.Infrastructure.Services
             else if (submitAction.CustomId.StartsWith("MJ::JOB::video::")
                 && submitAction.CustomId.Contains("::manual"))
             {
-                var cmd = targetTask.PartnerTaskInfo.FullCommand;
+                var cmd = targetTask.IsPartner ? targetTask.PartnerTaskInfo?.FullCommand
+                    : targetTask.IsOfficial ? targetTask.OfficialTaskInfo?.FullCommand
+                    : targetTask.PromptFull;
 
                 if (submitAction.CustomId.Contains("::low::"))
                 {
