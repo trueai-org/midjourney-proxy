@@ -1371,7 +1371,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
             //// 处理转义字符引号等
             //return prompt.Replace("\\\"", "\"").Replace("\\'", "'").Replace("\\\\", "\\");
 
-            prompt = FormatUrls(prompt).ConfigureAwait(false).GetAwaiter().GetResult();
+            prompt = FormatUrls(prompt, info).ConfigureAwait(false).GetAwaiter().GetResult();
 
             return prompt;
         }
@@ -1382,7 +1382,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// </summary>
         /// <param name="prompt"></param>
         /// <returns></returns>
-        public async Task<string> FormatUrls(string prompt)
+        public async Task<string> FormatUrls(string prompt, TaskInfo info)
         {
             var setting = GlobalConfiguration.Setting;
             if (!setting.EnableConvertOfficialLink)
@@ -1406,6 +1406,12 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 {
                     try
                     {
+                        // 如果是悠船任务，并且链接包含悠船，则不处理
+                        if (info.IsPartner && url.Contains("youchuan"))
+                        {
+                            continue;
+                        }
+
                         // url 缓存默认 24 小时有效
                         var okUrl = await _cache.GetOrCreateAsync($"tmp:{url}", async entry =>
                         {
