@@ -114,5 +114,11 @@ namespace Midjourney.Base.Models
         /// </summary>
         [JsonPropertyName("room_id")]
         public string RoomId { get; set; }
+
+        /// <summary>
+        /// 视频帧数
+        /// </summary>
+        [JsonPropertyName("vid_framecount")]
+        public int? FrameCount { get; set; }
     }
 }

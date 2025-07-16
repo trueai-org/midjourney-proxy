@@ -387,7 +387,7 @@ namespace Midjourney.Base.Storage
 
         public string GetCustomCdn()
         {
-            return _s3Options.CustomCdn;
+            return $"{_s3Options.CustomCdn}/{_s3Options.Bucket}";
         }
     }
 }

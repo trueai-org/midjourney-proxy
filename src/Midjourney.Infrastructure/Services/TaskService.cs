@@ -747,13 +747,24 @@ namespace Midjourney.Infrastructure.Services
             {
                 var cmd = targetTask.PartnerTaskInfo.FullCommand;
 
-                if (submitAction.CustomId.Contains("::low::") && !cmd.Contains("--motion"))
+                if (submitAction.CustomId.Contains("::low::"))
                 {
-                    cmd += " --motion low --video 1";
+                    if (!cmd.Contains("--motion"))
+                    {
+                        cmd += " --motion low";
+                    }
                 }
                 else
                 {
-                    cmd += " --motion high --video 1";
+                    if (!cmd.Contains("--motion"))
+                    {
+                        cmd += " --motion high";
+                    }
+                }
+
+                if (!cmd.Contains("--video"))
+                {
+                    cmd += " --video 1";
                 }
 
                 task.Prompt = cmd;

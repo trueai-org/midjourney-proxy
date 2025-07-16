@@ -22,7 +22,6 @@
 // invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
-using System.IO;
 using System.Net;
 using Midjourney.Base.Util;
 using Serilog;
@@ -77,8 +76,15 @@ namespace Midjourney.Base.Storage
         /// <param name="taskInfo"></param>
         public static void DownloadFile(TaskInfo taskInfo)
         {
+            var setting = GlobalConfiguration.Setting;
+
             // 是否启用保存到文件存储
-            if (!GlobalConfiguration.Setting.EnableSaveGeneratedImage)
+            if (!setting.EnableSaveGeneratedImage)
+            {
+                return;
+            }
+
+            if (setting.ImageStorageType == ImageStorageType.NONE)
             {
                 return;
             }
@@ -94,7 +100,7 @@ namespace Midjourney.Base.Storage
             }
 
             var lockKey = $"download:{imageUrl}";
-            var setting = GlobalConfiguration.Setting;
+
 
             WebProxy webProxy = null;
             var proxy = setting.Proxy;
@@ -316,6 +322,17 @@ namespace Midjourney.Base.Storage
                 var opt = setting.S3Storage;
                 var cdn = opt.CustomCdn;
 
+                // 已经保存了
+                if (imageUrl.StartsWith(cdn))
+                {
+                    return;
+                }
+
+                if (!string.IsNullOrWhiteSpace(cdn))
+                {
+                    cdn = $"{cdn}/{opt.Bucket}";
+                }
+
                 if (string.IsNullOrWhiteSpace(cdn) && !opt.EnablePresignedUrl)
                 {
                     // 如果没有CDN且不使用预签名，构建默认URL
@@ -462,7 +479,6 @@ namespace Midjourney.Base.Storage
             }
         }
 
-
         /// <summary>
         /// 保存内存中的文件到存储服务并返回访问URL
         /// </summary>
@@ -489,7 +505,7 @@ namespace Midjourney.Base.Storage
                 // 视频保持原路径
                 if (contentType == "video/mp4")
                 {
-                    path = $"attachments/{filename}";
+                    path = $"attachments/{filename.Trim().Trim('/')}";
                 }
 
                 // 阿里云 OSS
@@ -590,6 +606,8 @@ namespace Midjourney.Base.Storage
                         return null;
                     }
 
+                    cdn = $"{cdn.TrimEnd('/')}/{opt.Bucket}";
+
                     _instance.SaveAsync(stream, path, contentType);
 
                     // 构建访问URL
@@ -637,6 +655,5 @@ namespace Midjourney.Base.Storage
 
             return resultUrl;
         }
-
     }
 }

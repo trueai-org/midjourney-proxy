@@ -652,7 +652,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     if (info.IsPartner || info.IsOfficial)
                     {
 
-                        await _ymTaskService.UpdateStatus(info);
+                        await _ymTaskService.UpdateStatus(info, _taskStoreService);
 
                         await Task.Delay(1000);
                     }
