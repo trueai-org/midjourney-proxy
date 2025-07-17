@@ -114,6 +114,9 @@ The most powerful, complete, full-featured, completely free and open source Midj
 - [x] 支持账号自动登录功能（Discord 账号开启 2FA <https://github.com/trueai-org/midjourney-proxy/wiki/2FAopen>，登陆器配置 YesCaptchaKey <https://yescaptcha.com/i/4pizLQ>）
 - [x] 新增 Sqlite、MySQL、SqlServer、PostgreSQL 数据库支持；感谢 `@如风` 赞助此功能！
 - [x] 新增 账号限制、并发、有效期等功能；感谢 `@TOOM` 赞助此功能！
+- [x] 支持生成视频。
+- [x] 支持 Midjourney 官网绘图。
+- [x] 支持 Youchuan 悠船绘图。
 - [ ] 自动加入频道、自动切换频道（暂未支持）
 
 ## 在线预览
