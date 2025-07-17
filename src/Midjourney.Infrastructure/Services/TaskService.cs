@@ -25,7 +25,9 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Memory;
+using Midjourney.Base.Services;
 using Midjourney.Infrastructure.LoadBalancer;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -212,6 +214,59 @@ namespace Midjourney.Infrastructure.Services
             {
                 if (instance.Account.IsYouChuan || instance.Account.IsOfficial)
                 {
+                    var imageUrls = new List<string>();
+                    foreach (var dataUrl in dataUrls)
+                    {
+                        if (instance.Account.IsYouChuan)
+                        {
+                            var link = "";
+                            // 悠船
+                            if (dataUrl.Url?.StartsWith("http", StringComparison.OrdinalIgnoreCase) == true)
+                            {
+                                link = dataUrl.Url;
+                            }
+                            else
+                            {
+                                var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
+                                link = await instance.YmTaskService.UploadFileAsync(info, dataUrl.Data, taskFileName);
+                            }
+
+                            imageUrls.Add(link);
+                        }
+                        else
+                        {
+                            var taskFileName = $"{info.Id}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
+                            var uploadResult = await instance.UploadAsync(taskFileName, dataUrl);
+                            if (uploadResult.Code != ReturnCode.SUCCESS)
+                            {
+                                return Message.Of(uploadResult.Code, uploadResult.Description);
+                            }
+
+                            if (uploadResult.Description.StartsWith("http"))
+                            {
+                                imageUrls.Add(uploadResult.Description);
+                            }
+                            else
+                            {
+                                var finalFileName = uploadResult.Description;
+                                var sendImageResult = await instance.SendImageMessageAsync("upload image: " + finalFileName, finalFileName);
+                                if (sendImageResult.Code != ReturnCode.SUCCESS)
+                                {
+                                    return Message.Of(sendImageResult.Code, sendImageResult.Description);
+                                }
+                                imageUrls.Add(sendImageResult.Description);
+                            }
+                        }
+                    }
+
+                    if (imageUrls.Any())
+                    {
+                        info.Prompt = string.Join(" ", imageUrls) + " " + info.Prompt;
+                        info.PromptEn = string.Join(" ", imageUrls) + " " + info.PromptEn;
+                        info.Description = "/imagine " + info.Prompt;
+                        _taskStoreService.Save(info);
+                    }
+
                     return await instance.YmTaskService.SubmitTaskAsync(info, _taskStoreService, instance);
                 }
                 else
