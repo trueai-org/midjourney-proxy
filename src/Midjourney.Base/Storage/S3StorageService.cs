@@ -134,7 +134,7 @@ namespace Midjourney.Base.Storage
                     else if (!string.IsNullOrWhiteSpace(_s3Options.CustomCdn))
                     {
                         // 使用自定义CDN域名
-                        accessUrl = $"{_s3Options.CustomCdn.TrimEnd('/')}/{key.TrimStart('/')}";
+                        accessUrl = $"{_s3Options.CustomCdn.TrimEnd('/')}/{_s3Options.Bucket}/{key.TrimStart('/')}";
                     }
                     else
                     {
@@ -348,7 +348,7 @@ namespace Midjourney.Base.Storage
                     // 返回公共访问URL
                     if (!string.IsNullOrWhiteSpace(_s3Options.CustomCdn))
                     {
-                        return new Uri($"{_s3Options.CustomCdn.TrimEnd('/')}/{key.TrimStart('/')}");
+                        return new Uri($"{_s3Options.CustomCdn.TrimEnd('/')}/{_s3Options.Bucket}/{key.TrimStart('/')}");
                     }
                     else if (_s3Options.ForcePathStyle)
                     {
@@ -367,7 +367,8 @@ namespace Midjourney.Base.Storage
                     BucketName = _s3Options.Bucket,
                     Key = key.TrimStart('/'),
                     Verb = HttpVerb.GET,
-                    Expires = DateTime.UtcNow.AddMinutes(expiredMinutes)
+                    Expires = DateTime.UtcNow.AddMinutes(expiredMinutes),
+                    Protocol = _s3Options.UseHttps ? Protocol.HTTPS : Protocol.HTTP,
                 };
 
                 var presignedUrl = client.GetPreSignedURL(request);

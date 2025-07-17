@@ -616,8 +616,7 @@ namespace Midjourney.Base.Storage
                     // 如果配置了链接有效期，则生成带签名的链接
                     if (opt.ExpiredMinutes > 0)
                     {
-                        var priUri = _instance.GetSignKey(path, opt.ExpiredMinutes);
-                        resultUrl = $"{cdn.Trim().TrimEnd('/')}/{priUri.PathAndQuery.TrimStart('/')}";
+                        resultUrl = _instance.GetSignKey(path, opt.ExpiredMinutes).ToString();
                     }
 
                     // 根据内容类型应用不同的样式
