@@ -206,8 +206,10 @@ namespace Midjourney.API.Controllers
                 return Ok(new List<TaskInfo>());
             }
 
+            var ids = conditionDTO.Ids.Where(c => !string.IsNullOrWhiteSpace(c)).Select(c => c.Trim()).Distinct().ToList();
+
             var result = new List<TaskInfo>();
-            var notInQueueIds = new HashSet<string>(conditionDTO.Ids);
+            var notInQueueIds = new HashSet<string>(ids);
 
             foreach (var task in _discordLoadBalancer.GetQueueTasks())
             {
