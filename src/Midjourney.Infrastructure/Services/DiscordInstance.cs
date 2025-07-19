@@ -2117,12 +2117,21 @@ namespace Midjourney.Infrastructure.LoadBalancer
         }
 
         /// <summary>
-        /// 悠船每 1 分钟同步一次账号信息
+        /// 悠船每 n 分钟同步一次账号信息
         /// </summary>
         /// <returns></returns>
         public async Task YouChuanSyncInfo()
         {
             await _ymTaskService.YouChuanSyncInfo();
+        }
+
+        /// <summary>
+        /// 官网每 n 分钟同步一次账号信息
+        /// </summary>
+        /// <returns></returns>
+        public async Task OfficialSyncInfo()
+        {
+            await _ymTaskService.OfficialSyncInfo();
         }
     }
 }

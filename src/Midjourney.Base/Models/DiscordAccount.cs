@@ -676,7 +676,7 @@ namespace Midjourney.Base.Models
                     }
                     else if (IsOfficial)
                     {
-
+                        dic["renewDate"] = Properties.ContainsKey("renewDate") ? Properties["renewDate"].ToString() : "N/A";
                     }
                     else
                     {

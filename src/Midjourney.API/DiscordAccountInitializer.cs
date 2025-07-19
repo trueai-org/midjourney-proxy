@@ -806,6 +806,11 @@ namespace Midjourney.API
                         {
                             await disInstance?.YouChuanSyncInfo();
                         }
+
+                        if (account.IsOfficial)
+                        {
+                            await disInstance?.OfficialSyncInfo();
+                        }
                     }
                     else
                     {
