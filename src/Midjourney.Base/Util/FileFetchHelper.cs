@@ -127,6 +127,10 @@ namespace Midjourney.Base.Util
                 var contentType = response.Content.Headers.ContentType?.MediaType;
                 var fileName = GetFileNameFromUrlOrHeaders(url, response.Content.Headers);
                 var fileExtension = DetermineFileExtension(contentType, fileBytes, fileName);
+                if (fileExtension == ".jpeg")
+                {
+                    fileExtension = ".jpg"; // 将 jpeg 转换为 jpg
+                }
 
                 fileName = $"{Guid.NewGuid()}{fileExtension}";
 

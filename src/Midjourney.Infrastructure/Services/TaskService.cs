@@ -306,6 +306,7 @@ namespace Midjourney.Infrastructure.Services
                     return await instance.ImagineAsync(info, info.PromptEn,
                         info.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default));
                 }
+            
             });
         }
 

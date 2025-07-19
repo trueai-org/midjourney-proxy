@@ -1425,27 +1425,43 @@ namespace Midjourney.Infrastructure.LoadBalancer
                             }
                             else if (res.Success && res.FileBytes.Length > 0)
                             {
-                                // 上传到 Discord 服务器
-                                var uploadResult = await UploadAsync(res.FileName, new DataUrl(res.ContentType, res.FileBytes));
-                                if (uploadResult.Code != ReturnCode.SUCCESS)
+                                if (info.IsPartner)
                                 {
-                                    throw new LogicException(uploadResult.Code, uploadResult.Description);
-                                }
-
-                                if (uploadResult.Description.StartsWith("http"))
-                                {
-                                    return uploadResult.Description;
+                                    // 悠船链接转换
+                                    var youchuanUrl = await _ymTaskService.UploadFileAsync(info, res.FileBytes, res.FileName);
+                                    if (!string.IsNullOrWhiteSpace(youchuanUrl))
+                                    {
+                                        return youchuanUrl;
+                                    }
+                                    else
+                                    {
+                                        throw new LogicException(ReturnCode.FAILURE, "悠船链接转换失败");
+                                    }
                                 }
                                 else
                                 {
-                                    var finalFileName = uploadResult.Description;
-                                    var sendImageResult = await SendImageMessageAsync("upload image: " + finalFileName, finalFileName);
-                                    if (sendImageResult.Code != ReturnCode.SUCCESS)
+                                    // 上传到 Discord 服务器
+                                    var uploadResult = await UploadAsync(res.FileName, new DataUrl(res.ContentType, res.FileBytes));
+                                    if (uploadResult.Code != ReturnCode.SUCCESS)
                                     {
-                                        throw new LogicException(sendImageResult.Code, sendImageResult.Description);
+                                        throw new LogicException(uploadResult.Code, uploadResult.Description);
                                     }
 
-                                    return sendImageResult.Description;
+                                    if (uploadResult.Description.StartsWith("http"))
+                                    {
+                                        return uploadResult.Description;
+                                    }
+                                    else
+                                    {
+                                        var finalFileName = uploadResult.Description;
+                                        var sendImageResult = await SendImageMessageAsync("upload image: " + finalFileName, finalFileName);
+                                        if (sendImageResult.Code != ReturnCode.SUCCESS)
+                                        {
+                                            throw new LogicException(sendImageResult.Code, sendImageResult.Description);
+                                        }
+
+                                        return sendImageResult.Description;
+                                    }
                                 }
                             }
 
