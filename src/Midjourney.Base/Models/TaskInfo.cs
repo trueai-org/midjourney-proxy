@@ -22,6 +22,7 @@
 // invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
+using System.Text.Json.Serialization;
 using FreeSql.DataAnnotations;
 using Microsoft.Extensions.Caching.Memory;
 using Midjourney.Base.Data;
@@ -187,6 +188,12 @@ namespace Midjourney.Base.Models
         /// </summary>
         [Column(StringLength = 1024)]
         public string ImageUrl { get; set; }
+
+        /// <summary>
+        /// 图像URL列表
+        /// </summary>
+        [JsonMap]
+        public List<TaskInfoImageUrl> ImageUrls { get; set; } = [];
 
         /// <summary>
         /// 缩略图 url
@@ -760,5 +767,22 @@ namespace Midjourney.Base.Models
         /// 
         /// </summary>
         public List<CustomComponentModel> Buttons { get; set; } = new List<CustomComponentModel>();
+    }
+
+    /// <summary>
+    /// 图像URL信息
+    /// </summary>
+    public class TaskInfoImageUrl
+    {
+        public TaskInfoImageUrl(string url)
+        {
+            Url = url;
+        }
+
+        /// <summary>
+        /// 图像 URL
+        /// </summary>
+        [JsonPropertyName("url")]
+        public string Url { get; set; }
     }
 }
