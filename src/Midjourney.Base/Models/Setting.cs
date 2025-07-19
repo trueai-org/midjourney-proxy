@@ -117,17 +117,17 @@ namespace Midjourney.Base.Models
         /// </summary>
         public AccountChooseRule AccountChooseRule { get; set; } = AccountChooseRule.BestWaitIdle;
 
-        /// <summary>
-        /// Discord单账号配置.
-        /// </summary>
-        [BsonIgnore]
-        public DiscordAccountConfig Discord { get; set; } = new DiscordAccountConfig();
+        ///// <summary>
+        ///// Discord单账号配置.
+        ///// </summary>
+        //[BsonIgnore]
+        //public DiscordAccountConfig Discord { get; set; } = new DiscordAccountConfig();
 
-        /// <summary>
-        /// Discord账号池配置.
-        /// </summary>
-        [BsonIgnore]
-        public List<DiscordAccountConfig> Accounts { get; set; } = new List<DiscordAccountConfig>();
+        ///// <summary>
+        ///// Discord账号池配置.
+        ///// </summary>
+        //[BsonIgnore]
+        //public List<DiscordAccountConfig> Accounts { get; set; } = new List<DiscordAccountConfig>();
 
         /// <summary>
         /// 代理配置.

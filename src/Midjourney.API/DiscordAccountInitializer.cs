@@ -371,7 +371,7 @@ namespace Midjourney.API
         private async void DoWork(object state)
         {
             _logger.Information("开始例行检查");
-            
+
             try
             {
                 // 更新检查
@@ -403,15 +403,8 @@ namespace Midjourney.API
                         // 验证许可证密钥
                         await LicenseKeyHelper.Validate();
 
-                        // 本地配置中的默认账号
-                        var configAccounts = _properties.Accounts.ToList();
-                        if (!string.IsNullOrEmpty(_properties.Discord?.ChannelId)
-                        && !_properties.Discord.ChannelId.Contains("*"))
-                        {
-                            configAccounts.Add(_properties.Discord);
-                        }
-
-                        await Initialize(configAccounts.ToArray());
+                        // 初始化
+                        await Initialize();
 
                         // 检查并删除旧的文档
                         CheckAndDeleteOldDocuments();
@@ -553,32 +546,13 @@ namespace Midjourney.API
         /// 初始化所有账号
         /// </summary>
         /// <returns></returns>
-        public async Task Initialize(params DiscordAccountConfig[] appends)
+        public async Task Initialize()
         {
             var isLock = await AsyncLocalLock.TryLockAsync("initialize:all", TimeSpan.FromSeconds(10), async () =>
             {
                 var db = DbHelper.Instance.AccountStore;
 
                 var accounts = db.GetAll().OrderBy(c => c.Sort).ToList();
-
-                // 将启动配置中的 account 添加到数据库
-                var configAccounts = new List<DiscordAccountConfig>();
-                if (appends?.Length > 0)
-                {
-                    configAccounts.AddRange(appends);
-                }
-
-                foreach (var configAccount in configAccounts)
-                {
-                    var account = accounts.FirstOrDefault(c => c.ChannelId == configAccount.ChannelId);
-                    if (account == null)
-                    {
-                        account = DiscordAccount.Create(configAccount);
-                        db.Add(account);
-
-                        accounts.Add(account);
-                    }
-                }
 
                 foreach (var account in accounts)
                 {
@@ -604,6 +578,7 @@ namespace Midjourney.API
 
                 _logger.Information("当前可用账号数 [{@0}] - {@1}", enableInstanceIds.Count, string.Join(", ", enableInstanceIds));
             });
+
             if (!isLock)
             {
                 _logger.Warning("初始化所有账号中，请稍后重试...");

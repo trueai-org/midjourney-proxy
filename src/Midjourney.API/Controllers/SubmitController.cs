@@ -119,7 +119,12 @@ namespace Midjourney.API.Controllers
                 try
                 {
                     // 验证许可证密钥
-                    await LicenseKeyHelper.Validate();
+                    var success = await LicenseKeyHelper.Validate();
+                    if (!success)
+                    {
+                        _logger.LogWarning("许可证验证失败，可能是许可证已过期或无效");
+                        return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "许可证验证失败"));
+                    }
                 }
                 catch (Exception ex)
                 {
