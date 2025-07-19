@@ -34,6 +34,11 @@ namespace Midjourney.Base.Models
     public class Setting : DomainObject
     {
         /// <summary>
+        /// 悠船绘图时将 prompt 提示词中的链接转为悠船官网链接
+        /// </summary>
+        public bool EnableYouChuanPromptLink { get; set; }
+
+        /// <summary>
         /// 开启视频生成功能
         /// </summary>
         public bool EnableVideo { get; set; } = true;

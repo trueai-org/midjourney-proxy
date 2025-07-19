@@ -112,27 +112,10 @@ namespace Midjourney.API.Controllers
         /// <param name="imagineDTO">提交Imagine任务的DTO</param>
         /// <returns>提交结果</returns>
         [HttpPost("imagine")]
-        public async Task<ActionResult<SubmitResultVO>> Imagine([FromBody] SubmitImagineDTO imagineDTO)
+        public ActionResult<SubmitResultVO> Imagine([FromBody] SubmitImagineDTO imagineDTO)
         {
             try
             {
-                try
-                {
-                    // 验证许可证密钥
-                    var success = await LicenseKeyHelper.Validate();
-                    if (!success)
-                    {
-                        _logger.LogWarning("许可证验证失败，可能是许可证已过期或无效");
-                        return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "许可证验证失败"));
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "许可证验证失败");
-
-                    return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "许可证验证失败"));
-                }
-
                 string prompt = imagineDTO.Prompt;
                 if (string.IsNullOrWhiteSpace(prompt))
                 {

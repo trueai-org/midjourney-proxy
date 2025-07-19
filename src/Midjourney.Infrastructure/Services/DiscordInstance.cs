@@ -1280,6 +1280,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
             prompt = prompt.Replace(" -- ", " ")
                 .Replace("  ", " ").Replace("  ", " ").Replace("  ", " ").Trim();
 
+            // 使用正则替换超过 --- 3个 - 的替换为 " "
+            prompt = Regex.Replace(prompt, @"-{3,}", " ");
+
             // 任务指定速度模式
             if (info != null && info.Mode != null)
             {
@@ -1407,9 +1410,18 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     try
                     {
                         // 如果是悠船任务，并且链接包含悠船，则不处理
-                        if (info.IsPartner && url.Contains("youchuan"))
+                        if (info.IsPartner)
                         {
-                            continue;
+                            if (url.Contains("youchuan"))
+                            {
+                                continue;
+                            }
+
+                            // 未启用链接转换
+                            if (!setting.EnableYouChuanPromptLink)
+                            {
+                                continue;
+                            }
                         }
 
                         // url 缓存默认 24 小时有效
