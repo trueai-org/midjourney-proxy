@@ -22,7 +22,6 @@
 // invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
-using Midjourney.Infrastructure.Services;
 using Midjourney.License;
 using Serilog;
 using Serilog.Debugging;
@@ -108,41 +107,57 @@ namespace Midjourney.API
         private static void ConfigureInitialLogger(IConfiguration configuration, bool isDevelopment)
         {
             // 基本日志配置
+            //var loggerConfiguration = new LoggerConfiguration()
+            //      .ReadFrom.Configuration(configuration)
+            //      .Enrich.FromLogContext();
+
+            // 写死配置，而不是读取配置文件
+            // 单文件最大 10MB
+            var fileSizeLimitBytes = 10 * 1024 * 1024;
             var loggerConfiguration = new LoggerConfiguration()
-                  .ReadFrom.Configuration(configuration)
-                  .Enrich.FromLogContext();
+                .MinimumLevel.Information()
+                .MinimumLevel.Override("Default", LogEventLevel.Warning)
+                .MinimumLevel.Override("System", LogEventLevel.Warning)
+                .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+                .Enrich.FromLogContext()
+                .WriteTo.File("logs/log.txt",
+                    rollingInterval: RollingInterval.Day,
+                    fileSizeLimitBytes: fileSizeLimitBytes,
+                    rollOnFileSizeLimit: true,
+                    retainedFileCountLimit: 31);
+
 
             // 开发环境特定配置
             if (isDevelopment)
             {
                 loggerConfiguration.MinimumLevel.Debug();
 
-                // 如果配置中没有设置控制台日志，则添加
-                // 否则，不要在代码中添加，避免重复
-                bool hasConsoleInConfig = configuration
-                    .GetSection("Serilog:WriteTo")
-                    .GetChildren()
-                    .Any(section => section["Name"]?.Equals("Console", StringComparison.OrdinalIgnoreCase) == true);
+                //// 如果配置中没有设置控制台日志，则添加
+                //// 否则，不要在代码中添加，避免重复
+                //bool hasConsoleInConfig = configuration
+                //    .GetSection("Serilog:WriteTo")
+                //    .GetChildren()
+                //    .Any(section => section["Name"]?.Equals("Console", StringComparison.OrdinalIgnoreCase) == true);
 
-                if (!hasConsoleInConfig)
-                {
-                    loggerConfiguration.WriteTo.Console();
-                }
+                //if (!hasConsoleInConfig)
+                //{
+                //    loggerConfiguration.WriteTo.Console();
+                //}
+
+                loggerConfiguration.WriteTo.Console();
 
                 // 启用 Serilog 自我诊断
                 SelfLog.Enable(Console.Error);
             }
 
-            //else
-            //{
-            //    // 生产环境使用 appsettings.json 中的最小日志级别配置
-            //    loggerConfiguration.WriteTo.Console(restrictedToMinimumLevel: LogEventLevel.Information);
-            //}
-
             // 所有环境都记录错误到单独文件
             loggerConfiguration.WriteTo.Logger(lc => lc
                 .Filter.ByIncludingOnly(evt => evt.Level >= LogEventLevel.Error)
-                .WriteTo.File("logs/error.txt", rollingInterval: RollingInterval.Day));
+                .WriteTo.File("logs/error.txt",
+                    rollingInterval: RollingInterval.Day,
+                    fileSizeLimitBytes: fileSizeLimitBytes,
+                    rollOnFileSizeLimit: true,
+                    retainedFileCountLimit: 31));
 
             Log.Logger = loggerConfiguration.CreateLogger();
         }
