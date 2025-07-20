@@ -184,8 +184,11 @@ namespace Midjourney.Base.Util
             var dataUrlList = new List<DataUrl>();
             foreach (var base64 in base64Array)
             {
-                var dataUrl = DataUrl.Parse(base64);
-                dataUrlList.Add(dataUrl);
+                if(!string.IsNullOrWhiteSpace(base64))
+                {
+                    var dataUrl = DataUrl.Parse(base64);
+                    dataUrlList.Add(dataUrl);
+                }
             }
             return dataUrlList;
         }

@@ -34,6 +34,23 @@ namespace Midjourney.Base.Models
     public class Setting : DomainObject
     {
         /// <summary>
+        /// 私人定制开启的功能列表 - 在保存授权码/激活时生成
+        /// </summary>
+        public List<string> PrivateFeatures { get; set; } = [];
+
+        /// <summary>
+        /// 始终允许 U 放大，不判断账号是否可用 - 私人定制业务
+        /// 启用悠船 U 放大时，不验证账号的可用性
+        /// </summary>
+        public bool PrivateEnableYouChuanAllowU { get; set; } = false;
+
+        /// <summary>
+        /// 启用悠船合成图片使用自定义路径 - 私人定制业务
+        /// 服务器id/频道id/提示词前面几个单词_uudi.png
+        /// </summary>
+        public bool PrivateEnableYouChuanMergedCustomize { get; set; } = false;
+
+        /// <summary>
         /// 悠船绘图时将 prompt 提示词中的链接转为悠船官网链接
         /// </summary>
         public bool EnableYouChuanPromptLink { get; set; }

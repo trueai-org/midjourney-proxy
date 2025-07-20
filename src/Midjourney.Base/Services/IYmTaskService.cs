@@ -49,7 +49,7 @@ namespace Midjourney.Base.Services
         /// </summary>
         /// <param name="info"></param>
         /// <returns></returns>
-        Task UpdateStatus(TaskInfo info, ITaskStoreService taskStoreService);
+        Task UpdateStatus(TaskInfo info, ITaskStoreService taskStoreService, DiscordAccount account);
 
         /// <summary>
         /// 悠船每 n 分钟同步一次账号信息

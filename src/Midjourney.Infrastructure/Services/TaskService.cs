@@ -306,7 +306,7 @@ namespace Midjourney.Infrastructure.Services
                     return await instance.ImagineAsync(info, info.PromptEn,
                         info.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default));
                 }
-            
+
             });
         }
 
@@ -772,7 +772,6 @@ namespace Midjourney.Infrastructure.Services
                     }
                 }
             }
-
             if (discordInstance == null || discordInstance?.Account?.IsContinueDrawing != true)
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
@@ -781,9 +780,27 @@ namespace Midjourney.Infrastructure.Services
             {
                 return SubmitResultVO.Fail(ReturnCode.FAILURE, "提交失败，队列已满，请稍后重试");
             }
-            if (!discordInstance.Account.IsYouChuanContinueDrawing(task.Mode))
+
+            var setting = GlobalConfiguration.Setting;
+
+            // 放大任务，账号可用性判断
+            if (task.Action == TaskAction.UPSCALE)
             {
-                return SubmitResultVO.Fail(ReturnCode.FAILURE, "无可用的账号实例");
+                // 如果开启了放大不判断
+                if (!setting.PrivateEnableYouChuanAllowU)
+                {
+                    if (!discordInstance.Account.IsYouChuanContinueDrawing(task.Mode))
+                    {
+                        return SubmitResultVO.Fail(ReturnCode.FAILURE, "无可用的账号实例");
+                    }
+                }
+            }
+            else
+            {
+                if (!discordInstance.Account.IsYouChuanContinueDrawing(task.Mode))
+                {
+                    return SubmitResultVO.Fail(ReturnCode.FAILURE, "无可用的账号实例");
+                }
             }
 
             task.IsPartner = discordInstance.Account.IsYouChuan;

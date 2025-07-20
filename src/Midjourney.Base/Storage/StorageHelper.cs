@@ -486,7 +486,7 @@ namespace Midjourney.Base.Storage
         /// <param name="filename">文件名</param>
         /// <param name="contentType">内容类型</param>
         /// <returns>访问URL</returns>
-        public static string SaveFileAsync(Stream stream, string filename, string contentType)
+        public static string SaveFileAsync(Stream stream, string filename, string contentType, string path = null)
         {
             // 是否启用保存到文件存储
             if (!GlobalConfiguration.Setting.EnableSaveGeneratedImage || _instance == null)
@@ -500,7 +500,10 @@ namespace Midjourney.Base.Storage
             try
             {
                 // 构建存储路径 - 使用一个固定的目录结构
-                string path = $"attachments/merges/{DateTime.UtcNow:yyyy/MM/dd}/{filename}";
+                if (string.IsNullOrWhiteSpace(path))
+                {
+                    path = $"attachments/merges/{DateTime.UtcNow:yyyy/MM/dd}/{filename}";
+                }
 
                 // 视频保持原路径
                 if (contentType == "video/mp4")

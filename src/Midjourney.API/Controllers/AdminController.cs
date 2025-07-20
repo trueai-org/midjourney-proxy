@@ -2050,11 +2050,13 @@ namespace Midjourney.API.Controllers
             try
             {
                 // 保存时验证授权
-                var success = await LicenseKeyHelper.ValidateSync(setting.LicenseKey, setting.EnableYouChuan, setting.EnableOfficial);
-                if (!success)
+                var res = await LicenseKeyHelper.ValidateSync(setting.LicenseKey, setting.EnableYouChuan, setting.EnableOfficial);
+                if (!res.IsAuthorized)
                 {
                     return Result.Fail("授权验证失败，请检查授权码是否正确，如果没有授权码，请输入默认授权码：trueai.org");
                 }
+
+                setting.PrivateFeatures = res.Features ?? [];
             }
             catch (Exception ex)
             {
