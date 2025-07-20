@@ -52,9 +52,17 @@ namespace Midjourney.Base
             var match = Regex.Match(dataUrl, @"data:(?<type>.+?);base64,(?<data>.+)");
             if (!match.Success)
             {
-                Log.Warning("Invalid data URL format: {DataUrl}", dataUrl);
+                // 说明没有前缀，直接尝试解析为 base64 字符串
+                match = Regex.Match(dataUrl, @"^(?<data>.+)$");
+                if (!match.Success)
+                {
+                    Log.Warning("Invalid data URL format: {DataUrl}", dataUrl);
 
-                throw new FormatException("Invalid data URL format");
+                    throw new FormatException("Invalid data URL format");
+                }
+
+                var defaultMimeType = "image/png";
+                return new DataUrl(defaultMimeType, Convert.FromBase64String(match.Groups["data"].Value));
             }
 
             string mimeType = match.Groups["type"].Value;
