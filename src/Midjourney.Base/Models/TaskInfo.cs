@@ -45,6 +45,8 @@ namespace Midjourney.Base.Models
     [Index("i_Status", "Status")]
     [Index("i_Action", "Action")]
     [Index("i_ParentId", "ParentId")]
+    [Index("i_SubmitTime_UserId", "Group,UserId")]
+    [Index("i_SubmitTime_InstanceId", "SubmitTime,InstanceId")]
     public class TaskInfo : DomainObject
     {
         public TaskInfo()
