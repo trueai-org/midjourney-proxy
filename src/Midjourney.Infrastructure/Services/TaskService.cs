@@ -783,23 +783,27 @@ namespace Midjourney.Infrastructure.Services
 
             var setting = GlobalConfiguration.Setting;
 
+            // 悠船账号
             // 放大任务，账号可用性判断
-            if (task.Action == TaskAction.UPSCALE)
+            if(discordInstance.Account.IsYouChuan)
             {
-                // 如果开启了放大不判断
-                if (!setting.PrivateEnableYouChuanAllowU)
+                if (task.Action == TaskAction.UPSCALE)
+                {
+                    // 如果开启了放大不判断
+                    if (!setting.PrivateEnableYouChuanAllowU)
+                    {
+                        if (!discordInstance.Account.IsYouChuanContinueDrawing(task.Mode))
+                        {
+                            return SubmitResultVO.Fail(ReturnCode.FAILURE, "无可用的账号实例");
+                        }
+                    }
+                }
+                else
                 {
                     if (!discordInstance.Account.IsYouChuanContinueDrawing(task.Mode))
                     {
                         return SubmitResultVO.Fail(ReturnCode.FAILURE, "无可用的账号实例");
                     }
-                }
-            }
-            else
-            {
-                if (!discordInstance.Account.IsYouChuanContinueDrawing(task.Mode))
-                {
-                    return SubmitResultVO.Fail(ReturnCode.FAILURE, "无可用的账号实例");
                 }
             }
 
