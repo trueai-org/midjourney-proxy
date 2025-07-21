@@ -130,7 +130,8 @@ namespace Midjourney.Infrastructure.Services
             HttpResponseMessage response = await PostJson(notifyHook, paramsStr);
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogWarning("Notify task change fail, task: {0}({1}), hook: {2}, code: {3}, msg: {4}", taskId, currentStatusStr, notifyHook, (int)response.StatusCode, response.Content.ReadAsStringAsync().Result);
+                var content = response.Content.ReadAsStringAsync();
+                _logger.LogWarning("Notify task change fail, task: {0}({1}), hook: {2}, code: {3}, msg: {4}", taskId, currentStatusStr, notifyHook, (int)response.StatusCode, content);
             }
         }
 

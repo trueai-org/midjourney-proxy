@@ -478,13 +478,39 @@ namespace Midjourney.Base.Models
             try
             {
                 // 保存图片
-                StorageHelper.DownloadFile(this);
+                StorageHelper.DownloadFile(this).ConfigureAwait(false).GetAwaiter().GetResult();
             }
             catch (Exception ex)
             {
                 Log.Error(ex, "保存图片失败 {@0}", ImageUrl);
             }
 
+            SuccessUpdate();
+        }
+
+        /// <summary>
+        /// 异步保存成功
+        /// </summary>
+        /// <returns></returns>
+        public async Task SuccessAsync()
+        {
+            try
+            {
+                // 保存图片
+                await StorageHelper.DownloadFile(this);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "保存图片失败 {@0}", ImageUrl);
+            }
+            SuccessUpdate();
+        }
+
+        /// <summary>
+        /// 更新后的操作
+        /// </summary>
+        private void SuccessUpdate()
+        {
             // 调整图片 ACTION
             // 如果是 show 时
             if (Action == TaskAction.SHOW)

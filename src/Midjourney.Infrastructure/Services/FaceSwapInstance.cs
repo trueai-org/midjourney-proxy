@@ -470,7 +470,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                             if (res.Output is string output && !string.IsNullOrEmpty(output))
                             {
                                 info.ImageUrl = output;
-                                info.Success();
+                                await info.SuccessAsync();
                                 SaveAndNotify(info);
                                 return;
                             }

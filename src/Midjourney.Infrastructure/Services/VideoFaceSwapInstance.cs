@@ -526,7 +526,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                             {
                                 var url = arr.First().ToString();
                                 info.ImageUrl = url;
-                                info.Success();
+                                await info.SuccessAsync();
                                 SaveAndNotify(info);
                                 return;
                             }

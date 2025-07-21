@@ -35,6 +35,22 @@ namespace Midjourney.Base.Storage
     {
         private static IStorageService _instance;
 
+        /// <summary>
+        /// 默认悠船不使用代理
+        /// </summary>
+        private static HttpClient _youchuanHttpClient = new HttpClient
+        {
+            Timeout = TimeSpan.FromMinutes(10)
+        };
+
+        /// <summary>
+        /// 使用代理下载
+        /// </summary>
+        private static HttpClient _proxyHttpClient = new HttpClient
+        {
+            Timeout = TimeSpan.FromMinutes(10)
+        };
+
         public static IStorageService Instance => _instance;
 
         /// <summary>
@@ -68,23 +84,36 @@ namespace Midjourney.Base.Storage
             {
                 _instance = null;
             }
+
+            var setting = GlobalConfiguration.Setting;
+            var proxy = setting.Proxy;
+
+            WebProxy webProxy = null;
+            if (!string.IsNullOrEmpty(proxy?.Host))
+            {
+                webProxy = new WebProxy(proxy.Host, proxy.Port ?? 80);
+            }
+            var hch = new HttpClientHandler
+            {
+                UseProxy = webProxy != null,
+                Proxy = webProxy,
+            };
+            _proxyHttpClient = new HttpClient(hch)
+            {
+                Timeout = TimeSpan.FromMinutes(10)
+            };
         }
 
         /// <summary>
         /// 下载并保存图片
         /// </summary>
         /// <param name="taskInfo"></param>
-        public static void DownloadFile(TaskInfo taskInfo)
+        public static async Task DownloadFile(TaskInfo taskInfo)
         {
             var setting = GlobalConfiguration.Setting;
 
             // 是否启用保存到文件存储
-            if (!setting.EnableSaveGeneratedImage)
-            {
-                return;
-            }
-
-            if (setting.ImageStorageType == ImageStorageType.NONE)
+            if (!setting.EnableSaveGeneratedImage || setting.ImageStorageType == ImageStorageType.NONE)
             {
                 return;
             }
@@ -100,7 +129,6 @@ namespace Midjourney.Base.Storage
             }
 
             var lockKey = $"download:{imageUrl}";
-
 
             WebProxy webProxy = null;
             var proxy = setting.Proxy;
@@ -141,56 +169,47 @@ namespace Midjourney.Base.Storage
                     return;
                 }
 
-                // 本地锁
-                LocalLock.TryLock(lockKey, TimeSpan.FromSeconds(10), () =>
+                var oss = new AliyunOssStorageService();
+
+                // 替换 url
+                var url = $"{cdn?.Trim()?.Trim('/')}/{localPath}{uri?.Query}";
+
+                // 下载图片并保存
+                var imageBytes = await DownloadImageAsync(taskInfo, imageUrl);
+
+                using var stream = new MemoryStream(imageBytes);
+
+                var mm = MimeKit.MimeTypes.GetMimeType(Path.GetFileName(localPath));
+                if (string.IsNullOrWhiteSpace(mm))
                 {
-                    var oss = new AliyunOssStorageService();
+                    mm = "image/png";
+                }
 
-                    // 替换 url
-                    var url = $"{cdn?.Trim()?.Trim('/')}/{localPath}{uri?.Query}";
+                oss.SaveAsync(stream, localPath, mm);
 
-                    // 下载图片并保存
-                    using (HttpClient client = new HttpClient(hch))
-                    {
-                        client.Timeout = TimeSpan.FromMinutes(15);
+                // 如果配置了链接有效期，则生成带签名的链接
+                if (opt.ExpiredMinutes > 0)
+                {
+                    var priUri = oss.GetSignKey(localPath, opt.ExpiredMinutes);
+                    url = $"{cdn?.Trim()?.Trim('/')}/{priUri.PathAndQuery.TrimStart('/')}";
+                }
 
-                        var response = client.GetAsync(imageUrl).Result;
-                        response.EnsureSuccessStatusCode();
-                        var stream = response.Content.ReadAsStreamAsync().Result;
-
-                        var mm = MimeKit.MimeTypes.GetMimeType(Path.GetFileName(localPath));
-                        if (string.IsNullOrWhiteSpace(mm))
-                        {
-                            mm = "image/png";
-                        }
-
-                        oss.SaveAsync(stream, localPath, mm);
-
-                        // 如果配置了链接有效期，则生成带签名的链接
-                        if (opt.ExpiredMinutes > 0)
-                        {
-                            var priUri = oss.GetSignKey(localPath, opt.ExpiredMinutes);
-                            url = $"{cdn?.Trim()?.Trim('/')}/{priUri.PathAndQuery.TrimStart('/')}";
-                        }
-                    }
-
-                    if (action == TaskAction.SWAP_VIDEO_FACE)
-                    {
-                        imageUrl = url;
-                        thumbnailUrl = url.ToStyle(opt.VideoSnapshotStyle);
-                    }
-                    else if (action == TaskAction.SWAP_FACE)
-                    {
-                        // 换脸不格式化 url
-                        imageUrl = url;
-                        thumbnailUrl = url;
-                    }
-                    else
-                    {
-                        imageUrl = url.ToStyle(opt.ImageStyle);
-                        thumbnailUrl = url.ToStyle(opt.ThumbnailImageStyle);
-                    }
-                });
+                if (action == TaskAction.SWAP_VIDEO_FACE)
+                {
+                    imageUrl = url;
+                    thumbnailUrl = url.ToStyle(opt.VideoSnapshotStyle);
+                }
+                else if (action == TaskAction.SWAP_FACE)
+                {
+                    // 换脸不格式化 url
+                    imageUrl = url;
+                    thumbnailUrl = url;
+                }
+                else
+                {
+                    imageUrl = url.ToStyle(opt.ImageStyle);
+                    thumbnailUrl = url.ToStyle(opt.ThumbnailImageStyle);
+                }
             }
             // 腾讯云 COS
             else if (setting.ImageStorageType == ImageStorageType.COS)
@@ -203,56 +222,44 @@ namespace Midjourney.Base.Storage
                     return;
                 }
 
-                // 本地锁
-                LocalLock.TryLock(lockKey, TimeSpan.FromSeconds(10), () =>
+                var cos = new TencentCosStorageService();
+
+                // 替换 url
+                var url = $"{cdn?.Trim()?.Trim('/')}/{localPath}{uri?.Query}";
+
+                var imageBytes = await DownloadImageAsync(taskInfo, imageUrl);
+                using var stream = new MemoryStream(imageBytes);
+                var mm = MimeKit.MimeTypes.GetMimeType(Path.GetFileName(localPath));
+                if (string.IsNullOrWhiteSpace(mm))
                 {
-                    var cos = new TencentCosStorageService();
+                    mm = "image/png";
+                }
 
-                    // 替换 url
-                    var url = $"{cdn?.Trim()?.Trim('/')}/{localPath}{uri?.Query}";
+                cos.SaveAsync(stream, localPath, mm);
 
-                    // 下载图片并保存
-                    using (HttpClient client = new HttpClient(hch))
-                    {
-                        client.Timeout = TimeSpan.FromMinutes(15);
+                // 如果配置了链接有效期，则生成带签名的链接
+                if (opt.ExpiredMinutes > 0)
+                {
+                    var priUri = cos.GetSignKey(localPath, opt.ExpiredMinutes);
+                    url = $"{cdn?.Trim()?.Trim('/')}/{priUri.PathAndQuery.TrimStart('/')}";
+                }
 
-                        var response = client.GetAsync(imageUrl).Result;
-                        response.EnsureSuccessStatusCode();
-                        var stream = response.Content.ReadAsStreamAsync().Result;
-
-                        var mm = MimeKit.MimeTypes.GetMimeType(Path.GetFileName(localPath));
-                        if (string.IsNullOrWhiteSpace(mm))
-                        {
-                            mm = "image/png";
-                        }
-
-                        cos.SaveAsync(stream, localPath, mm);
-
-                        // 如果配置了链接有效期，则生成带签名的链接
-                        if (opt.ExpiredMinutes > 0)
-                        {
-                            var priUri = cos.GetSignKey(localPath, opt.ExpiredMinutes);
-                            url = $"{cdn?.Trim()?.Trim('/')}/{priUri.PathAndQuery.TrimStart('/')}";
-                        }
-                    }
-
-                    if (action == TaskAction.SWAP_VIDEO_FACE)
-                    {
-                        imageUrl = url;
-                        thumbnailUrl = url.ToStyle(opt.VideoSnapshotStyle);
-                    }
-                    else if (action == TaskAction.SWAP_FACE)
-                    {
-                        // 换脸不格式化 url
-                        imageUrl = url;
-                        thumbnailUrl = url;
-                    }
-                    else
-                    {
-                        imageUrl = url.ToStyle(opt.ImageStyle);
-                        thumbnailUrl = url.ToStyle(opt.ThumbnailImageStyle);
-                    }
-                });
+                if (action == TaskAction.SWAP_VIDEO_FACE)
+                {
+                    imageUrl = url;
+                    thumbnailUrl = url.ToStyle(opt.VideoSnapshotStyle);
+                }
+                else if (action == TaskAction.SWAP_FACE)
+                {
+                    // 换脸不格式化 url
+                    imageUrl = url;
+                    thumbnailUrl = url;
+                }
+                else
+                {
+                    imageUrl = url.ToStyle(opt.ImageStyle);
+                    thumbnailUrl = url.ToStyle(opt.ThumbnailImageStyle);
+                }
             }
             else if (setting.ImageStorageType == ImageStorageType.R2)
             {
@@ -264,56 +271,46 @@ namespace Midjourney.Base.Storage
                     return;
                 }
 
-                // 本地锁
-                LocalLock.TryLock(lockKey, TimeSpan.FromSeconds(10), () =>
+                var r2 = new CloudflareR2StorageService();
+
+                // 替换 url
+                var url = $"{cdn?.Trim()?.Trim('/')}/{localPath}{uri?.Query}";
+
+                var imageBytes = await DownloadImageAsync(taskInfo, imageUrl);
+                using var stream = new MemoryStream(imageBytes);
+
+                // 下载图片并保存
+                var mm = MimeKit.MimeTypes.GetMimeType(Path.GetFileName(localPath));
+                if (string.IsNullOrWhiteSpace(mm))
                 {
-                    var r2 = new CloudflareR2StorageService();
+                    mm = "image/png";
+                }
 
-                    // 替换 url
-                    var url = $"{cdn?.Trim()?.Trim('/')}/{localPath}{uri?.Query}";
+                r2.SaveAsync(stream, localPath, mm);
 
-                    // 下载图片并保存
-                    using (HttpClient client = new HttpClient(hch))
-                    {
-                        client.Timeout = TimeSpan.FromMinutes(15);
+                // 如果配置了链接有效期，则生成带签名的链接
+                if (opt.ExpiredMinutes > 0)
+                {
+                    var priUri = r2.GetSignKey(localPath, opt.ExpiredMinutes);
+                    url = $"{cdn?.Trim()?.Trim('/')}/{priUri.PathAndQuery.TrimStart('/')}";
+                }
 
-                        var response = client.GetAsync(imageUrl).Result;
-                        response.EnsureSuccessStatusCode();
-                        var stream = response.Content.ReadAsStreamAsync().Result;
-
-                        var mm = MimeKit.MimeTypes.GetMimeType(Path.GetFileName(localPath));
-                        if (string.IsNullOrWhiteSpace(mm))
-                        {
-                            mm = "image/png";
-                        }
-
-                        r2.SaveAsync(stream, localPath, mm);
-
-                        // 如果配置了链接有效期，则生成带签名的链接
-                        if (opt.ExpiredMinutes > 0)
-                        {
-                            var priUri = r2.GetSignKey(localPath, opt.ExpiredMinutes);
-                            url = $"{cdn?.Trim()?.Trim('/')}/{priUri.PathAndQuery.TrimStart('/')}";
-                        }
-                    }
-
-                    if (action == TaskAction.SWAP_VIDEO_FACE)
-                    {
-                        imageUrl = url;
-                        thumbnailUrl = url.ToStyle(opt.VideoSnapshotStyle);
-                    }
-                    else if (action == TaskAction.SWAP_FACE)
-                    {
-                        // 换脸不格式化 url
-                        imageUrl = url;
-                        thumbnailUrl = url;
-                    }
-                    else
-                    {
-                        imageUrl = url.ToStyle(opt.ImageStyle);
-                        thumbnailUrl = url.ToStyle(opt.ThumbnailImageStyle);
-                    }
-                });
+                if (action == TaskAction.SWAP_VIDEO_FACE)
+                {
+                    imageUrl = url;
+                    thumbnailUrl = url.ToStyle(opt.VideoSnapshotStyle);
+                }
+                else if (action == TaskAction.SWAP_FACE)
+                {
+                    // 换脸不格式化 url
+                    imageUrl = url;
+                    thumbnailUrl = url;
+                }
+                else
+                {
+                    imageUrl = url.ToStyle(opt.ImageStyle);
+                    thumbnailUrl = url.ToStyle(opt.ThumbnailImageStyle);
+                }
             }
 
             // S3 兼容存储 (包括 MinIO)
@@ -347,76 +344,66 @@ namespace Midjourney.Base.Storage
                 }
 
                 // 本地锁
-                LocalLock.TryLock(lockKey, TimeSpan.FromSeconds(10), () =>
+
+                // 替换 url
+                var url = $"{cdn?.Trim()?.Trim('/')}/{localPath}{uri?.Query}";
+                var imageBytes = await DownloadImageAsync(taskInfo, imageUrl);
+                using var stream = new MemoryStream(imageBytes);
+
+                var mm = MimeKit.MimeTypes.GetMimeType(Path.GetFileName(localPath));
+                if (string.IsNullOrWhiteSpace(mm))
                 {
-                    // 替换 url
-                    var url = $"{cdn?.Trim()?.Trim('/')}/{localPath}{uri?.Query}";
+                    mm = "image/png";
+                }
 
-                    // 下载图片并保存
-                    using (HttpClient client = new HttpClient(hch))
+                _instance.SaveAsync(stream, localPath, mm);
+
+                // 构建访问URL
+                if (opt.EnablePresignedUrl && opt.ExpiredMinutes > 0)
+                {
+                    var priUri = _instance.GetSignKey(localPath, opt.ExpiredMinutes);
+                    url = priUri.ToString();
+                }
+                else if (!string.IsNullOrWhiteSpace(cdn))
+                {
+                    url = $"{cdn.TrimEnd('/')}/{localPath}";
+                }
+                else
+                {
+                    // 使用默认S3 URL
+                    if (opt.ForcePathStyle)
                     {
-                        client.Timeout = TimeSpan.FromMinutes(15);
-
-                        var response = client.GetAsync(imageUrl).Result;
-                        response.EnsureSuccessStatusCode();
-                        var stream = response.Content.ReadAsStreamAsync().Result;
-
-                        var mm = MimeKit.MimeTypes.GetMimeType(Path.GetFileName(localPath));
-                        if (string.IsNullOrWhiteSpace(mm))
-                        {
-                            mm = "image/png";
-                        }
-
-                        _instance.SaveAsync(stream, localPath, mm);
-
-                        // 构建访问URL
-                        if (opt.EnablePresignedUrl && opt.ExpiredMinutes > 0)
-                        {
-                            var priUri = _instance.GetSignKey(localPath, opt.ExpiredMinutes);
-                            url = priUri.ToString();
-                        }
-                        else if (!string.IsNullOrWhiteSpace(cdn))
-                        {
-                            url = $"{cdn.TrimEnd('/')}/{localPath}";
-                        }
-                        else
-                        {
-                            // 使用默认S3 URL
-                            if (opt.ForcePathStyle)
-                            {
-                                url = $"{opt.Endpoint.TrimEnd('/')}/{opt.Bucket}/{localPath}";
-                            }
-                            else
-                            {
-                                var baseUrl = opt.Endpoint.Replace("://", $"://{opt.Bucket}.");
-                                url = $"{baseUrl.TrimEnd('/')}/{localPath}";
-                            }
-                        }
-
-                        // 根据内容类型应用不同的样式
-                        if (mm == "image/webp" || mm.StartsWith("image/"))
-                        {
-                            url = url.ToStyle(opt.ImageStyle);
-                        }
-                    }
-
-                    if (action == TaskAction.SWAP_VIDEO_FACE)
-                    {
-                        imageUrl = url;
-                        thumbnailUrl = url.ToStyle(opt.VideoSnapshotStyle);
-                    }
-                    else if (action == TaskAction.SWAP_FACE)
-                    {
-                        // 换脸不格式化 url
-                        imageUrl = url;
-                        thumbnailUrl = url;
+                        url = $"{opt.Endpoint.TrimEnd('/')}/{opt.Bucket}/{localPath}";
                     }
                     else
                     {
-                        imageUrl = url.ToStyle(opt.ImageStyle);
-                        thumbnailUrl = url.ToStyle(opt.ThumbnailImageStyle);
+                        var baseUrl = opt.Endpoint.Replace("://", $"://{opt.Bucket}.");
+                        url = $"{baseUrl.TrimEnd('/')}/{localPath}";
                     }
-                });
+                }
+
+                // 根据内容类型应用不同的样式
+                if (mm == "image/webp" || mm.StartsWith("image/"))
+                {
+                    url = url.ToStyle(opt.ImageStyle);
+                }
+
+                if (action == TaskAction.SWAP_VIDEO_FACE)
+                {
+                    imageUrl = url;
+                    thumbnailUrl = url.ToStyle(opt.VideoSnapshotStyle);
+                }
+                else if (action == TaskAction.SWAP_FACE)
+                {
+                    // 换脸不格式化 url
+                    imageUrl = url;
+                    thumbnailUrl = url;
+                }
+                else
+                {
+                    imageUrl = url.ToStyle(opt.ImageStyle);
+                    thumbnailUrl = url.ToStyle(opt.ThumbnailImageStyle);
+                }
             }
 
             // https://cdn.discordapp.com/attachments/1265095688782614602/1266300100989161584/03ytbus_LOGO_design_A_warrior_frog_Muscles_like_Popeye_Freehand_06857373-4fd9-403d-a5df-c2f27f9be269.png?ex=66a4a55e&is=66a353de&hm=c597e9d6d128c493df27a4d0ae41204655ab73f7e885878fc1876a8057a7999f&
@@ -434,38 +421,27 @@ namespace Midjourney.Base.Storage
                     return;
                 }
 
-                // 本地锁
-                LocalLock.TryLock(lockKey, TimeSpan.FromSeconds(10), () =>
+                // 如果路径是 ephemeral-attachments 或 attachments 才处理
+                // 如果是本地文件，则依然放到 attachments
+                // 换脸放到附件中
+                if (isReplicate)
                 {
-                    // 如果路径是 ephemeral-attachments 或 attachments 才处理
+                    localPath = $"attachments/{localPath}";
+                }
 
-                    // 如果是本地文件，则依然放到 attachments
-                    // 换脸放到附件中
-                    if (isReplicate)
-                    {
-                        localPath = $"attachments/{localPath}";
-                    }
+                var savePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", localPath);
+                var directoryPath = Path.GetDirectoryName(savePath);
 
-                    var savePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", localPath);
-                    var directoryPath = Path.GetDirectoryName(savePath);
+                if (!string.IsNullOrWhiteSpace(directoryPath))
+                {
+                    Directory.CreateDirectory(directoryPath);
 
-                    if (!string.IsNullOrWhiteSpace(directoryPath))
-                    {
-                        Directory.CreateDirectory(directoryPath);
+                    var imageBytes = await DownloadImageAsync(taskInfo, imageUrl);
+                    File.WriteAllBytes(savePath, imageBytes);
 
-                        // 下载图片并保存
-                        using (HttpClient client = new HttpClient(hch))
-                        {
-                            var response = client.GetAsync(imageUrl).Result;
-                            response.EnsureSuccessStatusCode();
-                            var imageBytes = response.Content.ReadAsByteArrayAsync().Result;
-                            File.WriteAllBytes(savePath, imageBytes);
-                        }
-
-                        // 替换 url
-                        imageUrl = $"{cdn?.Trim()?.Trim('/')}/{localPath}{uri?.Query}";
-                    }
-                });
+                    // 替换 url
+                    imageUrl = $"{cdn?.Trim()?.Trim('/')}/{localPath}{uri?.Query}";
+                }
             }
 
             if (!string.IsNullOrWhiteSpace(imageUrl))
@@ -656,6 +632,48 @@ namespace Midjourney.Base.Storage
             }
 
             return resultUrl;
+        }
+
+        /// <summary>
+        /// 加锁方式下载网络文件
+        /// </summary>
+        /// <param name="info"></param>
+        /// <param name="url"></param>
+        /// <returns></returns>
+        public static async Task<byte[]> DownloadImageAsync(TaskInfo info, string url)
+        {
+            HttpClient client;
+
+            if (info.IsPartner)
+            {
+                client = _youchuanHttpClient;
+            }
+            else
+            {
+                client = _proxyHttpClient;
+            }
+
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                return [];
+            }
+
+            byte[] bytes = [];
+
+            // 最大等待 10 分钟
+            var isLock = await AsyncLocalLock.TryLockAsync($"download:{url}", TimeSpan.FromMinutes(10), async () =>
+            {
+                var response = await client.GetAsync(url);
+                response.EnsureSuccessStatusCode();
+                bytes = await response.Content.ReadAsByteArrayAsync();
+            });
+
+            if (bytes == null || !isLock)
+            {
+                Log.Warning("下载图片失败或未获取到锁: {Url}", url);
+            }
+
+            return bytes ?? [];
         }
     }
 }
