@@ -1738,7 +1738,6 @@ namespace Midjourney.Infrastructure.Services
                                         AfterIntervalMin = 1.2m, // 默认值 1.2
                                         AfterIntervalMax = 1.2m, // 默认值 1.2
                                         QueueSize = accountJson.queueSize ?? 10, // 默认值 10
-                                        MaxQueueSize = 100, // 默认值 100
                                         TimeoutMinutes = accountJson.timeoutMinutes ?? 5, // 默认值 5
                                         Remark = accountJson.remark,
 

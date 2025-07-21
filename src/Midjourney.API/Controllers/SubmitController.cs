@@ -27,7 +27,6 @@ using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
 using Midjourney.Infrastructure.LoadBalancer;
-using Midjourney.License;
 
 namespace Midjourney.API.Controllers
 {
@@ -51,9 +50,13 @@ namespace Midjourney.API.Controllers
         private readonly string _ip;
 
         private readonly DiscordLoadBalancer _discordLoadBalancer;
-        private readonly GenerationSpeedMode? _mode;
         private readonly WorkContext _workContext;
         private readonly IMemoryCache _memoryCache;
+
+        /// <summary>
+        /// 指定绘图速度模式（优先级最高，如果找不到账号则直接返回错误）
+        /// </summary>
+        private readonly GenerationSpeedMode? _mode;
 
         public SubmitController(
             ITranslateService translateService,

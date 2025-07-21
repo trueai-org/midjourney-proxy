@@ -166,7 +166,7 @@ namespace Midjourney.Base.Models
         public string SponsorUserId { get; set; }
 
         /// <summary>
-        /// 并发数。
+        /// 默认并发数（快速）。
         /// </summary>
         [Display(Name = "并发数")]
         public int CoreSize { get; set; } = 3;
@@ -187,10 +187,20 @@ namespace Midjourney.Base.Models
         public decimal AfterIntervalMax { get; set; } = 1.2m;
 
         /// <summary>
-        /// 等待队列长度。
+        /// 默认等待队列长度（快速）。
         /// </summary>
         [Display(Name = "等待队列长度")]
         public int QueueSize { get; set; } = 10;
+
+        /// <summary>
+        /// 慢速并发数
+        /// </summary>
+        public int RelaxCoreSize { get; set; } = 3;
+
+        /// <summary>
+        /// 慢速等待队列数
+        /// </summary>
+        public int RelaxQueueSize { get; set; } = 10;
 
         /// <summary>
         /// 等待最大队列长度
@@ -717,9 +727,11 @@ namespace Midjourney.Base.Models
         {
             get
             {
+                var str = Properties.ContainsKey("Fast Time Remaining") ? Properties["Fast Time Remaining"] : "";
+
                 if (IsYouChuan)
                 {
-                    var str = YouChuanFastRemaining > 0 ? $"{(decimal)YouChuanFastRemaining / 3600:0.0} hours fast" : "0 fast";
+                    //var str = YouChuanFastRemaining > 0 ? $"{(decimal)YouChuanFastRemaining / 3600:0.0} hours fast" : "0 fast";
 
                     if (YouChuanRelaxedReset == null || YouChuanRelaxedReset <= DateTime.Now.Date)
                     {
@@ -734,7 +746,9 @@ namespace Midjourney.Base.Models
                     return str;
                 }
 
-                return Properties.ContainsKey("Fast Time Remaining") ? Properties["Fast Time Remaining"] : "";
+                //return Properties.ContainsKey("Fast Time Remaining") ? Properties["Fast Time Remaining"] : "";
+
+                return str;
             }
         }
 
@@ -798,7 +812,6 @@ namespace Midjourney.Base.Models
                 TimeoutMinutes = configAccount.TimeoutMinutes,
                 PrivateChannelId = configAccount.PrivateChannelId,
                 NijiBotChannelId = configAccount.NijiBotChannelId,
-                MaxQueueSize = configAccount.MaxQueueSize,
                 Mode = configAccount.Mode,
                 AllowModes = configAccount.AllowModes,
                 Weight = configAccount.Weight,
@@ -902,11 +915,6 @@ namespace Midjourney.Base.Models
             if (QueueSize <= 0)
             {
                 QueueSize = 1;
-            }
-
-            if (MaxQueueSize <= 0)
-            {
-                MaxQueueSize = 1;
             }
 
             if (TimeoutMinutes < 5)

@@ -1080,7 +1080,6 @@ namespace Midjourney.API
                 model.RemixAutoSubmit = param.RemixAutoSubmit;
                 model.CoreSize = param.CoreSize;
                 model.QueueSize = param.QueueSize;
-                model.MaxQueueSize = param.MaxQueueSize;
                 model.TimeoutMinutes = param.TimeoutMinutes;
                 model.Weight = param.Weight;
                 model.Remark = param.Remark;
