@@ -2100,6 +2100,9 @@ namespace Midjourney.API.Controllers
             // 存储服务
             StorageHelper.Configure();
 
+            // 缓存
+            GlobalCacheHelper.Configure();
+
             // 首页缓存
             _memoryCache.Remove("HOME");
 

@@ -263,11 +263,14 @@ namespace Midjourney.Base.Data
                                         // 2. postgresql 需要启动扩展支持字典类型
                                         // CREATE EXTENSION hstore;
 
-                                        freeSql.CodeFirst.SyncStructure(typeof(User),
-                                            typeof(BannedWord),
-                                            typeof(DiscordAccount),
-                                            typeof(TaskInfo),
-                                            typeof(DomainTag));
+                                        // 第一批
+                                        freeSql.CodeFirst.SyncStructure(typeof(User), typeof(BannedWord));
+
+                                        // 第二批
+                                        freeSql.CodeFirst.SyncStructure(typeof(DiscordAccount), typeof(DomainTag));
+
+                                        // 第三批
+                                        freeSql.CodeFirst.SyncStructure(typeof(TaskInfo));
 
                                         // 验证成功后，确认配置当前数据库
                                         freeSql = FreeSqlHelper.Init(false);

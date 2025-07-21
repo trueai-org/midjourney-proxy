@@ -34,6 +34,11 @@ namespace Midjourney.Base.Models
     public class Setting : DomainObject
     {
         /// <summary>
+        /// Redis 配置项
+        /// </summary>
+        public string RedisConnectionString { get; set; }
+
+        /// <summary>
         /// 私人定制开启的功能列表 - 在保存授权码/激活时生成
         /// </summary>
         public List<string> PrivateFeatures { get; set; } = [];

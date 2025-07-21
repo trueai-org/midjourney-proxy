@@ -47,6 +47,17 @@ namespace Midjourney.Base.Models
     [Index("i_ParentId", "ParentId")]
     [Index("i_SubmitTime_UserId", "Group,UserId")]
     [Index("i_SubmitTime_InstanceId", "SubmitTime,InstanceId")]
+    [Index("i_State", "State")]
+    [Index("i_Nonce", "Nonce")]
+    //[Index("i_Prompt", "Prompt")]
+    //[Index("i_PromptEn", "PromptEn")]
+    //[Index("i_PromptFull", "PromptFull")]
+    //[Index("i_Description", "Description")]
+    //[Index("i_FailReason", "FailReason")]
+    [Index("i_IsPartner", "IsPartner")]
+    [Index("i_PartnerTaskId", "PartnerTaskId")]
+    [Index("i_IsOfficial", "IsOfficial")]
+    [Index("i_OfficialTaskId", "OfficialTaskId")]
     public class TaskInfo : DomainObject
     {
         public TaskInfo()

@@ -82,6 +82,10 @@ namespace Midjourney.API
             // 存储服务
             StorageHelper.Configure();
 
+            // 缓存服务
+            // 缓存
+            GlobalCacheHelper.Configure();
+
             // 存储服务
             // 内存
             //services.AddSingleton<ITaskStoreService, InMemoryTaskStoreServiceImpl>();

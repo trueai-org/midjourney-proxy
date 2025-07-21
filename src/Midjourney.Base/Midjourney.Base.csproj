@@ -12,6 +12,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="Consul" Version="1.7.14.7" />
+		<PackageReference Include="CSRedisCore" Version="3.8.805" />
 		<PackageReference Include="Selenium.Support" Version="4.15.0" />
 		<PackageReference Include="Selenium.WebDriver" Version="4.15.0" />
 		<PackageReference Include="PuppeteerSharp" Version="18.0.4" />
