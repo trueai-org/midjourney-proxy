@@ -122,11 +122,17 @@ namespace Midjourney.Base.Models
         /// <summary>
         /// 今日绘图次数
         /// </summary>
+        [LiteDB.BsonIgnore]
+        [MongoDB.Bson.Serialization.Attributes.BsonIgnore]
+        [Column(IsIgnore = true)]
         public int DayDrawCount { get; set; } = 0;
 
         /// <summary>
         /// 总绘图次数
         /// </summary>
+        [LiteDB.BsonIgnore]
+        [MongoDB.Bson.Serialization.Attributes.BsonIgnore]
+        [Column(IsIgnore = true)]
         public int TotalDrawCount { get; set; } = 0;
 
         /// <summary>

@@ -449,6 +449,104 @@ namespace Midjourney.API.Controllers
         }
 
         /// <summary>
+        /// 下载日志 - 最新的错误日志/和最新的日志 zip 打包
+        /// </summary>
+        /// <param name="top"></param>
+        /// <returns></returns>
+        [HttpGet("download-logs")]
+        public IActionResult DownloadLogs([FromQuery] int top = 10)
+        {
+            if (_isAnonymous)
+            {
+                return Ok("演示模式，禁止操作");
+            }
+
+            var logName = "log";
+            var errorLogName = "error";
+
+            // 获取最新的日志文件
+            var dirs = Path.Combine(Directory.GetCurrentDirectory(), "logs");
+            if (!Directory.Exists(dirs))
+            {
+                return Ok("Log directory not found.");
+            }
+
+            var logFiles = Directory.GetFiles(dirs, $"{logName}*.txt")
+                .Select(f => new FileInfo(f))
+                .OrderByDescending(f => f.LastWriteTime)
+                .Take(top)
+                .ToList();
+
+            var errorLogFiles = Directory.GetFiles(dirs, $"{errorLogName}*.txt")
+                .Select(f => new FileInfo(f))
+                .OrderByDescending(f => f.LastWriteTime)
+                .Take(top)
+                .ToList();
+
+            //// 最新的日志文件
+            //var logFilePath = logFiles.FirstOrDefault()?.FullName;
+            //var errorLogFilePath = errorLogFiles.FirstOrDefault()?.FullName;
+            //if (string.IsNullOrWhiteSpace(logFilePath) || !System.IO.File.Exists(logFilePath))
+            //{
+            //    return Ok("Log file not found.");
+            //}
+
+            // 打包为 zip
+            var zipFilePath = Path.Combine(dirs, $"logs_{DateTime.Now:yyyyMMdd_HHmmss}.zip");
+            using (var zipStream = new FileStream(zipFilePath, FileMode.Create))
+            using (var archive = new System.IO.Compression.ZipArchive(zipStream, System.IO.Compression.ZipArchiveMode.Create))
+            {
+                //// 添加最新的日志文件
+                //archive.CreateEntryFromFile(logFilePath, Path.GetFileName(logFilePath));
+
+                //// 添加最新的错误日志文件
+                //if (!string.IsNullOrWhiteSpace(errorLogFilePath) && System.IO.File.Exists(errorLogFilePath))
+                //{
+                //    archive.CreateEntryFromFile(errorLogFilePath, Path.GetFileName(errorLogFilePath));
+                //}
+
+                // 添加最新的日志文件
+                foreach (var logFile in logFiles)
+                {
+                    if (logFile.Exists)
+                    {
+                        //archive.CreateEntryFromFile(logFile.FullName, logFile.Name);
+
+                        using (var fileStream = new FileStream(logFile.FullName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                        {
+                            var entry = archive.CreateEntry(logFile.Name);
+                            using (var entryStream = entry.Open())
+                            {
+                                fileStream.CopyTo(entryStream);
+                            }
+                        }
+                    }
+                }
+
+                // 添加最新的错误日志文件
+                foreach (var errorLogFile in errorLogFiles)
+                {
+                    if (errorLogFile.Exists)
+                    {
+                        //archive.CreateEntryFromFile(errorLogFile.FullName, errorLogFile.Name);
+
+                        using (var fileStream = new FileStream(errorLogFile.FullName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                        {
+                            var entry = archive.CreateEntry(errorLogFile.Name);
+                            using (var entryStream = entry.Open())
+                            {
+                                fileStream.CopyTo(entryStream);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 返回 zip 文件
+            return PhysicalFile(zipFilePath, "application/zip", $"logs_{DateTime.Now:yyyyMMdd_HHmmss}.zip");
+        }
+
+        /// <summary>
         /// 根据账号ID获取账号信息
         /// 指定ID获取账号
         /// </summary>
@@ -1509,6 +1607,8 @@ namespace Midjourney.API.Controllers
             var count = 0;
             var list = new List<User>();
 
+            var userTotalCount = new Dictionary<string, int>();
+
             var setting = GlobalConfiguration.Setting;
             if (setting.DatabaseType == DatabaseType.MongoDB)
             {
@@ -1527,6 +1627,22 @@ namespace Midjourney.API.Controllers
                     .Skip((page.Current - 1) * page.PageSize)
                     .Take(page.PageSize)
                     .ToList();
+
+                // 计算用户累计绘图
+                var userIds = list.Select(c => c.Id).ToList();
+                if (userIds.Count > 0)
+                {
+                    userTotalCount = MongoHelper.GetCollection<TaskInfo>().AsQueryable()
+                        .Where(c => userIds.Contains(c.UserId))
+                        .GroupBy(c => c.UserId)
+                        .Select(g => new
+                        {
+                            UserId = g.Key,
+                            TotalCount = g.Count()
+                        })
+                        .ToList()
+                        .ToDictionary(c => c.UserId, c => c.TotalCount);
+                }
             }
             else if (setting.DatabaseType == DatabaseType.LiteDB)
             {
@@ -1544,6 +1660,25 @@ namespace Midjourney.API.Controllers
                    .Skip((page.Current - 1) * page.PageSize)
                    .Limit(page.PageSize)
                    .ToList();
+
+
+                // 计算用户累计绘图
+                var userIds = list.Select(c => c.Id).ToList();
+                if (userIds.Count > 0)
+                {
+                    userTotalCount = LiteDBHelper.TaskStore.GetCollection()
+                        .Query()
+                        .Where(c => userIds.Contains(c.UserId))
+                        .Select(c => c.UserId)
+                        .ToList()
+                        .GroupBy(c => c)
+                        .Select(g => new
+                        {
+                            UserId = g.Key,
+                            TotalCount = g.Count()
+                        })
+                        .ToDictionary(c => c.UserId, c => c.TotalCount);
+                }
             }
             else
             {
@@ -1563,7 +1698,38 @@ namespace Midjourney.API.Controllers
                         .Skip((page.Current - 1) * page.PageSize)
                         .Take(page.PageSize)
                         .ToList();
+
+                    // 计算用户累计绘图
+                    var userIds = list.Select(c => c.Id).ToList();
+                    if (userIds.Count > 0)
+                    {
+                        userTotalCount = freeSql.Select<TaskInfo>().Where(c => userIds.Contains(c.UserId))
+                            .GroupBy(c => c.UserId)
+                            .ToList((c) => new
+                            {
+                                UserId = c.Key,
+                                TotalCount = c.Count()
+                            }).ToDictionary(c => c.UserId, c => c.TotalCount);
+                    }
                 }
+            }
+
+            // 统计今日绘图数量
+            var drawCounter = DrawCounter.UserTodayCounter;
+
+
+            foreach (var item in list)
+            {
+                DrawCounter.InitUserTodayCounter(item.Id);
+
+                // 今日绘图统计
+                var key = $"{DateTime.Now.Date:yyyyMMdd}_{item.Id}";
+                if (drawCounter.TryGetValue(key, out var modeDic))
+                {
+                    item.DayDrawCount = modeDic.Values.SelectMany(c => c.Values).Sum();
+                }
+
+                item.TotalDrawCount = userTotalCount.TryGetValue(item.Id, out var totalCount) ? totalCount : 0;
             }
 
             if (_isAnonymous)

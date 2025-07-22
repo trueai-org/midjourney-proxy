@@ -486,6 +486,11 @@ namespace Midjourney.Base.Models
                 if (StartTime.HasValue && FinishTime.HasValue)
                 {
                     var duration = FinishTime.Value - StartTime.Value;
+                    if (duration < 0)
+                    {
+                        duration = 0; // 确保不会出现负数
+                    }
+
                     return $"{duration / 1000.0:F2} s";
                 }
                 return "-";
