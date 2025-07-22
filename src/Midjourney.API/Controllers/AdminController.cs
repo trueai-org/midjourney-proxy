@@ -1154,6 +1154,7 @@ namespace Midjourney.API.Controllers
                     .OrderByIf(nameof(DiscordAccount.Sponsor).Equals(sort.Predicate, StringComparison.OrdinalIgnoreCase), c => c.Sponsor, sort.Reverse)
                     .OrderByIf(nameof(DiscordAccount.DateCreated).Equals(sort.Predicate, StringComparison.OrdinalIgnoreCase), c => c.DateCreated, sort.Reverse)
                     .OrderByIf(string.IsNullOrWhiteSpace(sort.Predicate), c => c.Sort, false)
+                    .OrderByDescending(c => c.DateCreated)
                     .Skip((page.Current - 1) * page.PageSize)
                     .Take(page.PageSize)
                     .ToList();
@@ -1182,6 +1183,7 @@ namespace Midjourney.API.Controllers
                     .OrderByIf(nameof(DiscordAccount.Sponsor).Equals(sort.Predicate, StringComparison.OrdinalIgnoreCase), c => c.Sponsor, sort.Reverse)
                     .OrderByIf(nameof(DiscordAccount.DateCreated).Equals(sort.Predicate, StringComparison.OrdinalIgnoreCase), c => c.DateCreated, sort.Reverse)
                     .OrderByIf(string.IsNullOrWhiteSpace(sort.Predicate), c => c.Sort, false)
+                    .OrderByDescending(c => c.DateCreated)
                     .Skip((page.Current - 1) * page.PageSize)
                     .Limit(page.PageSize)
                     .ToList();
@@ -1250,12 +1252,14 @@ namespace Midjourney.API.Controllers
                         .OrderByIf(nameof(DiscordAccount.Sponsor).Equals(sort.Predicate, StringComparison.OrdinalIgnoreCase), c => c.Sponsor, sort.Reverse)
                         .OrderByIf(nameof(DiscordAccount.DateCreated).Equals(sort.Predicate, StringComparison.OrdinalIgnoreCase), c => c.DateCreated, sort.Reverse)
                         .OrderByIf(string.IsNullOrWhiteSpace(sort.Predicate), c => c.Sort, false)
+                        .OrderByDescending(c => c.DateCreated)
                         .Skip((page.Current - 1) * page.PageSize)
                         .Take(page.PageSize)
                         .ToList();
                 }
             }
 
+            var counter = DrawCounter.AccountTodayCounter;
             foreach (var item in list)
             {
                 var inc = _loadBalancer.GetDiscordInstance(item.ChannelId);
@@ -1268,6 +1272,26 @@ namespace Midjourney.API.Controllers
 
                 // 是否运行中
                 item.Running = inc?.IsAlive ?? false;
+
+                // 计算今日绘图统计
+                var drawKey = $"{DateTime.Now.Date:yyyyMMdd}_{item.ChannelId}";
+                if (counter.TryGetValue(drawKey, out var counterValue))
+                {
+                    item.TodayCounter = counterValue.OrderBy(c => c.Key).ToDictionary(c => c.Key, c => c.Value);
+
+                    if (counterValue.TryGetValue(GenerationSpeedMode.FAST, out var fasts))
+                    {
+                        item.TodayFastDrawCount = fasts.Sum(x => x.Value);
+                    }
+                    if (counterValue.TryGetValue(GenerationSpeedMode.TURBO, out var turbos))
+                    {
+                        item.TodayTurboDrawCount = turbos.Sum(x => x.Value);
+                    }
+                    if (counterValue.TryGetValue(GenerationSpeedMode.RELAX, out var relaxs))
+                    {
+                        item.TodayRelaxDrawCount = relaxs.Sum(x => x.Value);
+                    }
+                }
 
                 if (user == null || (user.Role != EUserRole.ADMIN && user.Id != item.SponsorUserId))
                 {
@@ -1329,12 +1353,15 @@ namespace Midjourney.API.Controllers
             {
                 var coll = MongoHelper.GetCollection<TaskInfo>().AsQueryable();
                 var query = coll
+                    .WhereIf(param.Mode == GenerationSpeedMode.FAST, c => c.Mode == param.Mode || c.Mode == null)
+                    .WhereIf(param.Mode == GenerationSpeedMode.TURBO, c => c.Mode == param.Mode)
+                    .WhereIf(param.Mode == GenerationSpeedMode.RELAX, c => c.Mode == param.Mode)
                     .WhereIf(!string.IsNullOrWhiteSpace(param.Id), c => c.Id == param.Id || c.State == param.Id)
                     .WhereIf(!string.IsNullOrWhiteSpace(param.InstanceId), c => c.InstanceId == param.InstanceId)
                     .WhereIf(param.Status.HasValue, c => c.Status == param.Status)
                     .WhereIf(param.Action.HasValue, c => c.Action == param.Action)
                     .WhereIf(!string.IsNullOrWhiteSpace(param.FailReason), c => c.FailReason.Contains(param.FailReason))
-                    .WhereIf(!string.IsNullOrWhiteSpace(param.Description), c => c.Description.Contains(param.Description) || c.Prompt.Contains(param.Description) || c.PromptEn.Contains(param.Description));
+                    .WhereIf(!string.IsNullOrWhiteSpace(param.Description), c => c.Prompt.Contains(param.Description));
 
                 var count = query.Count();
                 var list = query
@@ -1350,12 +1377,15 @@ namespace Midjourney.API.Controllers
             else if (setting.DatabaseType == DatabaseType.LiteDB)
             {
                 var query = LiteDBHelper.TaskStore.GetCollection().Query()
+                .WhereIf(param.Mode == GenerationSpeedMode.FAST, c => c.Mode == param.Mode || c.Mode == null)
+                .WhereIf(param.Mode == GenerationSpeedMode.TURBO, c => c.Mode == param.Mode)
+                .WhereIf(param.Mode == GenerationSpeedMode.RELAX, c => c.Mode == param.Mode)
                 .WhereIf(!string.IsNullOrWhiteSpace(param.Id), c => c.Id == param.Id || c.State == param.Id)
                 .WhereIf(!string.IsNullOrWhiteSpace(param.InstanceId), c => c.InstanceId == param.InstanceId)
                 .WhereIf(param.Status.HasValue, c => c.Status == param.Status)
                 .WhereIf(param.Action.HasValue, c => c.Action == param.Action)
                 .WhereIf(!string.IsNullOrWhiteSpace(param.FailReason), c => c.FailReason.Contains(param.FailReason))
-                .WhereIf(!string.IsNullOrWhiteSpace(param.Description), c => c.Description.Contains(param.Description) || c.Prompt.Contains(param.Description) || c.PromptEn.Contains(param.Description));
+                .WhereIf(!string.IsNullOrWhiteSpace(param.Description), c => c.Prompt.Contains(param.Description));
 
                 var count = query.Count();
                 var list = query
@@ -1374,12 +1404,15 @@ namespace Midjourney.API.Controllers
                 if (freeSql != null)
                 {
                     var query = freeSql.Select<TaskInfo>()
+                        .WhereIf(param.Mode == GenerationSpeedMode.FAST, c => c.Mode == param.Mode || c.Mode == null)
+                        .WhereIf(param.Mode == GenerationSpeedMode.TURBO, c => c.Mode == param.Mode)
+                        .WhereIf(param.Mode == GenerationSpeedMode.RELAX, c => c.Mode == param.Mode)
                         .WhereIf(!string.IsNullOrWhiteSpace(param.Id), c => c.Id == param.Id || c.State == param.Id)
                         .WhereIf(!string.IsNullOrWhiteSpace(param.InstanceId), c => c.InstanceId == param.InstanceId)
                         .WhereIf(param.Status.HasValue, c => c.Status == param.Status)
                         .WhereIf(param.Action.HasValue, c => c.Action == param.Action)
                         .WhereIf(!string.IsNullOrWhiteSpace(param.FailReason), c => c.FailReason.Contains(param.FailReason))
-                        .WhereIf(!string.IsNullOrWhiteSpace(param.Description), c => c.Description.Contains(param.Description) || c.Prompt.Contains(param.Description) || c.PromptEn.Contains(param.Description));
+                        .WhereIf(!string.IsNullOrWhiteSpace(param.Description), c => c.Prompt.Contains(param.Description));
 
                     var count = (int)query.Count();
 

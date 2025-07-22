@@ -45,9 +45,10 @@ namespace Midjourney.Base.Models
     [Index("i_Status", "Status")]
     [Index("i_Action", "Action")]
     [Index("i_ParentId", "ParentId")]
-    [Index("i_SubmitTime_UserId", "Group,UserId")]
+    [Index("i_SubmitTime_UserId", "SubmitTime,UserId")]
     [Index("i_SubmitTime_InstanceId", "SubmitTime,InstanceId")]
     [Index("i_State", "State")]
+    [Index("i_Mode", "Mode")]
     [Index("i_Nonce", "Nonce")]
     //[Index("i_Prompt", "Prompt")]
     //[Index("i_PromptEn", "PromptEn")]
@@ -332,7 +333,7 @@ namespace Midjourney.Base.Models
         public string ReplicateTarget { get; set; }
 
         /// <summary>
-        /// 当前绘画客户端指定的速度模式
+        /// 当前绘画的速度模式
         /// </summary>
         public GenerationSpeedMode? Mode { get; set; }
 
@@ -451,7 +452,6 @@ namespace Midjourney.Base.Models
             };
         }
 
-
         /// <summary>
         /// 视频生成原始图像URL
         /// </summary>
@@ -472,6 +472,25 @@ namespace Midjourney.Base.Models
         /// </summary>
         [JsonMap]
         public List<TaskInfoVideoUrl> VideoUrls { get; set; }
+
+        /// <summary>
+        /// 耗时
+        /// </summary>
+        [LiteDB.BsonIgnore]
+        [MongoDB.Bson.Serialization.Attributes.BsonIgnore]
+        [Column(IsIgnore = true)]
+        public string UseTime
+        {
+            get
+            {
+                if (StartTime.HasValue && FinishTime.HasValue)
+                {
+                    var duration = FinishTime.Value - StartTime.Value;
+                    return $"{duration / 1000.0:F2} s";
+                }
+                return "-";
+            }
+        }
 
         /// <summary>
         /// 启动任务。
@@ -562,6 +581,11 @@ namespace Midjourney.Base.Models
         /// <param name="reason">失败原因。</param>
         public void Fail(string reason)
         {
+            if (reason?.Length > 4000)
+            {
+                reason = reason.Substring(0, 4000); // 限制失败原因长度
+            }
+
             FinishTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
             Status = TaskStatus.FAILURE;
             FailReason = reason;
@@ -610,30 +634,32 @@ namespace Midjourney.Base.Models
         {
             try
             {
-                if (!string.IsNullOrWhiteSpace(UserId))
-                {
-                    var model = DbHelper.Instance.UserStore.Get(UserId);
-                    if (model != null)
-                    {
-                        if (model.TotalDrawCount <= 0)
-                        {
-                            // 重新计算
-                            model.TotalDrawCount = (int)DbHelper.Instance.TaskStore.Count(x => x.UserId == UserId);
-                        }
-                        else
-                        {
-                            model.TotalDrawCount += 1;
-                        }
+                DrawCounter.Success(this);
 
-                        // 今日日期
-                        var nowDate = new DateTimeOffset(DateTime.Now.Date).ToUnixTimeMilliseconds();
+                //if (!string.IsNullOrWhiteSpace(UserId))
+                //{
+                //    var model = DbHelper.Instance.UserStore.Get(UserId);
+                //    if (model != null)
+                //    {
+                //        if (model.TotalDrawCount <= 0)
+                //        {
+                //            // 重新计算
+                //            model.TotalDrawCount = (int)DbHelper.Instance.TaskStore.Count(x => x.UserId == UserId);
+                //        }
+                //        else
+                //        {
+                //            model.TotalDrawCount += 1;
+                //        }
 
-                        // 计算今日绘图次数
-                        model.DayDrawCount = (int)DbHelper.Instance.TaskStore.Count(x => x.SubmitTime >= nowDate && x.UserId == UserId);
+                //        // 今日日期
+                //        var nowDate = new DateTimeOffset(DateTime.Now.Date).ToUnixTimeMilliseconds();
 
-                        DbHelper.Instance.UserStore.Update("DayDrawCount,TotalDrawCount", model);
-                    }
-                }
+                //        // 计算今日绘图次数
+                //        model.DayDrawCount = (int)DbHelper.Instance.TaskStore.Count(x => x.SubmitTime >= nowDate && x.UserId == UserId);
+
+                //        DbHelper.Instance.UserStore.Update("DayDrawCount,TotalDrawCount", model);
+                //    }
+                //}
             }
             catch (Exception ex)
             {
@@ -798,12 +824,12 @@ namespace Midjourney.Base.Models
     public class TaskInfoVideoUrl
     {
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public string Url { get; set; } = string.Empty;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public List<CustomComponentModel> Buttons { get; set; } = new List<CustomComponentModel>();
     }

@@ -400,7 +400,7 @@ namespace Midjourney.API
                         GlobalConfiguration.TodayDraw = (int)DbHelper.Instance.TaskStore.Count(x => x.SubmitTime >= now);
                         GlobalConfiguration.TotalDraw = (int)DbHelper.Instance.TaskStore.Count(x => true);
 
-                        // 验证许可证密钥
+                        // 验证许可
                         await LicenseKeyHelper.Validate();
 
                         // 初始化
@@ -558,6 +558,8 @@ namespace Midjourney.API
                 {
                     try
                     {
+                        DrawCounter.InitAccountTodayCounter(account.ChannelId);
+
                         await StartCheckAccount(account, false);
                     }
                     catch (Exception ex)
@@ -1013,9 +1015,9 @@ namespace Midjourney.API
                 model.CfUrl = null;
 
                 // 验证 Interval
-                if (param.Interval < 1.2m)
+                if (param.Interval < 0m)
                 {
-                    param.Interval = 1.2m;
+                    param.Interval = 0m;
                 }
 
                 // 最大并行数
@@ -1080,6 +1082,9 @@ namespace Midjourney.API
                 model.RemixAutoSubmit = param.RemixAutoSubmit;
                 model.CoreSize = param.CoreSize;
                 model.QueueSize = param.QueueSize;
+                model.RelaxQueueSize = param.RelaxQueueSize;
+                model.RelaxCoreSize = param.RelaxCoreSize;
+
                 model.TimeoutMinutes = param.TimeoutMinutes;
                 model.Weight = param.Weight;
                 model.Remark = param.Remark;

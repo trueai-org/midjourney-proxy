@@ -39,6 +39,16 @@ namespace Midjourney.Base.Models
         public string RedisConnectionString { get; set; }
 
         /// <summary>
+        /// 启用悠船失败自动重试
+        /// </summary>
+        public bool EnableYouChuanRetry { get; set; }
+
+        /// <summary>
+        /// 启用悠船重启继续继续任务
+        /// </summary>
+        public bool EnableYouChuanRestartContinue { get; set; }
+
+        /// <summary>
         /// 私人定制开启的功能列表 - 在保存授权码/激活时生成
         /// </summary>
         public List<string> PrivateFeatures { get; set; } = [];
@@ -795,9 +805,14 @@ namespace Midjourney.Base.Models
         public int QueueSize { get; set; } = 10;
 
         /// <summary>
-        /// 等待最大队列长度
+        /// 慢速并发数
         /// </summary>
-        public int MaxQueueSize { get; set; } = 100;
+        public int RelaxCoreSize { get; set; } = 3;
+
+        /// <summary>
+        /// 慢速等待队列数
+        /// </summary>
+        public int RelaxQueueSize { get; set; } = 10;
 
         /// <summary>
         /// 任务超时时间(分钟).

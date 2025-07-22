@@ -83,5 +83,10 @@ namespace Midjourney.Base.Dto
         /// 系统信息
         /// </summary>
         public SystemInfo SystemInfo { get; set; } = SystemInfo.GetCurrentSystemInfo();
+
+        /// <summary>
+        /// 今日绘图计数
+        /// </summary>
+        public Dictionary<GenerationSpeedMode, Dictionary<TaskAction, int>> TodayCounter { get; set; } = [];
     }
 }

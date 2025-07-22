@@ -15,11 +15,11 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Additional Terms:
-// This software shall not be used for any illegal activities. 
+// This software shall not be used for any illegal activities.
 // Users must comply with all applicable laws and regulations,
-// particularly those related to image and video processing. 
+// particularly those related to image and video processing.
 // The use of this software for any form of illegal face swapping,
-// invasion of privacy, or any other unlawful purposes is strictly prohibited. 
+// invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
 using Microsoft.AspNetCore.Authorization;
@@ -77,7 +77,6 @@ namespace Midjourney.API.Controllers
                 // 今日绘图客户端 top 10
                 var setting = GlobalConfiguration.Setting;
 
-
                 var top = GlobalConfiguration.Setting.HomeTopCount;
                 if (top <= 0)
                 {
@@ -130,6 +129,29 @@ namespace Midjourney.API.Controllers
                 return dto;
             });
             data.SystemInfo = SystemInfo.GetCurrentSystemInfo();
+
+            var homeCounter = new Dictionary<GenerationSpeedMode, Dictionary<TaskAction, int>>();
+            var counter = DrawCounter.AccountTodayCounter;
+            var all = counter.Values.SelectMany(c => c).ToList();
+            foreach (var item in all)
+            {
+                if (!homeCounter.ContainsKey(item.Key))
+                {
+                    homeCounter.TryAdd(item.Key, []);
+                }
+
+                foreach (var action in item.Value)
+                {
+                    if (!homeCounter[item.Key].ContainsKey(action.Key))
+                    {
+                        homeCounter[item.Key][action.Key] = 0;
+                    }
+
+                    homeCounter[item.Key][action.Key] += action.Value;
+                }
+            }
+            data.TodayCounter = homeCounter.OrderBy(c => c.Key).ToDictionary(c => c.Key, c => c.Value);
+
 
             return Result.Ok(data);
         }

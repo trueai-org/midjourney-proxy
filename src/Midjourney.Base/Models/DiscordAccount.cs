@@ -15,22 +15,20 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Additional Terms:
-// This software shall not be used for any illegal activities. 
+// This software shall not be used for any illegal activities.
 // Users must comply with all applicable laws and regulations,
-// particularly those related to image and video processing. 
+// particularly those related to image and video processing.
 // The use of this software for any form of illegal face swapping,
-// invasion of privacy, or any other unlawful purposes is strictly prohibited. 
+// invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
+using System.ComponentModel.DataAnnotations;
+using System.Text.RegularExpressions;
 using FreeSql.DataAnnotations;
 using LiteDB;
 using Midjourney.Base.Data;
 using Midjourney.Base.Dto;
 using MongoDB.Bson.Serialization.Attributes;
-using Newtonsoft.Json.Linq;
-using System.ComponentModel.DataAnnotations;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 
 namespace Midjourney.Base.Models
 {
@@ -203,6 +201,38 @@ namespace Midjourney.Base.Models
         public int RelaxQueueSize { get; set; } = 10;
 
         /// <summary>
+        /// 今日 Fast 绘图（有效绘图）
+        /// </summary>
+        [LiteDB.BsonIgnore]
+        [MongoDB.Bson.Serialization.Attributes.BsonIgnore]
+        [Column(IsIgnore = true)]
+        public int TodayFastDrawCount { get; set; } = 0;
+
+        /// <summary>
+        /// 今日 Relax 绘图（有效绘图）
+        /// </summary>
+        [LiteDB.BsonIgnore]
+        [MongoDB.Bson.Serialization.Attributes.BsonIgnore]
+        [Column(IsIgnore = true)]
+        public int TodayRelaxDrawCount { get; set; } = 0;
+
+        /// <summary>
+        /// 今日 Turbo 绘图（有效绘图）
+        /// </summary>
+        [LiteDB.BsonIgnore]
+        [MongoDB.Bson.Serialization.Attributes.BsonIgnore]
+        [Column(IsIgnore = true)]
+        public int TodayTurboDrawCount { get; set; } = 0;
+
+        /// <summary>
+        /// 今日绘图显示 relax/fast/turbo 绘图计数
+        /// </summary>
+        [LiteDB.BsonIgnore]
+        [MongoDB.Bson.Serialization.Attributes.BsonIgnore]
+        [Column(IsIgnore = true)]
+        public string TodayDraw => $"{TodayRelaxDrawCount} / {TodayFastDrawCount} / {TodayTurboDrawCount}";
+
+        /// <summary>
         /// 等待最大队列长度
         /// </summary>
         [Display(Name = "等待最大队列长度")]
@@ -252,6 +282,14 @@ namespace Midjourney.Base.Models
         /// 摸鱼时间段（只接收变化任务，不接收新的任务）
         /// </summary>
         public string FishingTime { get; set; }
+
+        /// <summary>
+        /// 今日绘图计数
+        /// </summary>
+        [LiteDB.BsonIgnore]
+        [MongoDB.Bson.Serialization.Attributes.BsonIgnore]
+        [Column(IsIgnore = true)]
+        public Dictionary<GenerationSpeedMode, Dictionary<TaskAction, int>> TodayCounter { get; set; } = [];
 
         /// <summary>
         /// 表示是否接收新的任务
@@ -463,7 +501,7 @@ namespace Midjourney.Base.Models
 
         /// <summary>
         /// 悠船快速时长剩余，单位：秒（total - used）
-        /// 剩余时间 > 60s/180s 时，表示允许绘图 
+        /// 剩余时间 > 60s/180s 时，表示允许绘图
         /// </summary>
         public int YouChuanFastRemaining { get; set; } = 0;
 
@@ -713,7 +751,6 @@ namespace Midjourney.Base.Models
                 }
                 catch
                 {
-
                 }
 
                 return dic;
@@ -788,13 +825,25 @@ namespace Midjourney.Base.Models
         /// <returns></returns>
         public static DiscordAccount Create(DiscordAccountConfig configAccount)
         {
-            if (configAccount.Interval < 1.2m)
+            if (configAccount.Interval < 0m)
             {
-                configAccount.Interval = 1.2m;
+                configAccount.Interval = 0m;
             }
             if (configAccount.CoreSize > 12)
             {
                 configAccount.CoreSize = 12;
+            }
+            if (configAccount.QueueSize > 100)
+            {
+                configAccount.QueueSize = 100;
+            }
+            if (configAccount.RelaxCoreSize > 12)
+            {
+                configAccount.RelaxCoreSize = 12;
+            }
+            if (configAccount.RelaxQueueSize > 100)
+            {
+                configAccount.RelaxQueueSize = 100;
             }
 
             return new DiscordAccount
@@ -808,6 +857,8 @@ namespace Midjourney.Base.Models
                 Enable = configAccount.Enable,
                 CoreSize = configAccount.CoreSize,
                 QueueSize = configAccount.QueueSize,
+                RelaxCoreSize = configAccount.RelaxCoreSize,
+                RelaxQueueSize = configAccount.RelaxQueueSize,
                 BotToken = configAccount.BotToken,
                 TimeoutMinutes = configAccount.TimeoutMinutes,
                 PrivateChannelId = configAccount.PrivateChannelId,

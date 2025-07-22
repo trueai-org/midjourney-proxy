@@ -372,9 +372,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
                         if (_semaphoreSlimLock.IsLockAvailable())
                         {
                             var preSleep = Account.Interval;
-                            if (preSleep <= 1.2m)
+                            if (preSleep <= 0m)
                             {
-                                preSleep = 1.2m;
+                                preSleep = 0m;
                             }
 
                             // 提交任务前间隔
@@ -395,11 +395,11 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                                 // 计算 min ~ max随机数
                                 var afterInterval = 1200;
-                                if (max > min && min >= 1.2m)
+                                if (max > min && min >= 0m)
                                 {
                                     afterInterval = new Random().Next((int)(min * 1000), (int)(max * 1000));
                                 }
-                                else if (max == min && min >= 1.2m)
+                                else if (max == min && min >= 0m)
                                 {
                                     afterInterval = (int)(min * 1000);
                                 }
