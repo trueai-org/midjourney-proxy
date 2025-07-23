@@ -1252,7 +1252,6 @@ namespace Midjourney.API.Controllers
                     .OrderByIf(nameof(DiscordAccount.Sponsor).Equals(sort.Predicate, StringComparison.OrdinalIgnoreCase), c => c.Sponsor, sort.Reverse)
                     .OrderByIf(nameof(DiscordAccount.DateCreated).Equals(sort.Predicate, StringComparison.OrdinalIgnoreCase), c => c.DateCreated, sort.Reverse)
                     .OrderByIf(string.IsNullOrWhiteSpace(sort.Predicate), c => c.Sort, false)
-                    .OrderByDescending(c => c.DateCreated)
                     .Skip((page.Current - 1) * page.PageSize)
                     .Take(page.PageSize)
                     .ToList();
@@ -1281,7 +1280,6 @@ namespace Midjourney.API.Controllers
                     .OrderByIf(nameof(DiscordAccount.Sponsor).Equals(sort.Predicate, StringComparison.OrdinalIgnoreCase), c => c.Sponsor, sort.Reverse)
                     .OrderByIf(nameof(DiscordAccount.DateCreated).Equals(sort.Predicate, StringComparison.OrdinalIgnoreCase), c => c.DateCreated, sort.Reverse)
                     .OrderByIf(string.IsNullOrWhiteSpace(sort.Predicate), c => c.Sort, false)
-                    .OrderByDescending(c => c.DateCreated)
                     .Skip((page.Current - 1) * page.PageSize)
                     .Limit(page.PageSize)
                     .ToList();
