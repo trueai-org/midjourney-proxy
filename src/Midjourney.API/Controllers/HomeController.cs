@@ -150,7 +150,7 @@ namespace Midjourney.API.Controllers
                     homeCounter[item.Key][action.Key] += action.Value;
                 }
             }
-            data.TodayCounter = homeCounter.OrderBy(c => c.Key).ToDictionary(c => c.Key, c => c.Value.OrderBy(x => x.Key).ToDictionary(x => x.Key, x => x.Value);
+            data.TodayCounter = homeCounter.OrderBy(c => c.Key).ToDictionary(c => c.Key, c => c.Value.OrderBy(x => x.Key).ToDictionary(x => x.Key, x => x.Value));
 
             return Result.Ok(data);
         }
