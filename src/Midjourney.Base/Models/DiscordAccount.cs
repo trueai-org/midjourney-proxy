@@ -307,13 +307,13 @@ namespace Midjourney.Base.Models
                 // 如果工作时间段和摸鱼时间段都为空
                 if (string.IsNullOrWhiteSpace(WorkTime) && string.IsNullOrWhiteSpace(FishingTime))
                 {
-                    return IsContinueDrawing;
+                    return IsDailyLimitContinueDrawing;
                 }
 
                 // 如果工作时间段内，且不是摸鱼时间段
                 if (DateTime.Now.IsInWorkTime(WorkTime) && !DateTime.Now.IsInFishTime(FishingTime))
                 {
-                    return IsContinueDrawing;
+                    return IsDailyLimitContinueDrawing;
                 }
 
                 // 表示不接收新的任务
@@ -322,12 +322,12 @@ namespace Midjourney.Base.Models
         }
 
         /// <summary>
-        /// 是否达到最大任务限制 - 是否允许继续绘图
+        /// 是否达到日任务绘图上限 - 是否允许继续绘图
         /// </summary>
         [LiteDB.BsonIgnore]
         [MongoDB.Bson.Serialization.Attributes.BsonIgnore]
         [Column(IsIgnore = true)]
-        public bool IsContinueDrawing
+        public bool IsDailyLimitContinueDrawing
         {
             get
             {
@@ -335,7 +335,6 @@ namespace Midjourney.Base.Models
                 {
                     return true;
                 }
-
                 return false;
             }
         }
@@ -361,7 +360,7 @@ namespace Midjourney.Base.Models
         /// 允许速度模式，用于前台筛选账号
         /// </summary>
         [JsonMap]
-        public List<GenerationSpeedMode> AllowModes { get; set; } = new List<GenerationSpeedMode>();
+        public List<GenerationSpeedMode> AllowModes { get; set; } = [];
 
         /// <summary>
         /// 自动设置慢速
@@ -373,7 +372,7 @@ namespace Midjourney.Base.Models
         /// MJ 组件列表。
         /// </summary>
         [JsonMap]
-        public List<Component> Components { get; set; } = new List<Component>();
+        public List<Component> Components { get; set; } = [];
 
         /// <summary>
         /// MJ 设置消息 ID
@@ -506,6 +505,11 @@ namespace Midjourney.Base.Models
         public int YouChuanFastRemaining { get; set; } = 0;
 
         /// <summary>
+        /// 悠船慢速每日上限
+        /// </summary>
+        public int YouChuanRelaxDailyLimit { get; set; } = -1;
+
+        /// <summary>
         /// 悠船到期时间
         /// </summary>
         [BsonDateTimeOptions(Kind = DateTimeKind.Local)]
@@ -520,39 +524,358 @@ namespace Midjourney.Base.Models
         public DateTime? YouChuanRelaxedReset { get; set; }
 
         /// <summary>
-        /// 传入速度模式，判断是否允许继续绘图（仅适用于悠船账号，如果没有速度模式，表示允许继续绘图）
+        /// 验证速度模式，是否允许继续绘图，并确定速度模式
         /// </summary>
-        /// <param name="speed"></param>
+        /// <param name="speed">前台指定唯一速度</param>
+        /// <param name="accountFilterModes">前台指定任一速度</param>
+        /// <param name="confirmMode">确认的速度模式，优先使用快速</param>
         /// <returns></returns>
-        public bool IsYouChuanContinueDrawing(GenerationSpeedMode? speed)
+        public bool IsValidateModeContinueDrawing(GenerationSpeedMode? speed, List<GenerationSpeedMode> accountFilterModes, out GenerationSpeedMode confirmMode)
         {
-            if (!IsYouChuan)
-            {
-                return true;
-            }
+            accountFilterModes ??= [];
+            confirmMode = GenerationSpeedMode.FAST;
 
-            if (AllowModes == null || AllowModes.Count == 0 || speed == null || AllowModes.Contains(speed.Value))
+            // 悠船
+            if (IsYouChuan)
             {
                 var anyRelax = YouChuanRelaxedReset == null || YouChuanRelaxedReset <= DateTime.Now.Date;
 
-                if (speed == GenerationSpeedMode.FAST)
+                // 1、如果后台固定速度，忽略所有前台参数
+                if (Mode == GenerationSpeedMode.RELAX)
                 {
-                    // 剩余时长 60s 以上，或者指定了慢速且慢速有时间
-                    return YouChuanFastRemaining > 60 || (Mode == GenerationSpeedMode.RELAX && anyRelax);
+                    confirmMode = GenerationSpeedMode.RELAX;
+                    return anyRelax;
                 }
-                else if (speed == GenerationSpeedMode.TURBO)
+                else if (Mode == GenerationSpeedMode.FAST)
                 {
-                    // 剩余时长 180s 以上，或者指定了慢速且慢速有时间
-                    return YouChuanFastRemaining > 180 || (Mode == GenerationSpeedMode.RELAX && anyRelax);
+                    confirmMode = GenerationSpeedMode.FAST;
+                    return YouChuanFastRemaining > 360;
                 }
-                else if (speed == GenerationSpeedMode.RELAX && anyRelax)
+                else if (Mode == GenerationSpeedMode.TURBO)
                 {
+                    confirmMode = GenerationSpeedMode.TURBO;
+                    return YouChuanFastRemaining > 720;
+                }
+                else
+                {
+                    // 2、如果前台指定唯一速度
+                    if (speed != null)
+                    {
+                        if (AllowModes.Count == 0 || AllowModes.Contains(speed.Value))
+                        {
+                            if (speed == GenerationSpeedMode.FAST)
+                            {
+                                confirmMode = GenerationSpeedMode.FAST;
+                                return YouChuanFastRemaining > 360;
+                            }
+                            else if (speed == GenerationSpeedMode.TURBO)
+                            {
+                                confirmMode = GenerationSpeedMode.TURBO;
+                                return YouChuanFastRemaining > 720;
+                            }
+                            else if (speed == GenerationSpeedMode.RELAX)
+                            {
+                                confirmMode = GenerationSpeedMode.RELAX;
+                                return anyRelax;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // 3、如果前台指定任一速度，并且后台不限制速度
+                        if (AllowModes.Count == 0 && (accountFilterModes.Count <= 0 || AllowModes.Any(x => accountFilterModes.Contains(x))))
+                        {
+                            var isSucess = false;
+
+                            // 前台没有过滤速度
+                            if (!isSucess && accountFilterModes.Count <= 0)
+                            {
+                                isSucess = YouChuanFastRemaining > 180 || anyRelax;
+                                if (isSucess)
+                                {
+                                    confirmMode = YouChuanFastRemaining > 180 ? GenerationSpeedMode.FAST : GenerationSpeedMode.RELAX;
+                                }
+                            }
+
+                            // 前台过滤快速 - 优先匹配快速
+                            if (!isSucess && accountFilterModes.Contains(GenerationSpeedMode.FAST))
+                            {
+                                isSucess = YouChuanFastRemaining > 360;
+                                if (isSucess)
+                                {
+                                    confirmMode = GenerationSpeedMode.FAST;
+                                }
+                            }
+
+                            // 前台过滤慢速 - 匹配慢速
+                            if (!isSucess && accountFilterModes.Contains(GenerationSpeedMode.RELAX))
+                            {
+                                isSucess = anyRelax;
+                                if (isSucess)
+                                {
+                                    confirmMode = GenerationSpeedMode.RELAX;
+                                }
+                            }
+
+                            // 前台过滤极速 - 匹配极速
+                            if (!isSucess && accountFilterModes.Contains(GenerationSpeedMode.TURBO))
+                            {
+                                isSucess = YouChuanFastRemaining > 720;
+                                if (isSucess)
+                                {
+                                    confirmMode = GenerationSpeedMode.TURBO;
+                                }
+                            }
+
+                            return isSucess;
+                        }
+
+                        // 4、如果前台指定任一速度，并且后台有限制
+                        if (AllowModes.Count > 0 && (accountFilterModes.Count <= 0 || AllowModes.Any(x => accountFilterModes.Contains(x))))
+                        {
+                            // 重组优先匹配 fast/relax/turbo 模式
+                            var ams = new List<GenerationSpeedMode>();
+                            if (AllowModes.Contains(GenerationSpeedMode.FAST))
+                            {
+                                ams.Add(GenerationSpeedMode.FAST);
+                            }
+                            if (AllowModes.Contains(GenerationSpeedMode.RELAX))
+                            {
+                                ams.Add(GenerationSpeedMode.RELAX);
+                            }
+                            if (AllowModes.Contains(GenerationSpeedMode.TURBO))
+                            {
+                                ams.Add(GenerationSpeedMode.TURBO);
+                            }
+
+                            foreach (var am in ams)
+                            {
+                                var isSucess = false;
+
+                                switch (am)
+                                {
+                                    case GenerationSpeedMode.RELAX:
+                                        {
+                                            // 前台没有过滤速度 - 后台要求慢速
+                                            if (!isSucess && accountFilterModes.Count <= 0)
+                                            {
+                                                isSucess = anyRelax;
+                                            }
+
+                                            // 前台过滤慢速 - 后台要求慢速
+                                            if (!isSucess && accountFilterModes.Contains(GenerationSpeedMode.RELAX))
+                                            {
+                                                isSucess = anyRelax;
+                                            }
+                                        }
+                                        break;
+                                    case GenerationSpeedMode.FAST:
+                                        {
+                                            // 前台没有过滤速度 - 后台要求快速
+                                            if (!isSucess && accountFilterModes.Count <= 0)
+                                            {
+                                                isSucess = YouChuanFastRemaining > 360;
+                                            }
+
+                                            // 前台过滤快速 - 后台要求快速
+                                            if (!isSucess && accountFilterModes.Contains(GenerationSpeedMode.FAST))
+                                            {
+                                                isSucess = YouChuanFastRemaining > 360;
+                                            }
+                                        }
+                                        break;
+                                    case GenerationSpeedMode.TURBO:
+                                        {
+                                            // 前台没有过滤速度 - 后台要求极速
+                                            if (!isSucess && accountFilterModes.Count <= 0)
+                                            {
+                                                isSucess = YouChuanFastRemaining > 720;
+                                            }
+
+                                            // 前台过滤极速 - 后台要求极速
+                                            if (!isSucess && accountFilterModes.Contains(GenerationSpeedMode.TURBO))
+                                            {
+                                                isSucess = YouChuanFastRemaining > 720;
+                                            }
+                                        }
+                                        break;
+                                    default:
+                                        break;
+                                }
+
+                                if (isSucess)
+                                {
+                                    confirmMode = am;
+                                    return isSucess;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            else
+            {
+                // 官方或 Discord
+                // 1、如果后台固定速度，忽略所有前台参数
+                if (Mode == GenerationSpeedMode.RELAX)
+                {
+                    confirmMode = GenerationSpeedMode.RELAX;
                     return true;
                 }
-                else if (speed == null)
+                else if (Mode == GenerationSpeedMode.FAST)
                 {
-                    // 如果没有速度模式
-                    return YouChuanFastRemaining > 60 || anyRelax;
+                    confirmMode = GenerationSpeedMode.FAST;
+                    return true;
+                }
+                else if (Mode == GenerationSpeedMode.TURBO)
+                {
+                    confirmMode = GenerationSpeedMode.TURBO;
+                    return true;
+                }
+                else
+                {
+                    // 2、如果前台指定唯一速度
+                    if (speed != null)
+                    {
+                        if (AllowModes.Count == 0 || AllowModes.Contains(speed.Value))
+                        {
+                            if (speed == GenerationSpeedMode.FAST)
+                            {
+                                confirmMode = GenerationSpeedMode.FAST;
+                                return true;
+                            }
+                            else if (speed == GenerationSpeedMode.TURBO)
+                            {
+                                confirmMode = GenerationSpeedMode.TURBO;
+                                return true;
+                            }
+                            else if (speed == GenerationSpeedMode.RELAX)
+                            {
+                                confirmMode = GenerationSpeedMode.RELAX;
+                                return true;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // 3、如果前台指定任一速度，并且后台不限制速度
+                        if (AllowModes.Count == 0 && (accountFilterModes.Count <= 0 || AllowModes.Any(x => accountFilterModes.Contains(x))))
+                        {
+                            var isSucess = false;
+
+                            // 前台没有过滤速度
+                            if (!isSucess && accountFilterModes.Count <= 0)
+                            {
+                                confirmMode = GenerationSpeedMode.FAST;
+                                return true;
+                            }
+
+                            // 前台过滤快速 - 优先匹配快速
+                            if (!isSucess && accountFilterModes.Contains(GenerationSpeedMode.FAST))
+                            {
+                                confirmMode = GenerationSpeedMode.FAST;
+                                return true;
+                            }
+
+                            // 前台过滤慢速 - 匹配慢速
+                            if (!isSucess && accountFilterModes.Contains(GenerationSpeedMode.RELAX))
+                            {
+                                confirmMode = GenerationSpeedMode.RELAX;
+                                return true;
+                            }
+
+                            // 前台过滤极速 - 匹配极速
+                            if (!isSucess && accountFilterModes.Contains(GenerationSpeedMode.TURBO))
+                            {
+                                confirmMode = GenerationSpeedMode.TURBO;
+                                return true;
+                            }
+
+                            return isSucess;
+                        }
+
+                        // 4、如果前台指定任一速度，并且后台有限制
+                        if (AllowModes.Count > 0 && (accountFilterModes.Count <= 0 || AllowModes.Any(x => accountFilterModes.Contains(x))))
+                        {
+                            // 重组优先匹配 fast/relax/turbo 模式
+                            var ams = new List<GenerationSpeedMode>();
+                            if (AllowModes.Contains(GenerationSpeedMode.FAST))
+                            {
+                                ams.Add(GenerationSpeedMode.FAST);
+                            }
+                            if (AllowModes.Contains(GenerationSpeedMode.RELAX))
+                            {
+                                ams.Add(GenerationSpeedMode.RELAX);
+                            }
+                            if (AllowModes.Contains(GenerationSpeedMode.TURBO))
+                            {
+                                ams.Add(GenerationSpeedMode.TURBO);
+                            }
+
+                            foreach (var am in ams)
+                            {
+                                var isSucess = false;
+
+                                switch (am)
+                                {
+                                    case GenerationSpeedMode.RELAX:
+                                        {
+                                            // 前台没有过滤速度 - 后台要求慢速
+                                            if (!isSucess && accountFilterModes.Count <= 0)
+                                            {
+                                                isSucess = true;
+                                            }
+
+                                            // 前台过滤慢速 - 后台要求慢速
+                                            if (!isSucess && accountFilterModes.Contains(GenerationSpeedMode.RELAX))
+                                            {
+                                                isSucess = true;
+                                            }
+                                        }
+                                        break;
+                                    case GenerationSpeedMode.FAST:
+                                        {
+                                            // 前台没有过滤速度 - 后台要求快速
+                                            if (!isSucess && accountFilterModes.Count <= 0)
+                                            {
+                                                isSucess = true;
+                                            }
+
+                                            // 前台过滤快速 - 后台要求快速
+                                            if (!isSucess && accountFilterModes.Contains(GenerationSpeedMode.FAST))
+                                            {
+                                                isSucess = true;
+                                            }
+                                        }
+                                        break;
+                                    case GenerationSpeedMode.TURBO:
+                                        {
+                                            // 前台没有过滤速度 - 后台要求极速
+                                            if (!isSucess && accountFilterModes.Count <= 0)
+                                            {
+                                                isSucess = true;
+                                            }
+
+                                            // 前台过滤极速 - 后台要求极速
+                                            if (!isSucess && accountFilterModes.Contains(GenerationSpeedMode.TURBO))
+                                            {
+                                                isSucess = true;
+                                            }
+                                        }
+                                        break;
+                                    default:
+                                        break;
+                                }
+
+                                if (isSucess)
+                                {
+                                    confirmMode = am;
+                                    return isSucess;
+                                }
+                            }
+                        }
+                    }
+
                 }
             }
 
@@ -764,28 +1087,37 @@ namespace Midjourney.Base.Models
         {
             get
             {
-                var str = Properties.ContainsKey("Fast Time Remaining") ? Properties["Fast Time Remaining"] : "";
+                return Properties.ContainsKey("Fast Time Remaining") ? Properties["Fast Time Remaining"]?.ToString() : "";
+            }
+        }
 
+        /// <summary>
+        /// 慢速时间剩余
+        /// </summary>
+        public string RelaxTimeRemaining
+        {
+            get
+            {
                 if (IsYouChuan)
                 {
-                    //var str = YouChuanFastRemaining > 0 ? $"{(decimal)YouChuanFastRemaining / 3600:0.0} hours fast" : "0 fast";
+                    // 悠船慢速每日上限
+                    if (YouChuanRelaxDailyLimit <= 0)
+                    {
+                        return "N/A";
+                    }
 
+                    // 如果没有设置慢速重置时间，表示没有慢速限制
                     if (YouChuanRelaxedReset == null || YouChuanRelaxedReset <= DateTime.Now.Date)
                     {
-                        str += $", relax normal";
+                        return $"{TodayRelaxDrawCount} / {YouChuanRelaxDailyLimit}";
                     }
                     else
                     {
-                        // 表示重置到第二天了
-                        str += $", relax reset {YouChuanRelaxedReset?.ToString("yyyy-MM-dd")}";
+                        return $"Reset {YouChuanRelaxedReset?.ToString("yyyy-MM-dd")}";
                     }
-
-                    return str;
                 }
 
-                //return Properties.ContainsKey("Fast Time Remaining") ? Properties["Fast Time Remaining"] : "";
-
-                return str;
+                return Properties.ContainsKey("Relax Time Remaining") ? Properties["Relax Time Remaining"]?.ToString() : "N/A";
             }
         }
 

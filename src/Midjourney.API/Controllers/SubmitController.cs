@@ -591,6 +591,7 @@ namespace Midjourney.API.Controllers
             task.RealBotType = targetTask.RealBotType;
             task.SubInstanceId = targetTask.SubInstanceId;
 
+
             // 识别 mj action
 
             // 放大
@@ -1003,18 +1004,25 @@ namespace Midjourney.API.Controllers
                 task.AccountFilter = new AccountFilter();
             }
 
-            // 如果路径中有速度模式
-            if (_mode != null)
+            // 如果没有路径速度，并且没有过滤速度，解析提示词，生成指定模式过滤
+            if (task.Mode == null && task.AccountFilter.Modes.Count == 0)
             {
-                if (!task.AccountFilter.Modes.Contains(_mode.Value))
-                {
-                    task.AccountFilter.Modes.Add(_mode.Value);
-                }
-            }
+                // 解析提示词
+                var prompt = task.Prompt?.ToLower() ?? "";
 
-            if (task.Mode == null)
-            {
-                task.Mode = task.GetMode();
+                // 解析速度模式
+                if (prompt.Contains("--fast"))
+                {
+                    task.Mode = GenerationSpeedMode.FAST;
+                }
+                else if (prompt.Contains("--relax"))
+                {
+                    task.Mode = GenerationSpeedMode.RELAX;
+                }
+                else if (prompt.Contains("--turbo"))
+                {
+                    task.Mode = GenerationSpeedMode.TURBO;
+                }
             }
         }
 

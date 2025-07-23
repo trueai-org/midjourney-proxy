@@ -63,7 +63,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <param name="domainIds">过滤垂直领域 ID</param>
         /// <param name="ids">指定 ids 账号</param>
         /// <param name="shorten"></param>
-        /// <param name="speedMode"></param>
+        /// <param name="preferredSpeedMode">首选速度模式，优先使用此模式过滤</param>
         public DiscordInstance ChooseInstance(
             AccountFilter accountFilter = null,
             bool? isNewTask = null,
@@ -74,7 +74,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
             List<string> domainIds = null,
             List<string> ids = null,
             bool? shorten = null,
-            GenerationSpeedMode? speedMode = null)
+            GenerationSpeedMode? preferredSpeedMode = null)
         {
             var list = GetAliveInstances()
 
@@ -82,19 +82,19 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 .Where(c => c.IsIdleQueue)
 
                 // 允许继续绘图
-                .Where(c => c.Account.IsContinueDrawing && c.Account.Enable == true)
+                .Where(c => c.Account.IsDailyLimitContinueDrawing && c.Account.Enable == true)
 
-                // 悠船绘图判断
-                .Where(c => c.Account.IsYouChuanContinueDrawing(speedMode))
+                // 首选速度绘图判断
+                .Where(c => c.Account.IsValidateModeContinueDrawing(preferredSpeedMode, accountFilter.Modes, out _))
 
-                // 指定 ID 的实例
-                .WhereIf(!string.IsNullOrWhiteSpace(accountFilter.InstanceId), c => c.ChannelId == accountFilter.InstanceId)
-
-                // 允许速度模式过滤，有交集的
-                .WhereIf(accountFilter?.Modes.Count > 0, c => c.Account.AllowModes == null || c.Account.AllowModes.Count <= 0 || c.Account.AllowModes.Any(x => accountFilter.Modes.Contains(x)))
+                //// 允许速度模式过滤，有交集的
+                //.WhereIf(accountFilter?.Modes.Count > 0, c => c.Account.AllowModes == null || c.Account.AllowModes.Count <= 0 || c.Account.AllowModes.Any(x => accountFilter.Modes.Contains(x)))
 
                 // Discord 绘图判断
                 .WhereIf(accountFilter?.Modes.Count > 0, c => c.Account.IsDiscordContinueDrawing(accountFilter.Modes.ToArray()))
+
+                // 指定 ID 的实例
+                .WhereIf(!string.IsNullOrWhiteSpace(accountFilter.InstanceId), c => c.ChannelId == accountFilter.InstanceId)
 
                 // Midjourney Remix 过滤
                 .WhereIf(accountFilter?.Remix == true, c => c.Account.MjRemixOn == accountFilter.Remix || !c.Account.RemixAutoSubmit)

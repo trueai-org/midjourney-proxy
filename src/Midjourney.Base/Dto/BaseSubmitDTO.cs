@@ -50,9 +50,9 @@ namespace Midjourney.Base.Dto
         public string InstanceId { get; set; }
 
         /// <summary>
-        /// 账号模式 RELAX | FAST | TURBO
+        /// 过滤账号模式 RELAX | FAST | TURBO
         /// </summary>
-        public List<GenerationSpeedMode> Modes { get; set; } = new List<GenerationSpeedMode>();
+        public List<GenerationSpeedMode> Modes { get; set; } = [];
 
         /// <summary>
         /// 账号是否 remix（Midjourney Remix）

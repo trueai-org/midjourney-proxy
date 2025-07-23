@@ -334,6 +334,10 @@ namespace Midjourney.Base.Models
 
         /// <summary>
         /// 当前绘画的速度模式
+        /// 1、优先从路劲获取指定的速度
+        /// 2、如果路径没有指定速度，则从执行结果中获取速度模式
+        /// 3、变化任务时，默认取父级的速度模式
+        /// 4、如果任务成功后，依然没有速度，则默认为 FAST
         /// </summary>
         public GenerationSpeedMode? Mode { get; set; }
 
@@ -392,65 +396,65 @@ namespace Midjourney.Base.Models
         [Column(IsIgnore = true)]
         public int? ImageWidth => Width;
 
-        /// <summary>
-        /// 获取当前绘图的速度模式
-        /// </summary>
-        /// <returns></returns>
-        public GenerationSpeedMode? GetMode()
-        {
-            // 如果自身有速度模式
-            if (Mode != null)
-            {
-                return Mode;
-            }
+        ///// <summary>
+        ///// 获取当前绘图的速度模式
+        ///// </summary>
+        ///// <returns></returns>
+        //public GenerationSpeedMode? GetMode()
+        //{
+        //    // 如果自身有速度模式
+        //    if (Mode != null)
+        //    {
+        //        return Mode;
+        //    }
 
-            // 如果过滤参数中有速度模式，则直接返回
-            if (AccountFilter != null && AccountFilter.Modes?.Count > 0)
-            {
-                return AccountFilter.Modes.FirstOrDefault();
-            }
+        //    // 如果过滤参数中有速度模式，则直接返回
+        //    if (AccountFilter != null && AccountFilter.Modes?.Count > 0)
+        //    {
+        //        return AccountFilter.Modes.FirstOrDefault();
+        //    }
 
-            if (!string.IsNullOrWhiteSpace(Prompt))
-            {
-                // 解析提示词
-                var prompt = Prompt.ToLower();
+        //    if (!string.IsNullOrWhiteSpace(Prompt))
+        //    {
+        //        // 解析提示词
+        //        var prompt = Prompt.ToLower();
 
-                // 解析速度模式
-                if (prompt.Contains("--fast"))
-                {
-                    return GenerationSpeedMode.FAST;
-                }
-                else if (prompt.Contains("--relax"))
-                {
-                    return GenerationSpeedMode.RELAX;
-                }
-                else if (prompt.Contains("--turbo"))
-                {
-                    return GenerationSpeedMode.TURBO;
-                }
-                else
-                {
-                    return null;
-                }
-            }
+        //        // 解析速度模式
+        //        if (prompt.Contains("--fast"))
+        //        {
+        //            return GenerationSpeedMode.FAST;
+        //        }
+        //        else if (prompt.Contains("--relax"))
+        //        {
+        //            return GenerationSpeedMode.RELAX;
+        //        }
+        //        else if (prompt.Contains("--turbo"))
+        //        {
+        //            return GenerationSpeedMode.TURBO;
+        //        }
+        //        else
+        //        {
+        //            return null;
+        //        }
+        //    }
 
-            return null;
-        }
+        //    return null;
+        //}
 
-        /// <summary>
-        /// 获取当前绘图的速度模式字符串表示。
-        /// </summary>
-        /// <returns></returns>
-        public string GetModeString()
-        {
-            return Mode switch
-            {
-                GenerationSpeedMode.FAST => "fast",
-                GenerationSpeedMode.RELAX => "relax",
-                GenerationSpeedMode.TURBO => "turbo",
-                _ => "relax"
-            };
-        }
+        ///// <summary>
+        ///// 获取当前绘图的速度模式字符串表示。
+        ///// </summary>
+        ///// <returns></returns>
+        //public string GetModeString()
+        //{
+        //    return Mode switch
+        //    {
+        //        GenerationSpeedMode.FAST => "fast",
+        //        GenerationSpeedMode.RELAX => "relax",
+        //        GenerationSpeedMode.TURBO => "turbo",
+        //        _ => "relax"
+        //    };
+        //}
 
         /// <summary>
         /// 视频生成原始图像URL
@@ -576,6 +580,34 @@ namespace Midjourney.Base.Models
             FinishTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
             Status = TaskStatus.SUCCESS;
             Progress = "100%";
+
+            // 根据最终提示词更新速度模式
+            var finalPrompt = GetProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, "");
+            if (!string.IsNullOrWhiteSpace(finalPrompt))
+            {
+                // 解析提示词
+                var prompt = finalPrompt.ToLower();
+
+                // 解析速度模式
+                if (prompt.Contains("--fast"))
+                {
+                    Mode = GenerationSpeedMode.FAST;
+                }
+                else if (prompt.Contains("--relax"))
+                {
+                    Mode = GenerationSpeedMode.RELAX;
+                }
+                else if (prompt.Contains("--turbo"))
+                {
+                    Mode = GenerationSpeedMode.TURBO;
+                }
+            }
+
+            // 如果没有解析到，则使用默认值
+            if (Mode == null)
+            {
+                Mode = GenerationSpeedMode.FAST;
+            }
 
             UpdateUserDrawCount();
         }

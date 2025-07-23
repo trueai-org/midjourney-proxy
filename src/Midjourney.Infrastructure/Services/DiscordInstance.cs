@@ -1290,25 +1290,22 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 prompt = prompt.Replace("--fast", "").Replace("--relax", "").Replace("--turbo", "");
 
                 // 如果任务指定了速度模式
-                if (info.Mode != null)
+                switch (info.Mode.Value)
                 {
-                    switch (info.Mode.Value)
-                    {
-                        case GenerationSpeedMode.RELAX:
-                            prompt += " --relax";
-                            break;
+                    case GenerationSpeedMode.RELAX:
+                        prompt += " --relax";
+                        break;
 
-                        case GenerationSpeedMode.FAST:
-                            prompt += " --fast";
-                            break;
+                    case GenerationSpeedMode.FAST:
+                        prompt += " --fast";
+                        break;
 
-                        case GenerationSpeedMode.TURBO:
-                            prompt += " --turbo";
-                            break;
+                    case GenerationSpeedMode.TURBO:
+                        prompt += " --turbo";
+                        break;
 
-                        default:
-                            break;
-                    }
+                    default:
+                        break;
                 }
             }
 
