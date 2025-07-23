@@ -1373,7 +1373,7 @@ namespace Midjourney.API.Controllers
                 var drawKey = $"{DateTime.Now.Date:yyyyMMdd}_{item.ChannelId}";
                 if (counter.TryGetValue(drawKey, out var counterValue))
                 {
-                    item.TodayCounter = counterValue.OrderBy(c => c.Key).ToDictionary(c => c.Key, c => c.Value);
+                    item.TodayCounter = counterValue.OrderBy(c => c.Key).ToDictionary(c => c.Key, c => c.Value.OrderBy(x => x.Key).ToDictionary(x => x.Key, x => x.Value));
 
                     if (counterValue.TryGetValue(GenerationSpeedMode.FAST, out var fasts))
                     {
