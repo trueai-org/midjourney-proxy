@@ -132,7 +132,7 @@ namespace Midjourney.API.Controllers
 
             var homeCounter = new Dictionary<GenerationSpeedMode, Dictionary<TaskAction, int>>();
             var counter = DrawCounter.AccountTodayCounter;
-            var all = counter.Values.SelectMany(c => c).ToList();
+            var all = counter.Where(c => c.Key.StartsWith(now)).SelectMany(c => c.Value).ToList();
             foreach (var item in all)
             {
                 if (!homeCounter.ContainsKey(item.Key))
