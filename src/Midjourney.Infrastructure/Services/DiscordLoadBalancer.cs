@@ -81,7 +81,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
             var list = GetAliveInstances()
 
                 // 过滤有空闲队列的实例
-                .Where(c => c.IsIdleQueue)
+                .Where(c => c.IsIdleQueue(preferredSpeedMode))
 
                 // 允许继续绘图
                 .Where(c => c.Account.IsDailyLimitContinueDrawing && c.Account.Enable == true)

@@ -238,6 +238,11 @@ namespace Midjourney.Base.Models
         public bool IsPartner { get; set; }
 
         /// <summary>
+        /// 是否为悠船放松模式任务
+        /// </summary>
+        public bool IsPartnerRelax => IsPartner && Mode == GenerationSpeedMode.RELAX;
+
+        /// <summary>
         /// 悠船任务 ID
         /// </summary>
         public string PartnerTaskId { get; set; }
