@@ -91,6 +91,12 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 int queuedTasks = instance.GetQueueTaskCount;
                 int queueSize = instance.Account.QueueSize;
 
+                // 双队列
+                if (instance.Account.IsYouChuan)
+                {
+                    queueSize = instance.Account.QueueSize + instance.Account.RelaxQueueSize;
+                }
+
                 // 计算队列利用率
                 double queueUtilization = queueSize > 0 ? (double)queuedTasks / queueSize : 1.0;
 
