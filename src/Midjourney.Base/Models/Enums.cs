@@ -305,6 +305,16 @@ namespace Midjourney.Base
         /// 视频拓展
         /// </summary>
         VIDEO_EXTEND,
+
+        /// <summary>
+        /// 高级编辑
+        /// </summary>
+        EDIT,
+
+        /// <summary>
+        /// 高级重绘
+        /// </summary>
+        RETEXTURE
     }
 
     /// <summary>

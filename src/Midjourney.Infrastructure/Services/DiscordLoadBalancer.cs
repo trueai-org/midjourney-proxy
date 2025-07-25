@@ -64,6 +64,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <param name="ids">指定 ids 账号</param>
         /// <param name="shorten"></param>
         /// <param name="preferredSpeedMode">首选速度模式，优先使用此模式过滤</param>
+        /// <param name="isYm">悠船/官方账号</param>
         public DiscordInstance ChooseInstance(
             AccountFilter accountFilter = null,
             bool? isNewTask = null,
@@ -74,7 +75,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
             List<string> domainIds = null,
             List<string> ids = null,
             bool? shorten = null,
-            GenerationSpeedMode? preferredSpeedMode = null)
+            GenerationSpeedMode? preferredSpeedMode = null,
+            bool? isYm = null)
         {
             var list = GetAliveInstances()
 
@@ -86,6 +88,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                 // 首选速度绘图判断
                 .Where(c => c.Account.IsValidateModeContinueDrawing(preferredSpeedMode, accountFilter.Modes, out _))
+
+                // 判断悠船或官方账号
+                .WhereIf(isYm == true, c => c.Account.IsYouChuan || c.Account.IsOfficial)
 
                 //// 允许速度模式过滤，有交集的
                 //.WhereIf(accountFilter?.Modes.Count > 0, c => c.Account.AllowModes == null || c.Account.AllowModes.Count <= 0 || c.Account.AllowModes.Any(x => accountFilter.Modes.Contains(x)))

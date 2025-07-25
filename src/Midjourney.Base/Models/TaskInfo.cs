@@ -204,6 +204,12 @@ namespace Midjourney.Base.Models
         public string ImageUrl { get; set; }
 
         /// <summary>
+        /// 基础图片 URL/垫图 URL
+        /// </summary>
+        [Column(StringLength = 1024)]
+        public string BaseImageUrl { get; set; }
+
+        /// <summary>
         /// 图像URL列表
         /// </summary>
         [JsonMap]

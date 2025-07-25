@@ -141,6 +141,22 @@ namespace Midjourney.Base.Services
         SubmitResultVO SubmitAction(TaskInfo task, SubmitActionDTO submitAction);
 
         /// <summary>
+        /// 提交编辑任务。
+        /// </summary>
+        /// <param name="task"></param>
+        /// <param name="dataUrl"></param>
+        /// <returns></returns>
+        SubmitResultVO SubmitEdit(TaskInfo task, DataUrl dataUrl);
+
+        /// <summary>
+        /// 提交转绘任务。
+        /// </summary>
+        /// <param name="task"></param>
+        /// <param name="dataUrl"></param>
+        /// <returns></returns>
+        SubmitResultVO SubmitRetexture(TaskInfo task, DataUrl dataUrl);
+
+        /// <summary>
         /// 执行 Modal
         /// </summary>
         /// <param name="task"></param>

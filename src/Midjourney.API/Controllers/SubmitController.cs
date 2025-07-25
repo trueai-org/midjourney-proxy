@@ -591,7 +591,6 @@ namespace Midjourney.API.Controllers
             task.RealBotType = targetTask.RealBotType;
             task.SubInstanceId = targetTask.SubInstanceId;
 
-
             // 识别 mj action
 
             // 放大
@@ -753,6 +752,146 @@ namespace Midjourney.API.Controllers
             task.RemixAutoSubmit = true;
 
             return Ok(_taskService.SubmitModal(task, actionDTO, dataUrl));
+        }
+
+        /// <summary>
+        /// 提交编辑任务
+        /// https://apiai.apifox.cn/api-314970543
+        /// </summary>
+        /// <param name="editsDTO"></param>
+        /// <returns></returns>
+        [HttpPost("edit")]
+        [HttpPost("edits")]
+        public ActionResult<SubmitResultVO> Edits([FromBody] SubmitEditsDTO editsDTO)
+        {
+            if (string.IsNullOrWhiteSpace(editsDTO.Image) || string.IsNullOrWhiteSpace(editsDTO.Prompt))
+            {
+                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "image或prompt不能为空"));
+            }
+
+            var setting = GlobalConfiguration.Setting;
+            if (!setting.EnableUserCustomUploadBase64)
+            {
+                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "禁止上传"));
+            }
+
+            DataUrl dataUrl;
+            try
+            {
+                // 如果是 http 开头
+                if (editsDTO.Image.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+                {
+                    dataUrl = new DataUrl { Url = editsDTO.Image };
+                }
+                else
+                {
+                    // 否则是 base64
+                    editsDTO.Image = editsDTO.Image.Trim();
+                    if (!editsDTO.Image.StartsWith("data:"))
+                    {
+                        editsDTO.Image = "data:image/png;base64," + editsDTO.Image;
+                    }
+                    dataUrl = DataUrl.Parse(editsDTO.Image);
+                }
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "base64格式转换异常");
+                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "base64格式错误"));
+            }
+
+            var task = NewTask(editsDTO);
+            var promptEn = TranslatePrompt(editsDTO.Prompt, task.RealBotType ?? task.BotType);
+
+            try
+            {
+                _taskService.CheckBanned(promptEn);
+            }
+            catch (BannedPromptException e)
+            {
+                return Ok(SubmitResultVO.Fail(ReturnCode.BANNED_PROMPT, "可能包含敏感词")
+                    .SetProperty("promptEn", promptEn)
+                    .SetProperty("bannedWord", e.Message));
+            }
+
+            task.BotType = EBotType.MID_JOURNEY;
+            task.Action = TaskAction.EDIT;
+            task.Description = $"/edit {promptEn}";
+            task.Prompt = editsDTO.Prompt;
+            task.PromptEn = promptEn;
+
+            NewTaskDoFilter(task, editsDTO.AccountFilter);
+
+            return Ok(_taskService.SubmitEdit(task, dataUrl));
+        }
+
+        /// <summary>
+        /// 提交转绘任务
+        /// </summary>
+        /// <param name="editsDTO"></param>
+        /// <returns></returns>
+        [HttpPost("retexture")]
+        public ActionResult<SubmitResultVO> Retexture([FromBody] SubmitEditsDTO editsDTO)
+        {
+            if (string.IsNullOrWhiteSpace(editsDTO.Image) || string.IsNullOrWhiteSpace(editsDTO.Prompt))
+            {
+                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "image或prompt不能为空"));
+            }
+
+            var setting = GlobalConfiguration.Setting;
+            if (!setting.EnableUserCustomUploadBase64)
+            {
+                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "禁止上传"));
+            }
+
+            DataUrl dataUrl;
+            try
+            {
+                // 如果是 http 开头
+                if (editsDTO.Image.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+                {
+                    dataUrl = new DataUrl { Url = editsDTO.Image };
+                }
+                else
+                {
+                    // 否则是 base64
+                    editsDTO.Image = editsDTO.Image.Trim();
+                    if (!editsDTO.Image.StartsWith("data:"))
+                    {
+                        editsDTO.Image = "data:image/png;base64," + editsDTO.Image;
+                    }
+                    dataUrl = DataUrl.Parse(editsDTO.Image);
+                }
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "base64格式转换异常");
+                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "base64格式错误"));
+            }
+
+            var task = NewTask(editsDTO);
+            var promptEn = TranslatePrompt(editsDTO.Prompt, task.RealBotType ?? task.BotType);
+
+            try
+            {
+                _taskService.CheckBanned(promptEn);
+            }
+            catch (BannedPromptException e)
+            {
+                return Ok(SubmitResultVO.Fail(ReturnCode.BANNED_PROMPT, "可能包含敏感词")
+                    .SetProperty("promptEn", promptEn)
+                    .SetProperty("bannedWord", e.Message));
+            }
+
+            task.BotType = EBotType.MID_JOURNEY;
+            task.Action = TaskAction.RETEXTURE;
+            task.Description = $"/retexture {promptEn}";
+            task.Prompt = editsDTO.Prompt;
+            task.PromptEn = promptEn;
+
+            NewTaskDoFilter(task, editsDTO.AccountFilter);
+
+            return Ok(_taskService.SubmitRetexture(task, dataUrl));
         }
 
         /// <summary>

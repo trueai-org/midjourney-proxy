@@ -156,7 +156,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         public string ChannelId => Account.ChannelId;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public DiscordHelper DiscordHelper => _discordHelper;
 
@@ -651,7 +651,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     // 如果是悠船任务，则每 2s 获取一次
                     if (info.IsPartner || info.IsOfficial)
                     {
-
                         await _ymTaskService.UpdateStatus(info, _taskStoreService, Account);
 
                         await Task.Delay(1000);
