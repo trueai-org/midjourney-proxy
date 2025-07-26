@@ -785,39 +785,43 @@ namespace Midjourney.Base.Models
             if (result == null || result.Length <= 0)
                 return;
 
+            // emoji 转换
+            // https://tw.piliapp.com/emoji/list/
+            // https://www.ifreesite.com/unicode/
+
             var json = """
                         [
                           {
                             "customId": "MJ::Job::PicReader::1",
-                            "emoji": "\u0031\u20e3",
+                            "emoji": "\u0031\uFE0F\u20E3",
                             "label": "",
                             "style": 2,
                             "type": 2
                           },
                           {
                             "customId": "MJ::Job::PicReader::2",
-                            "emoji": "\u0032\u20e3",
+                            "emoji": "\u0032\uFE0F\u20E3",
                             "label": "",
                             "style": 2,
                             "type": 2
                           },
                           {
                             "customId": "MJ::Job::PicReader::3",
-                            "emoji": "\u0033\u20e3",
+                            "emoji": "\u0033\uFE0F\u20E3",
                             "label": "",
                             "style": 2,
                             "type": 2
                           },
                           {
                             "customId": "MJ::Job::PicReader::4",
-                            "emoji": "\u0034\u20e3",
+                            "emoji": "\u0034\uFE0F\u20E3",
                             "label": "",
                             "style": 2,
                             "type": 2
                           },
                           {
                             "customId": "MJ::Picread::Retry",
-                            "emoji": "\ud83d\udd04",
+                            "emoji": "\u1F504",
                             "label": "",
                             "style": 2,
                             "type": 2
