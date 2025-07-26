@@ -663,6 +663,8 @@ namespace Midjourney.Base.Storage
             // 最大等待 10 分钟
             var isLock = await AsyncLocalLock.TryLockAsync($"download:{url}", TimeSpan.FromMinutes(10), async () =>
             {
+                url = ReplaceInternalUrl(info, url);
+
                 var response = await client.GetAsync(url);
                 response.EnsureSuccessStatusCode();
                 bytes = await response.Content.ReadAsByteArrayAsync();
@@ -674,6 +676,23 @@ namespace Midjourney.Base.Storage
             }
 
             return bytes ?? [];
+        }
+
+        /// <summary>
+        /// 替换外网下载的URL为内网URL
+        /// </summary>
+        /// <param name="url"></param>
+        /// <returns></returns>
+        public static string ReplaceInternalUrl(TaskInfo info, string url)
+        {
+            if (info?.IsPartner == true && !string.IsNullOrWhiteSpace(url) && GlobalConfiguration.Setting.EnableYouChuanInternalDownload)
+            {
+                if (url.Contains("youchuan-imagine.oss-cn-shanghai.aliyuncs.com"))
+                {
+                    return url.Replace("youchuan-imagine.oss-cn-shanghai.aliyuncs.com", "youchuan-imagine.oss-cn-shanghai-internal.aliyuncs.com");
+                }
+            }
+            return url;
         }
     }
 }
