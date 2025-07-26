@@ -137,6 +137,11 @@ namespace Midjourney.Base.Data
                                 coll.EnsureIndex(c => c.UserId);
                                 coll.EnsureIndex(c => c.ClientIp);
                                 coll.EnsureIndex(c => c.InstanceId);
+                                coll.EnsureIndex(c => c.PromptEn);
+                                coll.EnsureIndex(c => c.Prompt);
+                                coll.EnsureIndex(c => c.Description);
+                                coll.EnsureIndex(c => c.ImageUrl);
+                                coll.EnsureIndex(c => c.State);
 
                                 //coll.DropIndex("PromptEn");
                                 //coll.DropIndex("Prompt");
@@ -197,6 +202,9 @@ namespace Midjourney.Base.Data
 
                                 var index10 = new CreateIndexModel<TaskInfo>(Builders<TaskInfo>.IndexKeys.Ascending(c => c.ClientIp));
                                 coll.Indexes.CreateOne(index10);
+
+                                var index11 = new CreateIndexModel<TaskInfo>(Builders<TaskInfo>.IndexKeys.Ascending(c => c.State));
+                                coll.Indexes.CreateOne(index11);
                             }
                             break;
                         case DatabaseType.SQLite:
