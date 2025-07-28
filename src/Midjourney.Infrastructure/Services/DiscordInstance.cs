@@ -808,9 +808,11 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <returns>异步任务</returns>
         private async Task ExecuteTaskAsync(TaskInfo info, Func<Task<Message>> discordSubmit)
         {
+            // 初始锁，避免 info 修改导致判断错误
+            var initIsRelax = info.IsPartnerRelax;
             try
             {
-                if (info.IsPartnerRelax)
+                if (initIsRelax)
                 {
                     await _relaxLock.LockAsync();
                 }
@@ -949,7 +951,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 _runningTasks.TryRemove(info.Id, out _);
                 _taskFutureMap.TryRemove(info.Id, out _);
 
-                if (info.IsPartnerRelax)
+                if (initIsRelax)
                 {
                     _relaxLock.Unlock();
                 }
