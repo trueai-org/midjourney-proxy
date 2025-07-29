@@ -131,6 +131,8 @@ The most powerful, complete, full-featured, completely free and open source Midj
 - 自动验证/自动登录服务器地址：<http://47.76.110.222:8081>
 - 自动验证/自动登录服务器文档：<http://47.76.110.222:8081/swagger>
 
+> 由于公益验证器，受到大量恶意攻击，目前已暂停服务，如有需要请自行部署验证器。
+
 ## 预览截图
 
 ![绘图](./docs/screenshots/ui9.png)
