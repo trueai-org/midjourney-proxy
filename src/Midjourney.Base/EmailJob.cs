@@ -21,9 +21,8 @@
 // The use of this software for any form of illegal face swapping,
 // invasion of privacy, or any other unlawful purposes is strictly prohibited. 
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
+
 using Serilog;
-using System.Net;
-using System.Net.Mail;
 
 namespace Midjourney.Base
 {
@@ -33,7 +32,15 @@ namespace Midjourney.Base
     /// </summary>
     public class EmailJob : SingletonBase<EmailJob>
     {
-        public async void EmailSend(SmtpConfig config, string subject, string body, string to = null)
+        /// <summary>
+        /// 发送邮件通知
+        /// </summary>
+        /// <param name="config"></param>
+        /// <param name="subject"></param>
+        /// <param name="body"></param>
+        /// <param name="to"></param>
+        /// <returns></returns>
+        public async Task EmailSend(SmtpConfig config, string subject, string body, string to = null)
         {
             var mailTo = config.To;
             if (!string.IsNullOrWhiteSpace(to))
@@ -63,29 +70,29 @@ namespace Midjourney.Base
                 // 调用邮件发送方法
                 EmailSender.SendMimeKitEmail(smtpServer, userName, password, fromName, fromEmail, mailTo, subject, body, port, enableSsl);
 
-                // 不处理
-                return;
+                //// 不处理
+                //return;
 
-                var mailFrom = fromEmail;
+                //var mailFrom = fromEmail;
 
-                MailMessage mymail = new MailMessage();
-                mymail.From = new MailAddress(mailFrom);
-                mymail.To.Add(mailTo);
-                mymail.Subject = subject;
-                mymail.Body = body;
-                //mymail.IsBodyHtml = true;
-                //mymail.Attachments.Add(new Attachment(path));
+                //MailMessage mymail = new MailMessage();
+                //mymail.From = new MailAddress(mailFrom);
+                //mymail.To.Add(mailTo);
+                //mymail.Subject = subject;
+                //mymail.Body = body;
+                ////mymail.IsBodyHtml = true;
+                ////mymail.Attachments.Add(new Attachment(path));
 
-                using (SmtpClient smtpclient = new SmtpClient())
-                {
-                    smtpclient.Port = 587;
-                    smtpclient.UseDefaultCredentials = false;
-                    smtpclient.DeliveryMethod = SmtpDeliveryMethod.Network;
-                    smtpclient.Host = smtpServer;
-                    smtpclient.EnableSsl = true;
-                    smtpclient.Credentials = new NetworkCredential(fromEmail, password);
-                    smtpclient.Send(mymail);
-                }
+                //using (SmtpClient smtpclient = new SmtpClient())
+                //{
+                //    smtpclient.Port = 587;
+                //    smtpclient.UseDefaultCredentials = false;
+                //    smtpclient.DeliveryMethod = SmtpDeliveryMethod.Network;
+                //    smtpclient.Host = smtpServer;
+                //    smtpclient.EnableSsl = true;
+                //    smtpclient.Credentials = new NetworkCredential(fromEmail, password);
+                //    smtpclient.Send(mymail);
+                //}
             }
             catch (Exception ex)
             {
@@ -96,9 +103,9 @@ namespace Midjourney.Base
                     // 尝试第二次
                     await EmailSender.Instance.SendEmailAsync(config, mailTo, subject, body);
                 }
-                catch (Exception exx)
+                catch (Exception ex2)
                 {
-                    Log.Error(exx, "第二次发送邮件失败");
+                    Log.Error(ex2, "第二次发送邮件失败");
                 }
             }
         }

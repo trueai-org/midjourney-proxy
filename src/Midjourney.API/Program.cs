@@ -47,32 +47,16 @@ namespace Midjourney.API
                 // 机器标识
                 LicenseKeyHelper.Startup();
 
-                //// 启动时检查升级
-                //Task.Run(async () =>
-                //{
-                //    try
-                //    {
-                //        // 启用检查更新，自动升级，并重启
-                //        if (GlobalConfiguration.Setting.EnableUpdateCheck)
-                //        {
-                //            var upgradeService = host.Services.GetRequiredService<IUpgradeService>();
-                //            await upgradeService.CheckAndPerformStartupUpgradeAsync();
-                //        }
-                //    }
-                //    catch (Exception ex)
-                //    {
-                //        Log.Error(ex, "应用程序启动时检查升级失败");
-                //    }
-                //});
-
                 host.Run();
             }
             catch (Exception ex)
             {
-                Log.Fatal(ex, "应用程序启动失败");
+                Log.Error(ex, "应用程序启动失败");
             }
             finally
             {
+                Log.Information("应用程序即将关闭");
+
                 // 确保日志被刷新和关闭
                 Log.CloseAndFlush();
             }

@@ -21,6 +21,7 @@
 // The use of this software for any form of illegal face swapping,
 // invasion of privacy, or any other unlawful purposes is strictly prohibited. 
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
+
 using MailKit.Security;
 using MimeKit;
 using MimeKit.Text;
@@ -84,6 +85,17 @@ namespace Midjourney.Base
                     await client.SendAsync(message);
                     await client.DisconnectAsync(true);
                 }
+
+                //using (SmtpClient smtpclient = new SmtpClient())
+                //{
+                //    smtpclient.Port = 587;
+                //    smtpclient.UseDefaultCredentials = false;
+                //    smtpclient.DeliveryMethod = SmtpDeliveryMethod.Network;
+                //    smtpclient.Host = smtpServer;
+                //    smtpclient.EnableSsl = true;
+                //    smtpclient.Credentials = new NetworkCredential(fromEmail, password);
+                //    smtpclient.Send(mymail);
+                //}
             }
             catch (Exception ex)
             {

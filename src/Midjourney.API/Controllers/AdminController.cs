@@ -28,6 +28,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using LiteDB;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -108,7 +109,7 @@ namespace Midjourney.API.Controllers
         /// <exception cref="LogicException"></exception>
         [HttpPost("register")]
         [AllowAnonymous]
-        public Result Register([FromBody] RegisterDto registerDto)
+        public async Task<Result> Register([FromBody] RegisterDto registerDto)
         {
             if (registerDto == null || string.IsNullOrWhiteSpace(registerDto.Email))
             {
@@ -171,9 +172,9 @@ namespace Midjourney.API.Controllers
             DbHelper.Instance.UserStore.Add(user);
 
             // 发送邮件
-            EmailJob.Instance.EmailSend(GlobalConfiguration.Setting.Smtp,
-                $"Midjourney Proxy 注册通知", $"您的登录密码为：{user.Token}",
-                user.Email);
+            await EmailJob.Instance.EmailSend(GlobalConfiguration.Setting.Smtp,
+                   $"Midjourney Proxy 注册通知", $"您的登录密码为：{user.Token}",
+                   user.Email);
 
             // 设置缓存
             _memoryCache.Set(key, true, TimeSpan.FromDays(1));
@@ -263,7 +264,7 @@ namespace Midjourney.API.Controllers
         /// <returns></returns>
         [AllowAnonymous]
         [HttpPost("account-cf-notify")]
-        public ActionResult Validate([FromBody] CaptchaVerfyRequest request)
+        public async Task<ActionResult> Validate([FromBody] CaptchaVerfyRequest request)
         {
             if (!string.IsNullOrWhiteSpace(request.State) && !string.IsNullOrWhiteSpace(request.Url))
             {
@@ -310,7 +311,7 @@ namespace Midjourney.API.Controllers
                         if (!request.Success)
                         {
                             // 发送邮件
-                            EmailJob.Instance.EmailSend(_properties.Smtp, $"CF自动真人验证失败-{item.ChannelId}", $"CF自动真人验证失败-{item.ChannelId}, 请手动验证");
+                            await EmailJob.Instance.EmailSend(_properties.Smtp, $"CF自动真人验证失败-{item.ChannelId}", $"CF自动真人验证失败-{item.ChannelId}, 请手动验证");
                         }
                     }
                     else
@@ -639,7 +640,7 @@ namespace Midjourney.API.Controllers
         /// <returns></returns>
         [AllowAnonymous]
         [HttpPost("account-login-notify")]
-        public ActionResult AccountLoginNotify([FromBody] AutoLoginRequest request)
+        public async Task<ActionResult> AccountLoginNotify([FromBody] AutoLoginRequest request)
         {
             if (!string.IsNullOrWhiteSpace(request.State) && !string.IsNullOrWhiteSpace(request.LoginAccount))
             {
@@ -692,7 +693,7 @@ namespace Midjourney.API.Controllers
                         if (!request.Success)
                         {
                             // 发送邮件
-                            EmailJob.Instance.EmailSend(_properties.Smtp, $"自动登录失败-{item.ChannelId}", $"自动登录失败-{item.ChannelId}, {request.Message}, 请手动登录");
+                            await EmailJob.Instance.EmailSend(_properties.Smtp, $"自动登录失败-{item.ChannelId}", $"自动登录失败-{item.ChannelId}, {request.Message}, 请手动登录");
                         }
                     }
                     else

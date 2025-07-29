@@ -921,7 +921,7 @@ namespace Midjourney.Infrastructure
                 // 尝试自动登录
                 var sw = new Stopwatch();
                 var setting = GlobalConfiguration.Setting;
-                var info = new StringBuilder(); 
+                var info = new StringBuilder();
                 var account = Account;
                 if (setting.EnableAutoLogin)
                 {
@@ -966,8 +966,20 @@ namespace Midjourney.Infrastructure
             {
                 // 邮件通知
                 var smtp = GlobalConfiguration.Setting?.Smtp;
-                EmailJob.Instance.EmailSend(smtp, $"MJ账号禁用通知-{Account.ChannelId}",
-                    $"{Account.ChannelId}, {Account.DisabledReason}");
+
+                Task.Run(async () =>
+                {
+                    try
+                    {
+                        await EmailJob.Instance.EmailSend(smtp,
+                            $"MJ账号禁用通知-{Account.ChannelId}",
+                            $"{Account.ChannelId}, {Account.DisabledReason}");
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Error(ex, "邮件发送失败");
+                    }
+                });
             }
         }
 
