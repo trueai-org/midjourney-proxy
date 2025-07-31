@@ -16,6 +16,15 @@ jobs:
       - name: 检出仓库代码
         uses: actions/checkout@v3  # 使用最新稳定版本
 
+      - name: 复制 ARM64 特定库文件到引用目录
+        run: |
+          # 确保目标目录存在
+          mkdir -p src/lib/
+          # 复制 ARM64 特定的 DLL 到引用目录
+          cp src/lib/linux-arm64/Midjourney.License.dll src/lib/
+          # 验证文件已经被复制
+          ls -la src/lib/
+          
       - name: 设置 .NET 环境
         uses: actions/setup-dotnet@v3  # 使用最新稳定版本
         with:
