@@ -104,6 +104,7 @@ namespace Midjourney.API
                 .MinimumLevel.Override("System", LogEventLevel.Warning)
                 .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
                 .Enrich.FromLogContext()
+                .WriteTo.Console()
                 .WriteTo.File("logs/log.txt",
                     rollingInterval: RollingInterval.Day,
                     fileSizeLimitBytes: fileSizeLimitBytes,
@@ -128,7 +129,7 @@ namespace Midjourney.API
                 //    loggerConfiguration.WriteTo.Console();
                 //}
 
-                loggerConfiguration.WriteTo.Console();
+                //loggerConfiguration.WriteTo.Console();
 
                 // ∆Ù”√ Serilog ◊‘Œ“’Ô∂œ
                 SelfLog.Enable(Console.Error);
