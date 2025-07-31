@@ -243,7 +243,7 @@ docker run --name mjopen -d --restart=always \
  trueaiorg/midjourney-proxy
 ```
 
-> Windows 版本
+> Windows 版本（arm版本停止支持）
 
 ```bash
 a. 通过 https://github.com/trueai-org/midjourney-proxy/releases 下载 windows 最新免安装版，例如：midjourney-proxy-win-x64.zip
@@ -253,7 +253,7 @@ d. 部署到 IIS（可选），在 IIS 添加网站，将文件夹部署到 IIS�
 e. 使用系统自带的 `任务计划程序`（可选），创建基本任务，选择 `.exe` 程序即可，请选择`请勿启动多个实例`，保证只有一个任务执行即可。
 ```
 
-> Linux 版本
+> Linux 版本（arm版本停止支持）
 
 ```bash
 a. 通过 https://github.com/trueai-org/midjourney-proxy/releases 下载 linux 最新免安装版，例如：midjourney-proxy-linux-x64.zip
@@ -263,7 +263,7 @@ c. 启动方式1: sh run_app.sh
 d. 启动方式2: chmod +x run_app.sh && ./run_app.sh
 ```
 
-> macOS 版本
+> macOS 版本（arm版本停止支持）
 
 ```bash
 a. 通过 https://github.com/trueai-org/midjourney-proxy/releases 下载 macOS 最新免安装版，例如：midjourney-proxy-osx-x64.zip
