@@ -42,5 +42,10 @@ namespace Midjourney.Base.Dto
         /// </summary>
         [SwaggerSchema("MJ::JOB::upsample::2::3dbbd469-36af-4a0f-8f02-df6c579e7011")]
         public string CustomId { get; set; }
+
+        /// <summary>
+        /// 是否使用remix模式，可强制绕过账号指定的Remix自动提交
+        /// </summary>
+        public bool? EnableRemix { get; set; }
     }
 }
