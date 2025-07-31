@@ -131,7 +131,7 @@ The most powerful, complete, full-featured, completely free and open source Midj
 - 自动验证/自动登录服务器地址：<http://47.76.110.222:8081>
 - 自动验证/自动登录服务器文档：<http://47.76.110.222:8081/swagger>
 
-> 由于公益验证器，受到大量恶意攻击，目前已暂停服务，如有需要请自行部署验证器。
+> 由于公益验证器，受到大量恶意攻击，目前已暂停自动登录服务，如有需要自动登录请自行部署验证器。
 
 ## 预览截图
 
@@ -422,6 +422,7 @@ docker run -d \
 {
   "Demo": null, // 网站配置为演示模式
   "Captcha": {
+    "IsLoginService": true, // 是否启用登录服务
     "Concurrent": 1, // 并发数
     "Headless": true, // chrome 是否后台运行
     "TwoCaptchaKey": "", // 2captcha.com 的 API Key
