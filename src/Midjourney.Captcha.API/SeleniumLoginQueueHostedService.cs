@@ -91,6 +91,13 @@ namespace Midjourney.Captcha.API
                 {
                     if (TryDequeueRequest(out var request))
                     {
+                        // 未开启登录验证
+                        if (!_captchaOption.IsLoginService)
+                        {
+                            _logger.LogInformation("自动登录服务未开启，跳过请求: {@0}", request);
+                            return;
+                        }
+
                         // 等待并发信号量
                         await _concurrencySemaphore.WaitAsync(stoppingToken);
 

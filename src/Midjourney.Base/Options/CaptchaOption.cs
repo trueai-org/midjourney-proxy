@@ -48,5 +48,10 @@ namespace Midjourney.Base.Options
         /// 是否后台运行
         /// </summary>
         public bool Headless { get; set; }
+
+        /// <summary>
+        /// 是否开启登录验证服务（默认开启）
+        /// </summary>
+        public bool IsLoginService { get; set; } = true;
     }
 }
