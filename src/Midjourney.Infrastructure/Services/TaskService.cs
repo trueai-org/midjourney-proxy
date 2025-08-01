@@ -25,8 +25,10 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using Amazon.Runtime.Internal.Endpoints.StandardLibrary;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Identity.Client;
 using Midjourney.Base.Storage;
 using Midjourney.Infrastructure.LoadBalancer;
 using Newtonsoft.Json;
@@ -303,6 +305,7 @@ namespace Midjourney.Infrastructure.Services
                             imageUrls.Add(sendImageResult.Description);
                         }
                     }
+
                     if (imageUrls.Any())
                     {
                         info.Prompt = string.Join(" ", imageUrls) + " " + info.Prompt;
@@ -310,6 +313,19 @@ namespace Midjourney.Infrastructure.Services
                         info.Description = "/imagine " + info.Prompt;
                         _taskStoreService.Save(info);
                     }
+
+                    var setting = GlobalConfiguration.Setting;
+                    var prompt = info.PromptEn;
+                    if (prompt.Contains("http", StringComparison.OrdinalIgnoreCase) && prompt.Contains("--video", StringComparison.OrdinalIgnoreCase))
+                    {
+                        info.Action = TaskAction.VIDEO;
+
+                        if (!setting.EnableVideo)
+                        {
+                            return Message.Of(ReturnCode.FAILURE, "视频功能未启用");
+                        }
+                    }
+
                     return await instance.ImagineAsync(info, info.PromptEn,
                         info.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default));
                 }
@@ -446,7 +462,7 @@ namespace Midjourney.Infrastructure.Services
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
-    
+
             if (!instance.Account.IsValidateModeContinueDrawing(info.Mode, info.AccountFilter?.Modes, out var mode))
             {
                 return SubmitResultVO.Fail(ReturnCode.FAILURE, "无可用的账号实例");
@@ -575,7 +591,7 @@ namespace Midjourney.Infrastructure.Services
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "账号不可用: " + instanceId);
             }
-       
+
             if (!discordInstance.Account.IsValidateModeContinueDrawing(task.Mode, task.AccountFilter?.Modes, out var mode))
             {
                 return SubmitResultVO.Fail(ReturnCode.FAILURE, "无可用的账号实例");
@@ -599,7 +615,7 @@ namespace Midjourney.Infrastructure.Services
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "账号不可用: " + instanceId);
             }
-     
+
             if (!discordInstance.Account.IsValidateModeContinueDrawing(task.Mode, task.AccountFilter?.Modes, out var mode))
             {
                 return SubmitResultVO.Fail(ReturnCode.FAILURE, "无可用的账号实例");
@@ -631,7 +647,7 @@ namespace Midjourney.Infrastructure.Services
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "账号不可用: " + instanceId);
             }
-        
+
             if (!discordInstance.Account.IsValidateModeContinueDrawing(task.Mode, task.AccountFilter?.Modes, out var mode))
             {
                 return SubmitResultVO.Fail(ReturnCode.FAILURE, "无可用的账号实例");
@@ -665,7 +681,7 @@ namespace Midjourney.Infrastructure.Services
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
-     
+
             if (!discordInstance.Account.IsValidateModeContinueDrawing(task.Mode, task.AccountFilter?.Modes, out var mode))
             {
                 return SubmitResultVO.Fail(ReturnCode.FAILURE, "无可用的账号实例");
@@ -1028,7 +1044,7 @@ namespace Midjourney.Infrastructure.Services
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
-    
+
 
             task.IsPartner = discordInstance.Account.IsYouChuan;
             task.IsOfficial = discordInstance.Account.IsOfficial;
@@ -1422,7 +1438,7 @@ namespace Midjourney.Infrastructure.Services
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
-         
+
             if (!discordInstance.Account.IsValidateModeContinueDrawing(task.Mode, task.AccountFilter?.Modes, out var mode))
             {
                 return SubmitResultVO.Fail(ReturnCode.FAILURE, "无可用的账号实例");
@@ -1672,7 +1688,7 @@ namespace Midjourney.Infrastructure.Services
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
-            
+
             if (!discordInstance.Account.IsValidateModeContinueDrawing(task.Mode, task.AccountFilter?.Modes, out var mode))
             {
                 return SubmitResultVO.Fail(ReturnCode.FAILURE, "无可用的账号实例");

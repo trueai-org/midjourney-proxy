@@ -593,7 +593,7 @@ namespace Midjourney.API.Controllers
 
             // 识别 mj action
 
-            // 放大
+            // 图片放大
             // MJ::JOB::upsample::2::898416ec-7c18-4762-bf03-8e428fee1860
             if (actionDTO.CustomId.StartsWith("MJ::JOB::upsample::"))
             {
@@ -604,6 +604,26 @@ namespace Midjourney.API.Controllers
 
                 // 使用正则提取 U index
                 var match = Regex.Match(actionDTO.CustomId, @"MJ::JOB::upsample::(\d+)");
+                if (match.Success)
+                {
+                    var index = match.Groups[1].Value;
+                    if (int.TryParse(index, out int result) && result > 0)
+                    {
+                        task.SetProperty(Constants.TASK_PROPERTY_ACTION_INDEX, result);
+                    }
+                }
+            }
+            // 视频放大
+            // MJ::JOB::video_virtual_upscale
+            if (actionDTO.CustomId.StartsWith("MJ::JOB::video_virtual_upscale"))
+            {
+                task.Action = TaskAction.UPSCALE;
+
+                // 在进行 U 时，记录目标图片的 U 的 customId
+                task.SetProperty(Constants.TASK_PROPERTY_REMIX_U_CUSTOM_ID, actionDTO.CustomId);
+
+                // 使用正则提取 U index
+                var match = Regex.Match(actionDTO.CustomId, @"MJ::JOB::video_virtual_upscale::(\d+)");
                 if (match.Success)
                 {
                     var index = match.Groups[1].Value;
@@ -679,6 +699,13 @@ namespace Midjourney.API.Controllers
             else if (actionDTO.CustomId.StartsWith("MJ::Inpaint::"))
             {
                 task.Action = TaskAction.INPAINT;
+            }
+            // 视频操作
+            // MJ::JOB::animate_low::1::a6b09718-e1f6-4f31-9a42-c6dd7d8f1c83::SOLO
+            // MJ::JOB::animate_low_extend::
+            else if (actionDTO.CustomId.StartsWith("MJ::JOB::animate_"))
+            {
+                task.Action = TaskAction.VIDEO;
             }
             // describe 重新提交
             else if (actionDTO.CustomId.Contains("MJ::Picread::Retry"))
