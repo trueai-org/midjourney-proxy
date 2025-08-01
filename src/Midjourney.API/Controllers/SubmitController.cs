@@ -615,7 +615,7 @@ namespace Midjourney.API.Controllers
             }
             // 视频放大
             // MJ::JOB::video_virtual_upscale
-            if (actionDTO.CustomId.StartsWith("MJ::JOB::video_virtual_upscale"))
+            else if (actionDTO.CustomId.StartsWith("MJ::JOB::video_virtual_upscale"))
             {
                 task.Action = TaskAction.UPSCALE;
 
