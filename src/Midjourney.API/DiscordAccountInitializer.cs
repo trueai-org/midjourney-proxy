@@ -24,7 +24,10 @@
 
 using System.Diagnostics;
 using System.Text;
+using Discord;
+using LiteDB;
 using Microsoft.Extensions.Caching.Memory;
+using Midjourney.Base.Models;
 using Midjourney.Infrastructure.LoadBalancer;
 using Midjourney.Infrastructure.Services;
 using Midjourney.License;
@@ -386,6 +389,9 @@ namespace Midjourney.API
                         GlobalConfiguration.TodayDraw = (int)DbHelper.Instance.TaskStore.Count(x => x.SubmitTime >= now);
                         GlobalConfiguration.TotalDraw = (int)DbHelper.Instance.TaskStore.Count(x => true);
 
+                        // 用户绘图统计
+                        UserStat();
+
                         // 验证许可
                         await LicenseKeyHelper.Validate();
 
@@ -412,6 +418,146 @@ namespace Midjourney.API
             {
                 _logger.Error(ex, "例行检查执行异常");
             }
+        }
+
+        /// <summary>
+        /// 用户绘图统计
+        /// </summary>
+        public void UserStat()
+        {
+            // 今日用户绘图统计
+            var setting = GlobalConfiguration.Setting;
+            if (setting.EnableUserDrawStatistics)
+            {
+                var now = new DateTimeOffset(DateTime.Now.Date).ToUnixTimeMilliseconds();
+
+                var userTotalCount = new Dictionary<string, int>();
+                var userTodayCount = new Dictionary<string, int>();
+                if (setting.DatabaseType == DatabaseType.MongoDB)
+                {
+                    var taskColl = MongoHelper.GetCollection<TaskInfo>();
+                    var userColl = MongoHelper.GetCollection<User>();
+
+                    userTotalCount = taskColl.AsQueryable()
+                           .GroupBy(c => c.UserId)
+                           .Select(g => new
+                           {
+                               UserId = g.Key,
+                               TotalCount = g.Count()
+                           })
+                           .ToList()
+                           .Where(c => !string.IsNullOrWhiteSpace(c.UserId))
+                           .ToDictionary(c => c.UserId, c => c.TotalCount);
+
+                    userTodayCount = taskColl.AsQueryable()
+                           .Where(c => c.SubmitTime >= now)
+                           .GroupBy(c => c.UserId)
+                           .Select(g => new
+                           {
+                               UserId = g.Key,
+                               TotalCount = g.Count()
+                           })
+                           .ToList()
+                           .Where(c => !string.IsNullOrWhiteSpace(c.UserId))
+                           .ToDictionary(c => c.UserId, c => c.TotalCount);
+
+                    foreach (var item in userTotalCount)
+                    {
+                        if (!userTodayCount.ContainsKey(item.Key))
+                        {
+                            userTodayCount[item.Key] = 0;
+                        }
+
+                        var update = Builders<User>.Update
+                        .Set(c => c.TotalDrawCount, item.Value)
+                        .Set(c => c.DayDrawCount, userTodayCount[item.Key]);
+                        userColl.UpdateOne(c => c.Id == item.Key, update);
+                    }
+                }
+                else if (setting.DatabaseType == DatabaseType.LiteDB)
+                {
+                    userTotalCount = LiteDBHelper.TaskStore.GetCollection()
+                        .Query()
+                        .Select(c => c.UserId)
+                        .ToList()
+                        .GroupBy(c => c)
+                        .Select(g => new
+                        {
+                            UserId = g.Key,
+                            TotalCount = g.Count()
+                        })
+                        .Where(c => !string.IsNullOrWhiteSpace(c.UserId))
+                        .ToDictionary(c => c.UserId, c => c.TotalCount);
+
+                    userTodayCount = LiteDBHelper.TaskStore.GetCollection()
+                        .Query()
+                        .Where(c => c.SubmitTime >= now)
+                        .Select(c => c.UserId)
+                        .ToList()
+                        .GroupBy(c => c)
+                        .Select(g => new
+                        {
+                            UserId = g.Key,
+                            TotalCount = g.Count()
+                        })
+                        .Where(c => !string.IsNullOrWhiteSpace(c.UserId))
+                        .ToDictionary(c => c.UserId, c => c.TotalCount);
+
+                    foreach (var item in userTotalCount)
+                    {
+                        if (!userTodayCount.ContainsKey(item.Key))
+                        {
+                            userTodayCount[item.Key] = 0;
+                        }
+
+                        var userColl = LiteDBHelper.TaskStore.LiteDatabase.GetCollection<User>();
+                        userColl.UpdateMany($"{{ TotalDrawCount: {item.Value}, DayDrawCount: {userTodayCount[item.Key]} }}", $"_id = '{item.Key}'");
+                    }
+                }
+                else
+                {
+                    var freeSql = FreeSqlHelper.FreeSql;
+                    if (freeSql != null)
+                    {
+                        userTotalCount = freeSql.Select<TaskInfo>()
+                            .GroupBy(c => c.UserId)
+                            .ToList(c => new
+                            {
+                                UserId = c.Key,
+                                TotalCount = c.Count()
+                            })
+                            .Where(c => !string.IsNullOrWhiteSpace(c.UserId))
+                            .ToDictionary(c => c.UserId, c => c.TotalCount);
+
+                        userTodayCount = freeSql.Select<TaskInfo>()
+                            .Where(c => c.SubmitTime >= now)
+                            .GroupBy(c => c.UserId)
+                            .ToList(c => new
+                            {
+                                UserId = c.Key,
+                                TotalCount = c.Count()
+                            })
+                            .Where(c => !string.IsNullOrWhiteSpace(c.UserId))
+                            .ToDictionary(c => c.UserId, c => c.TotalCount);
+
+
+                        foreach (var item in userTotalCount)
+                        {
+                            if (!userTodayCount.ContainsKey(item.Key))
+                            {
+                                userTodayCount[item.Key] = 0;
+                            }
+
+                            freeSql.Update<User>()
+                                .Set(c => c.TotalDrawCount, item.Value)
+                                .Set(c => c.DayDrawCount, userTodayCount[item.Key])
+                                .Where(c => c.Id == item.Key)
+                                .ExecuteAffrows();
+                        }
+                    }
+                }
+            }
+
         }
 
         /// <summary>

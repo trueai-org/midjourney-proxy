@@ -34,6 +34,11 @@ namespace Midjourney.Base.Models
     public class Setting : DomainObject
     {
         /// <summary>
+        /// 开启用户绘图统计
+        /// </summary>
+        public bool EnableUserDrawStatistics { get; set; }
+
+        /// <summary>
         /// Redis 配置项
         /// </summary>
         public string RedisConnectionString { get; set; }

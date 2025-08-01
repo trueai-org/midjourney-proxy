@@ -120,19 +120,13 @@ namespace Midjourney.Base.Models
         public int TotalDrawLimit { get; set; } = -1;
 
         /// <summary>
-        /// 今日绘图次数（数据库字段已废弃）
+        /// 今日绘图次数（延迟更新）
         /// </summary>
-        [LiteDB.BsonIgnore]
-        [MongoDB.Bson.Serialization.Attributes.BsonIgnore]
-        [Column(IsNullable = false)]
         public int DayDrawCount { get; set; } = 0;
 
         /// <summary>
-        /// 总绘图次数（数据库字段已废弃）
+        /// 总绘图次数（延迟更新）
         /// </summary>
-        [LiteDB.BsonIgnore]
-        [MongoDB.Bson.Serialization.Attributes.BsonIgnore]
-        [Column(IsNullable = false)]
         public int TotalDrawCount { get; set; } = 0;
 
         /// <summary>
