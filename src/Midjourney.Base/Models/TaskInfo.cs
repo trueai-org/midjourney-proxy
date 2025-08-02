@@ -718,7 +718,7 @@ namespace Midjourney.Base.Models
         /// <summary>
         /// 设置放大按钮。
         /// </summary>
-        public void SetUpscaleButtons(string id, string version = "v6")
+        public void SetUpscaleButtons(string id, int index, string version = "v6")
         {
             if (string.IsNullOrWhiteSpace(id))
             {
@@ -748,6 +748,13 @@ namespace Midjourney.Base.Models
                     Buttons.AddRange(buttons);
                 }
 
+                // 开启视频绘图，放大时，增加视频操作
+                if (Action == TaskAction.UPSCALE && GlobalConfiguration.Setting.EnableVideo)
+                {
+                    Buttons.Add(CustomComponentModel.CreateAnimateButton(id, index, "High"));
+                    Buttons.Add(CustomComponentModel.CreateAnimateButton(id, index, "Low"));
+                }
+
                 // 增加重绘操作
                 Buttons.Add(new CustomComponentModel
                 {
@@ -757,23 +764,79 @@ namespace Midjourney.Base.Models
                     Style = 2,
                     Type = 2
                 });
-
-                // 开启视频绘图，增加视频操作
-                if (GlobalConfiguration.Setting.EnableVideo)
-                {
-                    // 增加视频操作 - 自动
-                    Buttons.Add(CustomComponentModel.CreateVideo(id, "Low", "Auto", "vid_1.1_i2v_480"));
-                    Buttons.Add(CustomComponentModel.CreateVideo(id, "High", "Auto", "vid_1.1_i2v_480"));
-
-                    // 增加视频操作 - 手动
-                    Buttons.Add(CustomComponentModel.CreateVideo(id, "Low", "Manual", "vid_1.1_i2v_480"));
-                    Buttons.Add(CustomComponentModel.CreateVideo(id, "High", "Manual", "vid_1.1_i2v_480"));
-                }
             }
             catch (Exception ex)
             {
                 Log.Error(ex, "设置放大按钮失败，JSON 解析错误");
             }
+        }
+
+        /// <summary>
+        /// 设置视频放大按钮。
+        /// </summary>
+        public void SetVideoUpscaleButtons(string id)
+        {
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                return;
+            }
+
+            // 清除现有按钮
+            Buttons.Clear();
+
+            for (int i = 1; i <= 4; i++)
+            {
+                Buttons.Add(new CustomComponentModel
+                {
+                    CustomId = $"MJ::JOB::video_virtual_upscale::{i}::{id}",
+                    Label = $"U{i}",
+                    Emoji = "",
+                    Style = 2,
+                    Type = 2
+                });
+            }
+
+            // 增加重绘操作
+            Buttons.Add(new CustomComponentModel
+            {
+                CustomId = $"MJ::JOB::reroll::0::{id}::SOLO",
+                Label = "",
+                Emoji = "\uD83D\uDD04",
+                Style = 2,
+                Type = 2
+            });
+        }
+
+        /// <summary>
+        /// 设置视频扩展动作操作按钮
+        /// </summary>
+        /// <param name="id"></param>
+        public void SetVideoExtendButtons(string id)
+        {
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                return;
+            }
+
+            Buttons.Clear();
+
+            Buttons.Add(new CustomComponentModel
+            {
+                CustomId = $"MJ::JOB::animate_high_extend::1::{id}",
+                Label = "Extend (High motion)",
+                Emoji = "🎞️",
+                Style = 2,
+                Type = 2
+            });
+
+            Buttons.Add(new CustomComponentModel
+            {
+                CustomId = $"MJ::JOB::animate_low_extend::1::{id}",
+                Label = "Extend (Low motion)",
+                Emoji = "🎞️",
+                Style = 2,
+                Type = 2
+            });
         }
 
         /// <summary>
@@ -875,15 +938,15 @@ namespace Midjourney.Base.Models
     /// </summary>
     public class TaskInfoVideoUrl
     {
-        /// <summary>
-        ///
-        /// </summary>
-        public string Url { get; set; } = string.Empty;
+        public TaskInfoVideoUrl(string url)
+        {
+            Url = url;
+        }
 
         /// <summary>
         ///
         /// </summary>
-        public List<CustomComponentModel> Buttons { get; set; } = new List<CustomComponentModel>();
+        public string Url { get; set; } = string.Empty;
     }
 
     /// <summary>

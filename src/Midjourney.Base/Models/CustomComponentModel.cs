@@ -21,8 +21,6 @@
 // The use of this software for any form of illegal face swapping,
 // invasion of privacy, or any other unlawful purposes is strictly prohibited. 
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
-using System.Text.Json.Serialization;
-using IdGen;
 
 namespace Midjourney.Base.Models
 {
@@ -42,26 +40,19 @@ namespace Midjourney.Base.Models
         public int Type { get; set; }
 
         /// <summary>
-        /// 创建视频组件
+        /// 创建视频操作按钮
         /// </summary>
         /// <param name="id"></param>
-        /// <param name="low"></param>
-        /// <param name="auto"></param>
-        /// <param name="videoType"></param>
+        /// <param name="index">1 | 2 | 3 | 4</param>
+        /// <param name="low">Low | High</param>
         /// <returns></returns>
-        public static CustomComponentModel CreateVideo(string id, string low = "Low", string auto = "Auto", string videoType = "vid_1.1_i2v_480")
+        public static CustomComponentModel CreateAnimateButton(string id, int index, string low = "Low")
         {
-            var prefix = "";
-            if (videoType.Contains("extend"))
-            {
-                prefix = "Extend ";
-            }
-
             return new CustomComponentModel
             {
-                CustomId = $"MJ::JOB::video::{low.ToLower()}::{id}::{videoType}::{auto.ToLower()}",
-                Label = $"{prefix}{auto} {low} Motion",
-                Emoji = "",
+                CustomId = $"MJ::JOB::animate_{low.ToLower()}::{index}::{id}::SOLO",
+                Label = $"Animate ({low} motion)",
+                Emoji = "🎞️",
                 Style = 2,
                 Type = 2
             };

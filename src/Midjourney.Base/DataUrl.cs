@@ -49,6 +49,26 @@ namespace Midjourney.Base
 
         public static DataUrl Parse(string dataUrl)
         {
+            if (string.IsNullOrWhiteSpace(dataUrl))
+            {
+                return null;
+            }
+
+            if (dataUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+            {
+                return new DataUrl
+                {
+                    Url = dataUrl
+                };
+            }
+
+            var setting = GlobalConfiguration.Setting;
+            if (!setting.EnableUserCustomUploadBase64)
+            {
+                // 不允许用户上传 base64 数据
+                throw new LogicException("disabled upload base64");
+            }
+
             var match = Regex.Match(dataUrl, @"data:(?<type>.+?);base64,(?<data>.+)");
             if (!match.Success)
             {

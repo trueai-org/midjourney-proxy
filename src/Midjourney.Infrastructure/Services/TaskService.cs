@@ -1156,7 +1156,7 @@ namespace Midjourney.Infrastructure.Services
                     : targetTask.IsOfficial ? targetTask.OfficialTaskInfo?.FullCommand
                     : targetTask.PromptFull;
 
-                if (submitAction.CustomId.Contains("::low::"))
+                if (submitAction.CustomId.Contains("low"))
                 {
                     if (!cmd.Contains("--motion"))
                     {
@@ -1179,15 +1179,7 @@ namespace Midjourney.Infrastructure.Services
                 task.Prompt = cmd;
                 task.PromptEn = cmd;
                 task.Status = TaskStatus.MODAL;
-
-                if (submitAction.CustomId.Contains("entend"))
-                {
-                    task.Action = TaskAction.VIDEO_EXTEND;
-                }
-                else
-                {
-                    task.Action = TaskAction.VIDEO;
-                }
+                task.Action = TaskAction.VIDEO;
 
                 _taskStoreService.Save(task);
 

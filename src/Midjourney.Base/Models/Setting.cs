@@ -34,6 +34,16 @@ namespace Midjourney.Base.Models
     public class Setting : DomainObject
     {
         /// <summary>
+        /// 是否开启视频合并 -> webp
+        /// </summary>
+        public bool EnableVideoMerge { get; set; } = true;
+
+        /// <summary>
+        /// 视频合并质量 0 - 100
+        /// </summary>
+        public int VideoMergeQuality { get; set; } = 75;
+
+        /// <summary>
         /// 开启用户绘图统计
         /// </summary>
         public bool EnableUserDrawStatistics { get; set; }

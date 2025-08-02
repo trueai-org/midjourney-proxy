@@ -302,7 +302,7 @@ namespace Midjourney.Base
         VIDEO,
 
         /// <summary>
-        /// 视频拓展
+        /// 视频拓展（废弃）
         /// </summary>
         VIDEO_EXTEND,
 

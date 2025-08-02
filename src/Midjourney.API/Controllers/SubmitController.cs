@@ -922,6 +922,44 @@ namespace Midjourney.API.Controllers
         }
 
         /// <summary>
+        /// 提交视频任务
+        /// </summary>
+        /// <param name="videoDTO"></param>
+        /// <returns></returns>
+        [HttpPost("video")]
+        public ActionResult<SubmitResultVO> Video([FromBody] SubmitVideoDTO videoDTO)
+        {
+            if (string.IsNullOrWhiteSpace(videoDTO.Prompt))
+            {
+                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "Prompt 不能为空"));
+            }
+
+            DataUrl startUrl;
+            DataUrl endUrl;
+            try
+            {
+                startUrl = DataUrl.Parse(videoDTO.Image);
+                endUrl = DataUrl.Parse(videoDTO.EndImage);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "base64格式转换异常");
+                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "base64格式错误"));
+            }
+
+            //var task = NewTask(videoDTO);
+            //task.BotType = EBotType.MID_JOURNEY;
+            //task.Action = TaskAction.VIDEO;
+            //task.Description = $"/video {videoDTO.VideoUrl}";
+            //task.VideoUrl = videoDTO.VideoUrl;
+            //NewTaskDoFilter(task, videoDTO.AccountFilter);
+            //return Ok(_taskService.SubmitVideo(task, dataUrl));
+
+            return Ok(null);
+        }
+
+
+        /// <summary>
         /// 创建新的任务对象
         /// </summary>
         /// <param name="baseDTO"></param>
