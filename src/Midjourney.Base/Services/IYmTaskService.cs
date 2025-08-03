@@ -42,7 +42,8 @@ namespace Midjourney.Base.Services
              SubmitActionDTO submitAction,
              TaskInfo targetTask,
              ITaskStoreService taskStoreService,
-             IDiscordInstance discordInstance);
+             IDiscordInstance discordInstance, 
+             string newPrompt = null);
 
         /// <summary>
         /// 获取并更新任务状态

@@ -444,9 +444,14 @@ namespace Midjourney.Base.Models
         public string LoginMessage { get; set; }
 
         /// <summary>
-        /// 日绘图最大次数限制，默认 -1 不限制
+        /// 日绘图最大次数限制，默认 -1 不限制（快速）
         /// </summary>
         public int DayDrawLimit { get; set; } = -1;
+
+        /// <summary>
+        /// 日绘图最大次数限制，默认 -1 不限制（慢速）
+        /// </summary>
+        public int DayRelaxDrawLimit { get; set; } = -1;
 
         /// <summary>
         /// 当日已绘图次数（每 2 分钟自动刷新）
@@ -1259,6 +1264,8 @@ namespace Midjourney.Base.Models
                 IsDescribe = configAccount.IsDescribe,
                 IsShorten = configAccount.IsShorten,
                 DayDrawLimit = configAccount.DayDrawLimit,
+                DayRelaxDrawLimit = configAccount.DayRelaxDrawLimit,
+
                 EnableMj = configAccount.EnableMj,
                 EnableNiji = configAccount.EnableNiji,
                 EnableFastToRelax = configAccount.EnableFastToRelax,

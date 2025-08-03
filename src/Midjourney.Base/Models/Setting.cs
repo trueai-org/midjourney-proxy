@@ -870,6 +870,12 @@ namespace Midjourney.Base.Models
         /// </summary>
         public int DayDrawLimit { get; set; } = -1;
 
+
+        /// <summary>
+        /// 日绘图最大次数限制，默认 -1 不限制（慢速）
+        /// </summary>
+        public int DayRelaxDrawLimit { get; set; } = -1;
+
         /// <summary>
         /// 开启垂直领域
         /// </summary>

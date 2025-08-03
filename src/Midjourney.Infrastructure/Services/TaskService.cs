@@ -1302,7 +1302,6 @@ namespace Midjourney.Infrastructure.Services
                 return SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "无可用的账号实例");
             }
 
-
             task.IsPartner = discordInstance.Account.IsYouChuan;
             task.IsOfficial = discordInstance.Account.IsOfficial;
             task.InstanceId = discordInstance.ChannelId;
@@ -1362,6 +1361,43 @@ namespace Midjourney.Infrastructure.Services
             {
                 task.PromptEn = targetTask.PromptEn;
             }
+
+            // 如果是 remix
+            if (submitAction.EnableRemix == true)
+            {
+                if (!discordInstance.Account.IsOfficial && !discordInstance.Account.IsYouChuan)
+                {
+                    var bt = task.RealBotType ?? task.BotType;
+
+                    // discord 账号判断是否开启 remix
+                    if (bt == EBotType.MID_JOURNEY && !discordInstance.Account.MjRemixOn)
+                    {
+                        return SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "当前账号不支持 remix，请开启 remix 功能");
+                    }
+
+                    if (bt == EBotType.NIJI_JOURNEY && !discordInstance.Account.NijiRemixOn)
+                    {
+                        return SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "当前账号不支持 remix，请开启 remix 功能");
+                    }
+                }
+
+                // 悠船、管饭账号不判断 remix
+                if (task.Action == TaskAction.PAN || task.Action == TaskAction.VARIATION || task.Action == TaskAction.REROLL || task.Action == TaskAction.VIDEO)
+                {
+                    task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_ID, targetTask.MessageId);
+                    task.SetProperty(Constants.TASK_PROPERTY_FLAGS, messageFlags);
+
+                    // 如果是 REMIX 任务，则设置任务状态为 modal
+                    task.Status = TaskStatus.MODAL;
+                    _taskStoreService.Save(task);
+
+                    // 状态码为 21
+                    return SubmitResultVO.Of(ReturnCode.EXISTED, "Waiting for window confirm", task.Id)
+                        .SetProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, task.PromptEn)
+                        .SetProperty(Constants.TASK_PROPERTY_REMIX, true);
+                }
+            }
+
 
             // 点击喜欢
             if (submitAction.CustomId.Contains("MJ::BOOKMARK"))

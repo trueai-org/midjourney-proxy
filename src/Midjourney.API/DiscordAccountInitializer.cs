@@ -1193,6 +1193,7 @@ namespace Midjourney.API
                 model.IsDescribe = param.IsDescribe;
                 model.IsShorten = param.IsShorten;
                 model.DayDrawLimit = param.DayDrawLimit;
+                model.DayRelaxDrawLimit = param.DayRelaxDrawLimit;
                 model.IsVerticalDomain = param.IsVerticalDomain;
                 model.VerticalDomainIds = param.VerticalDomainIds;
                 model.SubChannels = param.SubChannels;
