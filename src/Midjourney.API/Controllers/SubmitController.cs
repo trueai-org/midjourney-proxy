@@ -26,6 +26,8 @@ using System.Net;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Identity.Client;
+using Midjourney.Base.Dto;
 using Midjourney.Infrastructure.LoadBalancer;
 
 namespace Midjourney.API.Controllers
@@ -929,6 +931,12 @@ namespace Midjourney.API.Controllers
         [HttpPost("video")]
         public ActionResult<SubmitResultVO> Video([FromBody] SubmitVideoDTO videoDTO)
         {
+            var setting = GlobalConfiguration.Setting;
+            if (!setting.EnableVideo)
+            {
+                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "视频功能未启用"));
+            }
+
             if (string.IsNullOrWhiteSpace(videoDTO.Prompt))
             {
                 return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "Prompt 不能为空"));
@@ -944,20 +952,84 @@ namespace Midjourney.API.Controllers
             catch (Exception e)
             {
                 _logger.LogError(e, "base64格式转换异常");
+
                 return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "base64格式错误"));
             }
 
-            //var task = NewTask(videoDTO);
-            //task.BotType = EBotType.MID_JOURNEY;
-            //task.Action = TaskAction.VIDEO;
-            //task.Description = $"/video {videoDTO.VideoUrl}";
-            //task.VideoUrl = videoDTO.VideoUrl;
-            //NewTaskDoFilter(task, videoDTO.AccountFilter);
-            //return Ok(_taskService.SubmitVideo(task, dataUrl));
+            var task = NewTask(videoDTO);
+            task.BotType = EBotType.MID_JOURNEY;
+            task.Action = TaskAction.VIDEO;
 
-            return Ok(null);
+            task.SetProperty(Constants.TASK_PROPERTY_BOT_TYPE, task.BotType.GetDescription());
+            task.AccountFilter = new AccountFilter();
+
+            var promptEn = TranslatePrompt(videoDTO.Prompt, task.RealBotType ?? task.BotType);
+
+            try
+            {
+                _taskService.CheckBanned(promptEn);
+            }
+            catch (BannedPromptException e)
+            {
+                return Ok(SubmitResultVO.Fail(ReturnCode.BANNED_PROMPT, "可能包含敏感词")
+                    .SetProperty("promptEn", promptEn)
+                    .SetProperty("bannedWord", e.Message));
+            }
+
+            // 如果没有路径速度，并且没有过滤速度，解析提示词，生成指定模式过滤
+            if (task.Mode == null)
+            {
+                // 解析提示词
+                var prompt = task.Prompt?.ToLower() ?? "";
+
+                // 解析速度模式
+                if (prompt.Contains("--fast"))
+                {
+                    task.Mode = GenerationSpeedMode.FAST;
+                }
+                else if (prompt.Contains("--relax"))
+                {
+                    task.Mode = GenerationSpeedMode.RELAX;
+                }
+                else if (prompt.Contains("--turbo"))
+                {
+                    task.Mode = GenerationSpeedMode.TURBO;
+                }
+            }
+
+            TaskInfo targetTask = null;
+            if (!string.IsNullOrWhiteSpace(videoDTO.TaskId))
+            {
+                if (videoDTO.Action?.Equals("extend") != true)
+                {
+                    return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "任务类型错误"));
+                }
+
+                targetTask = _taskStoreService.Get(videoDTO.TaskId);
+                if (targetTask == null)
+                {
+                    return NotFound(SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "关联任务不存在或已失效"));
+                }
+
+                if (targetTask.Status != TaskStatus.SUCCESS)
+                {
+                    return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "关联任务状态错误"));
+                }
+
+
+                task.InstanceId = targetTask.InstanceId;
+                task.ParentId = targetTask.Id;
+                task.BotType = targetTask.BotType;
+                task.RealBotType = targetTask.RealBotType;
+                task.SubInstanceId = targetTask.SubInstanceId;
+            }
+
+            task.Description = $"/video {promptEn}";
+            task.Prompt = videoDTO.Prompt;
+            task.PromptEn = promptEn;
+
+            return Ok(_taskService.SubmitVideo(task, targetTask, startUrl, endUrl, videoDTO));
         }
-
 
         /// <summary>
         /// 创建新的任务对象

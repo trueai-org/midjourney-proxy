@@ -883,6 +883,41 @@ namespace Midjourney.Base.Models
         }
 
         /// <summary>
+        /// 判断是否允许生成视频
+        /// </summary>
+        /// <param name="isVideo"></param>
+        /// <returns></returns>
+        public bool IsAllowGenerateVideo(bool? isVideo = null)
+        {
+            if (isVideo != true)
+            {
+                return true;
+            }
+
+            // 如果是悠船账号
+            if (IsYouChuan)
+            {
+                // 快速 > 480, 即: 60 * 8
+                return YouChuanFastRemaining > 480;
+            }
+
+            // 如果是官方账号
+            if (IsOfficial)
+            {
+                return OfficialFastRemaining > 480;
+            }
+
+            // Discord 账号
+            // fastTimeRemaining "10.99/15.0 hours (73.28%)"
+            if (FastExhausted)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
         /// 判断是否允许 discord 绘图
         /// </summary>
         /// <param name="modes"></param>
@@ -921,6 +956,12 @@ namespace Midjourney.Base.Models
         /// 是否为官方账号
         /// </summary>
         public bool IsOfficial { get; set; }
+
+        /// <summary>
+        /// 官方账号快速时长剩余，单位：秒（total - used）
+        /// 剩余时间 > 60s/180s 时，表示允许绘图
+        /// </summary>
+        public int OfficialFastRemaining { get; set; } = 0;
 
         /// <summary>
         /// 服务运行中 - 用于前台显示

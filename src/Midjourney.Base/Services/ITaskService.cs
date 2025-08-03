@@ -157,6 +157,15 @@ namespace Midjourney.Base.Services
         SubmitResultVO SubmitRetexture(TaskInfo task, DataUrl dataUrl);
 
         /// <summary>
+        /// 提交视频任务
+        /// </summary>
+        /// <param name="task"></param>
+        /// <param name="startUrl"></param>
+        /// <param name="endUrl"></param>
+        /// <returns></returns>
+        SubmitResultVO SubmitVideo(TaskInfo task, TaskInfo targetTask, DataUrl startUrl, DataUrl endUrl, SubmitVideoDTO videoDTO);
+
+        /// <summary>
         /// 执行 Modal
         /// </summary>
         /// <param name="task"></param>
@@ -200,5 +209,6 @@ namespace Midjourney.Base.Services
         /// <param name="dto"></param>
         /// <returns></returns>
         Task MjPlusMigration(MjPlusMigrationDto dto);
+
     }
 }

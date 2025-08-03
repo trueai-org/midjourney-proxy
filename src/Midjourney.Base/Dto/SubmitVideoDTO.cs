@@ -21,10 +21,12 @@
 // The use of this software for any form of illegal face swapping,
 // invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
+
 namespace Midjourney.Base.Dto
 {
     /// <summary>
     /// video 提交参数
+    /// https://apiai.apifox.cn/api-315106648
     /// </summary>
     public class SubmitVideoDTO : BaseSubmitDTO
     {
