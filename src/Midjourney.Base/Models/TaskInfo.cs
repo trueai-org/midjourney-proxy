@@ -938,14 +938,20 @@ namespace Midjourney.Base.Models
     /// </summary>
     public class TaskInfoVideoUrl
     {
+        public TaskInfoVideoUrl()
+        {
+
+        }
+
         public TaskInfoVideoUrl(string url)
         {
             Url = url;
         }
 
         /// <summary>
-        ///
+        /// 视频 URL
         /// </summary>
+        [JsonPropertyName("url")]
         public string Url { get; set; } = string.Empty;
     }
 
@@ -954,6 +960,11 @@ namespace Midjourney.Base.Models
     /// </summary>
     public class TaskInfoImageUrl
     {
+        public TaskInfoImageUrl()
+        {
+
+        }
+
         public TaskInfoImageUrl(string url)
         {
             Url = url;
