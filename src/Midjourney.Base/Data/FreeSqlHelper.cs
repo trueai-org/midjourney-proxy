@@ -78,7 +78,6 @@ namespace Midjourney.Base.Data
                   // 监视 SQL 命令对象
                   .UseMonitorCommand(cmd =>
                   {
-                      // TODO dev
                       //Log.Information(cmd.CommandText);
                       //Console.WriteLine(cmd.CommandText);
                   });
