@@ -126,6 +126,9 @@ namespace Midjourney.API
             LiteDBHelper.SettingStore.Save(setting);
             GlobalConfiguration.Setting = setting;
 
+            // 修改日志级别
+            Program.SetLogLevel(setting.LogEventLevel);
+
             services.AddMemoryCache();
             services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
             services.AddTransient<WorkContext>();

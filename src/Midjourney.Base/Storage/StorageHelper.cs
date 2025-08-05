@@ -128,6 +128,19 @@ namespace Midjourney.Base.Storage
                 return;
             }
 
+            var cdn = _instance.GetCustomCdn();
+            if (string.IsNullOrWhiteSpace(cdn))
+            {
+                return;
+            }
+
+            var fileUri = new Uri(imageUrl);
+            var cdnUri = new Uri(cdn);
+            if (fileUri.Host.Equals(cdnUri.Host, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
             var lockKey = $"download:{imageUrl}";
 
             WebProxy webProxy = null;
@@ -162,12 +175,6 @@ namespace Midjourney.Base.Storage
             if (setting.ImageStorageType == ImageStorageType.OSS)
             {
                 var opt = setting.AliyunOss;
-                var cdn = opt.CustomCdn;
-
-                if (string.IsNullOrWhiteSpace(cdn) || imageUrl.StartsWith(cdn))
-                {
-                    return;
-                }
 
                 var oss = new AliyunOssStorageService();
 
@@ -215,12 +222,6 @@ namespace Midjourney.Base.Storage
             else if (setting.ImageStorageType == ImageStorageType.COS)
             {
                 var opt = setting.TencentCos;
-                var cdn = opt.CustomCdn;
-
-                if (string.IsNullOrWhiteSpace(cdn) || imageUrl.StartsWith(cdn))
-                {
-                    return;
-                }
 
                 var cos = new TencentCosStorageService();
 
@@ -264,12 +265,6 @@ namespace Midjourney.Base.Storage
             else if (setting.ImageStorageType == ImageStorageType.R2)
             {
                 var opt = setting.CloudflareR2;
-                var cdn = opt.CustomCdn;
-
-                if (string.IsNullOrWhiteSpace(cdn) || imageUrl.StartsWith(cdn))
-                {
-                    return;
-                }
 
                 var r2 = new CloudflareR2StorageService();
 
@@ -317,7 +312,7 @@ namespace Midjourney.Base.Storage
             else if (setting.ImageStorageType == ImageStorageType.S3)
             {
                 var opt = setting.S3Storage;
-                var cdn = opt.CustomCdn;
+                cdn = opt.CustomCdn;
 
                 // 已经保存了
                 if (imageUrl.StartsWith(cdn))
@@ -414,12 +409,6 @@ namespace Midjourney.Base.Storage
             else if (setting.ImageStorageType == ImageStorageType.LOCAL)
             {
                 var opt = setting.LocalStorage;
-                var cdn = opt.CustomCdn;
-
-                if (string.IsNullOrWhiteSpace(cdn) || imageUrl.StartsWith(cdn))
-                {
-                    return;
-                }
 
                 // 如果路径是 ephemeral-attachments 或 attachments 才处理
                 // 如果是本地文件，则依然放到 attachments
@@ -631,7 +620,23 @@ namespace Midjourney.Base.Storage
                 resultUrl = null;
             }
 
-            return resultUrl;
+            if (string.IsNullOrWhiteSpace(resultUrl))
+            {
+                return null;
+            }
+
+            // 重新格式化 URL
+            var resultUri = new Uri(resultUrl);
+
+            // 如果有端口
+            if (resultUri.IsDefaultPort)
+            {
+                return $"{resultUri.Scheme}://{resultUri.Host}{resultUri.PathAndQuery}";
+            }
+            else
+            {
+                return $"{resultUri.Scheme}://{resultUri.Host}:{resultUri.Port}{resultUri.PathAndQuery}";
+            }
         }
 
         /// <summary>
@@ -642,40 +647,49 @@ namespace Midjourney.Base.Storage
         /// <returns></returns>
         public static async Task<byte[]> DownloadImageAsync(TaskInfo info, string url)
         {
-            HttpClient client;
-
-            if (info.IsPartner)
+            if (info.IsOfficial)
             {
-                client = _youchuanHttpClient;
+                Log.Warning("官方图片无法直接下载: {Url}", url);
+
+                throw new InvalidOperationException("无法下载");
             }
             else
             {
-                client = _proxyHttpClient;
+                HttpClient client;
+
+                if (info.IsPartner)
+                {
+                    client = _youchuanHttpClient;
+                }
+                else
+                {
+                    client = _proxyHttpClient;
+                }
+
+                if (string.IsNullOrWhiteSpace(url))
+                {
+                    return [];
+                }
+
+                byte[] bytes = [];
+
+                // 最大等待 10 分钟
+                var isLock = await AsyncLocalLock.TryLockAsync($"download:{url}", TimeSpan.FromMinutes(10), async () =>
+                {
+                    url = ReplaceInternalUrl(info, url);
+
+                    var response = await client.GetAsync(url);
+                    response.EnsureSuccessStatusCode();
+                    bytes = await response.Content.ReadAsByteArrayAsync();
+                });
+
+                if (bytes == null || !isLock)
+                {
+                    Log.Warning("下载图片失败或未获取到锁: {Url}", url);
+                }
+
+                return bytes ?? [];
             }
-
-            if (string.IsNullOrWhiteSpace(url))
-            {
-                return [];
-            }
-
-            byte[] bytes = [];
-
-            // 最大等待 10 分钟
-            var isLock = await AsyncLocalLock.TryLockAsync($"download:{url}", TimeSpan.FromMinutes(10), async () =>
-            {
-                url = ReplaceInternalUrl(info, url);
-
-                var response = await client.GetAsync(url);
-                response.EnsureSuccessStatusCode();
-                bytes = await response.Content.ReadAsByteArrayAsync();
-            });
-
-            if (bytes == null || !isLock)
-            {
-                Log.Warning("下载图片失败或未获取到锁: {Url}", url);
-            }
-
-            return bytes ?? [];
         }
 
         /// <summary>

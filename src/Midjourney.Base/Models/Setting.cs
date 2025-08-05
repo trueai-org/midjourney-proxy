@@ -25,6 +25,7 @@
 using LiteDB;
 using Midjourney.Base.Data;
 using Midjourney.Base.Options;
+using Serilog.Events;
 
 namespace Midjourney.Base.Models
 {
@@ -33,6 +34,11 @@ namespace Midjourney.Base.Models
     /// </summary>
     public class Setting : DomainObject
     {
+        /// <summary>
+        /// 日志级别
+        /// </summary>
+        public LogEventLevel LogEventLevel { get; set; } = LogEventLevel.Information;
+
         /// <summary>
         /// 是否开启视频合并 -> webp
         /// </summary>

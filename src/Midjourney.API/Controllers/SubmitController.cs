@@ -335,7 +335,7 @@ namespace Midjourney.API.Controllers
         }
 
         /// <summary>
-        /// 任务变化
+        /// 任务变化（简单操作）
         /// </summary>
         /// <param name="changeDTO">提交变化任务的DTO</param>
         /// <returns>提交结果</returns>

@@ -555,6 +555,7 @@ namespace Midjourney.Base.Models
             {
                 Log.Error(ex, "保存图片失败 {@0}", ImageUrl);
             }
+
             SuccessUpdate();
         }
 

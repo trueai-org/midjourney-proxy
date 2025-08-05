@@ -24,6 +24,7 @@
 
 using Midjourney.License;
 using Serilog;
+using Serilog.Core;
 using Serilog.Debugging;
 using Serilog.Events;
 
@@ -31,6 +32,9 @@ namespace Midjourney.API
 {
     public class Program
     {
+        // 声明一个全局的日志级别开关
+        public static LoggingLevelSwitch LogLevelSwitch { get; private set; } = new LoggingLevelSwitch();
+
         public static void Main(string[] args)
         {
             try
@@ -55,9 +59,8 @@ namespace Midjourney.API
             }
             finally
             {
-                Log.Information("应用程序即将关闭");
-
                 // 确保日志被刷新和关闭
+                Log.Information("应用程序即将关闭");
                 Log.CloseAndFlush();
             }
         }
@@ -90,6 +93,9 @@ namespace Midjourney.API
         /// <param name="isDevelopment"></param>
         private static void ConfigureInitialLogger(IConfiguration configuration, bool isDevelopment)
         {
+            // 设置初始日志级别
+            LogLevelSwitch.MinimumLevel = isDevelopment ? LogEventLevel.Debug : LogEventLevel.Information;
+
             // 基本日志配置
             //var loggerConfiguration = new LoggerConfiguration()
             //      .ReadFrom.Configuration(configuration)
@@ -99,7 +105,8 @@ namespace Midjourney.API
             // 单文件最大 10MB
             var fileSizeLimitBytes = 10 * 1024 * 1024;
             var loggerConfiguration = new LoggerConfiguration()
-                .MinimumLevel.Information()
+                //.MinimumLevel.Information()
+                .MinimumLevel.ControlledBy(LogLevelSwitch) // 使用 LoggingLevelSwitch 控制日志级别
                 .MinimumLevel.Override("Default", LogEventLevel.Warning)
                 .MinimumLevel.Override("System", LogEventLevel.Warning)
                 .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
@@ -111,11 +118,10 @@ namespace Midjourney.API
                     rollOnFileSizeLimit: true,
                     retainedFileCountLimit: 31);
 
-
             // 开发环境特定配置
             if (isDevelopment)
             {
-                loggerConfiguration.MinimumLevel.Debug();
+                //loggerConfiguration.MinimumLevel.Debug();
 
                 //// 如果配置中没有设置控制台日志，则添加
                 //// 否则，不要在代码中添加，避免重复
@@ -146,5 +152,17 @@ namespace Midjourney.API
 
             Log.Logger = loggerConfiguration.CreateLogger();
         }
+
+        /// <summary>
+        /// 设置日志级别
+        /// </summary>
+        /// <param name="level"></param>
+        public static void SetLogLevel(LogEventLevel level)
+        {
+            LogLevelSwitch.MinimumLevel = level;
+
+            Log.Write(level, "日志级别已设置为: {Level}", level);
+        }
+
     }
 }
