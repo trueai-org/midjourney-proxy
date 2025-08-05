@@ -9,7 +9,7 @@
 		<IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
 		<EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
 		<SatelliteResourceLanguages>zh-Hans</SatelliteResourceLanguages>
-		<AssemblyVersion>8.6.14</AssemblyVersion>
+		<AssemblyVersion>8.6.15</AssemblyVersion>
 		<DockerfileContext>..\..</DockerfileContext>
 	</PropertyGroup>
 
@@ -33,14 +33,20 @@
 		<ProjectReference Include="..\Midjourney.Infrastructure\Midjourney.Infrastructure.csproj" />
 	</ItemGroup>
 
-	<ItemGroup>
-	  <Folder Include="Upgrade\" />
+	<!-- 开发时引用项目 -->
+	<ItemGroup Condition="'$(Configuration)' == 'Debug'">
+		<ProjectReference Include="..\..\..\src\Midjourney.License\Midjourney.License.csproj" />
 	</ItemGroup>
 
+	<!-- 发布时引用 DLL -->
+	<ItemGroup Condition="'$(Configuration)' == 'Release'">
+		<Reference Include="Midjourney.License">
+			<HintPath>..\lib\Midjourney.License.dll</HintPath>
+		</Reference>
+	</ItemGroup>
+	
 	<ItemGroup>
-	  <Reference Include="Midjourney.License">
-	    <HintPath>..\lib\Midjourney.License.dll</HintPath>
-	  </Reference>
+	  <Folder Include="Upgrade\" />
 	</ItemGroup>
 
 	<ItemGroup>
