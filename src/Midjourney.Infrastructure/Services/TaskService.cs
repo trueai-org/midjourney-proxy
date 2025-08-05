@@ -247,6 +247,23 @@ namespace Midjourney.Infrastructure.Services
                             if (dataUrl.Url?.StartsWith("http", StringComparison.OrdinalIgnoreCase) == true)
                             {
                                 link = dataUrl.Url;
+
+
+                                if (setting.EnableYouChuanPromptLink && !link.Contains("youchuan"))
+                                {
+                                    // 悠船官网链接转换
+                                    var ff = new FileFetchHelper();
+                                    var res = await ff.FetchFileAsync(link);
+                                    if (res.Success && !string.IsNullOrWhiteSpace(res.Url))
+                                    {
+                                        link = res.Url;
+                                    }
+                                    else if (res.Success && res.FileBytes.Length > 0)
+                                    {
+                                        var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
+                                        link = await instance.YmTaskService.UploadFileAsync(info, res.FileBytes, taskFileName);
+                                    }
+                                }
                             }
                             else
                             {

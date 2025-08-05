@@ -15,26 +15,26 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Additional Terms:
-// This software shall not be used for any illegal activities. 
+// This software shall not be used for any illegal activities.
 // Users must comply with all applicable laws and regulations,
-// particularly those related to image and video processing. 
+// particularly those related to image and video processing.
 // The use of this software for any form of illegal face swapping,
-// invasion of privacy, or any other unlawful purposes is strictly prohibited. 
+// invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
+using System.Net;
+using System.Net.Http.Headers;
 using Microsoft.IdentityModel.Logging;
 using Midjourney.Base.Storage;
 using MimeDetective;
 using Serilog;
-using System.Net;
-using System.Net.Http.Headers;
 
 namespace Midjourney.Base.Util
 {
     /// <summary>
     /// 文件抓取助手
     /// 多种方案
-    /// 
+    ///
     /// 备选：https://github.com/samuelneff/MimeTypeMap
     /// </summary>
     public class FileFetchHelper
@@ -42,42 +42,53 @@ namespace Midjourney.Base.Util
         /// <summary>
         /// 可抓取的文件文件后缀
         /// </summary>
-        private string[] WHITE_EXTENSIONS = ["jpg", "png", "webp", "bmp", "gif", "pdf", "jpeg", "tiff", "svg", "heif", "heic", "mp4"];
+        private static string[] WHITE_EXTENSIONS = ["jpg", "png", "webp", "bmp", "gif", "pdf", "jpeg", "tiff", "svg", "heif", "heic", "mp4"];
 
         /// <summary>
         /// 跳过的文件主机名
         /// </summary>
-        private string[] WHITE_HOSTS = ["discordapp.com", "cdn.discordapp.com", "mj.run", "midjourney.com", "cdn.midjourney.com"];
+        private static string[] WHITE_HOSTS = ["discordapp.com", "cdn.discordapp.com", "mj.run", "midjourney.com", "cdn.midjourney.com"];
 
-        private readonly HttpClient _httpClient;
+        private static HttpClient _sharedHttpClient;
+        private static readonly object _lock = new object();
         private readonly long _maxFileSize;
 
-        /// <summary>
-        /// 文件抓取到本地
-        /// 默认：超时 15 分钟
-        /// </summary>
-        /// <param name="maxFileSize">默认最大文件大小为 128 MB</param>
         public FileFetchHelper(long maxFileSize = 128 * 1024 * 1024)
         {
-            WebProxy webProxy = null;
-            var proxy = GlobalConfiguration.Setting.Proxy;
-            if (!string.IsNullOrEmpty(proxy?.Host))
-            {
-                webProxy = new WebProxy(proxy.Host, proxy.Port ?? 80);
-            }
-            var hch = new HttpClientHandler
-            {
-                UseProxy = webProxy != null,
-                Proxy = webProxy
-            };
-            _httpClient = new HttpClient(hch)
-            {
-                Timeout = TimeSpan.FromMinutes(15),
-            };
-
-            _httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36");
-
             _maxFileSize = maxFileSize;
+
+            if (_sharedHttpClient != null)
+                return;
+
+            lock (_lock)
+            {
+                if (_sharedHttpClient != null)
+                    return;
+
+                // 释放旧的客户端
+                _sharedHttpClient?.Dispose();
+
+                WebProxy webProxy = null;
+                var proxy = GlobalConfiguration.Setting.Proxy;
+                if (!string.IsNullOrEmpty(proxy?.Host))
+                {
+                    webProxy = new WebProxy(proxy.Host, proxy.Port ?? 80);
+                }
+
+                var handler = new HttpClientHandler
+                {
+                    UseProxy = webProxy != null,
+                    Proxy = webProxy
+                };
+
+                _sharedHttpClient = new HttpClient(handler)
+                {
+                    Timeout = TimeSpan.FromMinutes(15),
+                };
+
+                _sharedHttpClient.DefaultRequestHeaders.Add("User-Agent",
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36");
+            }
         }
 
         /// <summary>
@@ -104,15 +115,15 @@ namespace Midjourney.Base.Util
                     return new FetchFileResult { Success = true, Url = url, Msg = "White host" };
                 }
 
-                //_httpClient.DefaultRequestHeaders.Host = host;
+                // 创建独立的请求消息，避免污染共享HttpClient
+                using var request = new HttpRequestMessage(HttpMethod.Get, url);
 
                 if (_maxFileSize > 0)
                 {
-                    _httpClient.DefaultRequestHeaders.Range = new RangeHeaderValue(0, _maxFileSize - 1);
+                    request.Headers.Range = new RangeHeaderValue(0, _maxFileSize - 1);
                 }
 
-                var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
-
+                var response = await _sharedHttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
                 if (!response.IsSuccessStatusCode)
                 {
                     return new FetchFileResult { Success = false, Msg = $"Failed to fetch file. Status: {response.StatusCode}" };
@@ -171,7 +182,6 @@ namespace Midjourney.Base.Util
             try
             {
                 var host = new Uri(url).Host;
-
                 var cdn = StorageHelper.Instance?.GetCustomCdn();
                 if (string.IsNullOrWhiteSpace(cdn))
                 {
@@ -185,12 +195,14 @@ namespace Midjourney.Base.Util
                     return url;
                 }
 
+                // 创建独立的请求消息，避免污染共享HttpClient
+                using var request = new HttpRequestMessage(HttpMethod.Get, url);
                 if (_maxFileSize > 0)
                 {
-                    _httpClient.DefaultRequestHeaders.Range = new RangeHeaderValue(0, _maxFileSize - 1);
+                    request.Headers.Range = new RangeHeaderValue(0, _maxFileSize - 1);
                 }
 
-                var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
+                var response = await _sharedHttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
                 if (!response.IsSuccessStatusCode)
                 {
                     Log.Warning($"{url} Failed to fetch file. Status: {response.StatusCode}");
@@ -281,6 +293,7 @@ namespace Midjourney.Base.Util
                 {
                     Definitions = MimeDetective.Definitions.Default.All()
                 }.Build();
+
                 var results = inspector.Inspect(fileBytes);
                 var mimeType = results.ByMimeType();
                 if (mimeType != null && mimeType.Length > 0)
@@ -402,7 +415,7 @@ namespace Midjourney.Base.Util
         {
             // 发送一个 HEAD 请求
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Head, url);
-            HttpResponseMessage response = await _httpClient.SendAsync(request);
+            HttpResponseMessage response = await _sharedHttpClient.SendAsync(request);
 
             if (response.IsSuccessStatusCode)
             {
