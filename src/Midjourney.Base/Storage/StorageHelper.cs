@@ -476,6 +476,9 @@ namespace Midjourney.Base.Storage
                     path = $"attachments/{filename.Trim().Trim('/')}";
                 }
 
+                // 格式化 path 为 url path
+                path = path.Replace('\\', '/').TrimStart('/').Trim();
+
                 // 阿里云 OSS
                 if (setting.ImageStorageType == ImageStorageType.OSS)
                 {

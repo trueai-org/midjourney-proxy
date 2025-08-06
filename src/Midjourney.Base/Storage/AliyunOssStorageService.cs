@@ -545,7 +545,7 @@ namespace Midjourney.Base.Storage
 
         public string GetCustomCdn()
         {
-            return string.IsNullOrWhiteSpace(_ossOptions?.CustomCdn) ? _ossOptions.CustomCdn : string.Empty;
+            return _ossOptions.CustomCdn;
         }
     }
 
