@@ -758,12 +758,11 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 }
             }
 
-
-            info.InstanceId = ChannelId;
-            _taskStoreService.Save(info);
-
             try
             {
+                info.InstanceId = ChannelId;
+                _taskStoreService.Save(info);
+
                 if (info.IsPartnerRelax)
                 {
                     _relaxQueueTasks.Enqueue((info, discordSubmit));
