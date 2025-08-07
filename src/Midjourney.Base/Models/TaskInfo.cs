@@ -23,6 +23,7 @@
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 using FreeSql.DataAnnotations;
 using Microsoft.Extensions.Caching.Memory;
 using Midjourney.Base.Data;
@@ -61,6 +62,16 @@ namespace Midjourney.Base.Models
     [Index("i_OfficialTaskId", "OfficialTaskId")]
     public class TaskInfo : DomainObject
     {
+        /// <summary>
+        /// 版本号匹配正则表达式。
+        /// </summary>
+        private const string VERSION_PATTERN = @"--(?<flag>v|niji)\s*(?<version>\d+(?:\.\d+)?)";
+
+        /// <summary>
+        /// 版本号匹配正则表达式实例。
+        /// </summary>
+        private static readonly Regex VersionRegex = new Regex(VERSION_PATTERN, RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
         public TaskInfo()
         {
         }
@@ -518,6 +529,13 @@ namespace Midjourney.Base.Models
         }
 
         /// <summary>
+        /// 版本
+        /// v 1, v 2, v 3, v 4, v 5, v 5.1, v 5.2, v 6, v 6.1, v 7
+        /// niji 4, niji 5, niji 6
+        /// </summary>
+        public string Version { get; set; }
+
+        /// <summary>
         /// 启动任务。
         /// </summary>
         public void Start()
@@ -618,12 +636,18 @@ namespace Midjourney.Base.Models
                 {
                     Mode = GenerationSpeedMode.TURBO;
                 }
+
+                Version = GetVersion(finalPrompt);
             }
 
             // 如果没有解析到，则使用默认值
             if (Mode == null)
             {
                 Mode = GenerationSpeedMode.FAST;
+            }
+            if (RequestMode == null)
+            {
+                RequestMode = GenerationSpeedMode.FAST;
             }
 
             // 如果开启了保持速度模式，且速度模式不一致时，替换提示词 RequestMode
@@ -731,9 +755,9 @@ namespace Midjourney.Base.Models
         }
 
         /// <summary>
-        /// 设置放大按钮。
+        /// 放大后的操作按钮
         /// </summary>
-        public void SetUpscaleButtons(string id, int index, string version = "v6")
+        public void OnUpscaleButtons(string id, int index, string prompt)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
@@ -743,47 +767,89 @@ namespace Midjourney.Base.Models
             // 清除现有按钮
             Buttons.Clear();
 
-            // 替换占位符
-            var buttonsJson = GlobalConfiguration.ResourcesParamsMap["upscale_buttons"].Replace("{{id}}", id).Replace("{{version}}", version);
-            try
+            var version = GetVersion(prompt);
+
+            // 高清按钮
+            var upscaleButtons = CustomComponentModel.CreateUpscaleButtons(this, id, index, version);
+            if (upscaleButtons?.Count > 0)
             {
-                // 反序列化 JSON 并添加到按钮列表
-
-                var buttons = System.Text.Json.JsonSerializer.Deserialize<List<CustomComponentModel>>(buttonsJson, new System.Text.Json.JsonSerializerOptions()
-                {
-                    // 忽略大小写
-                    PropertyNameCaseInsensitive = true,
-
-                    //// 允许 Unicode 字符（包括 emoji）不被转义
-                    //Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-                });
-
-                if (buttons != null)
-                {
-                    Buttons.AddRange(buttons);
-                }
-
-                // 开启视频绘图，放大时，增加视频操作
-                if (Action == TaskAction.UPSCALE && GlobalConfiguration.Setting.EnableVideo)
-                {
-                    Buttons.Add(CustomComponentModel.CreateAnimateButton(id, index, "High"));
-                    Buttons.Add(CustomComponentModel.CreateAnimateButton(id, index, "Low"));
-                }
-
-                // 增加重绘操作
-                Buttons.Add(new CustomComponentModel
-                {
-                    CustomId = $"MJ::JOB::reroll::0::{id}::SOLO",
-                    Label = "",
-                    Emoji = "\uD83D\uDD04",
-                    Style = 2,
-                    Type = 2
-                });
+                Buttons.AddRange(upscaleButtons);
             }
-            catch (Exception ex)
+
+            // 变化按钮
+            var varyButtons = CustomComponentModel.CreateVaryButtons(id, index, version);
+            if (varyButtons?.Count > 0)
             {
-                Log.Error(ex, "设置放大按钮失败，JSON 解析错误");
+                Buttons.AddRange(varyButtons);
             }
+
+            // 缩放按钮
+            var zoomButtons = CustomComponentModel.CreateZoomButtons(id, index, version);
+            if (zoomButtons?.Count > 0)
+            {
+                Buttons.AddRange(zoomButtons);
+            }
+
+            // 延展按钮
+            var panButtons = CustomComponentModel.CreatePanButtons(id, index, version);
+            if (panButtons?.Count > 0)
+            {
+                Buttons.AddRange(panButtons);
+            }
+
+            // 视频操作按钮
+            // 开启视频绘图，放大时，增加视频操作
+            if (Action == TaskAction.UPSCALE && GlobalConfiguration.Setting.EnableVideo)
+            {
+                var videoButtons = CustomComponentModel.CreateAnimateButtons(id, index);
+                if (videoButtons?.Count > 0)
+                {
+                    Buttons.AddRange(videoButtons);
+                }
+            }
+
+            // 重绘按钮
+            Buttons.Add(CustomComponentModel.CreateRerollButtons(id));
+        }
+
+        /// <summary>
+        /// 高清后的操作按钮
+        /// </summary>
+        public void OnUpscale2xButtons(string id, int index, string prompt)
+        {
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                return;
+            }
+
+            // 清除现有按钮
+            Buttons.Clear();
+
+            var version = GetVersion(prompt);
+
+            // 变化按钮
+            var varyButtons = CustomComponentModel.CreateVaryButtons(id, index, version);
+            if (varyButtons?.Count > 0)
+            {
+                Buttons.AddRange(varyButtons);
+            }
+
+            // 缩放按钮
+            var zoomButtons = CustomComponentModel.CreateZoomButtons(id, index, version);
+            if (zoomButtons?.Count > 0)
+            {
+                Buttons.AddRange(zoomButtons);
+            }
+
+            // 视频按钮
+            var videoButtons = CustomComponentModel.CreateAnimateButtons(id, index);
+            if (videoButtons?.Count > 0)
+            {
+                Buttons.AddRange(videoButtons);
+            }
+
+            // 重绘按钮
+            Buttons.Add(CustomComponentModel.CreateRerollButtons(id));
         }
 
         /// <summary>
@@ -796,7 +862,6 @@ namespace Midjourney.Base.Models
                 return;
             }
 
-            // 清除现有按钮
             Buttons.Clear();
 
             for (int i = 1; i <= 4; i++)
@@ -811,15 +876,8 @@ namespace Midjourney.Base.Models
                 });
             }
 
-            // 增加重绘操作
-            Buttons.Add(new CustomComponentModel
-            {
-                CustomId = $"MJ::JOB::reroll::0::{id}::SOLO",
-                Label = "",
-                Emoji = "\uD83D\uDD04",
-                Style = 2,
-                Type = 2
-            });
+            // 增加重绘按钮
+            Buttons.Add(CustomComponentModel.CreateRerollButtons(id));
         }
 
         /// <summary>
@@ -946,6 +1004,32 @@ namespace Midjourney.Base.Models
                 Log.Error(ex, "设置描述按钮失败，JSON 解析错误");
             }
         }
+
+        /// <summary>
+        /// 获取版本
+        /// </summary>
+        /// <param name="prompt"></param>
+        /// <returns>v 6.1, niji 6</returns>
+        public string GetVersion(string prompt)
+        {
+            if (string.IsNullOrWhiteSpace(prompt))
+            {
+                return null;
+            }
+
+            var mat = VersionRegex.Match(prompt);
+            if (mat.Success)
+            {
+                var version = mat.Groups["version"].Value;
+                var flag = mat.Groups["flag"].Value;
+                if (!string.IsNullOrWhiteSpace(version) && !string.IsNullOrWhiteSpace(flag))
+                {
+                    return $"{flag} {version}".Trim();
+                }
+            }
+
+            return null;
+        }
     }
 
     /// <summary>
@@ -955,7 +1039,6 @@ namespace Midjourney.Base.Models
     {
         public TaskInfoVideoUrl()
         {
-
         }
 
         public TaskInfoVideoUrl(string url)
@@ -977,7 +1060,6 @@ namespace Midjourney.Base.Models
     {
         public TaskInfoImageUrl()
         {
-
         }
 
         public TaskInfoImageUrl(string url)

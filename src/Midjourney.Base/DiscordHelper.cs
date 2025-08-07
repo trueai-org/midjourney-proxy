@@ -205,6 +205,16 @@ namespace Midjourney.Base
                 }
                 return imageUrl.Substring(hashStartIndex + 1, imageUrl.Length - hashStartIndex - 1 - "_0_0.png".Length);
             }
+            // https://cdn.midjourney.com/a7b52e11-a59b-4f8e-ac2d-d9be4993a537/0_0.png
+            else if (imageUrl.EndsWith("/0_0.png"))
+            {
+                int hashStartIndex = imageUrl.LastIndexOf("/");
+                if (hashStartIndex < 0)
+                {
+                    return null;
+                }
+                return imageUrl.Substring(hashStartIndex + 1, imageUrl.Length - hashStartIndex - 1 - "/0_0.png".Length);
+            }
             // e7321c76-becf-473b-b14d-32b846dc70ad_0.mp4
             else if (imageUrl.EndsWith("_0.mp4"))
             {
