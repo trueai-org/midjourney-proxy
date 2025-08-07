@@ -139,7 +139,7 @@ namespace Midjourney.Base.Models
                     bytton2Type = "v7_upscale_2x_creative";
                 }
             }
-            else if (version.StartsWith("6.1"))
+            else if (version.StartsWith("v 6.1"))
             {
                 button1Type = "v6r1_2x_subtle";
                 bytton2Type = "v6r1_2x_creative";
