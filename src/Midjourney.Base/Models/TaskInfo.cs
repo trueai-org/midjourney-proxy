@@ -1014,7 +1014,8 @@ namespace Midjourney.Base.Models
         {
             if (string.IsNullOrWhiteSpace(prompt))
             {
-                return null;
+                // 默认返回 v 7
+                return "v 7";
             }
 
             var mat = VersionRegex.Match(prompt);
@@ -1028,7 +1029,14 @@ namespace Midjourney.Base.Models
                 }
             }
 
-            return null;
+            // niji 默认 niji 6
+            if (BotType == EBotType.NIJI_JOURNEY || prompt.Contains("--niji"))
+            {
+                return "niji 6";
+            }
+
+            // 默认返回 v 7
+            return "v 7";
         }
     }
 
