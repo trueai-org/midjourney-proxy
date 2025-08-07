@@ -1044,6 +1044,7 @@ namespace Midjourney.API.Controllers
                 Status = TaskStatus.NOT_START,
                 ClientIp = _ip,
                 Mode = _mode,
+                RequestMode = _mode,
                 UserId = user?.Id,
                 IsWhite = user?.IsWhite ?? false
             };
@@ -1295,6 +1296,8 @@ namespace Midjourney.API.Controllers
                 {
                     task.Mode = GenerationSpeedMode.TURBO;
                 }
+
+                task.RequestMode = task.Mode;
             }
         }
 

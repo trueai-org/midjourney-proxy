@@ -192,6 +192,7 @@ namespace Midjourney.API.Controllers
                 Status = TaskStatus.NOT_START,
                 ClientIp = _ip,
                 Mode = _mode,
+                RequestMode = _mode,
                 UserId = user?.Id,
             };
 

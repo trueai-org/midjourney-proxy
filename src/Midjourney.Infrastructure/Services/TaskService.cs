@@ -1523,6 +1523,7 @@ namespace Midjourney.Infrastructure.Services
                         PromptEn = prompt,
                         Status = TaskStatus.NOT_START,
                         Mode = task.Mode,
+                        RequestMode = task.RequestMode,
                         RemixAutoSubmit = true,
                         SubInstanceId = task.SubInstanceId,
                     };

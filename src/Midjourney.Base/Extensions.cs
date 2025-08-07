@@ -571,6 +571,63 @@ namespace Midjourney.Base
 
             return url + "?" + style;
         }
+
+
+
+        /// <summary>
+        /// 移除速度模式
+        /// </summary>
+        /// <param name="prompt"></param>
+        /// <returns></returns>
+        public static string RemoveSpeedMode(this string prompt)
+        {
+            if (string.IsNullOrWhiteSpace(prompt))
+            {
+                return prompt;
+            }
+
+            // 移除 --fast, --relax, --turbo
+            return prompt.Replace("--fast", "")
+                .Replace("--relax", "")
+                .Replace("--turbo", "")
+                .Trim();
+        }
+
+        /// <summary>
+        /// 追加速度模式
+        /// </summary>
+        /// <param name="prompt"></param>
+        /// <param name="mode"></param>
+        /// <returns></returns>
+        public static string AppendSpeedMode(this string prompt, GenerationSpeedMode? mode)
+        {
+            if (string.IsNullOrWhiteSpace(prompt))
+            {
+                return prompt;
+            }
+
+            // 移除可能的速度模式
+            prompt = prompt.RemoveSpeedMode();
+
+            // 如果没有指定速度模式，则返回原始 prompt
+            if (mode == null)
+            {
+                return prompt;
+            }
+
+            // 根据速度模式追加参数
+            switch (mode.Value)
+            {
+                case GenerationSpeedMode.RELAX:
+                    return prompt + " --relax";
+                case GenerationSpeedMode.FAST:
+                    return prompt + " --fast";
+                case GenerationSpeedMode.TURBO:
+                    return prompt + " --turbo";
+                default:
+                    return prompt;
+            }
+        }
     }
 
     /// <summary>

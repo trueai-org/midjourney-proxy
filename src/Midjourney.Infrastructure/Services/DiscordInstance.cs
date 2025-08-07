@@ -1532,8 +1532,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
             // 将 2 个空格替换为 1 个空格
             // 将 " -- " 替换为 " "
-            prompt = prompt.Replace(" -- ", " ")
-                .Replace("  ", " ").Replace("  ", " ").Replace("  ", " ").Trim();
+            prompt = prompt.Replace(" -- ", " ").Replace("  ", " ").Replace("  ", " ").Replace("  ", " ").Trim();
 
             // 使用正则替换超过 --- 3个 - 的替换为 " "
             prompt = Regex.Replace(prompt, @"-{3,}", " ");
@@ -1541,27 +1540,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
             // 任务指定速度模式
             if (info != null && info.Mode != null)
             {
-                // 移除 prompt 可能的的参数
-                prompt = prompt.Replace("--fast", "").Replace("--relax", "").Replace("--turbo", "");
-
-                // 如果任务指定了速度模式
-                switch (info.Mode.Value)
-                {
-                    case GenerationSpeedMode.RELAX:
-                        prompt += " --relax";
-                        break;
-
-                    case GenerationSpeedMode.FAST:
-                        prompt += " --fast";
-                        break;
-
-                    case GenerationSpeedMode.TURBO:
-                        prompt += " --turbo";
-                        break;
-
-                    default:
-                        break;
-                }
+                prompt = prompt.AppendSpeedMode(info.Mode);
             }
 
             // 允许速度模式
@@ -1592,35 +1571,13 @@ namespace Midjourney.Infrastructure.LoadBalancer
             // 如果快速模式用完了，且启用自动切换慢速
             if (Account.FastExhausted && Account.EnableAutoSetRelax == true)
             {
-                // 移除 prompt 可能的的参数
-                prompt = prompt.Replace("--fast", "").Replace("--relax", "").Replace("--turbo", "");
-
-                prompt += " --relax";
+                prompt = prompt.AppendSpeedMode(GenerationSpeedMode.RELAX);
             }
 
             // 指定生成速度模式
             if (Account.Mode != null)
             {
-                // 移除 prompt 可能的的参数
-                prompt = prompt.Replace("--fast", "").Replace("--relax", "").Replace("--turbo", "");
-
-                switch (Account.Mode.Value)
-                {
-                    case GenerationSpeedMode.RELAX:
-                        prompt += " --relax";
-                        break;
-
-                    case GenerationSpeedMode.FAST:
-                        prompt += " --fast";
-                        break;
-
-                    case GenerationSpeedMode.TURBO:
-                        prompt += " --turbo";
-                        break;
-
-                    default:
-                        break;
-                }
+                prompt = prompt.AppendSpeedMode(Account.Mode);
             }
 
             //// 处理转义字符引号等

@@ -81,6 +81,16 @@ namespace Midjourney.Base.Models
         public List<string> PrivateFeatures { get; set; } = [];
 
         /// <summary>
+        /// 悠船开启自定义链接转换 - 私人定制业务
+        /// </summary>
+        public bool PrivateEnableYouChuanCustomLinkConvert { get; set; } = false;
+
+        /// <summary>
+        /// 最终提示词保持用户请求速度模式（当指定速度模式时，或请求速度与最终速度不一致时） - 私人定制
+        /// </summary>
+        public bool PrivateKeepFinalPromptRequestSpeedMode { get; set; } = false;
+
+        /// <summary>
         /// 始终允许 U 放大，不判断账号是否可用 - 私人定制业务
         /// 启用悠船 U 放大时，不验证账号的可用性
         /// </summary>

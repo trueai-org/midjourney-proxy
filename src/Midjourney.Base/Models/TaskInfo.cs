@@ -353,6 +353,11 @@ namespace Midjourney.Base.Models
         public GenerationSpeedMode? Mode { get; set; }
 
         /// <summary>
+        /// 客户请求的速度模式。
+        /// </summary>
+        public GenerationSpeedMode? RequestMode { get; set; }
+
+        /// <summary>
         /// 账号过滤
         /// </summary>
         [JsonMap]
@@ -619,6 +624,15 @@ namespace Midjourney.Base.Models
             if (Mode == null)
             {
                 Mode = GenerationSpeedMode.FAST;
+            }
+
+            // 如果开启了保持速度模式，且速度模式不一致时，替换提示词 RequestMode
+            var setting = GlobalConfiguration.Setting;
+            if (RequestMode != null && Mode != RequestMode && setting.PrivateKeepFinalPromptRequestSpeedMode)
+            {
+                finalPrompt = finalPrompt.AppendSpeedMode(RequestMode);
+
+                SetProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, finalPrompt);
             }
 
             UpdateUserDrawCount();
