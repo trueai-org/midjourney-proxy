@@ -564,7 +564,7 @@ namespace Midjourney.Base.Models
         }
 
         /// <summary>
-        /// 异步保存成功
+        /// 异步保存成功（自动设置完成）
         /// </summary>
         /// <returns></returns>
         public async Task SuccessAsync()
@@ -612,10 +612,6 @@ namespace Midjourney.Base.Models
                 }
             }
 
-            FinishTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
-            Status = TaskStatus.SUCCESS;
-            Progress = "100%";
-
             // 根据最终提示词更新速度模式
             var finalPrompt = GetProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, "");
             if (!string.IsNullOrWhiteSpace(finalPrompt))
@@ -660,6 +656,11 @@ namespace Midjourney.Base.Models
             }
 
             UpdateUserDrawCount();
+
+            // 最后才设置完成时间和状态
+            FinishTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+            Status = TaskStatus.SUCCESS;
+            Progress = "100%";
         }
 
         /// <summary>
@@ -1037,6 +1038,23 @@ namespace Midjourney.Base.Models
 
             // 默认返回 v 7
             return "v 7";
+        }
+
+        /// <summary>
+        /// 计算最大公约数（GCD）
+        /// </summary>
+        /// <param name="value1"></param>
+        /// <param name="value2"></param>
+        /// <returns></returns>
+        public int GCD(int value1, int value2)
+        {
+            while (value2 != 0)
+            {
+                var temp = value2;
+                value2 = value1 % value2;
+                value1 = temp;
+            }
+            return value1;
         }
     }
 

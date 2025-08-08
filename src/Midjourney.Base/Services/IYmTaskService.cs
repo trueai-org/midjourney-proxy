@@ -69,7 +69,7 @@ namespace Midjourney.Base.Services
         /// </summary>
         /// <param name="task"></param>
         /// <returns></returns>
-        Task<string> GetSeedAsync(TaskInfo task);
+        Task<string> GetSeed(TaskInfo task);
 
         /// <summary>
         /// 获取图片文本数据
@@ -79,7 +79,7 @@ namespace Midjourney.Base.Services
         /// <param name="isPrivate"></param>
         /// <param name="mode"></param>
         /// <returns></returns>
-        Task DescribeAsync(TaskInfo task);
+        Task Describe(TaskInfo task);
 
         /// <summary>
         /// 提交模态框任务
@@ -87,7 +87,7 @@ namespace Midjourney.Base.Services
         /// <param name="task"></param>
         /// <param name="parentTask"></param>
         /// <returns></returns>
-        Task<Message> SubmitModalAsync(TaskInfo task, TaskInfo parentTask, SubmitModalDTO submitAction, ITaskStoreService taskStoreService);
+        Task<Message> SubmitModal(TaskInfo task, TaskInfo parentTask, SubmitModalDTO submitAction, ITaskStoreService taskStoreService);
 
         /// <summary>
         /// 上传文件到悠船服务
@@ -96,6 +96,6 @@ namespace Midjourney.Base.Services
         /// <param name="fileName">文件名</param>
         /// <param name="type">文件类型，默认为0</param>
         /// <returns>上传后的文件URL</returns>
-        Task<string> UploadFileAsync(TaskInfo task, byte[] fileContent, string fileName, int type = 0);
+        Task<string> UploadFile(TaskInfo task, byte[] fileContent, string fileName, int type = 0);
     }
 }

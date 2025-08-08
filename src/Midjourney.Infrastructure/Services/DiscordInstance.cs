@@ -1649,7 +1649,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                 if (info.IsPartner)
                                 {
                                     // 悠船链接转换
-                                    var youchuanUrl = await _ymTaskService.UploadFileAsync(info, res.FileBytes, res.FileName);
+                                    var youchuanUrl = await _ymTaskService.UploadFile(info, res.FileBytes, res.FileName);
                                     if (!string.IsNullOrWhiteSpace(youchuanUrl))
                                     {
                                         return youchuanUrl;

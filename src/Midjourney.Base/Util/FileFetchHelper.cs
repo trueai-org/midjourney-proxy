@@ -126,6 +126,17 @@ namespace Midjourney.Base.Util
                 var response = await _sharedHttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
                 if (!response.IsSuccessStatusCode)
                 {
+                    if (response.StatusCode == HttpStatusCode.Redirect)
+                    {
+                        // 如果是重定向，则尝试获取新的 URL
+                        if (response.Headers.Location != null)
+                        {
+                            url = response.Headers.Location.ToString();
+
+                            return await FetchFileAsync(url);
+                        }
+                    }
+
                     return new FetchFileResult { Success = false, Msg = $"Failed to fetch file. Status: {response.StatusCode}" };
                 }
 

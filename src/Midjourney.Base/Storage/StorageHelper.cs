@@ -171,6 +171,14 @@ namespace Midjourney.Base.Storage
                 localPath = $"attachments/{localPath}";
             }
 
+            // 下载图片并保存
+            var imageBytes = await DownloadImageAsync(taskInfo, imageUrl);
+            if (imageBytes == null || imageBytes.Length <= 0)
+            {
+                return;
+            }
+
+
             // 阿里云 OSS
             if (setting.ImageStorageType == ImageStorageType.OSS)
             {
@@ -181,8 +189,7 @@ namespace Midjourney.Base.Storage
                 // 替换 url
                 var url = $"{cdn?.Trim()?.Trim('/')}/{localPath}{uri?.Query}";
 
-                // 下载图片并保存
-                var imageBytes = await DownloadImageAsync(taskInfo, imageUrl);
+
 
                 using var stream = new MemoryStream(imageBytes);
 
@@ -228,7 +235,6 @@ namespace Midjourney.Base.Storage
                 // 替换 url
                 var url = $"{cdn?.Trim()?.Trim('/')}/{localPath}{uri?.Query}";
 
-                var imageBytes = await DownloadImageAsync(taskInfo, imageUrl);
                 using var stream = new MemoryStream(imageBytes);
                 var mm = MimeKit.MimeTypes.GetMimeType(Path.GetFileName(localPath));
                 if (string.IsNullOrWhiteSpace(mm))
@@ -271,7 +277,7 @@ namespace Midjourney.Base.Storage
                 // 替换 url
                 var url = $"{cdn?.Trim()?.Trim('/')}/{localPath}{uri?.Query}";
 
-                var imageBytes = await DownloadImageAsync(taskInfo, imageUrl);
+               
                 using var stream = new MemoryStream(imageBytes);
 
                 // 下载图片并保存
@@ -342,7 +348,7 @@ namespace Midjourney.Base.Storage
 
                 // 替换 url
                 var url = $"{cdn?.Trim()?.Trim('/')}/{localPath}{uri?.Query}";
-                var imageBytes = await DownloadImageAsync(taskInfo, imageUrl);
+            
                 using var stream = new MemoryStream(imageBytes);
 
                 var mm = MimeKit.MimeTypes.GetMimeType(Path.GetFileName(localPath));
@@ -425,7 +431,6 @@ namespace Midjourney.Base.Storage
                 {
                     Directory.CreateDirectory(directoryPath);
 
-                    var imageBytes = await DownloadImageAsync(taskInfo, imageUrl);
                     File.WriteAllBytes(savePath, imageBytes);
 
                     // 替换 url
@@ -653,8 +658,7 @@ namespace Midjourney.Base.Storage
             if (info.IsOfficial)
             {
                 Log.Warning("官方图片无法直接下载: {Url}", url);
-
-                throw new InvalidOperationException("无法下载");
+                return null;
             }
             else
             {
