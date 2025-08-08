@@ -97,8 +97,13 @@ namespace Midjourney.Base.Util
         /// </summary>
         /// <param name="url">https://mp-70570b1c-bf6a-40fe-9635-8e5c1901c65d.cdn.bspapp.com/temp/1723592564348_0.png</param>
         /// <returns></returns>
-        public async Task<FetchFileResult> FetchFileAsync(string url)
+        public async Task<FetchFileResult> FetchFileAsync(string url, int retry = 0)
         {
+            if (retry > 5)
+            {
+                return new FetchFileResult { Success = false, Msg = "Fetch retry limit exceeded" };
+            }
+
             if (string.IsNullOrWhiteSpace(url) || !Uri.IsWellFormedUriString(url, UriKind.Absolute))
             {
                 return new FetchFileResult { Success = false, Msg = "Invalid URL" };
@@ -134,7 +139,7 @@ namespace Midjourney.Base.Util
                             var newUrl = response.Headers.Location.ToString();
                             if (newUrl != url)
                             {
-                                return await FetchFileAsync(url);
+                                return await FetchFileAsync(url, ++retry);
                             }
                         }
                     }
@@ -147,6 +152,27 @@ namespace Midjourney.Base.Util
                 {
                     return new FetchFileResult { Success = false, Msg = "File size exceeds limit." };
                 }
+
+                //using var stream = await response.Content.ReadAsStreamAsync();
+                //using var memoryStream = new MemoryStream();
+
+                //var buffer = new byte[8192];
+                //int totalBytesRead = 0;
+                //int bytesRead;
+
+                //while ((bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length)) > 0)
+                //{
+                //    totalBytesRead += bytesRead;
+
+                //    if (totalBytesRead > _maxFileSize)
+                //    {
+                //        return new FetchFileResult { Success = false, Msg = "File size exceeds limit during download." };
+                //    }
+
+                //    await memoryStream.WriteAsync(buffer, 0, bytesRead);
+                //}
+
+                //var fileBytes = memoryStream.ToArray();
 
                 var contentType = response.Content.Headers.ContentType?.MediaType;
                 var fileName = GetFileNameFromUrlOrHeaders(url, response.Content.Headers);
