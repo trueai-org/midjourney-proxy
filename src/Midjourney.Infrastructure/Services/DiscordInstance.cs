@@ -1694,7 +1694,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     catch (Exception ex)
                     {
                         _logger.Error(ex, "解析 url 异常 {0}", url);
-                        throw;
+
+                        // 转换失败跳过
                     }
                 }
 
