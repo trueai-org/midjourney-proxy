@@ -131,9 +131,11 @@ namespace Midjourney.Base.Util
                         // 如果是重定向，则尝试获取新的 URL
                         if (response.Headers.Location != null)
                         {
-                            url = response.Headers.Location.ToString();
-
-                            return await FetchFileAsync(url);
+                            var newUrl = response.Headers.Location.ToString();
+                            if (newUrl != url)
+                            {
+                                return await FetchFileAsync(url);
+                            }
                         }
                     }
 
