@@ -22,9 +22,9 @@
 // invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
+using System.Linq.Expressions;
 using LiteDB;
 using Midjourney.Base.Services;
-using System.Linq.Expressions;
 
 namespace Midjourney.Base.Data
 {
@@ -40,19 +40,16 @@ namespace Midjourney.Base.Data
     {
         public void Save(TaskInfo task)
         {
-            //DbHelper.TaskStore.Save(task);
             DbHelper.Instance.TaskStore.Save(task);
         }
 
         public void Delete(string id)
         {
-            //DbHelper.TaskStore.Delete(id);
             DbHelper.Instance.TaskStore.Delete(id);
         }
 
         public TaskInfo Get(string id)
         {
-            //return DbHelper.TaskStore.Get(id);
             return DbHelper.Instance.TaskStore.Get(id);
         }
 

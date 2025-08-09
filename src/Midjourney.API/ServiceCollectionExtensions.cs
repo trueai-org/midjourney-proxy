@@ -86,11 +86,8 @@ namespace Midjourney.API
             // 缓存
             GlobalCacheHelper.Configure();
 
-            // 存储服务
-            // 内存
-            //services.AddSingleton<ITaskStoreService, InMemoryTaskStoreServiceImpl>();
-            // LiteDB
-            services.AddSingleton<ITaskStoreService>(new TaskRepository());
+            // 任务服务
+            services.AddSingleton<ITaskStoreService, TaskRepository>();
 
             // 账号负载均衡服务
             switch (config.AccountChooseRule)
