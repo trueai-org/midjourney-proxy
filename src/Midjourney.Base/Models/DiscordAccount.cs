@@ -460,10 +460,26 @@ namespace Midjourney.Base.Models
         /// </summary>
         public int DayRelaxDrawLimit { get; set; } = -1;
 
+        ///// <summary>
+        ///// 当日已绘图次数（废弃）
+        ///// </summary>
+        //public int DayDrawCount { get; set; } = 0;
+
         /// <summary>
-        /// 当日已绘图次数（废弃）
+        /// 今日慢速绘图总数（包含失败，不包含放大）
         /// </summary>
-        public int DayDrawCount { get; set; } = 0;
+        [LiteDB.BsonIgnore]
+        [MongoDB.Bson.Serialization.Attributes.BsonIgnore]
+        [Column(IsIgnore = true)]
+        public int DayRelaxCount { get; set; }
+
+        /// <summary>
+        /// 今日快速+极速绘图总数（包含失败，不包含放大）
+        /// </summary>
+        [LiteDB.BsonIgnore]
+        [MongoDB.Bson.Serialization.Attributes.BsonIgnore]
+        [Column(IsIgnore = true)]
+        public int DayFastCount { get; set; }
 
         /// <summary>
         /// 开启垂直领域
