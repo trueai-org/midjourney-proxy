@@ -281,7 +281,7 @@ namespace Midjourney.Base
         /// <param name="item"></param>
         public static void Success(TaskInfo item)
         {
-            if (item == null || item.Status != TaskStatus.SUCCESS || item.Action == null)
+            if (item == null || item.Action == null)
             {
                 return;
             }

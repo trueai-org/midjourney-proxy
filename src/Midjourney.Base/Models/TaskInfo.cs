@@ -620,15 +620,15 @@ namespace Midjourney.Base.Models
                 var prompt = finalPrompt.ToLower();
 
                 // 解析速度模式
-                if (prompt.Contains("--fast"))
+                if (prompt.Contains("--fast", StringComparison.OrdinalIgnoreCase))
                 {
                     Mode = GenerationSpeedMode.FAST;
                 }
-                else if (prompt.Contains("--relax"))
+                else if (prompt.Contains("--relax", StringComparison.OrdinalIgnoreCase))
                 {
                     Mode = GenerationSpeedMode.RELAX;
                 }
-                else if (prompt.Contains("--turbo"))
+                else if (prompt.Contains("--turbo", StringComparison.OrdinalIgnoreCase))
                 {
                     Mode = GenerationSpeedMode.TURBO;
                 }
@@ -655,7 +655,7 @@ namespace Midjourney.Base.Models
                 SetProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, finalPrompt);
             }
 
-            UpdateUserDrawCount();
+            UpdateUserDrawCount(true);
 
             // 最后才设置完成时间和状态
             FinishTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
@@ -673,11 +673,6 @@ namespace Midjourney.Base.Models
             {
                 reason = reason.Substring(0, 4000); // 限制失败原因长度
             }
-
-            FinishTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
-            Status = TaskStatus.FAILURE;
-            FailReason = reason;
-            Progress = "";
 
             if (!string.IsNullOrWhiteSpace(reason))
             {
@@ -712,17 +707,26 @@ namespace Midjourney.Base.Models
                 }
             }
 
-            UpdateUserDrawCount();
+            FinishTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+            Status = TaskStatus.FAILURE;
+            FailReason = reason;
+            Progress = "";
+
+            UpdateUserDrawCount(false);
         }
 
         /// <summary>
         /// 更新用户绘图次数。
         /// </summary>
-        public void UpdateUserDrawCount()
+        public void UpdateUserDrawCount(bool success)
         {
             try
             {
-                DrawCounter.Success(this);
+                if (success)
+                {
+                    DrawCounter.Success(this);
+                }
+
 
                 //if (!string.IsNullOrWhiteSpace(UserId))
                 //{
