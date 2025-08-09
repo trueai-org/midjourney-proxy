@@ -224,7 +224,7 @@ namespace Midjourney.Base.Models
         /// 图像URL列表
         /// </summary>
         [JsonMap]
-        public List<TaskInfoImageUrl> ImageUrls { get; set; } = [];
+        public List<TaskInfoImageUrl> ImageUrls { get; set; }
 
         /// <summary>
         /// 缩略图 url
