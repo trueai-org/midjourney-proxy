@@ -131,7 +131,7 @@ namespace Midjourney.API.Controllers
             data.SystemInfo = SystemInfo.GetCurrentSystemInfo();
 
             var homeCounter = new Dictionary<GenerationSpeedMode, Dictionary<TaskAction, int>>();
-            var counter = DrawCounter.AccountTodayCounter;
+            var counter = DrawCounter.AccountTodaySuccessCounter;
             var all = counter.Where(c => c.Key.StartsWith(now)).SelectMany(c => c.Value).ToList();
             foreach (var item in all)
             {

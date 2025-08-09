@@ -201,7 +201,7 @@ namespace Midjourney.Infrastructure.Services
                 preferredSpeedMode: info.Mode,
                 isVideo: info.Action == TaskAction.VIDEO);
 
-            if (instance == null || !instance.Account.IsAcceptNewTask)
+            if (instance == null)
             {
                 if (isDomain && domainIds.Count > 0)
                 {
@@ -214,13 +214,17 @@ namespace Midjourney.Infrastructure.Services
                 }
             }
 
-            if (instance == null || instance?.Account?.IsAcceptNewTask != true)
+            if (instance == null)
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
             if (!instance.Account.IsValidateModeContinueDrawing(info.Mode, info.AccountFilter?.Modes, out var mode))
             {
-                return SubmitResultVO.Fail(ReturnCode.FAILURE, "无可用的账号实例");
+                return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
+            }
+            if (!instance.Account.IsAcceptNewTask(mode))
+            {
+                return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
             if (!instance.IsIdleQueue(mode))
             {
@@ -365,13 +369,17 @@ namespace Midjourney.Infrastructure.Services
                 preferredSpeedMode: info.Mode,
                 isYm: true);
 
-            if (instance == null || instance?.Account?.IsAcceptNewTask != true)
+            if (instance == null)
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
             if (!instance.Account.IsValidateModeContinueDrawing(info.Mode, info.AccountFilter?.Modes, out var mode))
             {
-                return SubmitResultVO.Fail(ReturnCode.FAILURE, "无可用的账号实例");
+                return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
+            }
+            if (!instance.Account.IsAcceptNewTask(mode))
+            {
+                return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
             if (!instance.IsIdleQueue(mode))
             {
@@ -477,14 +485,17 @@ namespace Midjourney.Infrastructure.Services
                 preferredSpeedMode: info.Mode,
                 isYm: true);
 
-            if (instance == null || instance?.Account?.IsAcceptNewTask != true)
+            if (instance == null)
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
-
             if (!instance.Account.IsValidateModeContinueDrawing(info.Mode, info.AccountFilter?.Modes, out var mode))
             {
-                return SubmitResultVO.Fail(ReturnCode.FAILURE, "无可用的账号实例");
+                return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
+            }
+            if (!instance.Account.IsAcceptNewTask(mode))
+            {
+                return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
             if (!instance.IsIdleQueue(mode))
             {
@@ -620,26 +631,31 @@ namespace Midjourney.Infrastructure.Services
                 isVideo: true);
             }
 
-            if (instance == null || instance?.Account?.IsAcceptNewTask != true)
+            if (instance == null)
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
             if (!instance.Account.IsValidateModeContinueDrawing(info.Mode, info.AccountFilter?.Modes, out var mode))
             {
-                return SubmitResultVO.Fail(ReturnCode.FAILURE, "无可用的账号实例");
+                return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
+            }
+            if (!instance.Account.IsAcceptNewTask(mode))
+            {
+                return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
             if (!instance.IsIdleQueue(mode))
             {
                 return SubmitResultVO.Fail(ReturnCode.FAILURE, "提交失败，队列已满，请稍后重试");
             }
+
             if (!instance.Account.IsYouChuan && !instance.Account.IsOfficial)
             {
-                return SubmitResultVO.Fail(ReturnCode.FAILURE, "当前账号不支持编辑/重绘任务");
+                return SubmitResultVO.Fail(ReturnCode.FAILURE, "当前账号不支持主动视频任务");
             }
 
+            info.Mode = mode;
             info.IsOfficial = instance.Account.IsOfficial;
             info.IsPartner = instance.Account.IsYouChuan;
-            info.Mode = mode;
             info.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, instance.ChannelId);
             info.InstanceId = instance.ChannelId;
 
@@ -946,7 +962,7 @@ namespace Midjourney.Infrastructure.Services
                 describe: true,
                 preferredSpeedMode: task.Mode);
 
-            if (discordInstance == null || discordInstance?.Account?.IsDailyLimitContinueDrawing != true)
+            if (discordInstance == null || discordInstance?.Account?.IsDailyLimitContinueDrawing(task.Mode) != true)
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
@@ -1103,7 +1119,7 @@ namespace Midjourney.Infrastructure.Services
                 shorten: true,
                 preferredSpeedMode: task.Mode);
 
-            if (discordInstance == null || discordInstance?.Account?.IsDailyLimitContinueDrawing != true)
+            if (discordInstance == null || discordInstance?.Account?.IsDailyLimitContinueDrawing(task.Mode) != true)
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
@@ -1137,7 +1153,7 @@ namespace Midjourney.Infrastructure.Services
                 blend: true,
                 preferredSpeedMode: task.Mode);
 
-            if (discordInstance == null || discordInstance?.Account?.IsDailyLimitContinueDrawing != true)
+            if (discordInstance == null || discordInstance?.Account?.IsDailyLimitContinueDrawing(task.Mode) != true)
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
@@ -1309,7 +1325,7 @@ namespace Midjourney.Infrastructure.Services
                     }
                 }
             }
-            if (discordInstance == null || discordInstance?.Account?.IsDailyLimitContinueDrawing != true)
+            if (discordInstance == null || discordInstance?.Account?.IsDailyLimitContinueDrawing(task.Mode) != true)
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
@@ -1677,7 +1693,7 @@ namespace Midjourney.Infrastructure.Services
                 }
             }
 
-    
+
 
             return discordInstance.SubmitTaskAsync(task, async () =>
             {
@@ -1735,7 +1751,7 @@ namespace Midjourney.Infrastructure.Services
                 }
             }
 
-            if (discordInstance == null || discordInstance?.Account?.IsDailyLimitContinueDrawing != true)
+            if (discordInstance == null || discordInstance?.Account?.IsDailyLimitContinueDrawing(task.Mode) != true)
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }

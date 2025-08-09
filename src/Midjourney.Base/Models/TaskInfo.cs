@@ -707,55 +707,26 @@ namespace Midjourney.Base.Models
                 }
             }
 
+            UpdateUserDrawCount(false);
+
             FinishTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
             Status = TaskStatus.FAILURE;
             FailReason = reason;
             Progress = "";
-
-            UpdateUserDrawCount(false);
         }
 
         /// <summary>
-        /// 更新用户绘图次数。
+        /// 统计用户绘图次数。
         /// </summary>
         public void UpdateUserDrawCount(bool success)
         {
             try
             {
-                if (success)
-                {
-                    DrawCounter.Success(this);
-                }
-
-
-                //if (!string.IsNullOrWhiteSpace(UserId))
-                //{
-                //    var model = DbHelper.Instance.UserStore.Get(UserId);
-                //    if (model != null)
-                //    {
-                //        if (model.TotalDrawCount <= 0)
-                //        {
-                //            // 重新计算
-                //            model.TotalDrawCount = (int)DbHelper.Instance.TaskStore.Count(x => x.UserId == UserId);
-                //        }
-                //        else
-                //        {
-                //            model.TotalDrawCount += 1;
-                //        }
-
-                //        // 今日日期
-                //        var nowDate = new DateTimeOffset(DateTime.Now.Date).ToUnixTimeMilliseconds();
-
-                //        // 计算今日绘图次数
-                //        model.DayDrawCount = (int)DbHelper.Instance.TaskStore.Count(x => x.SubmitTime >= nowDate && x.UserId == UserId);
-
-                //        DbHelper.Instance.UserStore.Update("DayDrawCount,TotalDrawCount", model);
-                //    }
-                //}
+                DrawCounter.Complete(this, success);
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "更新用户绘图次数失败");
+                Log.Error(ex, "统计绘图次数失败");
             }
         }
 

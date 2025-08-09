@@ -5,19 +5,27 @@ using MongoDB.Driver;
 namespace Midjourney.Base
 {
     /// <summary>
-    /// DrawCounter 类用于计数绘图请求。
+    /// DrawCounter 类用于计数绘图请求
     /// </summary>
     public class DrawCounter
     {
         /// <summary>
-        /// 账号今日绘图统计
+        /// 账号今日成功绘图统计
+        /// key: yyyyMMdd_账号ID, value: (speed, action: count)
         /// </summary>
-        public static ConcurrentDictionary<string, Dictionary<GenerationSpeedMode, Dictionary<TaskAction, int>>> AccountTodayCounter = new();
+        public static ConcurrentDictionary<string, Dictionary<GenerationSpeedMode, Dictionary<TaskAction, int>>> AccountTodaySuccessCounter = new();
 
         /// <summary>
-        /// 用户今日绘图统计
+        /// 账号今日所有绘图统计(不包含放大, 包含失败)
+        /// key: yyyyMMdd_账号ID, value: (speed, count)
         /// </summary>
-        public static ConcurrentDictionary<string, Dictionary<GenerationSpeedMode, Dictionary<TaskAction, int>>> UserTodayCounter = new();
+        public static ConcurrentDictionary<string, Dictionary<GenerationSpeedMode, int>> AccountTodayAllCounter = new();
+
+        /// <summary>
+        /// 用户今日成功绘图统计
+        /// key: yyyyMMdd_用户ID, value: (speed, action: count)
+        /// </summary>
+        public static ConcurrentDictionary<string, Dictionary<GenerationSpeedMode, Dictionary<TaskAction, int>>> UserTodadSuccessCounter = new();
 
         /// <summary>
         /// 线程安全锁对象，用于确保多线程环境下的同步访问。
@@ -39,19 +47,19 @@ namespace Midjourney.Base
             var nowKey = DateTime.Now.Date.ToString("yyyyMMdd");
             var key = $"{nowKey}_{instanceId}";
 
-            if (AccountTodayCounter.ContainsKey(key))
+            if (AccountTodaySuccessCounter.ContainsKey(key))
             {
                 return true;
             }
 
             lock (_lock)
             {
-                if (AccountTodayCounter.ContainsKey(key))
+                if (AccountTodaySuccessCounter.ContainsKey(key))
                 {
                     return true;
                 }
 
-                AccountTodayCounter.AddOrUpdate(key, [], (key, oldValue) => []);
+                AccountTodaySuccessCounter.AddOrUpdate(key, [], (key, oldValue) => []);
 
                 var setting = GlobalConfiguration.Setting;
                 if (setting.DatabaseType == DatabaseType.MongoDB)
@@ -75,11 +83,26 @@ namespace Midjourney.Base
                         var mode = item.Mode ?? GenerationSpeedMode.FAST;
                         if (item.Action != null)
                         {
-                            AccountTodayCounter[key].TryAdd(mode, []);
-                            AccountTodayCounter[key][mode].TryAdd(item.Action.Value, 0);
-                            AccountTodayCounter[key][mode][item.Action.Value] += item.Count;
+                            AccountTodaySuccessCounter[key].TryAdd(mode, []);
+                            AccountTodaySuccessCounter[key][mode].TryAdd(item.Action.Value, 0);
+                            AccountTodaySuccessCounter[key][mode][item.Action.Value] += item.Count;
                         }
                     }
+
+                    // 统计不包含放大的所有任务, 按速度分组
+                    var allCounts = MongoHelper.GetCollection<TaskInfo>().AsQueryable()
+                        .Where(x => x.SubmitTime >= now && x.InstanceId == instanceId && x.Action != TaskAction.UPSCALE)
+                        .GroupBy(c => c.Mode)
+                        .Select(g => new
+                        {
+                            Mode = g.Key,
+                            Count = g.Count()
+                        })
+                        .ToList()
+                        .Where(c => c.Mode != null)
+                        .ToDictionary(c => c.Mode.Value, c => c.Count);
+
+                    AccountTodayAllCounter.AddOrUpdate(key, allCounts, (k, v) => allCounts);
                 }
                 else if (setting.DatabaseType == DatabaseType.LiteDB)
                 {
@@ -108,11 +131,21 @@ namespace Midjourney.Base
                         var mode = item.Mode ?? GenerationSpeedMode.FAST;
                         if (item.Action != null)
                         {
-                            AccountTodayCounter[key].TryAdd(mode, []);
-                            AccountTodayCounter[key][mode].TryAdd(item.Action.Value, 0);
-                            AccountTodayCounter[key][mode][item.Action.Value] += item.Count;
+                            AccountTodaySuccessCounter[key].TryAdd(mode, []);
+                            AccountTodaySuccessCounter[key][mode].TryAdd(item.Action.Value, 0);
+                            AccountTodaySuccessCounter[key][mode][item.Action.Value] += item.Count;
                         }
                     }
+
+                    // 统计不包含放大的所有任务, 按速度分组
+                    var allCounts = LiteDBHelper.TaskStore.GetCollection().Query()
+                        .Where(x => x.SubmitTime >= now && x.InstanceId == instanceId && x.Action != TaskAction.UPSCALE)
+                        .Select(c => c.Mode)
+                        .ToList()
+                        .GroupBy(c => c)
+                        .Where(g => g.Key != null)
+                        .ToDictionary(g => g.Key.Value, g => g.Count());
+                    AccountTodayAllCounter.AddOrUpdate(key, allCounts, (k, v) => allCounts);
                 }
                 else
                 {
@@ -138,13 +171,38 @@ namespace Midjourney.Base
                             var mode = item.Mode ?? GenerationSpeedMode.FAST;
                             if (item.Action != null)
                             {
-                                AccountTodayCounter[key].TryAdd(mode, []);
-                                AccountTodayCounter[key][mode].TryAdd(item.Action.Value, 0);
-                                AccountTodayCounter[key][mode][item.Action.Value] += item.Count;
+                                AccountTodaySuccessCounter[key].TryAdd(mode, []);
+                                AccountTodaySuccessCounter[key][mode].TryAdd(item.Action.Value, 0);
+                                AccountTodaySuccessCounter[key][mode][item.Action.Value] += item.Count;
                             }
                         }
+
+                        // 统计不包含放大的所有任务, 按速度分组
+                        var allCounts = freeSql.Select<TaskInfo>()
+                            .Where(x => x.SubmitTime >= now && x.InstanceId == instanceId && x.Action != TaskAction.UPSCALE)
+                            .GroupBy(c => c.Mode)
+                            .ToList(g => new
+                            {
+                                Mode = g.Key,
+                                Count = g.Count()
+                            })
+                            .Where(c => c.Mode != null)
+                            .ToDictionary(c => c.Mode.Value, c => c.Count);
+                        AccountTodayAllCounter.AddOrUpdate(key, allCounts, (k, v) => allCounts);
                     }
                 }
+            }
+
+            // 昨天的 key 移除
+            var yesterdayKey = $"{DateTime.Now.Date.AddDays(-1):yyyyMMdd}_{instanceId}";
+            if (AccountTodaySuccessCounter.ContainsKey(yesterdayKey))
+            {
+                AccountTodaySuccessCounter.TryRemove(yesterdayKey, out _);
+            }
+
+            if (AccountTodayAllCounter.ContainsKey(yesterdayKey))
+            {
+                AccountTodayAllCounter.TryRemove(yesterdayKey, out _);
             }
 
             return true;
@@ -164,19 +222,20 @@ namespace Midjourney.Base
             var now = new DateTimeOffset(DateTime.Now.Date).ToUnixTimeMilliseconds();
             var nowKey = DateTime.Now.Date.ToString("yyyyMMdd");
             var key = $"{nowKey}_{userId}";
-            if (UserTodayCounter.ContainsKey(key))
+
+            if (UserTodadSuccessCounter.ContainsKey(key))
             {
                 return true;
             }
 
             lock (_lock)
             {
-                if (UserTodayCounter.ContainsKey(key))
+                if (UserTodadSuccessCounter.ContainsKey(key))
                 {
                     return true;
                 }
 
-                UserTodayCounter.AddOrUpdate(key, [], (key, oldValue) => []);
+                UserTodadSuccessCounter.AddOrUpdate(key, [], (key, oldValue) => []);
 
                 var setting = GlobalConfiguration.Setting;
                 if (setting.DatabaseType == DatabaseType.MongoDB)
@@ -200,9 +259,9 @@ namespace Midjourney.Base
                         var mode = item.Mode ?? GenerationSpeedMode.FAST;
                         if (item.Action != null)
                         {
-                            UserTodayCounter[key].TryAdd(mode, []);
-                            UserTodayCounter[key][mode].TryAdd(item.Action.Value, 0);
-                            UserTodayCounter[key][mode][item.Action.Value] += item.Count;
+                            UserTodadSuccessCounter[key].TryAdd(mode, []);
+                            UserTodadSuccessCounter[key][mode].TryAdd(item.Action.Value, 0);
+                            UserTodadSuccessCounter[key][mode][item.Action.Value] += item.Count;
                         }
                     }
                 }
@@ -233,9 +292,9 @@ namespace Midjourney.Base
                         var mode = item.Mode ?? GenerationSpeedMode.FAST;
                         if (item.Action != null)
                         {
-                            UserTodayCounter[key].TryAdd(mode, []);
-                            UserTodayCounter[key][mode].TryAdd(item.Action.Value, 0);
-                            UserTodayCounter[key][mode][item.Action.Value] += item.Count;
+                            UserTodadSuccessCounter[key].TryAdd(mode, []);
+                            UserTodadSuccessCounter[key][mode].TryAdd(item.Action.Value, 0);
+                            UserTodadSuccessCounter[key][mode][item.Action.Value] += item.Count;
                         }
                     }
                 }
@@ -263,78 +322,143 @@ namespace Midjourney.Base
                             var mode = item.Mode ?? GenerationSpeedMode.FAST;
                             if (item.Action != null)
                             {
-                                UserTodayCounter[key].TryAdd(mode, []);
-                                UserTodayCounter[key][mode].TryAdd(item.Action.Value, 0);
-                                UserTodayCounter[key][mode][item.Action.Value] += item.Count;
+                                UserTodadSuccessCounter[key].TryAdd(mode, []);
+                                UserTodadSuccessCounter[key][mode].TryAdd(item.Action.Value, 0);
+                                UserTodadSuccessCounter[key][mode][item.Action.Value] += item.Count;
                             }
                         }
                     }
                 }
             }
 
+            // 昨天的 key 移除
+            var yesterdayKey = $"{DateTime.Now.Date.AddDays(-1):yyyyMMdd}_{userId}";
+            if (UserTodadSuccessCounter.ContainsKey(yesterdayKey))
+            {
+                UserTodadSuccessCounter.TryRemove(yesterdayKey, out _);
+            }
+
             return true;
         }
 
         /// <summary>
-        /// 任务成功时，计数器 +1
+        /// 任务完成时，计数器 +1
         /// </summary>
-        /// <param name="item"></param>
-        public static void Success(TaskInfo item)
+        /// <param name="info"></param>
+        public static void Complete(TaskInfo info, bool success)
         {
-            if (item == null || item.Action == null)
+            if (info == null || info.Action == null)
             {
                 return;
             }
 
             lock (_lock)
             {
-                var mode = item.Mode ?? GenerationSpeedMode.FAST;
+                var mode = info.Mode ?? GenerationSpeedMode.FAST;
 
-                if (InitUserTodayCounter(item.UserId))
+                // 统计账号
+                if (InitAccountTodayCounter(info.InstanceId))
                 {
-                    var key = $"{DateTime.Now.Date:yyyyMMdd}_{item.UserId}";
-                    if (!UserTodayCounter.ContainsKey(key))
-                    {
-                        UserTodayCounter.TryAdd(key, []);
-                    }
+                    var key = $"{DateTime.Now.Date:yyyyMMdd}_{info.InstanceId}";
 
-                    if (!UserTodayCounter[key].ContainsKey(mode))
+                    // 统计所有
+                    if (!AccountTodayAllCounter.ContainsKey(key))
                     {
-                        UserTodayCounter[key].TryAdd(mode, []);
+                        AccountTodayAllCounter.TryAdd(key, []);
                     }
-
-                    if (!UserTodayCounter[key][mode].ContainsKey(item.Action.Value))
+                    if (!AccountTodayAllCounter[key].ContainsKey(mode))
                     {
-                        UserTodayCounter[key][mode].TryAdd(item.Action.Value, 0);
+                        AccountTodayAllCounter[key].TryAdd(mode, 0);
                     }
+                    AccountTodayAllCounter[key][mode] += 1;
 
-                    var count = UserTodayCounter[key][mode][item.Action.Value];
-                    UserTodayCounter[key][mode][item.Action.Value] += 1;
+                    // 统计成功
+                    if (success)
+                    {
+                        if (!AccountTodaySuccessCounter.ContainsKey(key))
+                        {
+                            AccountTodaySuccessCounter.TryAdd(key, []);
+                        }
+
+                        if (!AccountTodaySuccessCounter[key].ContainsKey(mode))
+                        {
+                            AccountTodaySuccessCounter[key].TryAdd(mode, []);
+                        }
+
+                        if (!AccountTodaySuccessCounter[key][mode].ContainsKey(info.Action.Value))
+                        {
+                            AccountTodaySuccessCounter[key][mode].TryAdd(info.Action.Value, 0);
+                        }
+
+                        var count = AccountTodaySuccessCounter[key][mode][info.Action.Value];
+                        AccountTodaySuccessCounter[key][mode][info.Action.Value] += 1;
+                    }
                 }
 
-                if (InitAccountTodayCounter(item.InstanceId))
+                // 统计个人
+                if (InitUserTodayCounter(info.UserId))
                 {
-                    var key = $"{DateTime.Now.Date:yyyyMMdd}_{item.InstanceId}";
-
-                    if (!AccountTodayCounter.ContainsKey(key))
+                    // 统计成功
+                    if (success)
                     {
-                        AccountTodayCounter.TryAdd(key, []);
-                    }
+                        var key = $"{DateTime.Now.Date:yyyyMMdd}_{info.UserId}";
+                        if (!UserTodadSuccessCounter.ContainsKey(key))
+                        {
+                            UserTodadSuccessCounter.TryAdd(key, []);
+                        }
 
-                    if (!AccountTodayCounter[key].ContainsKey(mode))
-                    {
-                        AccountTodayCounter[key].TryAdd(mode, []);
-                    }
+                        if (!UserTodadSuccessCounter[key].ContainsKey(mode))
+                        {
+                            UserTodadSuccessCounter[key].TryAdd(mode, []);
+                        }
 
-                    if (!AccountTodayCounter[key][mode].ContainsKey(item.Action.Value))
-                    {
-                        AccountTodayCounter[key][mode].TryAdd(item.Action.Value, 0);
-                    }
+                        if (!UserTodadSuccessCounter[key][mode].ContainsKey(info.Action.Value))
+                        {
+                            UserTodadSuccessCounter[key][mode].TryAdd(info.Action.Value, 0);
+                        }
 
-                    var count = AccountTodayCounter[key][mode][item.Action.Value];
-                    AccountTodayCounter[key][mode][item.Action.Value] += 1;
+                        var count = UserTodadSuccessCounter[key][mode][info.Action.Value];
+                        UserTodadSuccessCounter[key][mode][info.Action.Value] += 1;
+                    }
                 }
             }
+        }
+
+        /// <summary>
+        /// 获取账号今日绘图总数（不包含放大，包含失败）
+        /// </summary>
+        /// <param name="instanceId"></param>
+        /// <param name="mode">慢速时返回快速绘图总数，快速时返回 (快速+极速) 绘图总数</param>
+        /// <returns></returns>
+        public static int GetAccountTodayTotalCount(string instanceId, GenerationSpeedMode mode)
+        {
+            if (string.IsNullOrWhiteSpace(instanceId))
+            {
+                return 0;
+            }
+
+            var nowKey = DateTime.Now.Date.ToString("yyyyMMdd");
+            var key = $"{nowKey}_{instanceId}";
+            if (AccountTodayAllCounter.TryGetValue(key, out var speedDict))
+            {
+                if (mode == GenerationSpeedMode.RELAX)
+                {
+                    if (speedDict.TryGetValue(mode, out var count))
+                    {
+                        return count;
+                    }
+                }
+                else
+                {
+                    // 快速 + 极速
+                    speedDict.TryGetValue(GenerationSpeedMode.FAST, out var fastCount);
+                    speedDict.TryGetValue(GenerationSpeedMode.TURBO, out var turboCount);
+
+                    return fastCount + turboCount;
+                }
+            }
+
+            return 0;
         }
     }
 }

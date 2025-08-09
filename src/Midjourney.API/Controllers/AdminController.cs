@@ -1357,7 +1357,7 @@ namespace Midjourney.API.Controllers
                 }
             }
 
-            var counter = DrawCounter.AccountTodayCounter;
+            var counter = DrawCounter.AccountTodaySuccessCounter;
             foreach (var item in list)
             {
                 var inc = _loadBalancer.GetDiscordInstance(item.ChannelId);
@@ -1715,7 +1715,7 @@ namespace Midjourney.API.Controllers
             }
 
             // 统计今日绘图数量
-            var drawCounter = DrawCounter.UserTodayCounter;
+            var drawCounter = DrawCounter.UserTodadSuccessCounter;
 
 
             foreach (var item in list)

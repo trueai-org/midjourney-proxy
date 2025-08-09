@@ -774,7 +774,7 @@ namespace Midjourney.API
 
                     // 判断是否在工作时间内
                     var now = new DateTimeOffset(DateTime.Now.Date).ToUnixTimeMilliseconds();
-                    var dayCount = (int)DbHelper.Instance.TaskStore.Count(c => c.InstanceId == account.ChannelId && c.SubmitTime >= now);
+                    //var dayCount = (int)DbHelper.Instance.TaskStore.Count(c => c.InstanceId == account.ChannelId && c.SubmitTime >= now);
 
                     sw.Stop();
                     info.AppendLine($"{account.Id}初始化中... 获取任务数耗时: {sw.ElapsedMilliseconds}ms");
@@ -864,8 +864,8 @@ namespace Midjourney.API
                                 sw.Restart();
                             }
 
-                            account.DayDrawCount = dayCount;
-                            db.Update("NijiBotChannelId,PrivateChannelId,AllowModes,SubChannels,SubChannelValues,FastExhausted,DayDrawCount", account);
+                            //account.DayDrawCount = dayCount;
+                            db.Update("NijiBotChannelId,PrivateChannelId,AllowModes,SubChannels,SubChannelValues,FastExhausted", account);
 
                             // 清除缓存
                             ClearAccountCache(account.Id);

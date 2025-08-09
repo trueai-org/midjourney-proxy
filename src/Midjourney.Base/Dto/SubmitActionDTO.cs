@@ -21,6 +21,7 @@
 // The use of this software for any form of illegal face swapping,
 // invasion of privacy, or any other unlawful purposes is strictly prohibited. 
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
+using System.Text.Json.Serialization;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace Midjourney.Base.Dto
@@ -47,5 +48,11 @@ namespace Midjourney.Base.Dto
         /// 是否使用remix模式，可强制绕过账号指定的Remix自动提交
         /// </summary>
         public bool? EnableRemix { get; set; }
+
+        /// <summary>
+        /// 强度变化（适用于 V1, V2, V3, V4 变化强度)
+        /// 默认：低变化，true：高变化
+        /// </summary>
+        public bool? Strong { get; set; }
     }
 }

@@ -59,7 +59,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         private readonly ConcurrentDictionary<string, Task> _taskFutureMap = [];
 
         private readonly Task _longTask;
-        private readonly Task _longTaskCache;
+        //private readonly Task _longTaskCache;
 
         private readonly CancellationTokenSource _longToken;
         private readonly ManualResetEvent _mre; // 信号
@@ -149,8 +149,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
             _longTask = new Task(Running, _longToken.Token, TaskCreationOptions.LongRunning);
             _longTask.Start();
 
-            _longTaskCache = new Task(RuningCache, _longToken.Token, TaskCreationOptions.LongRunning);
-            _longTaskCache.Start();
+            //_longTaskCache = new Task(RuningCache, _longToken.Token, TaskCreationOptions.LongRunning);
+            //_longTaskCache.Start();
 
             if (account.IsYouChuan || account.IsOfficial)
             {
@@ -630,42 +630,42 @@ namespace Midjourney.Infrastructure.LoadBalancer
             }
         }
 
-        /// <summary>
-        /// 缓存处理
-        /// </summary>
-        private void RuningCache()
-        {
-            while (true)
-            {
-                if (_longToken.Token.IsCancellationRequested)
-                {
-                    // 清理资源（如果需要）
-                    break;
-                }
+        ///// <summary>
+        ///// 缓存处理
+        ///// </summary>
+        //private void RuningCache()
+        //{
+        //    while (true)
+        //    {
+        //        if (_longToken.Token.IsCancellationRequested)
+        //        {
+        //            // 清理资源（如果需要）
+        //            break;
+        //        }
 
-                try
-                {
-                    // 当前时间转为 Unix 时间戳
-                    // 今日 0 点 Unix 时间戳
-                    var now = new DateTimeOffset(DateTime.Now.Date).ToUnixTimeMilliseconds();
-                    var count = (int)DbHelper.Instance.TaskStore.Count(c => c.SubmitTime >= now && c.InstanceId == Account.ChannelId);
+        //        try
+        //        {
+        //            // 当前时间转为 Unix 时间戳
+        //            // 今日 0 点 Unix 时间戳
+        //            var now = new DateTimeOffset(DateTime.Now.Date).ToUnixTimeMilliseconds();
+        //            var count = (int)DbHelper.Instance.TaskStore.Count(c => c.SubmitTime >= now && c.InstanceId == Account.ChannelId);
 
-                    if (Account.DayDrawCount != count)
-                    {
-                        Account.DayDrawCount = count;
+        //            if (Account.DayDrawCount != count)
+        //            {
+        //                Account.DayDrawCount = count;
 
-                        DbHelper.Instance.AccountStore.Update("DayDrawCount", Account);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.Error(ex, "RuningCache 异常");
-                }
+        //                DbHelper.Instance.AccountStore.Update("DayDrawCount", Account);
+        //            }
+        //        }
+        //        catch (Exception ex)
+        //        {
+        //            _logger.Error(ex, "RuningCache 异常");
+        //        }
 
-                // 每 2 分钟执行一次
-                Thread.Sleep(60 * 1000 * 2);
-            }
-        }
+        //        // 每 2 分钟执行一次
+        //        Thread.Sleep(60 * 1000 * 2);
+        //    }
+        //}
 
         /// <summary>
         /// 退出任务并进行保存和通知。

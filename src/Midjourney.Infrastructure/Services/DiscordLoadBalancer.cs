@@ -22,6 +22,8 @@
 // invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
+using System.Threading.Tasks;
+
 namespace Midjourney.Infrastructure.LoadBalancer
 {
     /// <summary>
@@ -85,7 +87,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 .Where(c => c.IsIdleQueue(preferredSpeedMode))
 
                 // 允许继续绘图
-                .Where(c => c.Account.IsDailyLimitContinueDrawing && c.Account.Enable == true)
+                .Where(c => c.Account.IsDailyLimitContinueDrawing(preferredSpeedMode) && c.Account.Enable == true)
 
                 // 首选速度绘图判断
                 .Where(c => c.Account.IsValidateModeContinueDrawing(preferredSpeedMode, accountFilter.Modes, out _))
@@ -117,7 +119,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 .WhereIf(accountFilter?.RemixAutoConsidered.HasValue == true, c => c.Account.RemixAutoSubmit == accountFilter.RemixAutoConsidered)
 
                 // 过滤只接收新任务的实例
-                .WhereIf(isNewTask == true, c => c.Account.IsAcceptNewTask == true)
+                .WhereIf(isNewTask == true, c => c.Account.IsAcceptNewTask(preferredSpeedMode))
 
                 // 过滤开启 niji mj 的账号
                 .WhereIf(botType == EBotType.NIJI_JOURNEY, c => c.Account.EnableNiji == true)

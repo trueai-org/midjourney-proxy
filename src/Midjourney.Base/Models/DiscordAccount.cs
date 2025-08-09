@@ -297,45 +297,52 @@ namespace Midjourney.Base.Models
         /// 2、处于非摸鱼时间段内
         /// 3、没有超出最大任务限制
         /// </summary>
-        [LiteDB.BsonIgnore]
-        [MongoDB.Bson.Serialization.Attributes.BsonIgnore]
-        [Column(IsIgnore = true)]
-        public bool IsAcceptNewTask
+        public bool IsAcceptNewTask(GenerationSpeedMode? mode)
         {
-            get
+            // 如果工作时间段和摸鱼时间段都为空
+            if (string.IsNullOrWhiteSpace(WorkTime) && string.IsNullOrWhiteSpace(FishingTime))
             {
-                // 如果工作时间段和摸鱼时间段都为空
-                if (string.IsNullOrWhiteSpace(WorkTime) && string.IsNullOrWhiteSpace(FishingTime))
-                {
-                    return IsDailyLimitContinueDrawing;
-                }
-
-                // 如果工作时间段内，且不是摸鱼时间段
-                if (DateTime.Now.IsInWorkTime(WorkTime) && !DateTime.Now.IsInFishTime(FishingTime))
-                {
-                    return IsDailyLimitContinueDrawing;
-                }
-
-                // 表示不接收新的任务
-                return false;
+                return IsDailyLimitContinueDrawing(mode);
             }
+
+            // 如果工作时间段内，且不是摸鱼时间段
+            if (DateTime.Now.IsInWorkTime(WorkTime) && !DateTime.Now.IsInFishTime(FishingTime))
+            {
+                return IsDailyLimitContinueDrawing(mode);
+            }
+
+            // 表示不接收新的任务
+            return false;
         }
 
         /// <summary>
         /// 是否达到日任务绘图上限 - 是否允许继续绘图
         /// </summary>
-        [LiteDB.BsonIgnore]
-        [MongoDB.Bson.Serialization.Attributes.BsonIgnore]
-        [Column(IsIgnore = true)]
-        public bool IsDailyLimitContinueDrawing
+        public bool IsDailyLimitContinueDrawing(GenerationSpeedMode? mode)
         {
-            get
+            mode ??= GenerationSpeedMode.FAST;
+
+            // 慢速
+            if (mode == GenerationSpeedMode.RELAX)
             {
-                if (DayDrawLimit <= -1 || DayDrawCount < DayDrawLimit)
+                if (DayRelaxDrawLimit <= -1)
                 {
                     return true;
                 }
-                return false;
+
+                var todayCount = DrawCounter.GetAccountTodayTotalCount(ChannelId, mode!.Value);
+                return todayCount < DayRelaxDrawLimit;
+            }
+            // 快速 | 极速
+            else
+            {
+                if (DayDrawLimit <= -1)
+                {
+                    return true;
+                }
+
+                var todayCount = DrawCounter.GetAccountTodayTotalCount(ChannelId, mode!.Value);
+                return todayCount < DayDrawLimit;
             }
         }
 
@@ -444,7 +451,7 @@ namespace Midjourney.Base.Models
         public string LoginMessage { get; set; }
 
         /// <summary>
-        /// 日绘图最大次数限制，默认 -1 不限制（快速）
+        /// 日绘图最大次数限制，默认 -1 不限制（快速+极速）
         /// </summary>
         public int DayDrawLimit { get; set; } = -1;
 
@@ -454,7 +461,7 @@ namespace Midjourney.Base.Models
         public int DayRelaxDrawLimit { get; set; } = -1;
 
         /// <summary>
-        /// 当日已绘图次数（每 2 分钟自动刷新）
+        /// 当日已绘图次数（废弃）
         /// </summary>
         public int DayDrawCount { get; set; } = 0;
 
@@ -674,6 +681,7 @@ namespace Midjourney.Base.Models
                                             }
                                         }
                                         break;
+
                                     case GenerationSpeedMode.FAST:
                                         {
                                             // 前台没有过滤速度 - 后台要求快速
@@ -689,6 +697,7 @@ namespace Midjourney.Base.Models
                                             }
                                         }
                                         break;
+
                                     case GenerationSpeedMode.TURBO:
                                         {
                                             // 前台没有过滤速度 - 后台要求极速
@@ -704,6 +713,7 @@ namespace Midjourney.Base.Models
                                             }
                                         }
                                         break;
+
                                     default:
                                         break;
                                 }
@@ -838,6 +848,7 @@ namespace Midjourney.Base.Models
                                             }
                                         }
                                         break;
+
                                     case GenerationSpeedMode.FAST:
                                         {
                                             // 前台没有过滤速度 - 后台要求快速
@@ -853,6 +864,7 @@ namespace Midjourney.Base.Models
                                             }
                                         }
                                         break;
+
                                     case GenerationSpeedMode.TURBO:
                                         {
                                             // 前台没有过滤速度 - 后台要求极速
@@ -868,6 +880,7 @@ namespace Midjourney.Base.Models
                                             }
                                         }
                                         break;
+
                                     default:
                                         break;
                                 }
@@ -880,7 +893,6 @@ namespace Midjourney.Base.Models
                             }
                         }
                     }
-
                 }
             }
 
