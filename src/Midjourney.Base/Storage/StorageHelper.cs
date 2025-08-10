@@ -107,8 +107,8 @@ namespace Midjourney.Base.Storage
         /// <summary>
         /// 下载并保存图片
         /// </summary>
-        /// <param name="taskInfo"></param>
-        public static async Task DownloadFile(TaskInfo taskInfo)
+        /// <param name="info"></param>
+        public static async Task DownloadFile(TaskInfo info)
         {
             var setting = GlobalConfiguration.Setting;
 
@@ -118,10 +118,10 @@ namespace Midjourney.Base.Storage
                 return;
             }
 
-            var imageUrl = taskInfo.ImageUrl;
-            var isReplicate = taskInfo.IsReplicate;
-            var thumbnailUrl = taskInfo.ThumbnailUrl;
-            var action = taskInfo.Action;
+            var imageUrl = info.ImageUrl;
+            var isReplicate = info.IsReplicate;
+            var thumbnailUrl = info.ThumbnailUrl;
+            var action = info.Action;
 
             if (string.IsNullOrWhiteSpace(imageUrl))
             {
@@ -141,6 +141,21 @@ namespace Midjourney.Base.Storage
                 return;
             }
 
+            // 开启了链接转换验证
+            if (info.IsPartner || info.IsOfficial)
+            {
+                if (info.StorageOption != null)
+                {
+                    // 将原图作为缩略图即可
+                    info.ThumbnailUrl = imageUrl;
+                    return;
+                }
+            }
+
+            // 创建保存路径
+            var uri = new Uri(imageUrl);
+            var localPath = uri.AbsolutePath.TrimStart('/');
+
             var lockKey = $"download:{imageUrl}";
 
             WebProxy webProxy = null;
@@ -155,9 +170,6 @@ namespace Midjourney.Base.Storage
                 Proxy = webProxy,
             };
 
-            // 创建保存路径
-            var uri = new Uri(imageUrl);
-            var localPath = uri.AbsolutePath.TrimStart('/');
 
             // 换脸放到私有附件中
             if (isReplicate)
@@ -172,12 +184,11 @@ namespace Midjourney.Base.Storage
             }
 
             // 下载图片并保存
-            var imageBytes = await DownloadImageAsync(taskInfo, imageUrl);
+            var imageBytes = await DownloadImageAsync(info, imageUrl);
             if (imageBytes == null || imageBytes.Length <= 0)
             {
                 return;
             }
-
 
             // 阿里云 OSS
             if (setting.ImageStorageType == ImageStorageType.OSS)
@@ -188,8 +199,6 @@ namespace Midjourney.Base.Storage
 
                 // 替换 url
                 var url = $"{cdn?.Trim()?.Trim('/')}/{localPath}{uri?.Query}";
-
-
 
                 using var stream = new MemoryStream(imageBytes);
 
@@ -277,7 +286,7 @@ namespace Midjourney.Base.Storage
                 // 替换 url
                 var url = $"{cdn?.Trim()?.Trim('/')}/{localPath}{uri?.Query}";
 
-               
+
                 using var stream = new MemoryStream(imageBytes);
 
                 // 下载图片并保存
@@ -348,7 +357,7 @@ namespace Midjourney.Base.Storage
 
                 // 替换 url
                 var url = $"{cdn?.Trim()?.Trim('/')}/{localPath}{uri?.Query}";
-            
+
                 using var stream = new MemoryStream(imageBytes);
 
                 var mm = MimeKit.MimeTypes.GetMimeType(Path.GetFileName(localPath));
@@ -440,12 +449,12 @@ namespace Midjourney.Base.Storage
 
             if (!string.IsNullOrWhiteSpace(imageUrl))
             {
-                taskInfo.ImageUrl = imageUrl;
+                info.ImageUrl = imageUrl;
             }
 
             if (!string.IsNullOrWhiteSpace(thumbnailUrl))
             {
-                taskInfo.ThumbnailUrl = thumbnailUrl;
+                info.ThumbnailUrl = thumbnailUrl;
             }
         }
 
@@ -655,48 +664,52 @@ namespace Midjourney.Base.Storage
         /// <returns></returns>
         public static async Task<byte[]> DownloadImageAsync(TaskInfo info, string url)
         {
-            if (info.IsOfficial)
+            // 如果是官方图片，则不允许直接下载
+            if (url.Contains(TaskInfo.MIDJOURNEY_CDN, StringComparison.OrdinalIgnoreCase))
             {
-                Log.Warning("官方图片无法直接下载: {Url}", url);
                 return null;
+            }
+
+            //if (info.IsOfficial)
+            //{
+            //    Log.Warning("官方图片无法直接下载: {Url}", url);
+            //    return null;
+            //}
+
+            HttpClient client;
+
+            if (info.IsPartner)
+            {
+                client = _youchuanHttpClient;
             }
             else
             {
-                HttpClient client;
-
-                if (info.IsPartner)
-                {
-                    client = _youchuanHttpClient;
-                }
-                else
-                {
-                    client = _proxyHttpClient;
-                }
-
-                if (string.IsNullOrWhiteSpace(url))
-                {
-                    return [];
-                }
-
-                byte[] bytes = [];
-
-                // 最大等待 10 分钟
-                var isLock = await AsyncLocalLock.TryLockAsync($"download:{url}", TimeSpan.FromMinutes(10), async () =>
-                {
-                    url = ReplaceInternalUrl(info, url);
-
-                    var response = await client.GetAsync(url);
-                    response.EnsureSuccessStatusCode();
-                    bytes = await response.Content.ReadAsByteArrayAsync();
-                });
-
-                if (bytes == null || !isLock)
-                {
-                    Log.Warning("下载图片失败或未获取到锁: {Url}", url);
-                }
-
-                return bytes ?? [];
+                client = _proxyHttpClient;
             }
+
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                return [];
+            }
+
+            byte[] bytes = [];
+
+            // 最大等待 10 分钟
+            var isLock = await AsyncLocalLock.TryLockAsync($"download:{url}", TimeSpan.FromMinutes(10), async () =>
+            {
+                url = ReplaceInternalUrl(info, url);
+
+                var response = await client.GetAsync(url);
+                response.EnsureSuccessStatusCode();
+                bytes = await response.Content.ReadAsByteArrayAsync();
+            });
+
+            if (bytes == null || !isLock)
+            {
+                Log.Warning("下载图片失败或未获取到锁: {Url}", url);
+            }
+
+            return bytes ?? [];
         }
 
         /// <summary>

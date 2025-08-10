@@ -51,17 +51,17 @@ namespace Midjourney.Base.Models
     [Index("i_State", "State")]
     [Index("i_Mode", "Mode")]
     [Index("i_Nonce", "Nonce")]
-    //[Index("i_Prompt", "Prompt")]
-    //[Index("i_PromptEn", "PromptEn")]
-    //[Index("i_PromptFull", "PromptFull")]
-    //[Index("i_Description", "Description")]
-    //[Index("i_FailReason", "FailReason")]
     [Index("i_IsPartner", "IsPartner")]
     [Index("i_PartnerTaskId", "PartnerTaskId")]
     [Index("i_IsOfficial", "IsOfficial")]
     [Index("i_OfficialTaskId", "OfficialTaskId")]
     public class TaskInfo : DomainObject
     {
+        /// <summary>
+        /// Midjourney CDN 域名
+        /// </summary>
+        public const string MIDJOURNEY_CDN = "cdn.midjourney.com";
+
         /// <summary>
         /// 版本号匹配正则表达式。
         /// </summary>
@@ -534,6 +534,14 @@ namespace Midjourney.Base.Models
         /// niji 4, niji 5, niji 6
         /// </summary>
         public string Version { get; set; }
+
+        /// <summary>
+        /// 存储选项（私人定制）
+        /// 请求头 x-storage-options: 1 | 2, 1: 返回官方链接, 2: 返回合作商链接
+        /// </summary>
+        public EStorageOption? StorageOption { get; set; }
+
+        // ------------------------------------- 方法 --------------------------------------
 
         /// <summary>
         /// 启动任务。
@@ -1030,6 +1038,79 @@ namespace Midjourney.Base.Models
                 value1 = temp;
             }
             return value1;
+        }
+
+        /// <summary>
+        /// 转换 URL 为官方链接或合作商链接。
+        /// </summary>
+        /// <param name="sourceUrl"></param>
+        /// <param name="newUrl"></param>
+        /// <returns></returns>
+        public string TransformUrl(string sourceUrl, string newUrl = null)
+        {
+            // 悠船
+            if (IsPartner)
+            {
+                if (!string.IsNullOrWhiteSpace(sourceUrl))
+                {
+                    if (StorageOption == EStorageOption.Partner)
+                    {
+                        return sourceUrl;
+                    }
+                    else if (StorageOption == EStorageOption.Official)
+                    {
+                        // 转为官方链接
+                        var uri = new Uri(sourceUrl);
+
+                        // https://youchuan-imagine.oss-cn-shanghai.aliyuncs.com/16e48f88-e900-4fe3-a9f3-4454e44bf19c_0_2.png
+                        // https://cdn.midjourney.com/16e48f88-e900-4fe3-a9f3-4454e44bf19c/0_1.png
+
+                        // 如果路径符合 /{guid}_{i}_{n}.png 的结尾，使用正则名称提取
+                        var match = Regex.Match(uri.PathAndQuery, @"^/(?<guid>[a-z0-9\-]+)_(?<i>\d+)_(?<n>\d+)\.png$", RegexOptions.IgnoreCase);
+                        if (match.Success)
+                        {
+                            var guid = match.Groups["guid"].Value;
+                            var i = match.Groups["i"].Value;
+                            var n = match.Groups["n"].Value;
+
+                            // 返回官方链接
+                            return $"https://{MIDJOURNEY_CDN}/{guid}/{i}_{n}.png";
+                        }
+
+                        // https://youchuan-imagine.oss-cn-shanghai.aliyuncs.com/e39614f4-a83f-4d39-8402-d807f3a3ca7d_0.mp4
+                        // https://cdn.midjourney.com/video/8809c019-f50d-4502-9436-a2716275d546/0.mp4
+
+                        // 如果路径符合 /{guid}_{i}.mp4 的结尾，使用正则名称提取
+                        match = Regex.Match(uri.PathAndQuery, @"^/(?<guid>[a-z0-9\-]+)_(?<i>\d+)\.mp4$", RegexOptions.IgnoreCase);
+                        if (match.Success)
+                        {
+                            var guid = match.Groups["guid"].Value;
+                            var i = match.Groups["i"].Value;
+
+                            // 返回官方链接
+                            return $"https://{MIDJOURNEY_CDN}/video/{guid}/{i}.mp4";
+                        }
+
+                        return $"https://{MIDJOURNEY_CDN}/{uri.PathAndQuery.TrimStart('/')}";
+                    }
+                }
+            }
+            // 官方
+            else if (IsOfficial)
+            {
+                if (!string.IsNullOrWhiteSpace(sourceUrl))
+                {
+                    if (StorageOption == EStorageOption.Official || StorageOption == EStorageOption.Partner)
+                    {
+                        return sourceUrl;
+                    }
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(newUrl))
+                return sourceUrl;
+
+            return newUrl;
         }
     }
 

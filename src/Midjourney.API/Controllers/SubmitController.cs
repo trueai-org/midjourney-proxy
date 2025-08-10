@@ -46,7 +46,7 @@ namespace Midjourney.API.Controllers
         private readonly ITaskStoreService _taskStoreService;
 
         private readonly DiscordHelper _discordHelper;
-        private readonly Setting _properties;
+        private readonly Setting _setting;
         private readonly ITaskService _taskService;
         private readonly ILogger<SubmitController> _logger;
         private readonly string _ip;
@@ -59,6 +59,11 @@ namespace Midjourney.API.Controllers
         /// 指定绘图速度模式（优先级最高，如果找不到账号则直接返回错误）
         /// </summary>
         private readonly GenerationSpeedMode? _mode;
+
+        /// <summary>
+        /// 存储选项
+        /// </summary>
+        private readonly EStorageOption? _storageOption;
 
         public SubmitController(
             ITranslateService translateService,
@@ -74,7 +79,7 @@ namespace Midjourney.API.Controllers
             _memoryCache = memoryCache;
             _translateService = translateService;
             _taskStoreService = taskStoreService;
-            _properties = GlobalConfiguration.Setting;
+            _setting = GlobalConfiguration.Setting;
             _taskService = taskService;
             _logger = logger;
             _discordHelper = discordHelper;
@@ -97,6 +102,24 @@ namespace Midjourney.API.Controllers
             }
 
             _ip = httpContextAccessor.HttpContext.Request.GetIP();
+
+            // 存储选项
+            // 请求头 x-storage-options: 1 | 2, 1: 返回官方链接, 2: 返回合作商链接
+            if (_setting.PrivateEnableYouChuanCustomLinkConvert
+                && httpContextAccessor.HttpContext.Request.Headers.TryGetValue("x-storage-options", out var storageOptions))
+            {
+                switch (storageOptions)
+                {
+                    case "1":
+                        _storageOption = EStorageOption.Official;
+                        break;
+                    case "2":
+                        _storageOption = EStorageOption.Partner;
+                        break;
+                    default:
+                        break;
+                }
+            }
 
             var mode = httpContextAccessor.HttpContext.Items["Mode"]?.ToString()?.ToLowerInvariant();
             if (!string.IsNullOrWhiteSpace(mode))
@@ -1045,6 +1068,7 @@ namespace Midjourney.API.Controllers
                 ClientIp = _ip,
                 Mode = _mode,
                 RequestMode = _mode,
+                StorageOption = _storageOption,
                 UserId = user?.Id,
                 IsWhite = user?.IsWhite ?? false
             };
@@ -1251,7 +1275,7 @@ namespace Midjourney.API.Controllers
                 }
             }
 
-            var notifyHook = string.IsNullOrWhiteSpace(baseDTO.NotifyHook) ? _properties.NotifyHook : baseDTO.NotifyHook;
+            var notifyHook = string.IsNullOrWhiteSpace(baseDTO.NotifyHook) ? _setting.NotifyHook : baseDTO.NotifyHook;
             task.SetProperty(Constants.TASK_PROPERTY_NOTIFY_HOOK, notifyHook);
 
             var nonce = SnowFlake.NextId();
@@ -1269,6 +1293,7 @@ namespace Midjourney.API.Controllers
         /// <param name="accountFilter"></param>
         private void NewTaskDoFilter(TaskInfo task, AccountFilter accountFilter)
         {
+            task.StorageOption = _storageOption;
             task.AccountFilter = accountFilter;
             task.SetProperty(Constants.TASK_PROPERTY_BOT_TYPE, task.BotType.GetDescription());
 
@@ -1311,7 +1336,7 @@ namespace Midjourney.API.Controllers
         {
             var setting = GlobalConfiguration.Setting;
 
-            if (_properties.TranslateWay == TranslateWay.NULL || string.IsNullOrWhiteSpace(prompt) || !_translateService.ContainsChinese(prompt))
+            if (_setting.TranslateWay == TranslateWay.NULL || string.IsNullOrWhiteSpace(prompt) || !_translateService.ContainsChinese(prompt))
             {
                 return prompt;
             }

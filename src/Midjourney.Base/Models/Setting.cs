@@ -82,6 +82,7 @@ namespace Midjourney.Base.Models
 
         /// <summary>
         /// 悠船开启自定义链接转换 - 私人定制业务
+        /// 请求头 x-storage-options: 1 | 2, 1: 返回官方链接, 2: 返回合作商链接
         /// </summary>
         public bool PrivateEnableYouChuanCustomLinkConvert { get; set; } = false;
 

@@ -453,6 +453,16 @@ namespace Midjourney.Base
         SQLServer = 6
     }
 
+    /// <summary>
+    /// 存储选项（私人定制）
+    /// 请求头 x-storage-options: 1 | 2, 1: 返回官方链接, 2: 返回合作商链接
+    /// </summary>
+    public enum EStorageOption
+    {
+        Official = 1,
+        Partner = 2
+    }
+
     public static class BlendDimensionsExtensions
     {
         /// <summary>

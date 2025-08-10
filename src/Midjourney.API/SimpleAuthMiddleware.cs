@@ -41,15 +41,16 @@ namespace Midjourney.API
         public async Task Invoke(HttpContext context, WorkContext workContext)
         {
             var path = context.Request.Path.Value;
-            if (path.StartsWith("/mj-turbo"))
+
+            if (path.StartsWith("/mj-turbo", StringComparison.OrdinalIgnoreCase))
             {
                 context.Items["Mode"] = "turbo";
             }
-            else if (path.StartsWith("/mj-relax"))
+            else if (path.StartsWith("/mj-relax", StringComparison.OrdinalIgnoreCase))
             {
                 context.Items["Mode"] = "relax";
             }
-            else if (path.StartsWith("/mj-fast"))
+            else if (path.StartsWith("/mj-fast", StringComparison.OrdinalIgnoreCase))
             {
                 context.Items["Mode"] = "fast";
             }
