@@ -133,11 +133,11 @@ namespace Midjourney.Base.Models
                 label1 = "Upscale (Subtle)";
                 label2 = "Upscale (Creative)";
 
-                if (info.IsPartner)
-                {
-                    button1Type = "v7_upscale_2x_subtle";
-                    bytton2Type = "v7_upscale_2x_creative";
-                }
+                //if (info.IsPartner)
+                //{
+                //    button1Type = "v7_upscale_2x_subtle";
+                //    bytton2Type = "v7_upscale_2x_creative";
+                //}
             }
             else if (version.StartsWith("v 6.1"))
             {
@@ -146,11 +146,11 @@ namespace Midjourney.Base.Models
                 label1 = "Upscale (Subtle)";
                 label2 = "Upscale (Creative)";
 
-                if (info.IsPartner)
-                {
-                    button1Type = "v6r1_upscale_2x_subtle";
-                    bytton2Type = "v6r1_upscale_2x_creative";
-                }
+                //if (info.IsPartner)
+                //{
+                //    button1Type = "v6r1_upscale_2x_subtle";
+                //    bytton2Type = "v6r1_upscale_2x_creative";
+                //}
             }
             else if (version.StartsWith("v 6") || version.StartsWith("niji 6"))
             {
@@ -159,11 +159,11 @@ namespace Midjourney.Base.Models
                 label1 = "Upscale (Subtle)";
                 label2 = "Upscale (Creative)";
 
-                if (info.IsPartner)
-                {
-                    button1Type = "v6_upscale_2x_subtle";
-                    bytton2Type = "v6_upscale_2x_creative";
-                }
+                //if (info.IsPartner)
+                //{
+                //    button1Type = "v6_upscale_2x_subtle";
+                //    bytton2Type = "v6_upscale_2x_creative";
+                //}
             }
             else if (version.StartsWith("v 5") || version.StartsWith("niji 5"))
             {
@@ -172,12 +172,12 @@ namespace Midjourney.Base.Models
                 label1 = "Upscale (2x)";
                 label2 = "Upscale (4x)";
 
-                if (info.IsPartner)
-                {
-                    // 悠船
-                    button1Type = "v5_upscale_2x";
-                    bytton2Type = "v5_upscale_4x";
-                }
+                //if (info.IsPartner)
+                //{
+                //    // 悠船
+                //    button1Type = "v5_upscale_2x";
+                //    bytton2Type = "v5_upscale_4x";
+                //}
             }
             else if (version.StartsWith("v 4") || version.StartsWith("niji 4"))
             {
@@ -206,11 +206,11 @@ namespace Midjourney.Base.Models
                     label1 = "Upscale (Subtle)";
                     label2 = "Upscale (Creative)";
 
-                    if (info.IsPartner)
-                    {
-                        button1Type = $"v{versionNumber}_upscale_2x_subtle";
-                        bytton2Type = $"v{versionNumber}_upscale_2x_creative";
-                    }
+                    //if (info.IsPartner)
+                    //{
+                    //    button1Type = $"v{versionNumber}_upscale_2x_subtle";
+                    //    bytton2Type = $"v{versionNumber}_upscale_2x_creative";
+                    //}
                 }
                 else
                 {
