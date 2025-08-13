@@ -70,7 +70,7 @@ namespace Midjourney.Base.Models
             [
                 new CustomComponentModel
                 {
-                    CustomId = $"MJ::JOB::animate_high::{index}::{id}::SOLO",
+                    CustomId = $"MJ::JOB::animate_high::1::{id}::SOLO",
                     Label = "Animate (High motion)",
                     Emoji = "🎞️",
                     Style = 2,
@@ -78,7 +78,7 @@ namespace Midjourney.Base.Models
                 },
                 new CustomComponentModel
                 {
-                    CustomId = $"MJ::JOB::animate_low::{index}::{id}::SOLO",
+                    CustomId = $"MJ::JOB::animate_low::1::{id}::SOLO",
                     Label = "Animate (Low motion)",
                     Emoji = "🎞️",
                     Style = 2,
@@ -223,7 +223,7 @@ namespace Midjourney.Base.Models
             [
                 new CustomComponentModel
                 {
-                    CustomId = $"MJ::JOB::upsample_{button1Type}::{index}::{id}::SOLO",
+                    CustomId = $"MJ::JOB::upsample_{button1Type}::1::{id}::SOLO",
                     Label = label1,
                     Emoji = "upscale_1",
                     Style = 2,
@@ -231,7 +231,7 @@ namespace Midjourney.Base.Models
                 },
                 new CustomComponentModel
                 {
-                    CustomId = $"MJ::JOB::upsample_{bytton2Type}::{index}::{id}::SOLO",
+                    CustomId = $"MJ::JOB::upsample_{bytton2Type}::1::{id}::SOLO",
                     Label = label2,
                     Emoji = "upscale_1",
                     Style = 2,
@@ -252,7 +252,7 @@ namespace Midjourney.Base.Models
             {
                 new CustomComponentModel
                 {
-                    CustomId = $"MJ::JOB::low_variation::{index}::{id}::SOLO",
+                    CustomId = $"MJ::JOB::low_variation::1::{id}::SOLO",
                     Label = "Vary (Subtle)",
                     Emoji = GetEmojiFromCodePoint(0x1FA84),
                     Style = 2,
@@ -260,7 +260,7 @@ namespace Midjourney.Base.Models
                 },
                 new CustomComponentModel
                 {
-                    CustomId = $"MJ::JOB::high_variation::{index}::{id}::SOLO",
+                    CustomId = $"MJ::JOB::high_variation::1::{id}::SOLO",
                     Label = "Vary (Strong)",
                     Emoji = GetEmojiFromCodePoint(0x1FA84),
                     Style = 2,
@@ -296,7 +296,7 @@ namespace Midjourney.Base.Models
 
             return new CustomComponentModel
             {
-                CustomId = $"MJ::Inpaint::{index}::{id}::SOLO",
+                CustomId = $"MJ::Inpaint::1::{id}::SOLO",
                 Label = "Vary (Region)",
                 Emoji = "🖌️",
                 Style = 2,
@@ -326,7 +326,7 @@ namespace Midjourney.Base.Models
             [
                 new CustomComponentModel
                 {
-                    CustomId = $"MJ::Outpaint::50::{index}::{id}::SOLO",
+                    CustomId = $"MJ::Outpaint::50::1::{id}::SOLO",
                     Emoji = "🔍",
                     Label = "Zoom Out 2x",
                     Style = 2,
@@ -334,7 +334,7 @@ namespace Midjourney.Base.Models
                 },
                 new CustomComponentModel
                 {
-                    CustomId = $"MJ::Outpaint::75::{index}::{id}::SOLO",
+                    CustomId = $"MJ::Outpaint::75::1::{id}::SOLO",
                     Emoji = "🔍",
                     Label = "Zoom Out 1.5x",
                     Style = 2,
@@ -342,7 +342,7 @@ namespace Midjourney.Base.Models
                 },
                 new CustomComponentModel
                 {
-                    CustomId = $"MJ::CustomZoom::{index}::{id}",
+                    CustomId = $"MJ::CustomZoom::1::{id}",
                     Emoji = "🔍",
                     Label = "Custom Zoom",
                     Style = 2,
@@ -370,37 +370,37 @@ namespace Midjourney.Base.Models
                 return
                 [
                     new CustomComponentModel
-                {
-                    CustomId = $"MJ::JOB::pan_left::{index}::{id}::SOLO",
-                    Emoji = "⬅️",
-                    Label = "",
-                    Style = 2,
-                    Type = 2
-                },
-                new CustomComponentModel
-                {
-                    CustomId = $"MJ::JOB::pan_right::{index}::{id}::SOLO",
-                    Emoji = "➡️",
-                    Label = "",
-                    Style = 2,
-                    Type = 2
-                },
-                new CustomComponentModel
-                {
-                    CustomId = $"MJ::JOB::pan_up::{index}::{id}::SOLO",
-                    Emoji = "⬆️",
-                    Label = "",
-                    Style = 2,
-                    Type = 2
-                },
-                new CustomComponentModel
-                {
-                    CustomId = $"MJ::JOB::pan_down::{index}::{id}::SOLO",
-                    Emoji = "⬇️",
-                    Label = "",
-                    Style = 2,
-                    Type = 2
-                }
+                    {
+                        CustomId = $"MJ::JOB::pan_left::1::{id}::SOLO",
+                        Emoji = "⬅️",
+                        Label = "",
+                        Style = 2,
+                        Type = 2
+                    },
+                    new CustomComponentModel
+                    {
+                        CustomId = $"MJ::JOB::pan_right::1::{id}::SOLO",
+                        Emoji = "➡️",
+                        Label = "",
+                        Style = 2,
+                        Type = 2
+                    },
+                    new CustomComponentModel
+                    {
+                        CustomId = $"MJ::JOB::pan_up::1::{id}::SOLO",
+                        Emoji = "⬆️",
+                        Label = "",
+                        Style = 2,
+                        Type = 2
+                    },
+                    new CustomComponentModel
+                    {
+                        CustomId = $"MJ::JOB::pan_down::1::{id}::SOLO",
+                        Emoji = "⬇️",
+                        Label = "",
+                        Style = 2,
+                        Type = 2
+                    }
                 ];
             }
         }
