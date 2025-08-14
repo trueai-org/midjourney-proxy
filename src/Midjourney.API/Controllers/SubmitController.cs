@@ -754,7 +754,7 @@ namespace Midjourney.API.Controllers
         [HttpPost("modal")]
         public ActionResult<SubmitResultVO> Modal([FromBody] SubmitModalDTO actionDTO)
         {
-            if (string.IsNullOrWhiteSpace(actionDTO.TaskId) || string.IsNullOrWhiteSpace(actionDTO.Prompt))
+            if (string.IsNullOrWhiteSpace(actionDTO.TaskId))
             {
                 return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "参数错误"));
             }
@@ -766,6 +766,13 @@ namespace Midjourney.API.Controllers
             }
 
             var prompt = actionDTO.Prompt;
+
+            // 如果没有 prompt 则使用父级的 prompt
+            if (string.IsNullOrWhiteSpace(prompt))
+            {
+                prompt = targetTask.Prompt;
+            }
+
             var task = targetTask;
 
             var promptEn = TranslatePrompt(prompt, task.RealBotType ?? task.BotType);
