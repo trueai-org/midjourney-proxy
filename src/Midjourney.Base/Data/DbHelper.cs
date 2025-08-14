@@ -137,9 +137,9 @@ namespace Midjourney.Base.Data
                                 coll.EnsureIndex(c => c.UserId);
                                 coll.EnsureIndex(c => c.ClientIp);
                                 coll.EnsureIndex(c => c.InstanceId);
-                                coll.EnsureIndex(c => c.PromptEn);
+                                //coll.EnsureIndex(c => c.PromptEn);
                                 coll.EnsureIndex(c => c.Prompt);
-                                coll.EnsureIndex(c => c.Description);
+                                //coll.EnsureIndex(c => c.Description);
                                 coll.EnsureIndex(c => c.ImageUrl);
                                 coll.EnsureIndex(c => c.State);
 

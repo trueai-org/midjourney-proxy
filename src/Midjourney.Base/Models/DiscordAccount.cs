@@ -460,10 +460,10 @@ namespace Midjourney.Base.Models
         /// </summary>
         public int DayRelaxDrawLimit { get; set; } = -1;
 
-        ///// <summary>
-        ///// 当日已绘图次数（废弃）
-        ///// </summary>
-        //public int DayDrawCount { get; set; } = 0;
+        /// <summary>
+        /// 当日已绘图次数（废弃）
+        /// </summary>
+        public int DayDrawCount { get; set; } = 0;
 
         /// <summary>
         /// 今日慢速绘图总数（包含失败，不包含放大）
