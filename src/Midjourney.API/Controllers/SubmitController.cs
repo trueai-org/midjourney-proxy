@@ -759,8 +759,8 @@ namespace Midjourney.API.Controllers
                 return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "参数错误"));
             }
 
-            var targetTask = _taskStoreService.Get(actionDTO.TaskId);
-            if (targetTask == null)
+            var task = _taskStoreService.Get(actionDTO.TaskId);
+            if (task == null)
             {
                 return NotFound(SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "关联任务不存在或已失效"));
             }
@@ -768,12 +768,27 @@ namespace Midjourney.API.Controllers
             var prompt = actionDTO.Prompt;
 
             // 如果没有 prompt 则使用父级的 prompt
-            if (string.IsNullOrWhiteSpace(prompt))
+            // 兼容 rix api
+            if (string.IsNullOrWhiteSpace(prompt) && !string.IsNullOrWhiteSpace(task.ParentId))
             {
-                prompt = targetTask.Prompt;
+                var parentTask = _taskStoreService.Get(task.ParentId);
+                if (parentTask != null)
+                {
+                    // 优先使用父级提示词
+                    prompt = parentTask.Prompt;
+
+                    // 从最终提示词获取
+                    if (string.IsNullOrWhiteSpace(prompt))
+                    {
+                        prompt = parentTask.GetProperty<string>(Constants.TASK_PROPERTY_FINAL_PROMPT, default);
+                    }
+                }
             }
 
-            var task = targetTask;
+            if (string.IsNullOrWhiteSpace(prompt))
+            {
+                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "prompt不能为空"));
+            }
 
             var promptEn = TranslatePrompt(prompt, task.RealBotType ?? task.BotType);
             try

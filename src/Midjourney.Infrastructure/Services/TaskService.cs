@@ -1431,7 +1431,6 @@ namespace Midjourney.Infrastructure.Services
                 }
             }
 
-
             // 点击喜欢
             if (submitAction.CustomId.Contains("MJ::BOOKMARK"))
             {
@@ -1692,7 +1691,6 @@ namespace Midjourney.Infrastructure.Services
                     }
                 }
             }
-
 
 
             return discordInstance.SubmitTaskAsync(task, async () =>
