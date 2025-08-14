@@ -22,6 +22,7 @@
 // invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
+using System;
 using System.Diagnostics;
 using System.Globalization;
 using System.Text.RegularExpressions;
@@ -30,6 +31,7 @@ using Amazon.Runtime.Internal.Endpoints.StandardLibrary;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Identity.Client;
 using Midjourney.Base;
+using Midjourney.Base.Models;
 using Midjourney.Base.Storage;
 using Midjourney.Infrastructure.LoadBalancer;
 using Newtonsoft.Json;
@@ -1515,7 +1517,7 @@ namespace Midjourney.Infrastructure.Services
                     .SetProperty(Constants.TASK_PROPERTY_REMIX, true);
             }
             // describe 全部重新生成绘图
-            else if (submitAction.CustomId?.Contains("MJ::Job::PicReader::all") == true)
+            else if (submitAction.CustomId.Contains("MJ::Job::PicReader::all"))
             {
                 var prompts = targetTask.PromptEn.Split('\n').Where(c => !string.IsNullOrWhiteSpace(c)).ToArray();
                 var ids = new List<string>();
@@ -1577,26 +1579,42 @@ namespace Midjourney.Infrastructure.Services
             }
             // 如果是 PicReader 作业，则直接返回
             // 图生文 -> 生图
-            else if (submitAction.CustomId?.StartsWith("MJ::Job::PicReader::") == true)
+            else if (submitAction.CustomId.StartsWith("MJ::Job::PicReader::"))
             {
-                var index = int.Parse(submitAction.CustomId.Split("::").LastOrDefault().Trim());
-                var pre = targetTask.PromptEn.Split('\n').Where(c => !string.IsNullOrWhiteSpace(c)).ToArray()[index - 1].Trim();
-                var prompt = pre.Substring(pre.IndexOf(' ')).Trim();
+                // 使用正则提取 V index
+                var match = Regex.Match(submitAction.CustomId, @"MJ::Job::PicReader::(\d+)");
+                if (match.Success)
+                {
+                    var index = match.Groups[1].Value;
+                    if (int.TryParse(index, out int ir) && ir > 0)
+                    {
+                        var arr = targetTask.PromptEn.Split('\n').Where(c => !string.IsNullOrWhiteSpace(c)).ToArray();
+                        if (ir > arr.Length)
+                        {
+                            return SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "无效的 PicReader 索引");
+                        }
 
-                task.Status = TaskStatus.MODAL;
-                task.Prompt = prompt;
-                task.PromptEn = prompt;
+                        var prompt = arr[ir - 1].Trim();
 
-                task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_ID, targetTask.MessageId);
-                task.SetProperty(Constants.TASK_PROPERTY_FLAGS, messageFlags);
+                        task.Prompt = prompt;
+                        task.PromptEn = prompt;
+                        task.Status = TaskStatus.MODAL;
 
-                _taskStoreService.Save(task);
+                        task.SetProperty(Constants.TASK_PROPERTY_ACTION_INDEX, index + 1);
+                        task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_ID, targetTask.MessageId);
+                        task.SetProperty(Constants.TASK_PROPERTY_FLAGS, messageFlags);
 
-                // 状态码为 21
-                // 重绘、自定义变焦始终 remix 为true
-                return SubmitResultVO.Of(ReturnCode.EXISTED, "Waiting for window confirm", task.Id)
-                    .SetProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, task.PromptEn)
-                    .SetProperty(Constants.TASK_PROPERTY_REMIX, true);
+                        _taskStoreService.Save(task);
+
+                        // 状态码为 21
+                        // 重绘、自定义变焦始终 remix 为true
+                        return SubmitResultVO.Of(ReturnCode.EXISTED, "Waiting for window confirm", task.Id)
+                            .SetProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, task.PromptEn)
+                            .SetProperty(Constants.TASK_PROPERTY_REMIX, true);
+                    }
+                }
+
+                return SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "无效的 PicReader 索引");
             }
             // prompt shorten -> 生图
             else if (submitAction.CustomId.StartsWith("MJ::Job::PromptAnalyzer::"))
