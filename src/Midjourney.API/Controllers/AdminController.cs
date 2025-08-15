@@ -1252,7 +1252,9 @@ namespace Midjourney.API.Controllers
                     .OrderByIf(nameof(DiscordAccount.Remark).Equals(sort.Predicate, StringComparison.OrdinalIgnoreCase), c => c.Remark, sort.Reverse)
                     .OrderByIf(nameof(DiscordAccount.Sponsor).Equals(sort.Predicate, StringComparison.OrdinalIgnoreCase), c => c.Sponsor, sort.Reverse)
                     .OrderByIf(nameof(DiscordAccount.DateCreated).Equals(sort.Predicate, StringComparison.OrdinalIgnoreCase), c => c.DateCreated, sort.Reverse)
-                    .OrderByIf(string.IsNullOrWhiteSpace(sort.Predicate), c => c.Sort, false)
+
+                    // sort 排序 bug, 分页产生重复数据
+                    .OrderByIf(string.IsNullOrWhiteSpace(sort.Predicate), c => c.DateCreated, true)
                     .Skip((page.Current - 1) * page.PageSize)
                     .Take(page.PageSize)
                     .ToList();
@@ -1280,7 +1282,7 @@ namespace Midjourney.API.Controllers
                     .OrderByIf(nameof(DiscordAccount.Remark).Equals(sort.Predicate, StringComparison.OrdinalIgnoreCase), c => c.Remark, sort.Reverse)
                     .OrderByIf(nameof(DiscordAccount.Sponsor).Equals(sort.Predicate, StringComparison.OrdinalIgnoreCase), c => c.Sponsor, sort.Reverse)
                     .OrderByIf(nameof(DiscordAccount.DateCreated).Equals(sort.Predicate, StringComparison.OrdinalIgnoreCase), c => c.DateCreated, sort.Reverse)
-                    .OrderByIf(string.IsNullOrWhiteSpace(sort.Predicate), c => c.Sort, false)
+                    .OrderByIf(string.IsNullOrWhiteSpace(sort.Predicate), c => c.DateCreated, true)
                     .Skip((page.Current - 1) * page.PageSize)
                     .Limit(page.PageSize)
                     .ToList();
@@ -1348,7 +1350,7 @@ namespace Midjourney.API.Controllers
                         .OrderByIf(nameof(DiscordAccount.Remark).Equals(sort.Predicate, StringComparison.OrdinalIgnoreCase), c => c.Remark, sort.Reverse)
                         .OrderByIf(nameof(DiscordAccount.Sponsor).Equals(sort.Predicate, StringComparison.OrdinalIgnoreCase), c => c.Sponsor, sort.Reverse)
                         .OrderByIf(nameof(DiscordAccount.DateCreated).Equals(sort.Predicate, StringComparison.OrdinalIgnoreCase), c => c.DateCreated, sort.Reverse)
-                        .OrderByIf(string.IsNullOrWhiteSpace(sort.Predicate), c => c.Sort, false)
+                        .OrderByIf(string.IsNullOrWhiteSpace(sort.Predicate), c => c.DateCreated, true)
                         .OrderByDescending(c => c.DateCreated)
                         .Skip((page.Current - 1) * page.PageSize)
                         .Take(page.PageSize)
