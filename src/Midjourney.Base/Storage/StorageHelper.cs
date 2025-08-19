@@ -183,6 +183,12 @@ namespace Midjourney.Base.Storage
                     .TrimStart('?'); // 移除开头的 ?
 
                 oldQuery = cleanQuery;
+
+                // 添加 ?
+                if (!string.IsNullOrWhiteSpace(oldQuery))
+                {
+                    oldQuery = $"?{oldQuery}";
+                }
             }
 
             var lockKey = $"download:{imageUrl}";
