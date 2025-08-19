@@ -445,6 +445,39 @@ namespace Midjourney.Base.Util
         }
 
         /// <summary>
+        /// 通过文件 url 或 MimeType 获取文件后缀
+        /// </summary>
+        /// <param name="mimeType"></param>
+        /// <param name="url"></param>
+        /// <returns>png, jpg</returns>
+        public static string GuessFileSuffix(string mimeType, string url)
+        {
+            var suffix = "";
+            if (string.IsNullOrWhiteSpace(mimeType) && string.IsNullOrWhiteSpace(url))
+            {
+                return null;
+            }
+
+            if (!string.IsNullOrWhiteSpace(mimeType))
+            {
+                suffix = MimeTypeUtils.GuessFileSuffix(mimeType);
+            }
+
+            if (string.IsNullOrWhiteSpace(suffix))
+            {
+                // 如果没有 MIME 类型，则尝试从 URL 获取
+                var uri = new Uri(url);
+                if (uri.Segments.Length > 0)
+                {
+                    var lastSegment = uri.Segments.Last();
+                    suffix = Path.GetExtension(lastSegment)?.TrimStart('.').ToLowerInvariant();
+                }
+            }
+
+            return suffix?.TrimStart('.').ToLowerInvariant();
+        }
+
+        /// <summary>
         /// 获取 url 链接文件大小
         /// </summary>
         /// <param name="url"></param>

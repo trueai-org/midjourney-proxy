@@ -1040,7 +1040,7 @@ namespace Midjourney.Infrastructure.Services
 
                     if (task.Buttons.Count > 0)
                     {
-                        task.Success();
+                        await task.SuccessAsync();
                     }
                     else
                     {

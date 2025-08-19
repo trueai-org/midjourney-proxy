@@ -491,7 +491,7 @@ namespace Midjourney.API.Controllers
             task.BotType = GetBotType(describeDTO.BotType);
             task.Action = TaskAction.DESCRIBE;
 
-            string taskFileName = $"{task.Id}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType) ?? Path.GetExtension(dataUrl.Url)}";
+            string taskFileName = $"{task.Id}.{FileFetchHelper.GuessFileSuffix(dataUrl.MimeType, dataUrl.Url)}";
             task.Description = $"/describe {taskFileName}";
 
             NewTaskDoFilter(task, describeDTO.AccountFilter);

@@ -23,6 +23,7 @@
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
 using System.Net;
+using Microsoft.AspNetCore.WebUtilities;
 using Midjourney.Base.Util;
 using Serilog;
 
@@ -156,6 +157,34 @@ namespace Midjourney.Base.Storage
             var uri = new Uri(imageUrl);
             var localPath = uri.AbsolutePath.TrimStart('/');
 
+            var oldQuery = uri.Query;
+
+            // query 参数冲突问题，当来源站包含有效期时 ?OSSAccessKeyId=LTAI5tRS95ryrT57tyHLRkg7&Expires=1755681051&Signature=eIR2LwpKORL5oD3IFtC1xd8pTVI%3D
+            // 如果再次附加有效期，会导致链接失效
+            // 因此直接清除有效期参数
+            if (oldQuery != null)
+            {
+                // 解析 queryString 移除冲突参数
+                var queryParams = QueryHelpers.ParseQuery(oldQuery);
+
+                // 移除可能冲突的参数
+                var conflictingKeys = new[] {
+                    "OSSAccessKeyId", "Expires", "Signature",
+                    "x-oss-expires", "x-oss-signature", "x-oss-access-key-id"
+                };
+
+                foreach (var key in conflictingKeys)
+                {
+                    queryParams.Remove(key);
+                }
+
+                // 重新构建查询字符串
+                var cleanQuery = QueryHelpers.AddQueryString("", queryParams)
+                    .TrimStart('?'); // 移除开头的 ?
+
+                oldQuery = cleanQuery;
+            }
+
             var lockKey = $"download:{imageUrl}";
 
             WebProxy webProxy = null;
@@ -198,7 +227,7 @@ namespace Midjourney.Base.Storage
                 var oss = new AliyunOssStorageService();
 
                 // 替换 url
-                var url = $"{cdn?.Trim()?.Trim('/')}/{localPath}{uri?.Query}";
+                var url = $"{cdn?.Trim()?.Trim('/')}/{localPath}{oldQuery}";
 
                 using var stream = new MemoryStream(imageBytes);
 
@@ -242,7 +271,7 @@ namespace Midjourney.Base.Storage
                 var cos = new TencentCosStorageService();
 
                 // 替换 url
-                var url = $"{cdn?.Trim()?.Trim('/')}/{localPath}{uri?.Query}";
+                var url = $"{cdn?.Trim()?.Trim('/')}/{localPath}{oldQuery}";
 
                 using var stream = new MemoryStream(imageBytes);
                 var mm = MimeKit.MimeTypes.GetMimeType(Path.GetFileName(localPath));
@@ -284,7 +313,7 @@ namespace Midjourney.Base.Storage
                 var r2 = new CloudflareR2StorageService();
 
                 // 替换 url
-                var url = $"{cdn?.Trim()?.Trim('/')}/{localPath}{uri?.Query}";
+                var url = $"{cdn?.Trim()?.Trim('/')}/{localPath}{oldQuery}";
 
 
                 using var stream = new MemoryStream(imageBytes);
@@ -356,7 +385,7 @@ namespace Midjourney.Base.Storage
                 // 本地锁
 
                 // 替换 url
-                var url = $"{cdn?.Trim()?.Trim('/')}/{localPath}{uri?.Query}";
+                var url = $"{cdn?.Trim()?.Trim('/')}/{localPath}{oldQuery}";
 
                 using var stream = new MemoryStream(imageBytes);
 
@@ -443,7 +472,7 @@ namespace Midjourney.Base.Storage
                     File.WriteAllBytes(savePath, imageBytes);
 
                     // 替换 url
-                    imageUrl = $"{cdn?.Trim()?.Trim('/')}/{localPath}{uri?.Query}";
+                    imageUrl = $"{cdn?.Trim()?.Trim('/')}/{localPath}{oldQuery}";
                 }
             }
 
