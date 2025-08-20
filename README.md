@@ -322,7 +322,7 @@ curl -o linux_install.sh https://raw.githubusercontent.com/trueai-org/midjourney
 ```
 ### 数据库配置
 
-- `LiteDB`（不推荐，任务数不超过5万）：本地默认数据库库，默认存储位置：`data/mj.db`
+- `LiteDB`（不推荐，任务数不超过5万）：本地默认数据库，默认存储位置：`data/mj.db`
 - `Sqlite`：本地数据库，默认存储位置：`data/mj_sqlite.db`
 - `MongoDB`（推荐）：需要配置数据库连接字符串，示例：`mongodb://mongoadmin:***@192.168.3.241`，需要配置数据库名称：`mj`
 - `MySQL(建议使用 8.x 版本)`：需要配置数据库连接字符串，示例：`Data Source=192.168.3.241;Port=3306;User ID=root;Password=xxx; Initial Catalog=mj;Charset=utf8mb4; SslMode=none;Min pool size=1`
