@@ -141,7 +141,8 @@ namespace Midjourney.Base
                     // 已提交的所有任务（包含取消）
                     // 统计不包含放大的所有任务, 按速度分组
                     var allCounts = LiteDBHelper.TaskStore.GetCollection().Query()
-                        .Where(x => x.SubmitTime >= now && x.InstanceId == instanceId && x.Action != TaskAction.UPSCALE && x.Status != TaskStatus.MODAL && x.Status != TaskStatus.NOT_START)
+                        .Where(x => x.SubmitTime >= now && x.InstanceId == instanceId && x.Action != TaskAction.UPSCALE && x.Status != TaskStatus.MODAL && x.Status != TaskStatus.NOT_START && x.Mode != null)
+                        .ToList()
                         .Select(c => c.Mode)
                         .ToList()
                         .GroupBy(c => c)
