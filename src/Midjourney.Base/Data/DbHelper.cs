@@ -137,11 +137,16 @@ namespace Midjourney.Base.Data
                                 coll.EnsureIndex(c => c.UserId);
                                 coll.EnsureIndex(c => c.ClientIp);
                                 coll.EnsureIndex(c => c.InstanceId);
-                                //coll.EnsureIndex(c => c.PromptEn);
-                                coll.EnsureIndex(c => c.Prompt);
-                                //coll.EnsureIndex(c => c.Description);
-                                coll.EnsureIndex(c => c.ImageUrl);
                                 coll.EnsureIndex(c => c.State);
+                                coll.EnsureIndex(c => c.IsPartner);
+                                coll.EnsureIndex(c => c.IsOfficial);
+                                coll.EnsureIndex(c => c.PartnerTaskId);
+                                coll.EnsureIndex(c => c.OfficialTaskId);
+
+                                //coll.EnsureIndex(c => c.PromptEn);
+                                //coll.EnsureIndex(c => c.Prompt);
+                                //coll.EnsureIndex(c => c.Description);
+                                //coll.EnsureIndex(c => c.ImageUrl);
 
                                 //coll.DropIndex("PromptEn");
                                 //coll.DropIndex("Prompt");
