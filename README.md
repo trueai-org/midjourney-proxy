@@ -14,7 +14,7 @@ The most powerful, complete, full-featured, completely free and open source Midj
 
 ⭐ 如果觉得项目不错，请一定帮忙点个 `Star`，万分感谢！
 
-## 👍👍 Disocord Midjourney 官方镜像站，官方 1折 优惠！
+## 👍👍 Disocord Midjourney 官方镜像站，官方 1 折优惠！
 
 - 🍎 支持 Discord 所有指令！
 - 🐂 注册即送 25 张免费 Midjourney 额度！
