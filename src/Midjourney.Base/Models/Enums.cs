@@ -314,7 +314,12 @@ namespace Midjourney.Base
         /// <summary>
         /// 高级重绘
         /// </summary>
-        RETEXTURE
+        RETEXTURE,
+
+        /// <summary>
+        /// 图生文 - 文生图
+        /// </summary>
+        PIC_READER
     }
 
     /// <summary>

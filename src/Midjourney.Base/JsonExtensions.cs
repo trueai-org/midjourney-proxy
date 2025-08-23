@@ -32,9 +32,9 @@ namespace Midjourney.Base
             return JsonConvert.SerializeObject(obj);
         }
 
-        public static T ToObject<T>(this string json)
+        public static T ToObject<T>(this string json, JsonSerializerSettings settings = null)
         {
-            return JsonConvert.DeserializeObject<T>(json);
+            return JsonConvert.DeserializeObject<T>(json, settings);
         }
 
         /// <summary>
