@@ -606,14 +606,14 @@ namespace Midjourney.Base
                 return prompt;
             }
 
-            // 移除可能的速度模式
-            prompt = prompt.RemoveSpeedMode();
-
             // 如果没有指定速度模式，则返回原始 prompt
             if (mode == null)
             {
                 return prompt;
             }
+
+            // 移除可能的速度模式
+            prompt = prompt.RemoveSpeedMode();
 
             // 根据速度模式追加参数
             switch (mode.Value)
