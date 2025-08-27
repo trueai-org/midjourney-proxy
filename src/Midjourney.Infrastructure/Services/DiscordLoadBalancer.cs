@@ -79,7 +79,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
             bool? shorten = null,
             GenerationSpeedMode? preferredSpeedMode = null,
             bool? isYm = null,
-            bool? isVideo = null)
+            bool? isVideo = null,
+            bool? isHdVideo = null)
         {
             var list = GetAliveInstances()
 
@@ -97,6 +98,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                 // 判断是否允许视频操作
                 .WhereIf(isVideo == true, c => c.Account.IsAllowGenerateVideo(isVideo))
+
+                // 高清视频支持
+                .WhereIf(isHdVideo == true, c => c.Account.IsHdVideo)
 
                 //// 允许速度模式过滤，有交集的
                 //.WhereIf(accountFilter?.Modes.Count > 0, c => c.Account.AllowModes == null || c.Account.AllowModes.Count <= 0 || c.Account.AllowModes.Any(x => accountFilter.Modes.Contains(x)))

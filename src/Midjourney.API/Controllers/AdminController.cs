@@ -1032,6 +1032,8 @@ namespace Midjourney.API.Controllers
             model.IsShorten = param.IsShorten;
             model.DayDrawLimit = param.DayDrawLimit;
             model.DayRelaxDrawLimit = param.DayRelaxDrawLimit;
+            model.IsRelaxVideo = param.IsRelaxVideo;
+            model.IsHdVideo = param.IsHdVideo;
 
             // 如果是悠船、官方
             // 清除禁用原因

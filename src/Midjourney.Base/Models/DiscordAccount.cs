@@ -283,6 +283,17 @@ namespace Midjourney.Base.Models
         /// </summary>
         public string FishingTime { get; set; }
 
+
+        /// <summary>
+        /// 启用高清视频（Pro or Mega 以上套餐，可以开启此功能）
+        /// </summary>
+        public bool IsHdVideo { get; set; } = false;  // 启用高清视频
+
+        /// <summary>
+        /// 启用慢速视频（Pro or Mega 以上套餐，可以开启此功能）
+        /// </summary>
+        public bool IsRelaxVideo { get; set; } = false;
+
         /// <summary>
         /// 今日绘图计数
         /// </summary>
@@ -937,7 +948,8 @@ namespace Midjourney.Base.Models
             // 如果是官方账号
             if (IsOfficial)
             {
-                return OfficialFastRemaining > 480;
+                // 开启慢速，或者慢速 > 8 minutes
+                return OfficialFastRemaining > 480 || IsRelaxVideo;
             }
 
             // Discord 账号
@@ -1304,7 +1316,9 @@ namespace Midjourney.Base.Models
                 LoginPassword = configAccount.LoginPassword,
                 Login2fa = configAccount.Login2fa,
                 IsYouChuan = configAccount.IsYouChuan,
-                IsOfficial = configAccount.IsOfficial
+                IsOfficial = configAccount.IsOfficial,
+                IsHdVideo = configAccount.IsHdVideo,
+                IsRelaxVideo = configAccount.IsRelaxVideo,
             };
         }
 

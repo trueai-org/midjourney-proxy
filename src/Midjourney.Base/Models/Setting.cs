@@ -992,6 +992,16 @@ namespace Midjourney.Base.Models
         /// 是否为官方账号
         /// </summary>
         public bool IsOfficial { get; set; }
+
+        /// <summary>
+        /// 启用高清视频（Pro or Mega 以上套餐，可以开启此功能）
+        /// </summary>
+        public bool IsHdVideo { get; set; } = false;  // 启用高清视频
+
+        /// <summary>
+        /// 启用慢速视频（Pro or Mega 以上套餐，可以开启此功能）
+        /// </summary>
+        public bool IsRelaxVideo { get; set; } = false;
     }
 
     /// <summary>

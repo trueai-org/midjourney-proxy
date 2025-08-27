@@ -62,7 +62,7 @@ namespace Midjourney.Base.Dto
         public string Action { get; set; }
 
         /// <summary>
-        /// 执行的视频索引号 >= 0 <= 3
+        /// 执行的视频索引号 0 | 1 | 2 | 3
         /// </summary>
         public int? Index { get; set; }
 
@@ -70,5 +70,19 @@ namespace Midjourney.Base.Dto
         /// 需要操作的视频父任务ID
         /// </summary>
         public string TaskId { get; set; }
+
+        /// <summary>
+        /// 视频分辨率类型，默认标清。
+        /// 取值：vid_1.1_i2v_480 | vid_1.1_i2v_720
+        /// SD: vid_1.1_i2v_480
+        /// HD: vid_1.1_i2v_720
+        /// </summary>
+        public string VideoType { get; set; } = "vid_1.1_i2v_480";
+
+        /// <summary>
+        /// 批量大小 1 | 2 | 4
+        /// 默认：4
+        /// </summary>
+        public int? BatchSize { get; set; } = 4;
     }
 }

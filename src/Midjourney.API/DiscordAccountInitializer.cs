@@ -1225,6 +1225,8 @@ namespace Midjourney.API
                 model.UserToken = param.UserToken;
                 model.Mode = param.Mode;
                 model.Sponsor = param.Sponsor;
+                model.IsHdVideo = param.IsHdVideo;
+                model.IsRelaxVideo = param.IsRelaxVideo;
 
                 DbHelper.Instance.AccountStore.Update(model);
 

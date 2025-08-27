@@ -22,17 +22,10 @@
 // invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
-using System;
 using System.Diagnostics;
 using System.Globalization;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using Amazon.Runtime.Internal.Endpoints.StandardLibrary;
 using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Identity.Client;
-using Midjourney.Base;
-using Midjourney.Base.Models;
-using Midjourney.Base.Storage;
 using Midjourney.Infrastructure.LoadBalancer;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -253,7 +246,6 @@ namespace Midjourney.Infrastructure.Services
                             if (dataUrl.Url?.StartsWith("http", StringComparison.OrdinalIgnoreCase) == true)
                             {
                                 link = dataUrl.Url;
-
 
                                 if (setting.EnableYouChuanPromptLink && !link.Contains("youchuan"))
                                 {
@@ -601,6 +593,9 @@ namespace Midjourney.Infrastructure.Services
         {
             DiscordInstance instance;
 
+            // 高清视频
+            var isHdVideo = videoDTO.VideoType == "vid_1.1_i2v_720";
+
             if (videoDTO.Action?.Equals("extend", StringComparison.OrdinalIgnoreCase) == true)
             {
                 if (targetTask == null)
@@ -630,13 +625,21 @@ namespace Midjourney.Infrastructure.Services
                 botType: info.RealBotType ?? info.BotType,
                 preferredSpeedMode: info.Mode,
                 isYm: true,
-                isVideo: true);
+                isVideo: true,
+                isHdVideo: isHdVideo);
             }
 
             if (instance == null)
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
+
+            // 如果要求 HD，但是没有 HD
+            if (isHdVideo && !instance.Account.IsHdVideo)
+            {
+                return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
+            }
+
             if (!instance.Account.IsValidateModeContinueDrawing(info.Mode, info.AccountFilter?.Modes, out var mode))
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
@@ -782,6 +785,12 @@ namespace Midjourney.Infrastructure.Services
                 // 提示词拼接
                 var prompt = info.PromptEn;
 
+                // 开始图片
+                if (!string.IsNullOrWhiteSpace(startImageUrl) && !prompt.Contains(startImageUrl, StringComparison.OrdinalIgnoreCase))
+                {
+                    prompt = $"{startImageUrl} {prompt}";
+                }
+
                 // 如果是视频任务，添加 --video 参数
                 if (!prompt.Contains("--video", StringComparison.OrdinalIgnoreCase))
                 {
@@ -800,16 +809,21 @@ namespace Midjourney.Infrastructure.Services
                     prompt += $" --end {endImageUrl}";
                 }
 
-                // 开始图片
-                if (!string.IsNullOrWhiteSpace(startImageUrl) && !prompt.Contains(startImageUrl, StringComparison.OrdinalIgnoreCase))
-                {
-                    prompt = $"{startImageUrl} {prompt}";
-                }
-
                 // motion
                 if (!string.IsNullOrWhiteSpace(videoDTO.Motion) && !prompt.Contains("--motion", StringComparison.OrdinalIgnoreCase))
                 {
                     prompt += $" --motion {videoDTO.Motion}";
+                }
+
+                // 如果有设置 --bs
+                if (videoDTO.BatchSize > 0 && !prompt.Contains("--bs", StringComparison.OrdinalIgnoreCase))
+                {
+                    // 默认 4 不需要添加参数
+                    var allowBatchSize = new int[] { 1, 2 };
+                    if (allowBatchSize.Contains(videoDTO.BatchSize.Value))
+                    {
+                        prompt += $" --bs {videoDTO.BatchSize}";
+                    }
                 }
 
                 if (videoDTO.Action?.Equals("extend", StringComparison.OrdinalIgnoreCase) == true)
@@ -826,6 +840,7 @@ namespace Midjourney.Infrastructure.Services
 
                     info.SetProperty(Constants.TASK_PROPERTY_CUSTOM_ID, customId);
                     info.PromptEn = prompt;
+                    info.VideoType = videoDTO.VideoType;
                     info.Description = "/video " + info.Prompt;
                     _taskStoreService.Save(info);
                     return await instance.YmTaskService.SubmitActionAsync(info, new SubmitActionDTO()
@@ -1710,7 +1725,6 @@ namespace Midjourney.Infrastructure.Services
                 }
             }
 
-
             return discordInstance.SubmitTaskAsync(task, async () =>
             {
                 // 悠船 | 官方
@@ -2157,48 +2171,59 @@ namespace Midjourney.Infrastructure.Services
                 throw new LogicException("无可用的账号实例");
             }
 
-            if (discordInstance.Account.EnableMj == true)
+            if (model.IsYouChuan)
             {
-                var res3 = await discordInstance.SettingAsync(SnowFlake.NextId(), EBotType.MID_JOURNEY);
-                if (res3.Code != ReturnCode.SUCCESS)
-                {
-                    throw new LogicException(res3.Description);
-                }
-                Thread.Sleep(2500);
-
-                var res0 = await discordInstance.InfoAsync(SnowFlake.NextId(), EBotType.MID_JOURNEY);
-                if (res0.Code != ReturnCode.SUCCESS)
-                {
-                    throw new LogicException(res0.Description);
-                }
-                Thread.Sleep(2500);
+                await discordInstance.YmTaskService.YouChuanSyncInfo(true);
             }
-
-            if (discordInstance.Account.EnableNiji == true)
+            else if (model.IsOfficial)
             {
-                try
+                await discordInstance.YmTaskService.OfficialSyncInfo(true);
+            }
+            else
+            {
+                if (discordInstance.Account.EnableMj == true)
                 {
-                    // 如果没有开启 NIJI 转 MJ
-                    if (GlobalConfiguration.Setting.EnableConvertNijiToMj == false)
+                    var res3 = await discordInstance.SettingAsync(SnowFlake.NextId(), EBotType.MID_JOURNEY);
+                    if (res3.Code != ReturnCode.SUCCESS)
                     {
-                        var res2 = await discordInstance.SettingAsync(SnowFlake.NextId(), EBotType.NIJI_JOURNEY);
-                        if (res2.Code != ReturnCode.SUCCESS)
-                        {
-                            throw new LogicException(res2.Description);
-                        }
-                        Thread.Sleep(2500);
-
-                        var res = await discordInstance.InfoAsync(SnowFlake.NextId(), EBotType.NIJI_JOURNEY);
-                        if (res.Code != ReturnCode.SUCCESS)
-                        {
-                            throw new LogicException(res.Description);
-                        }
-                        Thread.Sleep(2500);
+                        throw new LogicException(res3.Description);
                     }
+                    Thread.Sleep(2500);
+
+                    var res0 = await discordInstance.InfoAsync(SnowFlake.NextId(), EBotType.MID_JOURNEY);
+                    if (res0.Code != ReturnCode.SUCCESS)
+                    {
+                        throw new LogicException(res0.Description);
+                    }
+                    Thread.Sleep(2500);
                 }
-                catch (Exception ex)
+
+                if (discordInstance.Account.EnableNiji == true)
                 {
-                    Log.Error(ex, "同步 Niji 信息异常");
+                    try
+                    {
+                        // 如果没有开启 NIJI 转 MJ
+                        if (GlobalConfiguration.Setting.EnableConvertNijiToMj == false)
+                        {
+                            var res2 = await discordInstance.SettingAsync(SnowFlake.NextId(), EBotType.NIJI_JOURNEY);
+                            if (res2.Code != ReturnCode.SUCCESS)
+                            {
+                                throw new LogicException(res2.Description);
+                            }
+                            Thread.Sleep(2500);
+
+                            var res = await discordInstance.InfoAsync(SnowFlake.NextId(), EBotType.NIJI_JOURNEY);
+                            if (res.Code != ReturnCode.SUCCESS)
+                            {
+                                throw new LogicException(res.Description);
+                            }
+                            Thread.Sleep(2500);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Error(ex, "同步 Niji 信息异常");
+                    }
                 }
             }
         }
