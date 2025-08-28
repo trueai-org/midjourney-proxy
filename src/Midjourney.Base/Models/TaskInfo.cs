@@ -852,7 +852,7 @@ namespace Midjourney.Base.Models
         /// <summary>
         /// 设置视频放大按钮。
         /// </summary>
-        public void SetVideoUpscaleButtons(string id)
+        public void SetVideoUpscaleButtons(string id, int videoCount = 4)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
@@ -861,7 +861,7 @@ namespace Midjourney.Base.Models
 
             Buttons.Clear();
 
-            for (int i = 1; i <= 4; i++)
+            for (int i = 1; i <= videoCount; i++)
             {
                 Buttons.Add(new CustomComponentModel
                 {
