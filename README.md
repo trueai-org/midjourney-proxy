@@ -25,7 +25,7 @@ The most powerful, complete, full-featured, completely free and open source Midj
 
 官网：<https://trueai.org>
 
-企业入驻：<https://admin.trueai.org>
+企业注册：<https://admin.trueai.org>
 
 更多官方镜像站接入指南：<https://trueai-org.feishu.cn/wiki/VvEZwL0X8i14wGkXcfrc85w7nFU>
 
