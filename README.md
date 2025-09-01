@@ -21,6 +21,7 @@ The most powerful, complete, full-featured, completely free and open source Midj
 - 😍 多端登录，不限设备，不限网络，永不封号！
 - 💖 现已开放内测，官网 1.3 折 优惠，欢迎收藏体验！
 - 🥃 支持频道分享，支持多人聊天，支持多人绘图！
+- ☘ 只需一个域名，即刻拥有 Discord 官方镜像站！无需自己部署，无需服务器！
 
 官网：<https://trueai.org>
 
