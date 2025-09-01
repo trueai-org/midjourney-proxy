@@ -14,14 +14,19 @@ The most powerful, complete, full-featured, completely free and open source Midj
 
 ⭐ 如果觉得项目不错，请一定帮忙点个 `Star`，万分感谢！
 
-## 👍👍 Disocord Midjourney 官方镜像站，官方 1 折优惠！
+## 👍👍 Disocord Midjourney 官方镜像站，官方 1.3 折优惠！
 
 - 🍎 支持 Discord 所有指令！
 - 🐂 注册即送 25 张免费 Midjourney 额度！
 - 😍 多端登录，不限设备，不限网络，永不封号！
 - 💖 现已开放内测，官网 1.3 折 优惠，欢迎收藏体验！
+- 🥃 支持频道分享，支持多人聊天，支持多人绘图！
 
 官网：<https://trueai.org>
+
+企业入驻：<https://admin.trueai.org>
+
+更多官方镜像站接入指南：<https://trueai-org.feishu.cn/wiki/VvEZwL0X8i14wGkXcfrc85w7nFU>
 
 <img src="./docs/screenshots/trueai.org.jpg" alt="trueai.org" width="360"/>
 
