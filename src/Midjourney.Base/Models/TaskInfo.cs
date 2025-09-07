@@ -165,6 +165,15 @@ namespace Midjourney.Base.Models
         public TaskStatus? Status { get; set; }
 
         /// <summary>
+        /// 是否已完成
+        /// </summary>
+        [LiteDB.BsonIgnore]
+        [MongoDB.Bson.Serialization.Attributes.BsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        [Column(IsIgnore = true)]
+        public bool IsCompleted => Status == TaskStatus.SUCCESS || Status == TaskStatus.FAILURE || Status == TaskStatus.CANCEL;
+
+        /// <summary>
         /// 提示词。
         /// </summary>
         [Column(StringLength = -1)]

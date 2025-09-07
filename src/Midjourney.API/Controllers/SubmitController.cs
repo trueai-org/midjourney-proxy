@@ -26,8 +26,6 @@ using System.Net;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Identity.Client;
-using Midjourney.Base.Dto;
 using Midjourney.Infrastructure.LoadBalancer;
 
 namespace Midjourney.API.Controllers

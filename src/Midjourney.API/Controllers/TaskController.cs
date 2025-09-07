@@ -108,7 +108,11 @@ namespace Midjourney.API.Controllers
             {
                 if (user.Id == queueTask.UserId || user.Role == EUserRole.ADMIN)
                 {
-                    queueTask.Fail("主动取消任务");
+                    if (!queueTask.IsCompleted)
+                    {
+                        queueTask.Fail("主动取消任务");
+                        _taskStoreService.Save(queueTask);
+                    }
                 }
             }
             else
@@ -125,8 +129,11 @@ namespace Midjourney.API.Controllers
                 {
                     if (user.Id == targetTask.UserId || user.Role == EUserRole.ADMIN)
                     {
-                        targetTask.Fail("取消任务");
-                        _taskStoreService.Save(targetTask);
+                        if (!targetTask.IsCompleted)
+                        {
+                            targetTask.Fail("取消任务");
+                            _taskStoreService.Save(targetTask);
+                        }
                     }
                 }
             }
