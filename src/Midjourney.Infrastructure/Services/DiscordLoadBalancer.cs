@@ -80,7 +80,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
             GenerationSpeedMode? preferredSpeedMode = null,
             bool? isYm = null,
             bool? isVideo = null,
-            bool? isHdVideo = null)
+            bool? isHdVideo = null,
+            bool? isYouChuan = null)
         {
             var list = GetAliveInstances()
 
@@ -95,6 +96,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                 // 判断悠船或官方账号
                 .WhereIf(isYm == true, c => c.Account.IsYouChuan || c.Account.IsOfficial)
+
+                // 判断悠船
+                .WhereIf(isYouChuan == true, c => c.Account.IsYouChuan)
 
                 // 判断是否允许视频操作
                 .WhereIf(isVideo == true, c => c.Account.IsAllowGenerateVideo(isVideo))
