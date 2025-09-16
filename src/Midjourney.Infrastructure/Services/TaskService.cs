@@ -1352,7 +1352,9 @@ namespace Midjourney.Infrastructure.Services
             }
 
             // 悠船账号，当无可用账号时，采取重试机制
-            if (discordInstance == null || discordInstance?.Account?.IsDailyLimitContinueDrawing(task.Mode) != true)
+            if (discordInstance == null
+                || discordInstance?.Account?.IsDailyLimitContinueDrawing(task.Mode) != true
+                || !discordInstance.Account.IsValidateModeContinueDrawing(task.Mode, task.AccountFilter?.Modes, out var mode))
             {
                 if (targetTask.IsPartner && setting.EnableYouChuanRetry)
                 {
@@ -1385,7 +1387,7 @@ namespace Midjourney.Infrastructure.Services
             }
             else
             {
-                if (!discordInstance.Account.IsValidateModeContinueDrawing(task.Mode, task.AccountFilter?.Modes, out var mode))
+                if (!discordInstance.Account.IsValidateModeContinueDrawing(task.Mode, task.AccountFilter?.Modes, out mode))
                 {
                     return SubmitResultVO.Fail(ReturnCode.FAILURE, "无可用的账号实例");
                 }
@@ -1397,8 +1399,6 @@ namespace Midjourney.Infrastructure.Services
 
                 task.Mode = mode;
             }
-
-
 
             var messageFlags = targetTask.GetProperty<string>(Constants.TASK_PROPERTY_FLAGS, default)?.ToInt() ?? 0;
             var messageId = targetTask.GetProperty<string>(Constants.TASK_PROPERTY_MESSAGE_ID, default);
@@ -1802,7 +1802,9 @@ namespace Midjourney.Infrastructure.Services
             }
 
             // 悠船账号，当无可用账号时，采取重试机制
-            if (discordInstance == null || discordInstance?.Account?.IsDailyLimitContinueDrawing(task.Mode) != true)
+            if (discordInstance == null
+                || discordInstance?.Account?.IsDailyLimitContinueDrawing(task.Mode) != true
+                || !discordInstance.Account.IsValidateModeContinueDrawing(task.Mode, task.AccountFilter?.Modes, out var mode))
             {
                 if (task.IsPartner && setting.EnableYouChuanRetry)
                 {
@@ -1819,10 +1821,11 @@ namespace Midjourney.Infrastructure.Services
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
 
-            if (!discordInstance.Account.IsValidateModeContinueDrawing(task.Mode, task.AccountFilter?.Modes, out var mode))
+            if (!discordInstance.Account.IsValidateModeContinueDrawing(task.Mode, task.AccountFilter?.Modes, out mode))
             {
                 return SubmitResultVO.Fail(ReturnCode.FAILURE, "无可用的账号实例");
             }
+
             if (!discordInstance.IsIdleQueue(mode))
             {
                 return SubmitResultVO.Fail(ReturnCode.FAILURE, "提交失败，队列已满，请稍后重试");
