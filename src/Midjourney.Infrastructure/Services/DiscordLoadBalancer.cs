@@ -92,7 +92,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 .Where(c => c.Account.IsDailyLimitContinueDrawing(preferredSpeedMode) && c.Account.Enable == true)
 
                 // 首选速度绘图判断
-                .Where(c => c.Account.IsValidateModeContinueDrawing(preferredSpeedMode, accountFilter.Modes, out _))
+                .Where(c => c.Account.IsValidateModeContinueDrawing(preferredSpeedMode, accountFilter?.Modes, out _))
 
                 // 判断悠船或官方账号
                 .WhereIf(isYm == true, c => c.Account.IsYouChuan || c.Account.IsOfficial)
@@ -106,14 +106,11 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 // 高清视频支持
                 .WhereIf(isHdVideo == true, c => c.Account.IsHdVideo)
 
-                //// 允许速度模式过滤，有交集的
-                //.WhereIf(accountFilter?.Modes.Count > 0, c => c.Account.AllowModes == null || c.Account.AllowModes.Count <= 0 || c.Account.AllowModes.Any(x => accountFilter.Modes.Contains(x)))
-
                 // Discord 绘图判断
                 .WhereIf(accountFilter?.Modes.Count > 0, c => c.Account.IsDiscordContinueDrawing(accountFilter.Modes.ToArray()))
 
                 // 指定 ID 的实例
-                .WhereIf(!string.IsNullOrWhiteSpace(accountFilter.InstanceId), c => c.ChannelId == accountFilter.InstanceId)
+                .WhereIf(!string.IsNullOrWhiteSpace(accountFilter?.InstanceId), c => c.ChannelId == accountFilter.InstanceId)
 
                 // Midjourney Remix 过滤
                 .WhereIf(accountFilter?.Remix == true, c => c.Account.MjRemixOn == accountFilter.Remix || !c.Account.RemixAutoSubmit)

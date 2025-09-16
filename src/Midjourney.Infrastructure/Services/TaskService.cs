@@ -1345,10 +1345,16 @@ namespace Midjourney.Infrastructure.Services
                 }
             }
 
+            var targetTask = _taskStoreService.Get(submitAction.TaskId)!;
+            if (targetTask == null)
+            {
+                return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "目标任务不存在");
+            }
+
             // 悠船账号，当无可用账号时，采取重试机制
             if (discordInstance == null || discordInstance?.Account?.IsDailyLimitContinueDrawing(task.Mode) != true)
             {
-                if (task.IsPartner && setting.EnableYouChuanRetry)
+                if (targetTask.IsPartner && setting.EnableYouChuanRetry)
                 {
                     discordInstance = _discordLoadBalancer.ChooseInstance(task.AccountFilter,
                         isNewTask: true,
@@ -1392,11 +1398,7 @@ namespace Midjourney.Infrastructure.Services
                 task.Mode = mode;
             }
 
-            var targetTask = _taskStoreService.Get(submitAction.TaskId)!;
-            if (targetTask == null)
-            {
-                return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "目标任务不存在");
-            }
+
 
             var messageFlags = targetTask.GetProperty<string>(Constants.TASK_PROPERTY_FLAGS, default)?.ToInt() ?? 0;
             var messageId = targetTask.GetProperty<string>(Constants.TASK_PROPERTY_MESSAGE_ID, default);
