@@ -1055,11 +1055,10 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// </summary>
         public void Dispose()
         {
+            var accountId = Account?.Id;
+
             try
             {
-                // 清除缓存
-                ClearAccountCache(Account?.Id);
-
                 BotMessageListener?.Dispose();
                 WebSocketManager?.Dispose();
 
@@ -1130,6 +1129,11 @@ namespace Midjourney.Infrastructure.LoadBalancer
             }
             catch
             {
+            }
+            finally
+            {
+                // 最后清除缓存
+                ClearAccountCache(accountId);
             }
         }
 
