@@ -114,6 +114,23 @@ namespace Midjourney.API
                         });
                     }
 
+                    // 启用视频功能
+                    if (GlobalConfiguration.Setting.EnableVideo)
+                    {
+                        Task.Run(async () =>
+                        {
+                            try
+                            {
+                                await new VideoToWebPConverter().ConfigureFFMpeg();
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.Error(ex, "初始化视频业务异常");
+                            }
+                        });
+                    }
+
+
                     var setting = GlobalConfiguration.Setting;
 
                     // 初始化数据库索引
