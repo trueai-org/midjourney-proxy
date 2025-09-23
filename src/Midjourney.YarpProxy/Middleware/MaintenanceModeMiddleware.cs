@@ -23,7 +23,8 @@ namespace Midjourney.YarpProxy.Middleware
         {
             // 如果是调试端点，直接放行
             if (context.Request.Path.StartsWithSegments("/debug") ||
-                context.Request.Path.StartsWithSegments("/health"))
+                context.Request.Path.StartsWithSegments("/health") ||
+                context.Request.Path.StartsWithSegments("/yarp-admin"))
             {
                 await _next(context);
                 return;

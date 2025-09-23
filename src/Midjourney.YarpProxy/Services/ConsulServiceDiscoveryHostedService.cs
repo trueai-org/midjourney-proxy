@@ -170,7 +170,11 @@ namespace Midjourney.YarpProxy.Services
             {
                 var destination = new DestinationConfig
                 {
-                    Address = $"http://{service.Address}:{service.Port}"
+                    Address = $"http://{service.Address}:{service.Port}",
+                    Metadata = new Dictionary<string, string>
+                    {
+                        { "Weight", "1" },
+                    }
                 };
                 destinations.Add($"midjourney-{service.ID}", destination);
             }
@@ -180,7 +184,7 @@ namespace Midjourney.YarpProxy.Services
                 new ClusterConfig
                 {
                     ClusterId = "midjourney-cluster",
-                    LoadBalancingPolicy = LoadBalancingPolicies.RoundRobin,
+                    LoadBalancingPolicy = LoadBalancingPolicies.RoundRobin, // "WeightedRandom", // LoadBalancingPolicies.RoundRobin,
                     HealthCheck = new HealthCheckConfig
                     {
                         Active = new ActiveHealthCheckConfig
@@ -229,7 +233,7 @@ namespace Midjourney.YarpProxy.Services
 
 
             _yarpConfigProvider.Update(routes, clusters);
-            
+
 
             _logger.LogInformation("已更新 YARP 配置，路由数量: {RouteCount}, 集群数量: {ClusterCount}, 目标服务数量: {DestinationCount}",
                 routes.Count, clusters.Count, destinations.Count);

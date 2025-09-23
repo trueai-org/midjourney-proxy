@@ -42,6 +42,15 @@ namespace Midjourney.API
         {
             var path = context.Request.Path.Value;
 
+            // /health 不需要检查授权
+            if (path.StartsWith("/health", StringComparison.OrdinalIgnoreCase) ||
+                path.StartsWith("/debug", StringComparison.OrdinalIgnoreCase))
+            {
+                await _next(context);
+                return;
+            }
+
+
             if (path.StartsWith("/mj-turbo", StringComparison.OrdinalIgnoreCase))
             {
                 context.Items["Mode"] = "turbo";
