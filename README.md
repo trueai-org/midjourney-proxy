@@ -464,6 +464,11 @@ docker run -d \
 
 ## Consul 配置
 
+技术方案
+
+> Caddy -> [Yarp | Traefik | Ocelot] -> Midjourney API -> Consul <-> [Yarp | Traefik | Ocelot]
+
+
 ```bash
 
 docker stop consul && docker rm consul
