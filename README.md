@@ -473,6 +473,10 @@ TODO
 集群方案 -> redis / memerycache
 redis 锁, lock:{id}:1, lock:{id}:2, ... lock:{id}:n
 队列调整为预处理, 然后持久化, 最后将队列持久化到 redis
+
+todo 显示 yarp 每个节点目前的连接数
+支持自动切换到最新版
+自动删除旧版（无连接数且超过 n 分后自动下线）
 ```
 
 ```bash
