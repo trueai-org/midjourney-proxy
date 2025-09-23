@@ -468,6 +468,12 @@ docker run -d \
 
 > Caddy -> [Yarp | Traefik | Ocelot] -> Midjourney API -> Consul <-> [Yarp | Traefik | Ocelot]
 
+```txt
+TODO
+集群方案 -> redis / memerycache
+redis 锁, lock:{id}:1, lock:{id}:2, ... lock:{id}:n
+队列调整为预处理, 然后持久化, 最后将队列持久化到 redis
+```
 
 ```bash
 
