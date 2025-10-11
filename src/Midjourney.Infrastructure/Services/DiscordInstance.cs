@@ -30,6 +30,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Caching.Memory;
 using Midjourney.License;
+using Midjourney.License.YouChuan;
 using Newtonsoft.Json.Linq;
 using Serilog;
 
@@ -98,6 +99,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
         private readonly IYmTaskService _ymTaskService;
 
+        private readonly IHttpClientFactory _httpClientFactory;
+
         public DiscordInstance(
             IMemoryCache memoryCache,
             DiscordAccount account,
@@ -106,8 +109,10 @@ namespace Midjourney.Infrastructure.LoadBalancer
             DiscordHelper discordHelper,
             Dictionary<string, string> paramsMap,
             IWebProxy webProxy,
-            ITaskService taskService)
+            ITaskService taskService,
+            IHttpClientFactory httpClientFactory)
         {
+            _httpClientFactory = httpClientFactory;
             _logger = Log.Logger;
 
             var hch = new HttpClientHandler
@@ -154,7 +159,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
             if (account.IsYouChuan || account.IsOfficial)
             {
-                _ymTaskService = new YmTaskService(account, this, _cache);
+                _ymTaskService = new YmTaskService(account, this, _cache, _httpClientFactory);
             }
         }
 

@@ -26,7 +26,6 @@ global using Midjourney.Base;
 global using Midjourney.Base.Data;
 global using Midjourney.Base.Dto;
 global using Midjourney.Base.Models;
-global using Midjourney.Base.Options;
 global using Midjourney.Base.Services;
 global using Midjourney.Base.StandardTable;
 global using Midjourney.Base.Storage;
@@ -39,14 +38,11 @@ global using TaskStatus = Midjourney.Base.TaskStatus;
 using System.Reflection;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
 using Midjourney.Infrastructure.Services;
 using Midjourney.License;
+using Midjourney.License.YouChuan;
 using MongoDB.Driver;
 using Serilog;
 
@@ -164,8 +160,9 @@ namespace Midjourney.API
                 };
             });
 
-            // 注册 HttpClient
+            // 注册 IHttpClientFactory 复用 HttpClient 实例
             services.AddHttpClient();
+            services.AddYouChuanHttpClient();
 
             // 升级服务
             services.TryAddSingleton<IUpgradeService, UpgradeService>();
