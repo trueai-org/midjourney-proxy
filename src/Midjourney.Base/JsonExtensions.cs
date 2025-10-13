@@ -15,26 +15,87 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Additional Terms:
-// This software shall not be used for any illegal activities. 
+// This software shall not be used for any illegal activities.
 // Users must comply with all applicable laws and regulations,
-// particularly those related to image and video processing. 
+// particularly those related to image and video processing.
 // The use of this software for any form of illegal face swapping,
-// invasion of privacy, or any other unlawful purposes is strictly prohibited. 
+// invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
+using System.Text.Json;
 using Newtonsoft.Json;
 
 namespace Midjourney.Base
 {
     public static class JsonExtensions
     {
-        public static string ToJson<T>(this T obj)
+        /// <summary>
+        /// 使用 Newtonsoft.Json 序列化对象
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="obj"></param>
+        /// <param name="jsonSerializerSettings"></param>
+        /// <returns></returns>
+        public static string ToJson<T>(this T obj, JsonSerializerSettings jsonSerializerSettings = null)
         {
-            return JsonConvert.SerializeObject(obj);
+            return JsonConvert.SerializeObject(obj, jsonSerializerSettings);
         }
 
-        public static T ToObject<T>(this string json, JsonSerializerSettings settings = null)
+        /// <summary>
+        /// 使用 Newtonsoft.Json 反序列化对象
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="json"></param>
+        /// <param name="jsonSerializerSettings"></param>
+        /// <returns></returns>
+        public static T ToObject<T>(this string json, JsonSerializerSettings jsonSerializerSettings = null)
         {
-            return JsonConvert.DeserializeObject<T>(json, settings);
+            return JsonConvert.DeserializeObject<T>(json, jsonSerializerSettings);
+        }
+
+        /// <summary>
+        /// 使用 System.Text.Json 序列化对象
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="obj"></param>
+        /// <param name="jsonSerializerOptions"></param>
+        /// <returns></returns>
+        public static string ToSystemTextJson<T>(this T obj, JsonSerializerOptions jsonSerializerOptions = null)
+        {
+            return System.Text.Json.JsonSerializer.Serialize(obj, jsonSerializerOptions);
+        }
+
+        /// <summary>
+        /// 使用 System.Text.Json 反序列化对象
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="json"></param>
+        /// <param name="options"></param>
+        /// <returns></returns>
+        public static T ToSystemTextObject<T>(this string json, System.Text.Json.JsonSerializerOptions options = null)
+        {
+            return System.Text.Json.JsonSerializer.Deserialize<T>(json, options);
+        }
+
+        /// <summary>
+        /// 使用 System.Text.Json 反序列化对象，失败时不抛异常
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="json"></param>
+        /// <param name="result"></param>
+        /// <param name="options"></param>
+        /// <returns></returns>
+        public static bool TryToSystemTextObject<T>(this string json, out T result, System.Text.Json.JsonSerializerOptions options = null)
+        {
+            try
+            {
+                result = System.Text.Json.JsonSerializer.Deserialize<T>(json, options);
+                return true;
+            }
+            catch
+            {
+                result = default;
+                return false;
+            }
         }
 
         /// <summary>
