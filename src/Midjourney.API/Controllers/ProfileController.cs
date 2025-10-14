@@ -65,6 +65,14 @@ namespace Midjourney.API.Controllers
                     return;
                 }
             }
+
+            var setting = GlobalConfiguration.Setting;
+            if (!setting.PrivateEnableOfficialPersonalize)
+            {
+                context.HttpContext.Response.StatusCode = (int)HttpStatusCode.Forbidden;
+                context.HttpContext.Response.WriteAsync("Forbidden: Official Personalize is disabled.");
+                return;
+            }
         }
 
         /// <summary>

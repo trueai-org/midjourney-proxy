@@ -104,6 +104,11 @@ namespace Midjourney.Base.Models
         public bool PrivateEnableYouChuanMergedCustomize { get; set; } = false;
 
         /// <summary>
+        /// 开启官方个性化配置
+        /// </summary>
+        public bool PrivateEnableOfficialPersonalize { get; set; } = false;
+
+        /// <summary>
         /// 悠船绘图时将 prompt 提示词中的链接转为悠船官网链接
         /// </summary>
         public bool EnableYouChuanPromptLink { get; set; }
