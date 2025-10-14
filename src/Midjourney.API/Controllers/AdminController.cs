@@ -1034,6 +1034,7 @@ namespace Midjourney.API.Controllers
             model.DayRelaxDrawLimit = param.DayRelaxDrawLimit;
             model.IsRelaxVideo = param.IsRelaxVideo;
             model.IsHdVideo = param.IsHdVideo;
+            model.OfficialEnablePersonalize = param.OfficialEnablePersonalize;
 
             // 如果是悠船、官方
             // 清除禁用原因

@@ -1244,6 +1244,7 @@ namespace Midjourney.API
                 model.Sponsor = param.Sponsor;
                 model.IsHdVideo = param.IsHdVideo;
                 model.IsRelaxVideo = param.IsRelaxVideo;
+                model.OfficialEnablePersonalize = param.OfficialEnablePersonalize;
 
                 DbHelper.Instance.AccountStore.Update(model);
 

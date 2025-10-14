@@ -415,12 +415,6 @@ namespace Midjourney.Base.Models
         public bool EnableConvertOfficialLink { get; set; } = true;
 
         /// <summary>
-        /// 启用转换云/加速链接/OSS/COS/CDN
-        /// </summary>
-        [Obsolete("废弃")]
-        public bool EnableConvertAliyunLink { get; set; }
-
-        /// <summary>
         /// 保存用户上传的 link 到文件存储（例如：describe）
         /// </summary>
         public bool EnableSaveUserUploadLink { get; set; } = true;
@@ -992,6 +986,11 @@ namespace Midjourney.Base.Models
         /// 是否为官方账号
         /// </summary>
         public bool IsOfficial { get; set; }
+
+        /// <summary>
+        /// 官方账号是否启用个性化配置 - 启用后可以使用此账号生成个性化配置 -p 参数
+        /// </summary>
+        public bool OfficialEnablePersonalize { get; set; } = false;
 
         /// <summary>
         /// 启用高清视频（Pro or Mega 以上套餐，可以开启此功能）

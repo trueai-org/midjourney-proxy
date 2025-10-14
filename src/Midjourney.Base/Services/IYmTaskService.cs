@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Threading.Tasks;
-using Midjourney.Base.Dto;
+﻿using Midjourney.Base.Dto;
 
 namespace Midjourney.Base.Services
 {
@@ -42,7 +40,7 @@ namespace Midjourney.Base.Services
              SubmitActionDTO submitAction,
              TaskInfo targetTask,
              ITaskStoreService taskStoreService,
-             IDiscordInstance discordInstance, 
+             IDiscordInstance discordInstance,
              string newPrompt = null);
 
         /// <summary>
@@ -97,5 +95,28 @@ namespace Midjourney.Base.Services
         /// <param name="type">文件类型，默认为0</param>
         /// <returns>上传后的文件URL</returns>
         Task<string> UploadFile(TaskInfo task, byte[] fileContent, string fileName, int type = 0);
+
+        /// <summary>
+        /// 创建个性化配置
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="request"></param>
+        /// <returns></returns>
+        Task<ProfileCreateResultDto> ProfileCreateAsync(ProfileCreateDto request);
+
+        /// <summary>
+        /// 创建个性化配置 - 跳过评分
+        /// </summary>
+        /// <param name="personalize"></param>
+        /// <returns></returns>
+        Task<ProfileGetRandomPairsResponse> ProfileCreateSkipAsync(PersonalizeTag personalize, string cursor = "");
+
+        /// <summary>
+        /// 创建个性化配置 - 评分
+        /// </summary>
+        /// <param name="personalize"></param>
+        /// <param name="isRight"></param>
+        /// <returns></returns>
+        Task<ProfileGetRandomPairsResponse> ProfileCreateRateAsync(PersonalizeTag personalize, bool isRight);
     }
 }

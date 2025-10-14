@@ -58,5 +58,10 @@ namespace Midjourney.Base.Data
         /// 禁用词存储。
         /// </summary>
         public static LiteDBRepository<BannedWord> BannedWordStore = new LiteDBRepository<BannedWord>("data/mj.db");
+
+        /// <summary>
+        /// 个性化标签存储。
+        /// </summary>
+        public static LiteDBRepository<PersonalizeTag> PersonalizeTagStore = new LiteDBRepository<PersonalizeTag>("data/mj.db");
     }
 }

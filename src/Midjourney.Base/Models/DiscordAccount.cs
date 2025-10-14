@@ -1009,6 +1009,11 @@ namespace Midjourney.Base.Models
         public int OfficialFastRemaining { get; set; } = 0;
 
         /// <summary>
+        /// 官方账号是否启用个性化配置 - 启用后可以使用此账号生成个性化配置 -p 参数
+        /// </summary>
+        public bool OfficialEnablePersonalize { get; set; } = false;
+
+        /// <summary>
         /// 服务运行中 - 用于前台显示
         /// </summary>
         [LiteDB.BsonIgnore]
@@ -1317,6 +1322,7 @@ namespace Midjourney.Base.Models
                 Login2fa = configAccount.Login2fa,
                 IsYouChuan = configAccount.IsYouChuan,
                 IsOfficial = configAccount.IsOfficial,
+                OfficialEnablePersonalize = configAccount.OfficialEnablePersonalize,
                 IsHdVideo = configAccount.IsHdVideo,
                 IsRelaxVideo = configAccount.IsRelaxVideo,
             };

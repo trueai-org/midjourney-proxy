@@ -250,5 +250,15 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// </summary>
         /// <param name="instance"></param>
         public void RemoveInstance(DiscordInstance instance) => _instances.Remove(instance);
+
+        /// <summary>
+        /// 获取一个启用官方个性化的存活的实例
+        /// </summary>
+        /// <returns></returns>
+        public DiscordInstance GetAliveOfficialPersonalizeInstance()
+        {
+            var list = GetAliveInstances().Where(c => c.Account.OfficialEnablePersonalize).ToList();
+            return _rule.Choose(list);
+        }
     }
 }

@@ -38,6 +38,7 @@ namespace Midjourney.Base.Data
         private IDataHelper<User> _userStore;
         private IDataHelper<DomainTag> _domainStore;
         private IDataHelper<BannedWord> _bannedWordStore;
+        private IDataHelper<PersonalizeTag> _personalizeTagWordStore;
 
         public DbHelper()
         {
@@ -70,6 +71,11 @@ namespace Midjourney.Base.Data
         public IDataHelper<BannedWord> BannedWordStore => _bannedWordStore;
 
         /// <summary>
+        /// 个性化标签数据库操作
+        /// </summary>
+        public IDataHelper<PersonalizeTag> PersonalizeTagWordStore => _personalizeTagWordStore;
+
+        /// <summary>
         /// 初始化数据库
         /// </summary>
         public void Init()
@@ -84,6 +90,7 @@ namespace Midjourney.Base.Data
                         _userStore = LiteDBHelper.UserStore;
                         _domainStore = LiteDBHelper.DomainStore;
                         _bannedWordStore = LiteDBHelper.BannedWordStore;
+                        _personalizeTagWordStore = LiteDBHelper.PersonalizeTagStore;
                     }
                     break;
                 case DatabaseType.MongoDB:
@@ -93,6 +100,7 @@ namespace Midjourney.Base.Data
                         _userStore = new MongoDBRepository<User>();
                         _domainStore = new MongoDBRepository<DomainTag>();
                         _bannedWordStore = new MongoDBRepository<BannedWord>();
+                        _personalizeTagWordStore = new MongoDBRepository<PersonalizeTag>();
                     }
                     break;
                 case DatabaseType.SQLite:
@@ -105,6 +113,7 @@ namespace Midjourney.Base.Data
                         _userStore = new FreeSqlRepository<User>();
                         _domainStore = new FreeSqlRepository<DomainTag>();
                         _bannedWordStore = new FreeSqlRepository<BannedWord>();
+                        _personalizeTagWordStore = new FreeSqlRepository<PersonalizeTag>();
                     }
                     break;
                 default:
@@ -284,6 +293,8 @@ namespace Midjourney.Base.Data
 
                                         // 第三批
                                         freeSql.CodeFirst.SyncStructure(typeof(TaskInfo));
+
+                                        freeSql.CodeFirst.SyncStructure(typeof(PersonalizeTag));
 
                                         // 验证成功后，确认配置当前数据库
                                         freeSql = FreeSqlHelper.Init(false);

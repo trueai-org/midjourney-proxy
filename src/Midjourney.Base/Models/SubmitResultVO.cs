@@ -114,6 +114,15 @@ namespace Midjourney.Base.Models
         public static SubmitResultVO Of(int code, string description, List<string> result) => new SubmitResultVO(code, description, result);
 
         /// <summary>
+        /// 返回带自定义状态码、描述和任务ID的提交结果。
+        /// </summary>
+        /// <param name="code"></param>
+        /// <param name="description"></param>
+        /// <param name="result"></param>
+        /// <returns></returns>
+        public static SubmitResultVO Of(int code, string description, dynamic result) => new SubmitResultVO(code, description, result);
+
+        /// <summary>
         /// 返回失败的提交结果。
         /// </summary>
         public static SubmitResultVO Fail(int code, string description) => new SubmitResultVO(code, description);
