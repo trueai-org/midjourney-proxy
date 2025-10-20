@@ -81,28 +81,28 @@ namespace Midjourney.API.Controllers
         /// <param name="createDto"></param>
         /// <returns></returns>
         [HttpPost("create")]
-        public async Task<ActionResult<PersonalizeTagResult>> ProfileCreate([FromBody] ProfileCreateDto createDto)
+        public async Task<ActionResult<SubmitResultVO>> ProfileCreate([FromBody] ProfileCreateDto createDto)
         {
             if (_isAnonymous)
             {
-                throw new UnauthorizedAccessException("演示模式，禁止操作");
+                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "演示模式，禁止操作"));
             }
 
             if (createDto == null || string.IsNullOrWhiteSpace(createDto.Title))
             {
-                throw new ArgumentNullException(nameof(createDto));
+                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "参数错误"));
             }
 
             var instance = _loadBalancer.GetAliveOfficialPersonalizeInstance();
             if (instance == null)
             {
-                throw new InvalidOperationException("无可用的账号实例");
+                return Ok(SubmitResultVO.Fail(ReturnCode.FAILURE, "无可用的账号实例"));
             }
 
             var res = await instance.YmTaskService.ProfileCreateAsync(createDto);
             if (string.IsNullOrWhiteSpace(res?.ProfileId))
             {
-                throw new InvalidOperationException("创建失败");
+                return Ok(SubmitResultVO.Fail(ReturnCode.FAILURE, "创建失败"));
             }
 
             var model = new PersonalizeTag()
@@ -115,7 +115,7 @@ namespace Midjourney.API.Controllers
 
             DbHelper.Instance.PersonalizeTagWordStore.Add(model);
 
-            return Ok(model.ToResult());
+            return Ok(SubmitResultVO.Of(ReturnCode.SUCCESS, "成功", model.Id));
         }
 
         /// <summary>
@@ -217,6 +217,8 @@ namespace Midjourney.API.Controllers
                 return Ok(SubmitResultVO.Fail(ReturnCode.FAILURE, "操作失败"));
             }
 
+            model.ClickTotal++;
+            model.SkipCount++;
             model.RandomPairs = res;
 
             DbHelper.Instance.PersonalizeTagWordStore.Update(model);
@@ -272,13 +274,25 @@ namespace Midjourney.API.Controllers
             }
 
             var isRight = jobs[1].Id == req.JobId;
+
+            if (isRight)
+            {
+                model.ClickRight++;
+            }
+            else
+            {
+                model.ClickLeft++;
+            }
+
+            model.WinTotal++;
+            model.ClickTotal++;
+
             var res = await instance.YmTaskService.ProfileCreateRateAsync(model, isRight);
             if (res == null)
             {
                 return Ok(SubmitResultVO.Fail(ReturnCode.FAILURE, "操作失败"));
             }
 
-            model.RankingCount++;
             model.RandomPairs = res;
 
             DbHelper.Instance.PersonalizeTagWordStore.Update(model);

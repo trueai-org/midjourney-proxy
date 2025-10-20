@@ -57,9 +57,29 @@ namespace Midjourney.Base.Models
         public string Version { get; set; }
 
         /// <summary>
-        /// 评分数量
+        /// 总点击次数
         /// </summary>
-        public int RankingCount { get; set; }
+        public int ClickTotal { get; set; }
+
+        /// <summary>
+        /// 左边点击次数
+        /// </summary>
+        public int ClickLeft { get; set; }
+
+        /// <summary>
+        /// 右边点击次数
+        /// </summary>
+        public int ClickRight { get; set; }
+
+        /// <summary>
+        /// 跳过的次数
+        /// </summary>
+        public int SkipCount { get; set; }
+
+        /// <summary>
+        /// 总评分次数
+        /// </summary>
+        public int WinTotal { get; set; }
 
         /// <summary>
         /// 最后一次配对的响应对象
@@ -103,8 +123,12 @@ namespace Midjourney.Base.Models
                 Version = Version,
                 CreatedAt = CreateTimeFormat,
                 UpdateeAt = UpdateTimeFormat,
-                Status = (Version == "6" && RankingCount >= 40) || (Version == "7" && RankingCount >= 200) ? "UNLOCKED" : "BUILDING",
-                ClickRight = RankingCount
+                Status = (Version == "6" && ClickTotal >= 40) || (Version == "7" && ClickTotal >= 200) ? "UNLOCKED" : "BUILDING",
+                ClickTotal = ClickTotal,
+                ClickLeft = ClickLeft,
+                ClickRight = ClickRight,
+                SkipCount = SkipCount,
+                WinTotal = WinTotal,
             };
         }
     }
@@ -147,8 +171,28 @@ namespace Midjourney.Base.Models
         public string Status { get; set; }
 
         /// <summary>
-        /// 评分数量
+        /// 总点击次数
+        /// </summary>
+        public int ClickTotal { get; set; }
+
+        /// <summary>
+        /// 左边点击次数
+        /// </summary>
+        public int ClickLeft { get; set; }
+
+        /// <summary>
+        /// 右边点击次数
         /// </summary>
         public int ClickRight { get; set; }
+
+        /// <summary>
+        /// 跳过的次数
+        /// </summary>
+        public int SkipCount { get; set; }
+
+        /// <summary>
+        /// 总评分次数
+        /// </summary>
+        public int WinTotal { get; set; }
     }
 }
