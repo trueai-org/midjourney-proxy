@@ -123,7 +123,7 @@ namespace Midjourney.Base.Models
                 Version = Version,
                 CreatedAt = CreateTimeFormat,
                 UpdateeAt = UpdateTimeFormat,
-                Status = (Version == "6" && ClickTotal >= 40) || (Version == "7" && ClickTotal >= 200) ? "UNLOCKED" : "BUILDING",
+                Status = (Version == "6" && WinTotal >= 40) || (Version == "7" && WinTotal >= 200) ? "UNLOCKED" : "BUILDING",
                 ClickTotal = ClickTotal,
                 ClickLeft = ClickLeft,
                 ClickRight = ClickRight,
