@@ -97,9 +97,9 @@ namespace Midjourney.Base.Util
         /// </summary>
         /// <param name="url">https://mp-70570b1c-bf6a-40fe-9635-8e5c1901c65d.cdn.bspapp.com/temp/1723592564348_0.png</param>
         /// <returns></returns>
-        public async Task<FetchFileResult> FetchFileAsync(string url, int retry = 0)
+        public async Task<FetchFileResult> FetchFileAsync(string url, int retry = 0, bool isWhite = true, bool isRetry = true)
         {
-            if (retry > 5)
+            if (isRetry && retry > 5)
             {
                 return new FetchFileResult { Success = false, Msg = "Fetch retry limit exceeded" };
             }
@@ -115,7 +115,7 @@ namespace Midjourney.Base.Util
                 var host = new Uri(url).Host;
 
                 // 官方域名不做转换
-                if (WHITE_HOSTS.Any(x => host.Contains(x)))
+                if (isWhite && WHITE_HOSTS.Any(x => host.Contains(x)))
                 {
                     return new FetchFileResult { Success = true, Url = url, Msg = "White host" };
                 }
@@ -139,7 +139,10 @@ namespace Midjourney.Base.Util
                             var newUrl = response.Headers.Location.ToString();
                             if (newUrl != url)
                             {
-                                return await FetchFileAsync(url, ++retry);
+                                if (isRetry)
+                                {
+                                    return await FetchFileAsync(url, ++retry, isWhite, isRetry);
+                                }
                             }
                         }
                     }

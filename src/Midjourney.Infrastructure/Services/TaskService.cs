@@ -25,6 +25,7 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.Text.RegularExpressions;
+using Amazon.Runtime.Internal.Endpoints.StandardLibrary;
 using Microsoft.Extensions.Caching.Memory;
 using Midjourney.Infrastructure.LoadBalancer;
 using Newtonsoft.Json;
@@ -1282,30 +1283,42 @@ namespace Midjourney.Infrastructure.Services
                 else
                 {
                     var finalFileNames = new List<string>();
-                    foreach (var dataUrl in dataUrls)
+                    foreach (var item in dataUrls)
                     {
+                        var dataUrl = item;
+
+                        // discord 混图只能通过 base64
                         if (dataUrl.Url?.StartsWith("http", StringComparison.OrdinalIgnoreCase) == true)
                         {
-                            finalFileNames.Add(dataUrl.Url);
+                            // 将 url 转为 bytes
+                            var ff = new FileFetchHelper();
+                            var res = await ff.FetchFileAsync(dataUrl.Url);
+                            if (res.Success && res.FileBytes?.Length > 0)
+                            {
+                                dataUrl = new DataUrl(res.ContentType, res.FileBytes);
+                            }
+                            else
+                            {
+                                return Message.Failure("Fetch image from url failed: " + dataUrl.Url);
+                            }
                         }
-                        else
+
+                        var guid = "";
+                        if (dataUrls.Count > 0)
                         {
-                            var guid = "";
-                            if (dataUrls.Count > 0)
-                            {
-                                guid = "-" + Guid.NewGuid().ToString("N");
-                            }
-
-                            var taskFileName = $"{task.Id}{guid}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
-
-                            var uploadResult = await discordInstance.UploadAsync(taskFileName, dataUrl, useDiscordUpload: !isYm);
-                            if (uploadResult.Code != ReturnCode.SUCCESS)
-                            {
-                                return Message.Of(uploadResult.Code, uploadResult.Description);
-                            }
-
-                            finalFileNames.Add(uploadResult.Description);
+                            guid = "-" + Guid.NewGuid().ToString("N");
                         }
+
+                        var taskFileName = $"{task.Id}{guid}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
+
+                        var uploadResult = await discordInstance.UploadAsync(taskFileName, dataUrl, useDiscordUpload: !isYm);
+                        if (uploadResult.Code != ReturnCode.SUCCESS)
+                        {
+                            return Message.Of(uploadResult.Code, uploadResult.Description);
+                        }
+
+                        finalFileNames.Add(uploadResult.Description);
+
                     }
 
                     return await discordInstance.BlendAsync(finalFileNames, dimensions,
