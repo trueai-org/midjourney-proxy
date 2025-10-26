@@ -1284,21 +1284,28 @@ namespace Midjourney.Infrastructure.Services
                     var finalFileNames = new List<string>();
                     foreach (var dataUrl in dataUrls)
                     {
-                        var guid = "";
-                        if (dataUrls.Count > 0)
+                        if (dataUrl.Url?.StartsWith("http", StringComparison.OrdinalIgnoreCase) == true)
                         {
-                            guid = "-" + Guid.NewGuid().ToString("N");
+                            finalFileNames.Add(dataUrl.Url);
                         }
-
-                        var taskFileName = $"{task.Id}{guid}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
-
-                        var uploadResult = await discordInstance.UploadAsync(taskFileName, dataUrl, useDiscordUpload: !isYm);
-                        if (uploadResult.Code != ReturnCode.SUCCESS)
+                        else
                         {
-                            return Message.Of(uploadResult.Code, uploadResult.Description);
-                        }
+                            var guid = "";
+                            if (dataUrls.Count > 0)
+                            {
+                                guid = "-" + Guid.NewGuid().ToString("N");
+                            }
 
-                        finalFileNames.Add(uploadResult.Description);
+                            var taskFileName = $"{task.Id}{guid}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
+
+                            var uploadResult = await discordInstance.UploadAsync(taskFileName, dataUrl, useDiscordUpload: !isYm);
+                            if (uploadResult.Code != ReturnCode.SUCCESS)
+                            {
+                                return Message.Of(uploadResult.Code, uploadResult.Description);
+                            }
+
+                            finalFileNames.Add(uploadResult.Description);
+                        }
                     }
 
                     return await discordInstance.BlendAsync(finalFileNames, dimensions,
