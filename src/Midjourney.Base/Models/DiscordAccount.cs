@@ -307,9 +307,16 @@ namespace Midjourney.Base.Models
         /// 1、处于工作时间段内
         /// 2、处于非摸鱼时间段内
         /// 3、没有超出最大任务限制
+        /// 4、没有触发风控休眠中
         /// </summary>
         public bool IsAcceptNewTask(GenerationSpeedMode? mode)
         {
+            // 如果处于风控休眠中
+            if (RiskControlUnlockTime != null && RiskControlUnlockTime > DateTime.Now)
+            {
+                return false;
+            }
+
             // 如果工作时间段和摸鱼时间段都为空
             if (string.IsNullOrWhiteSpace(WorkTime) && string.IsNullOrWhiteSpace(FishingTime))
             {
@@ -531,6 +538,22 @@ namespace Midjourney.Base.Models
         [MongoDB.Bson.Serialization.Attributes.BsonIgnore]
         [Column(IsIgnore = true)]
         public int QueueCount { get; set; }
+
+        /// <summary>
+        /// 触发风控后的解封时间点 - 风控期间不再接收任务
+        /// 重连时清空风控时间
+        /// </summary>
+        [BsonDateTimeOptions(Kind = DateTimeKind.Local)]
+        public DateTime? RiskControlUnlockTime { get; set; }
+
+        /// <summary>
+        /// 触发风控后的解封时间点 - 风控期间不再接收任务
+        /// </summary>
+        [LiteDB.BsonIgnore]
+        [MongoDB.Bson.Serialization.Attributes.BsonIgnore]
+        [Column(IsIgnore = true)]
+        public string RiskControlUnlockTimeFormat => RiskControlUnlockTime != null && RiskControlUnlockTime > DateTime.Now ?
+            RiskControlUnlockTime.Value.ToString("yyyy-MM-dd HH:mm:ss") : "";
 
         /// <summary>
         /// 是否为悠船账号

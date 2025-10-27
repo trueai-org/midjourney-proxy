@@ -55,9 +55,34 @@ namespace Midjourney.Base.Models
         public bool EnableUserDrawStatistics { get; set; }
 
         /// <summary>
+        /// 是否启用 Redis
+        /// </summary>
+        public bool EnableRedis { get; set; }
+
+        /// <summary>
         /// Redis 配置项
         /// </summary>
         public string RedisConnectionString { get; set; }
+
+        /// <summary>
+        /// 启用风控自动验证 - 适用于官网 Cloudflare 验证
+        /// </summary>
+        public bool EnableRiskControlAutoCaptcha { get; set; }
+
+        /// <summary>
+        /// 触发超过多少次验证后，账号自动休眠
+        /// </summary>
+        public int RiskControlAutoCaptchaMaxCount { get; set; } = 2;
+
+        /// <summary>
+        /// 触发风控后自定休眠的时间，单位分钟
+        /// </summary>
+        public int RiskControlAutoCaptchaSleepMinutes { get; set; } = 120;
+
+        /// <summary>
+        /// 2captcha API key
+        /// </summary>
+        public string TwoCaptchaKey { get; set; }
 
         /// <summary>
         /// 启用悠船内网下载图片

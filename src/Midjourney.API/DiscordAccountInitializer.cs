@@ -1163,6 +1163,10 @@ namespace Midjourney.API
                 model.CfHashUrl = null;
                 model.CfUrl = null;
 
+                // 清除风控状态
+                model.RiskControlUnlockTime = null;
+
+
                 // 验证 Interval
                 if (param.Interval < 0m)
                 {

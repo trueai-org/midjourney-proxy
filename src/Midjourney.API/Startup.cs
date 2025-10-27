@@ -101,6 +101,25 @@ namespace Midjourney.API
                 setting.DatabaseType = DatabaseType.LiteDB;
             }
 
+            // 初始化 Redis 验证是否可连接
+            if (setting.EnableRedis && !string.IsNullOrWhiteSpace(setting.RedisConnectionString))
+            {
+                try
+                {
+                    var csredis = new CSRedis.CSRedisClient(setting.RedisConnectionString);
+                    if (!csredis.Ping())
+                    {
+                        setting.EnableRedis = false;
+                        Log.Error("Redis 连接失败，已自动禁用 Redis 功能");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    setting.EnableRedis = false;
+                    Log.Error(ex, "Redis 连接异常，已自动禁用 Redis 功能");
+                }
+            }
+
             // 验证数据库是否可连接
             GlobalConfiguration.Setting = setting;
             if (!DbHelper.Verify())

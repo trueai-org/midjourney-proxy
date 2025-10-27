@@ -246,17 +246,31 @@ namespace Midjourney.Base.Data
         /// <returns></returns>
         public static bool Verify()
         {
+            var setting = GlobalConfiguration.Setting;
+            if (setting.DatabaseType == DatabaseType.LiteDB)
+            {
+                return true;
+            }
+
+            return Verify(setting.DatabaseType, setting.DatabaseConnectionString);
+        }
+
+        /// <summary>
+        /// 验证数据库连接
+        /// </summary>
+        /// <returns></returns>
+        public static bool Verify(DatabaseType databaseType, string databaseConnectionString)
+        {
             try
             {
-                var setting = GlobalConfiguration.Setting;
-                if (setting.DatabaseType == DatabaseType.LiteDB)
+                if (databaseType == DatabaseType.LiteDB)
                 {
                     return true;
                 }
 
-                if (!string.IsNullOrWhiteSpace(setting.DatabaseConnectionString))
+                if (!string.IsNullOrWhiteSpace(databaseConnectionString))
                 {
-                    switch (setting.DatabaseType)
+                    switch (databaseType)
                     {
                         case DatabaseType.MongoDB:
                             {
@@ -318,6 +332,7 @@ namespace Midjourney.Base.Data
             {
                 Log.Error(ex, "数据库连接验证失败");
             }
+
             return false;
         }
     }

@@ -2258,6 +2258,16 @@ namespace Midjourney.API.Controllers
                 {
                     model.ConsulOptions.ConsulUrl = "****";
                 }
+
+                if (!string.IsNullOrWhiteSpace(model.RedisConnectionString))
+                {
+                    model.RedisConnectionString = "****";
+                }
+
+                if (!string.IsNullOrWhiteSpace(model.TwoCaptchaKey))
+                {
+                    model.TwoCaptchaKey = "****";
+                }
             }
 
             model.UpgradeInfo = _upgradeService.UpgradeInfo;
@@ -2294,6 +2304,33 @@ namespace Midjourney.API.Controllers
                 Log.Error(ex, "授权验证失败");
 
                 return Result.Fail("授权验证失败，请检查授权码是否正确，如果没有授权码，请输入默认授权码：trueai.org");
+            }
+
+            // 如果启用了 redis 则验证
+            if (setting.EnableRedis)
+            {
+                try
+                {
+                    var csredis = new CSRedis.CSRedisClient(setting.RedisConnectionString);
+                    if (!csredis.Ping())
+                    {
+                        return Result.Fail("Redis 连接失败，请检查连接字符串是否正确");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex, "Redis 连接失败");
+                    return Result.Fail("Redis 连接失败，请检查连接字符串是否正确");
+                }
+            }
+
+            // 如果启用了风控验证
+            if (setting.EnableRiskControlAutoCaptcha)
+            {
+                if (string.IsNullOrWhiteSpace(setting.TwoCaptchaKey))
+                {
+                    return Result.Fail("2Captcha 密钥不能为空");
+                }
             }
 
             setting.Id = Constants.DEFAULT_SETTING_ID;
@@ -2378,21 +2415,72 @@ namespace Midjourney.API.Controllers
             return Result.Ok();
         }
 
+        ///// <summary>
+        ///// 验证数据库是否正常连接
+        ///// </summary>
+        ///// <returns></returns>
+        //[HttpPost("verify-mongo")]
+        //public Result ValidateMongo()
+        //{
+        //    if (_isAnonymous)
+        //    {
+        //        return Result.Fail("演示模式，禁止操作");
+        //    }
+
+        //    var success = DbHelper.Verify();
+
+        //    return success ? Result.Ok() : Result.Fail("连接失败");
+        //}
+
         /// <summary>
-        /// 验证数据库是否正常连接
+        /// 验证数据库连接
         /// </summary>
+        /// <param name="request"></param>
         /// <returns></returns>
-        [HttpPost("verify-mongo")]
-        public Result ValidateMongo()
+        [HttpPost("validate-database-connection")]
+        public Result ValidateDatabaseConnection([FromBody] ValidateDatabaseRequest request)
         {
             if (_isAnonymous)
             {
                 return Result.Fail("演示模式，禁止操作");
             }
+            try
+            {
+                if (request.IsRedis)
+                {
+                    if (string.IsNullOrWhiteSpace(request.DatabaseConnectionString))
+                    {
+                        return Result.Fail("请输入 Redis 连接字符串");
+                    }
 
-            var success = DbHelper.Verify();
+                    // 初始化Redis
+                    var csredis = new CSRedis.CSRedisClient(request.DatabaseConnectionString);
+                    if (csredis.Ping())
+                    {
+                        return Result.Ok();
+                    }
+                }
+                else
+                {
+                    if (request.DatabaseType == null)
+                    {
+                        return Result.Fail("请选择数据库类型");
+                    }
 
-            return success ? Result.Ok() : Result.Fail("连接失败");
+                    var success = DbHelper.Verify(request.DatabaseType!.Value, request.DatabaseConnectionString);
+                    if (success)
+                    {
+                        return Result.Ok();
+                    }
+                }
+
+                return Result.Fail("连接失败");
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "验证数据库连接失败");
+                return Result.Fail("连接失败: " + ex.Message);
+            }
         }
 
         /// <summary>
