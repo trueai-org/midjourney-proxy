@@ -369,11 +369,11 @@ namespace Midjourney.Base.Dto
         [JsonPropertyName("discriminator")]
         public string Discriminator { get; set; }
 
-        /// <summary>
-        /// 家族。
-        /// </summary>
-        [JsonPropertyName("clan")]
-        public string Clan { get; set; }
+        ///// <summary>
+        ///// 家族。
+        ///// </summary>
+        //[JsonPropertyName("clan")]
+        //public string Clan { get; set; }
 
         ///// <summary>
         ///// 头像装饰数据。
