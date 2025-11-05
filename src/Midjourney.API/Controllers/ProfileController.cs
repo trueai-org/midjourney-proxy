@@ -173,6 +173,8 @@ namespace Midjourney.API.Controllers
                 }
 
                 model.RandomPairs = res;
+                model.UpdateTime = DateTime.Now;
+
                 DbHelper.Instance.PersonalizeTagWordStore.Update(model);
             }
 
@@ -235,6 +237,7 @@ namespace Midjourney.API.Controllers
             model.ClickTotal++;
             model.SkipCount++;
             model.RandomPairs = res;
+            model.UpdateTime = DateTime.Now;
 
             DbHelper.Instance.PersonalizeTagWordStore.Update(model);
 
@@ -312,6 +315,7 @@ namespace Midjourney.API.Controllers
             }
 
             model.RandomPairs = res;
+            model.UpdateTime = DateTime.Now;
 
             DbHelper.Instance.PersonalizeTagWordStore.Update(model);
 

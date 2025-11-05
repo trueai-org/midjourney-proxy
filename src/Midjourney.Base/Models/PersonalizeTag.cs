@@ -82,6 +82,11 @@ namespace Midjourney.Base.Models
         public int WinTotal { get; set; }
 
         /// <summary>
+        /// 用时 ms
+        /// </summary>
+        public long UseTime { get; set; }
+
+        /// <summary>
         /// 最后一次配对的响应对象
         /// </summary>
         [JsonMap]
