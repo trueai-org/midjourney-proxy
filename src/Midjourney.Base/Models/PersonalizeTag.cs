@@ -84,7 +84,7 @@ namespace Midjourney.Base.Models
         /// <summary>
         /// 用时 ms
         /// </summary>
-        public long UseTime { get; set; }
+        public long? UseTime { get; set; }
 
         /// <summary>
         /// 最后一次配对的响应对象
