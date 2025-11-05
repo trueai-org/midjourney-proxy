@@ -117,6 +117,6 @@ namespace Midjourney.Base.Services
         /// <param name="personalize"></param>
         /// <param name="isRight"></param>
         /// <returns></returns>
-        Task<ProfileGetRandomPairsResponse> ProfileCreateRateAsync(PersonalizeTag personalize, bool isRight);
+        Task<ProfileGetRandomPairsResponse> ProfileCreateRateAsync(PersonalizeTag personalize, bool? isRight = null);
     }
 }

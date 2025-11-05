@@ -224,8 +224,22 @@ namespace Midjourney.API.Controllers
                 return Ok(SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "个性化配置不存在"));
             }
 
-            var res = await instance.YmTaskService.ProfileCreateSkipAsync(model);
-            if (res?.Pairs?.Count > 0)
+            //var res = await instance.YmTaskService.ProfileCreateSkipAsync(model);
+            //if (res?.Pairs?.Count > 0)
+            //{
+            //    // 正常
+            //}
+            //else
+            //{
+            //    return Ok(SubmitResultVO.Fail(ReturnCode.FAILURE, "操作失败"));
+            //}
+
+            model.ClickTotal++;
+            model.SkipCount++;
+
+            // 跳过时，依然调用评分接口
+            var res = await instance.YmTaskService.ProfileCreateRateAsync(model);
+            if (res.Pairs?.Count > 0)
             {
                 // 正常
             }
@@ -234,8 +248,6 @@ namespace Midjourney.API.Controllers
                 return Ok(SubmitResultVO.Fail(ReturnCode.FAILURE, "操作失败"));
             }
 
-            model.ClickTotal++;
-            model.SkipCount++;
             model.RandomPairs = res;
             model.UpdateTime = DateTime.Now;
 
