@@ -131,8 +131,8 @@ namespace Midjourney.API.Controllers
             {
                 return NotFound();
             }
-
-            return Ok(model.ToResult());
+            var data = model.ToResult();
+            return Ok(data);
         }
 
         /// <summary>
@@ -160,23 +160,34 @@ namespace Midjourney.API.Controllers
                 return Ok(SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "个性化配置不存在"));
             }
 
-            var res = await instance.YmTaskService.ProfileCreateSkipAsync(model);
-            if (res == null)
+            if (model.RandomPairs?.Pairs?.Count > 0)
             {
-                return Ok(SubmitResultVO.Fail(ReturnCode.FAILURE, "操作失败"));
+                // 已存在
+            }
+            else
+            {
+                var res = await instance.YmTaskService.ProfileCreateSkipAsync(model);
+                if (res == null)
+                {
+                    return Ok(SubmitResultVO.Fail(ReturnCode.FAILURE, "操作失败"));
+                }
+
+                model.RandomPairs = res;
+                DbHelper.Instance.PersonalizeTagWordStore.Update(model);
             }
 
-            model.RandomPairs = res;
-
-            DbHelper.Instance.PersonalizeTagWordStore.Update(model);
-
-            var jobIds = res.Pairs.First().Jobs.Select(c => new ProfileSkipResultDto
+            if (model.RandomPairs.Pairs?.Count > 0)
             {
-                JobId = c.Id,
-                ImageUrl = $"https://cdn.midjourney.com/{c.Id}/0_{c.ParentGrid}.jpeg"
-            }).ToList();
+                var jobIds = model.RandomPairs.Pairs.First().Jobs.Select(c => new ProfileSkipResultDto
+                {
+                    JobId = c.Id,
+                    ImageUrl = $"https://cdn.midjourney.com/{c.Id}/0_{c.ParentGrid}.jpeg"
+                }).ToList();
 
-            return Ok(SubmitResultVO.Of(ReturnCode.SUCCESS, "成功", jobIds));
+                return Ok(SubmitResultVO.Of(ReturnCode.SUCCESS, "成功", jobIds));
+            }
+
+            return Ok(SubmitResultVO.Fail(ReturnCode.FAILURE, "无可用配对数据"));
         }
 
         /// <summary>
@@ -212,7 +223,11 @@ namespace Midjourney.API.Controllers
             }
 
             var res = await instance.YmTaskService.ProfileCreateSkipAsync(model);
-            if (res == null)
+            if (res?.Pairs?.Count > 0)
+            {
+                // 正常
+            }
+            else
             {
                 return Ok(SubmitResultVO.Fail(ReturnCode.FAILURE, "操作失败"));
             }
@@ -265,8 +280,7 @@ namespace Midjourney.API.Controllers
             }
 
             // 判断 JobId 是否在 RandomPairs 中
-            var pair = model.RandomPairs?.Pairs?.FirstOrDefault();
-            var jobs = pair?.Jobs;
+            var jobs = model.RandomPairs?.Pairs?.FirstOrDefault()?.Jobs;
             var job = jobs?.FirstOrDefault(c => c.Id == req.JobId);
             if (job == null)
             {
@@ -288,7 +302,11 @@ namespace Midjourney.API.Controllers
             model.ClickTotal++;
 
             var res = await instance.YmTaskService.ProfileCreateRateAsync(model, isRight);
-            if (res == null)
+            if (res.Pairs?.Count > 0)
+            {
+                // 正常
+            }
+            else
             {
                 return Ok(SubmitResultVO.Fail(ReturnCode.FAILURE, "操作失败"));
             }
