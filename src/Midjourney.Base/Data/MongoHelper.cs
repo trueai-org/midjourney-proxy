@@ -15,12 +15,13 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Additional Terms:
-// This software shall not be used for any illegal activities. 
+// This software shall not be used for any illegal activities.
 // Users must comply with all applicable laws and regulations,
-// particularly those related to image and video processing. 
+// particularly those related to image and video processing.
 // The use of this software for any form of illegal face swapping,
-// invasion of privacy, or any other unlawful purposes is strictly prohibited. 
+// invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
+
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Serilog;
@@ -30,7 +31,8 @@ namespace Midjourney.Base.Data
     /// <summary>
     /// Mongo DB 单例辅助
     /// </summary>
-    public abstract class MongoHelper : MongoHelper<MongoHelper> { }
+    public abstract class MongoHelper : MongoHelper<MongoHelper>
+    { }
 
     /// <summary>
     /// Mongo DB 单例辅助
@@ -43,7 +45,6 @@ namespace Midjourney.Base.Data
 
         static MongoHelper()
         {
-
         }
 
         /// <summary>
@@ -112,50 +113,55 @@ namespace Midjourney.Base.Data
             _instance = database;
         }
 
-        /// <summary>
-        /// 验证 mongo 连接 - 旧版连接
-        /// </summary>
-        /// <returns></returns>
-        public static bool OldVerify()
-        {
-            try
-            {
-                if (string.IsNullOrWhiteSpace(GlobalConfiguration.Setting.MongoDefaultConnectionString)
-                    || string.IsNullOrWhiteSpace(GlobalConfiguration.Setting.MongoDefaultDatabase))
-                {
-                    return false;
-                }
+        ///// <summary>
+        ///// 验证 mongo 连接 - 旧版连接
+        ///// </summary>
+        ///// <returns></returns>
+        //public static bool OldVerify()
+        //{
+        //    try
+        //    {
+        //        if (string.IsNullOrWhiteSpace(GlobalConfiguration.Setting.MongoDefaultConnectionString)
+        //            || string.IsNullOrWhiteSpace(GlobalConfiguration.Setting.MongoDefaultDatabase))
+        //        {
+        //            return false;
+        //        }
 
-                var client = new MongoClient(GlobalConfiguration.Setting.MongoDefaultConnectionString);
-                var database = client.GetDatabase(GlobalConfiguration.Setting.MongoDefaultDatabase);
+        //        var client = new MongoClient(GlobalConfiguration.Setting.MongoDefaultConnectionString);
+        //        var database = client.GetDatabase(GlobalConfiguration.Setting.MongoDefaultDatabase);
 
-                return database.RunCommandAsync((Command<BsonDocument>)"{ping:1}").Wait(1000);
-            }
-            catch (Exception ex)
-            {
-                Log.Error(ex, "MongoDB 连接失败");
+        //        return database.RunCommandAsync((Command<BsonDocument>)"{ping:1}").Wait(1000);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Log.Error(ex, "MongoDB 连接失败");
 
-                return false;
-            }
-        }
+        //        return false;
+        //    }
+        //}
 
         /// <summary>
         /// 验证 mongo 连接
         /// </summary>
         /// <returns></returns>
-        public static bool Verify()
+        public static bool Verify(string databaseConnectionString = null, string databaseName = null)
         {
             try
             {
-                var setting = GlobalConfiguration.Setting;
-                if (string.IsNullOrWhiteSpace(setting.DatabaseConnectionString)
-                    || string.IsNullOrWhiteSpace(setting.DatabaseName))
+                if (string.IsNullOrWhiteSpace(databaseConnectionString) && string.IsNullOrWhiteSpace(databaseName))
+                {
+                    var setting = GlobalConfiguration.Setting;
+                    databaseConnectionString = setting.DatabaseConnectionString;
+                    databaseName = setting.DatabaseName;
+                }
+
+                if (string.IsNullOrWhiteSpace(databaseConnectionString) || string.IsNullOrWhiteSpace(databaseName))
                 {
                     return false;
                 }
 
-                var client = new MongoClient(setting.DatabaseConnectionString);
-                var database = client.GetDatabase(setting.DatabaseName);
+                var client = new MongoClient(databaseConnectionString);
+                var database = client.GetDatabase(databaseName);
 
                 return database.RunCommandAsync((Command<BsonDocument>)"{ping:1}").Wait(1000);
             }

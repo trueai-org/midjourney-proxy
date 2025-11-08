@@ -49,11 +49,21 @@ namespace Midjourney.Base.Data
         /// <summary>
         /// 初始化 FreeSql
         /// </summary>
-        public static IFreeSql Init(bool autoSyncStructure = false)
+        public static IFreeSql Init(DatabaseType databaseType, string databaseConnectionString = null, bool autoSyncStructure = false)
         {
-            var setting = GlobalConfiguration.Setting;
+            if (databaseType == DatabaseType.NONE 
+                || databaseType == DatabaseType.LiteDB
+                || databaseType == DatabaseType.MongoDB)
+            {
+                return null;
+            }
 
-            if (string.IsNullOrWhiteSpace(setting.DatabaseConnectionString))
+            if (string.IsNullOrWhiteSpace(databaseConnectionString))
+            {
+                databaseConnectionString = GlobalConfiguration.Setting.DatabaseConnectionString;
+            }
+
+            if (string.IsNullOrWhiteSpace(databaseConnectionString))
             {
                 return null;
             }
@@ -84,7 +94,7 @@ namespace Midjourney.Base.Data
 #endif
 
 
-            switch (setting.DatabaseType)
+            switch (databaseType)
             {
                 case DatabaseType.LiteDB:
                 case DatabaseType.MongoDB:
@@ -100,19 +110,19 @@ namespace Midjourney.Base.Data
                 case DatabaseType.MySQL:
                     {
                         // Data Source=192.168.3.241;Port=3306;User ID=root;Password=root; Initial Catalog=mj;Charset=utf8mb4; SslMode=none;Min pool size=1
-                        fsqlBuilder.UseConnectionString(DataType.MySql, setting.DatabaseConnectionString);
+                        fsqlBuilder.UseConnectionString(DataType.MySql, databaseConnectionString);
                     }
                     break;
                 case DatabaseType.PostgreSQL:
                     {
                         // Host=192.168.164.10;Port=5432;Username=postgres;Password=123456; Database=tedb;ArrayNullabilityMode=Always;Pooling=true;Minimum Pool Size=1
-                        fsqlBuilder.UseConnectionString(DataType.PostgreSQL, setting.DatabaseConnectionString);
+                        fsqlBuilder.UseConnectionString(DataType.PostgreSQL, databaseConnectionString);
                     }
                     break;
                 case DatabaseType.SQLServer:
                     {
                         // Data Source=.;User Id=sa;Password=123456;Initial Catalog=freesqlTest;Encrypt=True;TrustServerCertificate=True;Pooling=true;Min Pool Size=1
-                        fsqlBuilder.UseConnectionString(DataType.SqlServer, setting.DatabaseConnectionString);
+                        fsqlBuilder.UseConnectionString(DataType.SqlServer, databaseConnectionString);
                     }
                     break;
                 default:

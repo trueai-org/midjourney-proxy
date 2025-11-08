@@ -83,17 +83,17 @@ namespace Midjourney.API
             }
             GlobalConfiguration.Setting = setting;
 
-            // 原始 Mongo 配置，旧版数据库配置
-            if (setting.DatabaseType == DatabaseType.NONE)
-            {
-                if (MongoHelper.OldVerify())
-                {
-                    // 将原始 Mongo 配置转换为新配置
-                    setting.DatabaseConnectionString = setting.MongoDefaultConnectionString;
-                    setting.DatabaseName = setting.MongoDefaultDatabase;
-                    setting.DatabaseType = DatabaseType.MongoDB;
-                }
-            }
+            //// 原始 Mongo 配置，旧版数据库配置
+            //if (setting.DatabaseType == DatabaseType.NONE)
+            //{
+            //    if (MongoHelper.OldVerify())
+            //    {
+            //        // 将原始 Mongo 配置转换为新配置
+            //        setting.DatabaseConnectionString = setting.MongoDefaultConnectionString;
+            //        setting.DatabaseName = setting.MongoDefaultDatabase;
+            //        setting.DatabaseType = DatabaseType.MongoDB;
+            //    }
+            //}
 
             // 如果未配置则为 None
             if (setting.DatabaseType == DatabaseType.NONE)
@@ -122,7 +122,7 @@ namespace Midjourney.API
 
             // 验证数据库是否可连接
             GlobalConfiguration.Setting = setting;
-            if (!DbHelper.Verify())
+            if (!DbHelper.VerifyConfigure())
             {
                 // 切换为本地数据库
                 setting.DatabaseType = DatabaseType.LiteDB;

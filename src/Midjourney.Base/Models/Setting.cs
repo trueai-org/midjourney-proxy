@@ -186,26 +186,26 @@ namespace Midjourney.Base.Models
         /// </summary>
         public string LicenseKey { get; set; }
 
-        /// <summary>
-        /// MongoDB 默认连接字符串
-        /// </summary>
-        public string MongoDefaultConnectionString { get; set; }
+        ///// <summary>
+        ///// （废弃）MongoDB 默认连接字符串
+        ///// </summary>
+        //public string MongoDefaultConnectionString { get; set; }
 
-        /// <summary>
-        /// MongoDB 默认数据库
-        /// </summary>
-        public string MongoDefaultDatabase { get; set; }
+        ///// <summary>
+        ///// （废弃）MongoDB 默认数据库
+        ///// </summary>
+        //public string MongoDefaultDatabase { get; set; }
 
-        /// <summary>
-        /// （废弃）是否使用
-        /// </summary>
-        [BsonIgnore]
-        public bool IsMongo { get; set; }
+        ///// <summary>
+        ///// （废弃）是否使用
+        ///// </summary>
+        //[BsonIgnore]
+        //public bool IsMongo { get; set; }
 
-        /// <summary>
-        /// （废弃）是否启动本地数据自动迁移到 MongoDB
-        /// </summary>
-        public bool IsMongoAutoMigrate { get; set; }
+        ///// <summary>
+        ///// （废弃）是否启动本地数据自动迁移到 MongoDB
+        ///// </summary>
+        //public bool IsMongoAutoMigrate { get; set; }
 
         /// <summary>
         /// 本地数据库是否自动迁移到其他数据库

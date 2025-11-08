@@ -2212,10 +2212,10 @@ namespace Midjourney.API.Controllers
                     model.Openai.GptApiKey = "****";
                 }
 
-                if (!string.IsNullOrWhiteSpace(model.MongoDefaultConnectionString))
-                {
-                    model.MongoDefaultConnectionString = "****";
-                }
+                //if (!string.IsNullOrWhiteSpace(model.MongoDefaultConnectionString))
+                //{
+                //    model.MongoDefaultConnectionString = "****";
+                //}
 
                 if (model.AliyunOss != null)
                 {
@@ -2467,7 +2467,16 @@ namespace Midjourney.API.Controllers
                         return Result.Fail("请选择数据库类型");
                     }
 
-                    var success = DbHelper.Verify(request.DatabaseType!.Value, request.DatabaseConnectionString);
+                    // 如果是 mongodb 则验证数据库名称
+                    if (request.DatabaseType == DatabaseType.MongoDB)
+                    {
+                        if (string.IsNullOrWhiteSpace(request.DatabaseName))
+                        {
+                            return Result.Fail("请输入数据库名称");
+                        }
+                    }
+
+                    var success = DbHelper.Verify(request.DatabaseType!.Value, request.DatabaseConnectionString, request.DatabaseName);
                     if (success)
                     {
                         return Result.Ok();
