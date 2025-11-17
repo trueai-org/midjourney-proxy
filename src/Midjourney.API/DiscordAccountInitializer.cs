@@ -384,13 +384,22 @@ namespace Midjourney.API
                         _logger.Error(ex, "初始化基本信息异常");
                     }
 
+                    // 最后才执行作业
                     _timer = new Timer(DoWork, null, TimeSpan.Zero, TimeSpan.FromMinutes(1));
                 });
 
                 // 确保在应用程序停止时注销服务
                 _applicationLifetime.ApplicationStopping.Register(async () =>
                 {
-                    await _consulService.DeregisterServiceAsync();
+                    try
+                    {
+                        await _consulService.DeregisterServiceAsync();
+                        _logger.Information("Consul 服务注销完成");
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Error(ex, "停止 Consul 服务注销失败");
+                    }
                 });
 
                 await Task.CompletedTask;

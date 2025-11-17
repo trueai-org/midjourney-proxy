@@ -81,25 +81,31 @@ namespace Midjourney.API
                 };
                 LiteDBHelper.SettingStore.Save(setting);
             }
+
             GlobalConfiguration.Setting = setting;
 
-            //// 原始 Mongo 配置，旧版数据库配置
-            //if (setting.DatabaseType == DatabaseType.NONE)
-            //{
-            //    if (MongoHelper.OldVerify())
-            //    {
-            //        // 将原始 Mongo 配置转换为新配置
-            //        setting.DatabaseConnectionString = setting.MongoDefaultConnectionString;
-            //        setting.DatabaseName = setting.MongoDefaultDatabase;
-            //        setting.DatabaseType = DatabaseType.MongoDB;
-            //    }
-            //}
+            // 是否需要重新保存配置
+            var isSaveSetting = false;
 
             // 如果未配置则为 None
             if (setting.DatabaseType == DatabaseType.NONE)
             {
                 setting.DatabaseType = DatabaseType.LiteDB;
+                isSaveSetting = true;
             }
+
+            // 验证数据库是否可连接
+            GlobalConfiguration.Setting = setting;
+            if (!DbHelper.VerifyConfigure())
+            {
+                // 切换为本地数据库
+                setting.DatabaseType = DatabaseType.LiteDB;
+                isSaveSetting = true;
+
+                Log.Error("数据库连接失败，自动切换为 LiteDB 数据库");
+            }
+
+            Log.Information("数据库类型：{0}", setting.DatabaseType);
 
             // 初始化 Redis 验证是否可连接
             if (setting.EnableRedis && !string.IsNullOrWhiteSpace(setting.RedisConnectionString))
@@ -110,35 +116,26 @@ namespace Midjourney.API
                     if (!csredis.Ping())
                     {
                         setting.EnableRedis = false;
+                        isSaveSetting = true;
+
                         Log.Error("Redis 连接失败，已自动禁用 Redis 功能");
                     }
                 }
                 catch (Exception ex)
                 {
                     setting.EnableRedis = false;
+                    isSaveSetting = true;
+
                     Log.Error(ex, "Redis 连接异常，已自动禁用 Redis 功能");
                 }
             }
 
-            // 验证数据库是否可连接
-            GlobalConfiguration.Setting = setting;
-            if (!DbHelper.VerifyConfigure())
+            // 需要重新保存配置，注意：如果版本过旧，重新保存配置可能会覆盖新的业务，需谨慎处理
+            if (isSaveSetting)
             {
-                // 切换为本地数据库
-                setting.DatabaseType = DatabaseType.LiteDB;
-                Log.Error("数据库连接失败，自动切换为 LiteDB 数据库");
+                LiteDBHelper.SettingStore.Save(setting);
             }
 
-            Log.Information("数据库类型：{0}", setting.DatabaseType);
-
-            if (string.IsNullOrWhiteSpace(setting.LicenseKey))
-            {
-                // 默认授权
-                setting.LicenseKey = "trueai.org";
-            }
-
-            LicenseKeyHelper.LicenseKey = setting.LicenseKey;
-            LiteDBHelper.SettingStore.Save(setting);
             GlobalConfiguration.Setting = setting;
 
             // 修改日志级别
@@ -183,27 +180,14 @@ namespace Midjourney.API
             services.AddHttpClient();
             services.AddYouChuanHttpClient();
 
-            // 升级服务
+            // 注册升级服务
             services.TryAddSingleton<IUpgradeService, UpgradeService>();
 
             // 注册 Midjourney 服务
             services.AddMidjourneyServices(setting);
 
-            // 配置 Consul
+            // 注册 Consul
             services.AddSingleton<IConsulService, ConsulService>();
-
-            //var consulOpt = Configuration.GetSection(nameof(ConsulOptions));
-            //var consulOptions = consulOpt.Get<ConsulOptions>();
-            //if (GlobalConfiguration.Setting.ConsulOptions?.Enable == true)
-            //{
-            //    //services.Configure<ConsulOptions>(consulOpt);
-            //    //var opt = Options.Create(GlobalConfiguration.Setting.ConsulOptions);
-
-            //    // 注册服务
-            //    services.AddSingleton<IConsulService, ConsulService>();
-
-            //    //services.AddHostedService<ConsulHostedService>();
-            //}
 
             // 注册 Discord 账号初始化器
             services.AddSingleton<DiscordAccountInitializer>();

@@ -2339,8 +2339,6 @@ namespace Midjourney.API.Controllers
 
             GlobalConfiguration.Setting = setting;
 
-            LicenseKeyHelper.LicenseKey = GlobalConfiguration.Setting.LicenseKey;
-
             // 日志级别
             Program.SetLogLevel(setting.LogEventLevel);
 

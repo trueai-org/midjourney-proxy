@@ -184,28 +184,7 @@ namespace Midjourney.Base.Models
         /// <summary>
         /// 用户授权码
         /// </summary>
-        public string LicenseKey { get; set; }
-
-        ///// <summary>
-        ///// （废弃）MongoDB 默认连接字符串
-        ///// </summary>
-        //public string MongoDefaultConnectionString { get; set; }
-
-        ///// <summary>
-        ///// （废弃）MongoDB 默认数据库
-        ///// </summary>
-        //public string MongoDefaultDatabase { get; set; }
-
-        ///// <summary>
-        ///// （废弃）是否使用
-        ///// </summary>
-        //[BsonIgnore]
-        //public bool IsMongo { get; set; }
-
-        ///// <summary>
-        ///// （废弃）是否启动本地数据自动迁移到 MongoDB
-        ///// </summary>
-        //public bool IsMongoAutoMigrate { get; set; }
+        public string LicenseKey { get; set; } = "trueai.org";
 
         /// <summary>
         /// 本地数据库是否自动迁移到其他数据库
@@ -221,18 +200,6 @@ namespace Midjourney.Base.Models
         /// Discord账号选择规则.
         /// </summary>
         public AccountChooseRule AccountChooseRule { get; set; } = AccountChooseRule.BestWaitIdle;
-
-        ///// <summary>
-        ///// Discord单账号配置.
-        ///// </summary>
-        //[BsonIgnore]
-        //public DiscordAccountConfig Discord { get; set; } = new DiscordAccountConfig();
-
-        ///// <summary>
-        ///// Discord账号池配置.
-        ///// </summary>
-        //[BsonIgnore]
-        //public List<DiscordAccountConfig> Accounts { get; set; } = new List<DiscordAccountConfig>();
 
         /// <summary>
         /// 代理配置.
@@ -1148,16 +1115,6 @@ namespace Midjourney.Base.Models
     /// </summary>
     public class AliyunOssOptions
     {
-        ///// <summary>
-        ///// 是否可用
-        ///// </summary>
-        //public bool Enable { get; set; }
-
-        ///// <summary>
-        ///// 启动本地图片自动迁移，待定
-        ///// </summary>
-        //public bool EnableAutoMigrate { get; set; }
-
         /// <summary>
         /// 存储空间是您用于存储对象（Object）的容器，所有的对象都必须隶属于某个存储空间。
         /// </summary>
