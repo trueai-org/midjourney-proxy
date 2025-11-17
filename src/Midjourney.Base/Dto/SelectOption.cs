@@ -21,6 +21,7 @@
 // The use of this software for any form of illegal face swapping,
 // invasion of privacy, or any other unlawful purposes is strictly prohibited. 
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
+
 namespace Midjourney.Base.Dto
 {
     /// <summary>
@@ -55,11 +56,6 @@ namespace Midjourney.Base.Dto
         /// 子级
         /// </summary>
         public List<SelectChildrenWithSort<T>> Children { get; set; } = new List<SelectChildrenWithSort<T>>();
-
-        /// <summary>
-        /// 序号
-        /// </summary>
-        public int Sort { get; set; }
     }
 
     /// <summary>
@@ -102,6 +98,11 @@ namespace Midjourney.Base.Dto
         /// 数量
         /// </summary>
         public int Count { get; set; }
+
+        /// <summary>
+        /// 排序
+        /// </summary>
+        public int Sort { get; set; }
     }
 
     /// <summary>
