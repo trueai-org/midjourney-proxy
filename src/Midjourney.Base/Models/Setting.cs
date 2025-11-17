@@ -123,7 +123,7 @@ namespace Midjourney.Base.Models
         public bool PrivateEnableYouChuanAllowU { get; set; } = false;
 
         /// <summary>
-        /// 启用悠船合成图片使用自定义路径 - 私人定制业务
+        /// 启用悠船/官方合成图片使用自定义路径 - 私人定制业务
         /// 服务器id/频道id/提示词前面几个单词_uudi.png
         /// </summary>
         public bool PrivateEnableYouChuanMergedCustomize { get; set; } = false;
