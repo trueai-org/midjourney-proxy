@@ -190,17 +190,20 @@ namespace Midjourney.API
             services.AddMidjourneyServices(setting);
 
             // 配置 Consul
+            services.AddSingleton<IConsulService, ConsulService>();
+
             //var consulOpt = Configuration.GetSection(nameof(ConsulOptions));
             //var consulOptions = consulOpt.Get<ConsulOptions>();
-            if (GlobalConfiguration.Setting.ConsulOptions?.Enable == true)
-            {
-                //services.Configure<ConsulOptions>(consulOpt);
-                //var opt = Options.Create(GlobalConfiguration.Setting.ConsulOptions);
+            //if (GlobalConfiguration.Setting.ConsulOptions?.Enable == true)
+            //{
+            //    //services.Configure<ConsulOptions>(consulOpt);
+            //    //var opt = Options.Create(GlobalConfiguration.Setting.ConsulOptions);
 
-                // 注册服务
-                services.AddSingleton<IConsulService, ConsulService>();
-                services.AddHostedService<ConsulHostedService>();
-            }
+            //    // 注册服务
+            //    services.AddSingleton<IConsulService, ConsulService>();
+
+            //    //services.AddHostedService<ConsulHostedService>();
+            //}
 
             // 注册 Discord 账号初始化器
             services.AddSingleton<DiscordAccountInitializer>();

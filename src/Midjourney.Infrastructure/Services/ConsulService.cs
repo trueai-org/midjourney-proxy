@@ -16,16 +16,18 @@ namespace Midjourney.Infrastructure.Services
 
         public ConsulService(ILogger<ConsulService> logger)
         {
-            _consulOptions = GlobalConfiguration.Setting.ConsulOptions;
             _logger = logger;
+            _consulOptions = GlobalConfiguration.Setting.ConsulOptions;
 
-            var consulClientConfiguration = new ConsulClientConfiguration
+            if(_consulOptions?.Enable == true)
             {
-                Address = new Uri(_consulOptions.ConsulUrl)
-            };
-
-            _consulClient = new ConsulClient(consulClientConfiguration);
-
+                var consulClientConfiguration = new ConsulClientConfiguration
+                {
+                    Address = new Uri(_consulOptions.ConsulUrl)
+                };
+                _consulClient = new ConsulClient(consulClientConfiguration);
+            }
+            
             // 生成唯一实例ID（基于机器名+进程ID+时间戳）
             _uniqueInstanceId = $"{Environment.MachineName}-{Environment.ProcessId}-{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
         }
@@ -133,6 +135,8 @@ namespace Midjourney.Infrastructure.Services
                 await _consulClient.Agent.ServiceRegister(registration);
                 _logger.LogInformation($"服务已注册到 Consul: {_serviceId} at {localIp}:{_consulOptions.ServicePort}");
                 _logger.LogInformation($"实例唯一标识: {_uniqueInstanceId}");
+
+                await SetCurrentVersionAsync();
             }
             catch (Exception ex)
             {
@@ -199,6 +203,53 @@ namespace Midjourney.Infrastructure.Services
             return false;
         }
 
+        /// <summary>
+        /// 从 Consul 获取当前版本 KV 信息
+        /// </summary>
+        /// <returns></returns>
+        public async Task<string> GetCurrentVersionAsync()
+        {
+            try
+            {
+                var keyPrefix = GlobalConfiguration.Setting.ConsulOptions.ServiceName;
+                var kvPair = await _consulClient.KV.Get($"{keyPrefix}/version");
+                if (kvPair.Response != null && kvPair.Response.Value != null)
+                {
+                    var version = System.Text.Encoding.UTF8.GetString(kvPair.Response.Value);
+                    _logger.LogInformation($"从 Consul 获取到当前版本: {version}");
+                    return version;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "从 Consul 获取当前版本失败");
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// 写入最新版本到 Consul KV
+        /// </summary>
+        /// <returns></returns>
+        public async Task SetCurrentVersionAsync()
+        {
+            try
+            {
+                var version = GlobalConfiguration.Version;
+                var keyPrefix = GlobalConfiguration.Setting.ConsulOptions.ServiceName;
+                var kvPair = new KVPair($"{keyPrefix}/version")
+                {
+                    Value = System.Text.Encoding.UTF8.GetBytes(version)
+                };
+                await _consulClient.KV.Put(kvPair);
+                _logger.LogInformation($"已将当前版本写入 Consul: {version}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "将当前版本写入 Consul 失败");
+            }
+        }
+
         public async Task DeregisterServiceAsync()
         {
             try
@@ -217,8 +268,6 @@ namespace Midjourney.Infrastructure.Services
 
         private string GetLocalIPAddress()
         {
-
-
             try
             {
                 using var socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0);

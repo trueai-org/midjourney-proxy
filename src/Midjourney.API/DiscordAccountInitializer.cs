@@ -24,10 +24,8 @@
 
 using System.Diagnostics;
 using System.Text;
-using Discord;
 using LiteDB;
 using Microsoft.Extensions.Caching.Memory;
-using Midjourney.Base.Models;
 using Midjourney.Infrastructure.LoadBalancer;
 using Midjourney.Infrastructure.Services;
 using Midjourney.License;
@@ -53,10 +51,19 @@ namespace Midjourney.API
         private readonly ILogger _logger = Log.Logger;
         private readonly IHostApplicationLifetime _applicationLifetime;
         private readonly IUpgradeService _upgradeService;
+        private readonly IConsulService _consulService;
 
         private Timer _timer;
-        //private DateTime? _userDayReset = null;
         private DateTime? _upgradeTime = null;
+
+        // 是否更新中，避免长时间运行更新
+        private bool _isUpgrading = false;
+
+        // 是否已注册到配置中心
+        private static bool _isConsulRegistered = false;
+
+        // Consul 是否已初始化完成/版本比较
+        private static bool _isConsulInitialized = false;
 
         public DiscordAccountInitializer(
             DiscordLoadBalancer discordLoadBalancer,
@@ -66,7 +73,8 @@ namespace Midjourney.API
             IMemoryCache memoryCache,
             DiscordHelper discordHelper,
             IHostApplicationLifetime applicationLifetime,
-            IUpgradeService upgradeService)
+            IUpgradeService upgradeService,
+            IConsulService consulService)
         {
             // 配置全局缓存
             GlobalConfiguration.MemoryCache = memoryCache;
@@ -80,6 +88,7 @@ namespace Midjourney.API
             _discordHelper = discordHelper;
             _applicationLifetime = applicationLifetime;
             _upgradeService = upgradeService;
+            _consulService = consulService;
         }
 
         /// <summary>
@@ -92,11 +101,59 @@ namespace Midjourney.API
             {
                 _applicationLifetime.ApplicationStarted.Register(() =>
                 {
-                    // 更新检查
-                    Task.Run(async () =>
+                    var setting = GlobalConfiguration.Setting;
+                    if (setting.ConsulOptions?.Enable == true)
                     {
-                        await UpgradeCheck();
-                    });
+                        // 后台更新检查
+                        // 启用版本对比更新检查，启用时以注册中心的服务版本为准，如果版本过低则执行更新检查，然后退出应用程序
+                        Task.Run(async () =>
+                        {
+                            try
+                            {
+                                if (setting.ConsulOptions.EnableVersionCheck)
+                                {
+                                    var currentVersion = GlobalConfiguration.Version;
+                                    var consulVersion = await _consulService.GetCurrentVersionAsync();
+
+                                    if (!string.IsNullOrWhiteSpace(consulVersion) && !string.IsNullOrWhiteSpace(consulVersion) && currentVersion != consulVersion)
+                                    {
+                                        var exeVer = new Version(currentVersion.TrimStart('v'));
+                                        var conVer = new Version(consulVersion.TrimStart('v'));
+                                        if (exeVer < conVer)
+                                        {
+                                            _logger.Information("注册中心检测到新版本，当前版本: {@0}，注册中心版本: {@1}，开始更新检查...", currentVersion, consulVersion);
+                                            await UpgradeCheck();
+
+                                            // 等待一会儿
+                                            Thread.Sleep(1000);
+
+                                            _logger.Information("注册中心版本更新检查完成，应用程序即将退出以完成更新。");
+
+                                            // 使用非 0 退出码，表示需要重启应用程序
+                                            // 退出应用程序
+                                            Environment.Exit(101);
+
+                                            return;
+                                        }
+                                    }
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.Error(ex, "Consul 版本对比更新检查执行失败");
+                            }
+
+                            _isConsulInitialized = true;
+                        });
+                    }
+                    else
+                    {
+                        // 后台更新检查
+                        Task.Run(async () =>
+                        {
+                            await UpgradeCheck();
+                        });
+                    }
 
                     // 官方下载下载器
                     if (GlobalConfiguration.Setting.EnableOfficial)
@@ -129,9 +186,6 @@ namespace Midjourney.API
                             }
                         });
                     }
-
-
-                    var setting = GlobalConfiguration.Setting;
 
                     // 初始化数据库索引
                     DbHelper.Instance.IndexInit();
@@ -333,6 +387,12 @@ namespace Midjourney.API
                     _timer = new Timer(DoWork, null, TimeSpan.Zero, TimeSpan.FromMinutes(1));
                 });
 
+                // 确保在应用程序停止时注销服务
+                _applicationLifetime.ApplicationStopping.Register(async () =>
+                {
+                    await _consulService.DeregisterServiceAsync();
+                });
+
                 await Task.CompletedTask;
             }
             catch (Exception ex)
@@ -394,13 +454,32 @@ namespace Midjourney.API
 
             try
             {
-                // 更新检查
-                await UpgradeCheck();
-
                 var isLock = await AsyncLocalLock.TryLockAsync("DoWork", TimeSpan.FromSeconds(10), async () =>
                 {
                     try
                     {
+                        var setting = GlobalConfiguration.Setting;
+
+                        try
+                        {
+                            // Consul 服务注册
+                            if (setting.ConsulOptions?.Enable == true && _isConsulInitialized && !_isConsulRegistered)
+                            {
+                                _logger.Information("正在注册 Consul 服务...");
+                                await _consulService.RegisterServiceAsync();
+                                _logger.Information("Consul 服务注册完成");
+
+                                _isConsulRegistered = true;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.Error(ex, "注册 Consul 服务注册失败");
+                        }
+
+                        // 异步更新检查
+                        _ = UpgradeCheck();
+
                         var now = new DateTimeOffset(DateTime.Now.Date).ToUnixTimeMilliseconds();
 
                         GlobalConfiguration.TodayDraw = (int)DbHelper.Instance.TaskStore.Count(x => x.SubmitTime >= now);
@@ -428,7 +507,7 @@ namespace Midjourney.API
 
                 if (!isLock)
                 {
-                    _logger.Information("例行检查中，请稍后重试...");
+                    _logger.Debug("例行检查中...");
                 }
             }
             catch (Exception ex)
@@ -557,7 +636,6 @@ namespace Midjourney.API
                             .Where(c => !string.IsNullOrWhiteSpace(c.UserId))
                             .ToDictionary(c => c.UserId, c => c.TotalCount);
 
-
                         foreach (var item in userTotalCount)
                         {
                             if (!userTodayCount.ContainsKey(item.Key))
@@ -574,7 +652,6 @@ namespace Midjourney.API
                     }
                 }
             }
-
         }
 
         /// <summary>
@@ -587,16 +664,34 @@ namespace Midjourney.API
             {
                 if (GlobalConfiguration.Setting.EnableUpdateCheck)
                 {
-                    if (_upgradeTime == null || (DateTime.Now - _upgradeTime.Value).TotalHours > 1)
+                    // 更新超过 24 小时，强制调整状态
+                    if (_isUpgrading && _upgradeTime != null && (DateTime.Now - _upgradeTime.Value).TotalHours > 24)
+                    {
+                        _isUpgrading = false;
+                    }
+
+                    if (!_isUpgrading && (_upgradeTime == null || (DateTime.Now - _upgradeTime.Value).TotalHours > 1))
                     {
                         _upgradeTime = DateTime.Now;
+                        _isUpgrading = true;
 
-                        _logger.Information("开始检查更新...");
-
-                        var last = await _upgradeService.CheckForUpdatesAsync();
-                        if (last.HasUpdate)
+                        try
                         {
-                            await _upgradeService.StartDownloadAsync();
+                            _logger.Information("开始检查更新...");
+
+                            var last = await _upgradeService.CheckForUpdatesAsync();
+                            if (last.HasUpdate)
+                            {
+                                await _upgradeService.StartDownloadAsync();
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.Error(ex, "更新检查失败");
+                        }
+                        finally
+                        {
+                            _isUpgrading = false;
                         }
                     }
                 }
@@ -1166,7 +1261,6 @@ namespace Midjourney.API
                 // 清除风控状态
                 model.RiskControlUnlockTime = null;
 
-
                 // 验证 Interval
                 if (param.Interval < 0m)
                 {
@@ -1335,6 +1429,17 @@ namespace Midjourney.API
         /// <returns></returns>
         public async Task StopAsync(CancellationToken cancellationToken)
         {
+            try
+            {
+                await _consulService.DeregisterServiceAsync();
+
+                _logger.Information("Consul 服务注销完成");
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "停止 Consul 服务注销失败");
+            }
+
             _logger.Information("例行检查服务已停止");
 
             _timer?.Change(Timeout.Infinite, 0);
