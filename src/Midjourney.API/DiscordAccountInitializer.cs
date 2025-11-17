@@ -55,15 +55,7 @@ namespace Midjourney.API
 
         private Timer _timer;
         private DateTime? _upgradeTime = null;
-
-        // 是否更新中，避免长时间运行更新
-        private bool _isUpgrading = false;
-
-        // 是否已注册到配置中心
-        private static bool _isConsulRegistered = false;
-
-        // Consul 是否已初始化完成/版本比较
-        private static bool _isConsulInitialized = false;
+        private bool _isUpgrading = false; // 是否更新中，避免长时间运行更新
 
         public DiscordAccountInitializer(
             DiscordLoadBalancer discordLoadBalancer,
@@ -99,92 +91,106 @@ namespace Midjourney.API
         {
             try
             {
-                _applicationLifetime.ApplicationStarted.Register(() =>
+                _applicationLifetime.ApplicationStarted.Register(async () =>
                 {
                     var setting = GlobalConfiguration.Setting;
+
+                    // 启用配置中心
                     if (setting.ConsulOptions?.Enable == true)
                     {
-                        // 后台更新检查
                         // 启用版本对比更新检查，启用时以注册中心的服务版本为准，如果版本过低则执行更新检查，然后退出应用程序
-                        Task.Run(async () =>
+                        if (setting.ConsulOptions.EnableVersionCheck)
                         {
                             try
                             {
-                                if (setting.ConsulOptions.EnableVersionCheck)
+                                var currentVersion = GlobalConfiguration.Version;
+                                var consulVersion = await _consulService.GetCurrentVersionAsync();
+                                if (!string.IsNullOrWhiteSpace(consulVersion) && !string.IsNullOrWhiteSpace(consulVersion) && currentVersion != consulVersion)
                                 {
-                                    var currentVersion = GlobalConfiguration.Version;
-                                    var consulVersion = await _consulService.GetCurrentVersionAsync();
-
-                                    if (!string.IsNullOrWhiteSpace(consulVersion) && !string.IsNullOrWhiteSpace(consulVersion) && currentVersion != consulVersion)
+                                    var exeVer = new Version(currentVersion.TrimStart('v'));
+                                    var conVer = new Version(consulVersion.TrimStart('v'));
+                                    if (exeVer < conVer)
                                     {
-                                        var exeVer = new Version(currentVersion.TrimStart('v'));
-                                        var conVer = new Version(consulVersion.TrimStart('v'));
-                                        if (exeVer < conVer)
+                                        _logger.Information("注册中心检测到新版本，当前版本: {@0}，注册中心版本: {@1}，开始更新检查...", currentVersion, consulVersion);
+
+                                        // 检查更新，当有可用更新时
+                                        var downloding = await UpgradeCheck();
+                                        if (downloding)
                                         {
-                                            _logger.Information("注册中心检测到新版本，当前版本: {@0}，注册中心版本: {@1}，开始更新检查...", currentVersion, consulVersion);
-                                            await UpgradeCheck();
+                                            // 最多等待 5 分钟，获取下载状态
+                                            var downlodingTask = new Task(() =>
+                                            {
+                                                var sw = new Stopwatch();
+                                                sw.Start();
+                                                while (sw.Elapsed.TotalMinutes < 5)
+                                                {
+                                                    var status = _upgradeService.GetUpgradeStatus();
+                                                    if (status.Status == UpgradeStatus.ReadyToRestart)
+                                                    {
+                                                        break;
+                                                    }
+                                                    Thread.Sleep(1000);
+                                                }
+                                            });
+                                            downlodingTask.Start();
+                                            downlodingTask.Wait();
 
-                                            // 等待一会儿
-                                            Thread.Sleep(1000);
+                                            // 再次获取状态
+                                            var finalStatus = _upgradeService.GetUpgradeStatus();
+                                            if (finalStatus.Status == UpgradeStatus.ReadyToRestart)
+                                            {
+                                                _logger.Information("注册中心版本更新检查完成，应用程序即将退出以完成更新。");
 
-                                            _logger.Information("注册中心版本更新检查完成，应用程序即将退出以完成更新。");
+                                                // 使用非 0 退出码，表示需要重启应用程序
+                                                Environment.Exit(101);
 
-                                            // 使用非 0 退出码，表示需要重启应用程序
-                                            // 退出应用程序
-                                            Environment.Exit(101);
-
-                                            return;
+                                                return;
+                                            }
+                                            else
+                                            {
+                                                _logger.Warning("注册中心版本更新检查完成，但更新未能成功完成，状态：{@0}，请手动检查更新。", finalStatus.Status);
+                                            }
                                         }
                                     }
                                 }
+
                             }
                             catch (Exception ex)
                             {
                                 _logger.Error(ex, "Consul 版本对比更新检查执行失败");
                             }
-
-                            _isConsulInitialized = true;
-                        });
+                        }
                     }
                     else
                     {
                         // 后台更新检查
-                        Task.Run(async () =>
-                        {
-                            await UpgradeCheck();
-                        });
+                        _ = UpgradeCheck();
                     }
 
                     // 官方下载下载器
-                    if (GlobalConfiguration.Setting.EnableOfficial)
+                    if (setting.EnableOfficial)
                     {
-                        Task.Run(async () =>
+                        try
                         {
-                            try
-                            {
-                                await LicenseKeyHelper.InitDonwloader();
-                            }
-                            catch (Exception ex)
-                            {
-                                _logger.Error(ex, "初始化官方业务异常");
-                            }
-                        });
+                            _ = LicenseKeyHelper.InitDonwloader();
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.Error(ex, "初始化官方业务异常");
+                        }
                     }
 
-                    // 启用视频功能
-                    if (GlobalConfiguration.Setting.EnableVideo)
+                    // 启用视频功能，视频下载器
+                    if (setting.EnableVideo)
                     {
-                        Task.Run(async () =>
+                        try
                         {
-                            try
-                            {
-                                await new VideoToWebPConverter().ConfigureFFMpeg();
-                            }
-                            catch (Exception ex)
-                            {
-                                _logger.Error(ex, "初始化视频业务异常");
-                            }
-                        });
+                            _ = new VideoToWebPConverter().ConfigureFFMpeg();
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.Error(ex, "初始化视频业务异常");
+                        }
                     }
 
                     // 初始化数据库索引
@@ -384,8 +390,23 @@ namespace Midjourney.API
                         _logger.Error(ex, "初始化基本信息异常");
                     }
 
-                    // 最后才执行作业
+                    // 执行作业
                     _timer = new Timer(DoWork, null, TimeSpan.Zero, TimeSpan.FromMinutes(1));
+
+                    // 最后注册 Consul 服务
+                    if (setting.ConsulOptions?.Enable == true)
+                    {
+                        try
+                        {
+                            _logger.Information("正在注册 Consul 服务...");
+                            await _consulService.RegisterServiceAsync();
+                            _logger.Information("Consul 服务注册完成");
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.Error(ex, "注册 Consul 服务注册失败");
+                        }
+                    }
                 });
 
                 // 确保在应用程序停止时注销服务
@@ -467,25 +488,6 @@ namespace Midjourney.API
                 {
                     try
                     {
-                        var setting = GlobalConfiguration.Setting;
-
-                        try
-                        {
-                            // Consul 服务注册
-                            if (setting.ConsulOptions?.Enable == true && _isConsulInitialized && !_isConsulRegistered)
-                            {
-                                _logger.Information("正在注册 Consul 服务...");
-                                await _consulService.RegisterServiceAsync();
-                                _logger.Information("Consul 服务注册完成");
-
-                                _isConsulRegistered = true;
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.Error(ex, "注册 Consul 服务注册失败");
-                        }
-
                         // 异步更新检查
                         _ = UpgradeCheck();
 
@@ -667,7 +669,7 @@ namespace Midjourney.API
         /// 执行更新检查并下载最新版本
         /// </summary>
         /// <returns></returns>
-        public async Task UpgradeCheck()
+        public async Task<bool> UpgradeCheck()
         {
             try
             {
@@ -691,7 +693,7 @@ namespace Midjourney.API
                             var last = await _upgradeService.CheckForUpdatesAsync();
                             if (last.HasUpdate)
                             {
-                                await _upgradeService.StartDownloadAsync();
+                                return await _upgradeService.StartDownloadAsync();
                             }
                         }
                         catch (Exception ex)
@@ -709,6 +711,8 @@ namespace Midjourney.API
             {
                 Log.Error(ex, "更新检查执行失败");
             }
+
+            return false;
         }
 
         /// <summary>
