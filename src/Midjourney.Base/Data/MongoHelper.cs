@@ -161,9 +161,21 @@ namespace Midjourney.Base.Data
                 }
 
                 var client = new MongoClient(databaseConnectionString);
+
+                // 判断数据库是否存在
+                var dbExists = client.ListDatabaseNames().ToList().Contains(databaseName);
+                if (!dbExists)
+                {
+                    // MongoDB 中没有显式的 "create database" 命令，数据库在有 collection/数据时才会真正创建，
+                    // 所以这里创建一个轻量的 collection 来使数据库被创建。
+                    var databaseToCreate = client.GetDatabase(databaseName);
+                    var initCollectionName = "__init_collection";
+                    databaseToCreate.CreateCollection(initCollectionName);
+                }
+
                 var database = client.GetDatabase(databaseName);
 
-                return database.RunCommandAsync((Command<BsonDocument>)"{ping:1}").Wait(1000);
+                return database.RunCommandAsync((Command<BsonDocument>)"{ping:1}").Wait(2000);
             }
             catch (Exception ex)
             {
