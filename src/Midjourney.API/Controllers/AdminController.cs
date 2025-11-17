@@ -2413,23 +2413,6 @@ namespace Midjourney.API.Controllers
             return Result.Ok();
         }
 
-        ///// <summary>
-        ///// 验证数据库是否正常连接
-        ///// </summary>
-        ///// <returns></returns>
-        //[HttpPost("verify-mongo")]
-        //public Result ValidateMongo()
-        //{
-        //    if (_isAnonymous)
-        //    {
-        //        return Result.Fail("演示模式，禁止操作");
-        //    }
-
-        //    var success = DbHelper.Verify();
-
-        //    return success ? Result.Ok() : Result.Fail("连接失败");
-        //}
-
         /// <summary>
         /// 验证数据库连接
         /// </summary>
