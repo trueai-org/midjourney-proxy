@@ -10,22 +10,24 @@
 		<NoWarn>1701;1702;1591;1572;1573;</NoWarn>
 	</PropertyGroup>
 
-	<!--<ItemGroup>
-		<ProjectReference Include="..\..\..\src\Midjourney.License\Midjourney.License.csproj" />
-		<ProjectReference Include="..\Midjourney.Base\Midjourney.Base.csproj" />
-	</ItemGroup>-->
-
-	<!-- 开发时引用项目 -->
-	<ItemGroup Condition="'$(Configuration)' == 'Debug'">
-		<ProjectReference Include="..\..\..\src\Midjourney.License\Midjourney.License.csproj" />
-		<ProjectReference Include="..\Midjourney.Base\Midjourney.Base.csproj" />
-	</ItemGroup>
-
-	<!-- 发布时引用 DLL -->
-	<ItemGroup Condition="'$(Configuration)' == 'Release'">
+	<ItemGroup>
 		<Reference Include="Midjourney.License">
 			<HintPath>..\lib\Midjourney.License.dll</HintPath>
 		</Reference>
 		<ProjectReference Include="..\Midjourney.Base\Midjourney.Base.csproj" />
 	</ItemGroup>
+
+	<!-- 开发时引用项目 -->
+	<!-- 发布时引用 DLL -->
+	<!--<ItemGroup Condition="'$(Configuration)' == 'Debug'">
+		<ProjectReference Include="..\..\..\src\Midjourney.License\Midjourney.License.csproj" />
+		<ProjectReference Include="..\Midjourney.Base\Midjourney.Base.csproj" />
+	</ItemGroup>
+
+	<ItemGroup Condition="'$(Configuration)' == 'Release'">
+		<Reference Include="Midjourney.License">
+			<HintPath>..\lib\Midjourney.License.dll</HintPath>
+		</Reference>
+		<ProjectReference Include="..\Midjourney.Base\Midjourney.Base.csproj" />
+	</ItemGroup>-->
 </Project>
