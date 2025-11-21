@@ -31,19 +31,21 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\Midjourney.Infrastructure\Midjourney.Infrastructure.csproj" />
-	</ItemGroup>
-
-	<!-- 开发时引用项目 -->
-	<ItemGroup Condition="'$(Configuration)' == 'Debug'">
-		<ProjectReference Include="..\..\..\src\Midjourney.License\Midjourney.License.csproj" />
-	</ItemGroup>
-
-	<!-- 发布时引用 DLL -->
-	<ItemGroup Condition="'$(Configuration)' == 'Release'">
 		<Reference Include="Midjourney.License">
 			<HintPath>..\lib\Midjourney.License.dll</HintPath>
 		</Reference>
 	</ItemGroup>
+
+	<!-- 开发时引用项目 -->
+	<!-- 发布时引用 DLL -->
+	<!--<ItemGroup Condition="'$(Configuration)' == 'Debug'">
+		<ProjectReference Include="..\..\..\src\Midjourney.License\Midjourney.License.csproj" />
+	</ItemGroup>
+	<ItemGroup Condition="'$(Configuration)' == 'Release'">
+		<Reference Include="Midjourney.License">
+			<HintPath>..\lib\Midjourney.License.dll</HintPath>
+		</Reference>
+	</ItemGroup>-->
 	
 	<ItemGroup>
 	  <Folder Include="Upgrade\" />
