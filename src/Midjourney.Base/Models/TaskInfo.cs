@@ -1074,6 +1074,14 @@ namespace Midjourney.Base.Models
             // 悠船
             if (IsPartner)
             {
+                var setting = GlobalConfiguration.Setting;
+                if (!string.IsNullOrWhiteSpace(setting.LocalStorage?.PartnerCdn) && !string.IsNullOrWhiteSpace(sourceUrl))
+                {
+                    // 替换域名
+                    var uri = new Uri(sourceUrl);
+                    return $"{setting.LocalStorage.PartnerCdn}/{uri.PathAndQuery.TrimStart('/')}";
+                }
+
                 if (!string.IsNullOrWhiteSpace(sourceUrl))
                 {
                     if (StorageOption == EStorageOption.Partner)

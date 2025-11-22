@@ -123,6 +123,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 // Remix 自动提交过滤
                 .WhereIf(accountFilter?.RemixAutoConsidered.HasValue == true, c => c.Account.RemixAutoSubmit == accountFilter.RemixAutoConsidered)
 
+                // 通过备注过滤账号
+                .WhereIf(!string.IsNullOrWhiteSpace(accountFilter?.Remark), c => c.Account.Remark != null && c.Account.Remark.Contains(accountFilter.Remark))
+
                 // 过滤只接收新任务的实例
                 .WhereIf(isNewTask == true, c => c.Account.IsAcceptNewTask(preferredSpeedMode))
 

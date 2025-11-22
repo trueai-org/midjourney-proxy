@@ -43,18 +43,19 @@ namespace Midjourney.Base
         public async Task EmailSend(SmtpConfig config, string subject, string body, string to = null)
         {
             var mailTo = config.To;
-            if (!string.IsNullOrWhiteSpace(to))
-            {
-                mailTo = to;
-            }
-
-            if (string.IsNullOrWhiteSpace(config?.FromPassword) || string.IsNullOrWhiteSpace(mailTo))
-            {
-                return;
-            }
 
             try
             {
+                if (!string.IsNullOrWhiteSpace(to))
+                {
+                    mailTo = to;
+                }
+
+                if (string.IsNullOrWhiteSpace(config?.FromPassword) || string.IsNullOrWhiteSpace(mailTo))
+                {
+                    return;
+                }
+
                 // SMTP服务器信息
                 string smtpServer = config.Host; // "smtp.mxhichina.com"; // 请替换为你的SMTP服务器地址
                 int port = config.Port; // SMTP端口，一般为587或465，具体依据你的SMTP服务器而定
@@ -96,7 +97,7 @@ namespace Midjourney.Base
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "发送邮件失败");
+                Log.Error(ex, "第一次发送邮件失败");
 
                 try
                 {

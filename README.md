@@ -344,6 +344,11 @@ curl -o linux_install.sh https://raw.githubusercontent.com/trueai-org/midjourney
 - `SqlServer`：需要配置数据库连接字符串，示例：`Data Source=192.168.3.241;User Id=sa;Password=xxx;Initial Catalog=mj;Encrypt=True;TrustServerCertificate=True;Pooling=true;Min Pool Size=1`
 - `PostgreSQL`：需要配置数据库连接字符串，示例：`Host=192.168.3.241;Port=5432;Username=mj;Password=xxx; Database=mj;ArrayNullabilityMode=Always;Pooling=true;Minimum Pool Size=1`，需要启动扩展支持字典类型 `CREATE EXTENSION hstore`
 
+### Redis 配置
+
+- 开启 Redis 支持分布式部署。
+- 依赖 Redis 可以自动过官网 CloudFlare 验证。
+
 ### MongoDB 配置
 
 > 如果你的任务量未来可能超过 10 万，推荐 Docker 部署 MongoDB。

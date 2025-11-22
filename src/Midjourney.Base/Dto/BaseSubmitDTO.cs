@@ -68,5 +68,10 @@ namespace Midjourney.Base.Dto
         /// 账号过滤时，remix 自动提交视为账号的 remix 为 false
         /// </summary>
         public bool? RemixAutoConsidered { get; set; }
+
+        /// <summary>
+        /// 通过备注过滤账号
+        /// </summary>
+        public string Remark { get; set; }
     }
 }

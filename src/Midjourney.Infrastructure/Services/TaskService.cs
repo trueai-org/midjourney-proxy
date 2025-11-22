@@ -732,7 +732,7 @@ namespace Midjourney.Infrastructure.Services
                     {
                         startImageUrl = startUrl.Url;
                     }
-                    else if (endUrl?.Data != null && endUrl.Data.Length > 0)
+                    else if (startUrl?.Data != null && startUrl.Data.Length > 0)
                     {
                         var taskFileName = $"{info.Id}.{MimeTypeUtils.GuessFileSuffix(startUrl.MimeType)}";
                         var uploadResult = await instance.UploadAsync(taskFileName, startUrl);

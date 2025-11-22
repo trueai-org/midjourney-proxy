@@ -22,7 +22,6 @@
 // invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
-using LiteDB;
 using Midjourney.Base.Data;
 using Midjourney.Base.Options;
 using Serilog.Events;
@@ -70,14 +69,20 @@ namespace Midjourney.Base.Models
         public bool EnableRiskControlAutoCaptcha { get; set; }
 
         /// <summary>
-        /// 触发超过多少次验证后，账号自动休眠
+        /// 判断是否允许官网账号进行 CF 验证处理，验证 redis captcha enable
         /// </summary>
-        public int RiskControlAutoCaptchaMaxCount { get; set; } = 2;
+        public bool IsAllowOfficialAccountRiskControlCaptcha => EnableRiskControlAutoCaptcha && !string.IsNullOrWhiteSpace(TwoCaptchaKey)
+            && EnableRedis && !string.IsNullOrWhiteSpace(RedisConnectionString);
 
         /// <summary>
-        /// 触发风控后自定休眠的时间，单位分钟
+        /// 今日触发超过多少次验证后，账号自动禁用
         /// </summary>
-        public int RiskControlAutoCaptchaSleepMinutes { get; set; } = 120;
+        public int RiskControlAutoCaptchaMaxCount { get; set; } = 10;
+
+        ///// <summary>
+        ///// 触发风控后自定休眠的时间，单位分钟
+        ///// </summary>
+        //public int RiskControlAutoCaptchaSleepMinutes { get; set; } = 120;
 
         /// <summary>
         /// 2captcha API key
@@ -499,6 +504,11 @@ namespace Midjourney.Base.Models
         /// 加速域名，可用于图片加速和图片审核使用
         /// </summary>
         public string CustomCdn { get; set; }
+
+        /// <summary>
+        /// 合作商加速域名
+        /// </summary>
+        public string PartnerCdn { get; set; }
     }
 
     /// <summary>
