@@ -142,6 +142,15 @@ namespace Midjourney.Base.Storage
                 return;
             }
 
+            if (!string.IsNullOrWhiteSpace(setting.LocalStorage?.PartnerCdn))
+            { 
+                var partnerCdnUri = new Uri(setting.LocalStorage.PartnerCdn);
+                if (fileUri.Host.Equals(partnerCdnUri.Host, StringComparison.OrdinalIgnoreCase))
+                {
+                    return;
+                }
+            }
+
             // 开启了链接转换验证
             if (info.IsPartner || info.IsOfficial)
             {
