@@ -142,6 +142,7 @@ namespace Midjourney.Base.Storage
                 return;
             }
 
+            // 合作商加速链接不处理
             if (!string.IsNullOrWhiteSpace(setting.LocalStorage?.PartnerCdn))
             { 
                 var partnerCdnUri = new Uri(setting.LocalStorage.PartnerCdn);

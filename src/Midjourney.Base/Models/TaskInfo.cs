@@ -29,6 +29,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Midjourney.Base.Data;
 using Midjourney.Base.Dto;
 using Midjourney.Base.Storage;
+using MongoDB.Driver;
 using Serilog;
 
 namespace Midjourney.Base.Models
@@ -62,6 +63,11 @@ namespace Midjourney.Base.Models
         /// Midjourney CDN 域名
         /// </summary>
         public const string MIDJOURNEY_CDN = "cdn.midjourney.com";
+
+        /// <summary>
+        /// 悠船 CDN 域名
+        /// </summary>
+        public const string YOUCHUAN_CDN = "youchuan-imagine.oss-cn-shanghai.aliyuncs.com";
 
         /// <summary>
         /// 版本号匹配正则表达式。
@@ -1064,6 +1070,84 @@ namespace Midjourney.Base.Models
         }
 
         /// <summary>
+        /// 转为合作商自定义链接
+        /// </summary>
+        public void TransformToPartnerUrl()
+        {
+            var setting = GlobalConfiguration.Setting;
+            if (IsPartner && !string.IsNullOrWhiteSpace(setting.LocalStorage?.PartnerCdn))
+            {
+                // 替换合作商域名
+
+                if (!string.IsNullOrWhiteSpace(VideoGenOriginImageUrl) && VideoGenOriginImageUrl.Contains(YOUCHUAN_CDN, StringComparison.OrdinalIgnoreCase))
+                {
+                    var uri = new Uri(VideoGenOriginImageUrl);
+                    VideoGenOriginImageUrl = $"{setting.LocalStorage.PartnerCdn}/{uri.PathAndQuery.TrimStart('/')}";
+                }
+
+                if (VideoUrls?.Count > 0)
+                {
+                    foreach (var item in VideoUrls)
+                    {
+                        if (!string.IsNullOrWhiteSpace(item.Url) && item.Url.Contains(YOUCHUAN_CDN, StringComparison.OrdinalIgnoreCase))
+                        {
+                            var uri = new Uri(item.Url);
+                            item.Url = $"{setting.LocalStorage.PartnerCdn}/{uri.PathAndQuery.TrimStart('/')}";
+                        }
+                    }
+                }
+
+                if (!string.IsNullOrWhiteSpace(ImageUrl) && ImageUrl.Contains(YOUCHUAN_CDN, StringComparison.OrdinalIgnoreCase))
+                {
+                    var uri = new Uri(ImageUrl);
+                    ImageUrl = $"{setting.LocalStorage.PartnerCdn}/{uri.PathAndQuery.TrimStart('/')}";
+                }
+
+                if (!string.IsNullOrWhiteSpace(Url) && Url.Contains(YOUCHUAN_CDN, StringComparison.OrdinalIgnoreCase))
+                {
+                    var uri = new Uri(Url);
+                    Url = $"{setting.LocalStorage.PartnerCdn}/{uri.PathAndQuery.TrimStart('/')}";
+                }
+
+                if (ImageUrls?.Count > 0)
+                {
+                    foreach (var item in ImageUrls)
+                    {
+                        if (!string.IsNullOrWhiteSpace(item.Url) && item.Url.Contains(YOUCHUAN_CDN, StringComparison.OrdinalIgnoreCase))
+                        {
+                            var uri = new Uri(item.Url);
+                            item.Url = $"{setting.LocalStorage.PartnerCdn}/{uri.PathAndQuery.TrimStart('/')}";
+                        }
+                    }
+                }
+
+                if (PartnerTaskInfo?.ImgUrls?.Count > 0)
+                {
+                    foreach (var item in PartnerTaskInfo.ImgUrls)
+                    {
+                        if (!string.IsNullOrWhiteSpace(item.Url) && item.Url.Contains(YOUCHUAN_CDN, StringComparison.OrdinalIgnoreCase))
+                        {
+                            var uri = new Uri(item.Url);
+                            item.Url = $"{setting.LocalStorage.PartnerCdn}/{uri.PathAndQuery.TrimStart('/')}";
+                        }
+
+                        if (!string.IsNullOrWhiteSpace(item.Webp) && item.Webp.Contains(YOUCHUAN_CDN, StringComparison.OrdinalIgnoreCase))
+                        {
+                            var uri = new Uri(item.Webp);
+                            item.Webp = $"{setting.LocalStorage.PartnerCdn}/{uri.PathAndQuery.TrimStart('/')}";
+                        }
+
+                        if (!string.IsNullOrWhiteSpace(item.Thumbnail) && item.Thumbnail.Contains(YOUCHUAN_CDN, StringComparison.OrdinalIgnoreCase))
+                        {
+                            var uri = new Uri(item.Thumbnail);
+                            item.Thumbnail = $"{setting.LocalStorage.PartnerCdn}/{uri.PathAndQuery.TrimStart('/')}";
+                        }
+                    }
+                }
+            }
+        }
+
+        /// <summary>
         /// 转换 URL 为官方链接或合作商链接。
         /// </summary>
         /// <param name="sourceUrl"></param>
@@ -1074,14 +1158,6 @@ namespace Midjourney.Base.Models
             // 悠船
             if (IsPartner)
             {
-                var setting = GlobalConfiguration.Setting;
-                if (!string.IsNullOrWhiteSpace(setting.LocalStorage?.PartnerCdn) && !string.IsNullOrWhiteSpace(sourceUrl))
-                {
-                    // 替换域名
-                    var uri = new Uri(sourceUrl);
-                    return $"{setting.LocalStorage.PartnerCdn}/{uri.PathAndQuery.TrimStart('/')}";
-                }
-
                 if (!string.IsNullOrWhiteSpace(sourceUrl))
                 {
                     if (StorageOption == EStorageOption.Partner)
