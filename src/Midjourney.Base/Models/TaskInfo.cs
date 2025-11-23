@@ -1153,6 +1153,12 @@ namespace Midjourney.Base.Models
                             item.Thumbnail = $"{setting.LocalStorage.PartnerCdn}/{uri.PathAndQuery.TrimStart('/')}";
                         }
                     }
+
+                    if (!string.IsNullOrWhiteSpace(PartnerTaskInfo.VideoGenOriginImageUrl))
+                    {
+                        var uri = new Uri(PartnerTaskInfo.VideoGenOriginImageUrl);
+                        PartnerTaskInfo.VideoGenOriginImageUrl = $"{setting.LocalStorage.PartnerCdn}/{uri.PathAndQuery.TrimStart('/')}";
+                    }
                 }
             }
         }
@@ -1170,6 +1176,13 @@ namespace Midjourney.Base.Models
             {
                 if (!string.IsNullOrWhiteSpace(sourceUrl))
                 {
+                    var setting = GlobalConfiguration.Setting;
+                    if (!string.IsNullOrWhiteSpace(setting.LocalStorage?.PartnerCdn) && sourceUrl.Contains(YOUCHUAN_CDN_PREFIX, StringComparison.OrdinalIgnoreCase))
+                    {
+                        var uri = new Uri(sourceUrl);
+                        return $"{setting.LocalStorage.PartnerCdn}/{uri.PathAndQuery.TrimStart('/')}";
+                    }
+
                     if (StorageOption == EStorageOption.Partner)
                     {
                         return sourceUrl;
