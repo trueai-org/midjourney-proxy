@@ -70,6 +70,16 @@ namespace Midjourney.Base.Models
         public const string YOUCHUAN_CDN = "youchuan-imagine.oss-cn-shanghai.aliyuncs.com";
 
         /// <summary>
+        /// 悠船内网 CDN 域名
+        /// </summary>
+        public const string YOUCHUAN_CDN_INTERNAL = "youchuan-imagine.oss-cn-shanghai-internal.aliyuncs.com";
+
+        /// <summary>
+        /// 悠船 CDN 域名前缀
+        /// </summary>
+        public const string YOUCHUAN_CDN_PREFIX = "youchuan-imagine.oss-cn-shanghai";
+
+        /// <summary>
         /// 版本号匹配正则表达式。
         /// </summary>
         private const string VERSION_PATTERN = @"--(?<flag>v|niji)\s*(?<version>\d+(?:\.\d+)?)";
@@ -1079,7 +1089,7 @@ namespace Midjourney.Base.Models
             {
                 // 替换合作商域名
 
-                if (!string.IsNullOrWhiteSpace(VideoGenOriginImageUrl) && VideoGenOriginImageUrl.Contains(YOUCHUAN_CDN, StringComparison.OrdinalIgnoreCase))
+                if (!string.IsNullOrWhiteSpace(VideoGenOriginImageUrl) && VideoGenOriginImageUrl.Contains(YOUCHUAN_CDN_PREFIX, StringComparison.OrdinalIgnoreCase))
                 {
                     var uri = new Uri(VideoGenOriginImageUrl);
                     VideoGenOriginImageUrl = $"{setting.LocalStorage.PartnerCdn}/{uri.PathAndQuery.TrimStart('/')}";
@@ -1089,7 +1099,7 @@ namespace Midjourney.Base.Models
                 {
                     foreach (var item in VideoUrls)
                     {
-                        if (!string.IsNullOrWhiteSpace(item.Url) && item.Url.Contains(YOUCHUAN_CDN, StringComparison.OrdinalIgnoreCase))
+                        if (!string.IsNullOrWhiteSpace(item.Url) && item.Url.Contains(YOUCHUAN_CDN_PREFIX, StringComparison.OrdinalIgnoreCase))
                         {
                             var uri = new Uri(item.Url);
                             item.Url = $"{setting.LocalStorage.PartnerCdn}/{uri.PathAndQuery.TrimStart('/')}";
@@ -1097,13 +1107,13 @@ namespace Midjourney.Base.Models
                     }
                 }
 
-                if (!string.IsNullOrWhiteSpace(ImageUrl) && ImageUrl.Contains(YOUCHUAN_CDN, StringComparison.OrdinalIgnoreCase))
+                if (!string.IsNullOrWhiteSpace(ImageUrl) && ImageUrl.Contains(YOUCHUAN_CDN_PREFIX, StringComparison.OrdinalIgnoreCase))
                 {
                     var uri = new Uri(ImageUrl);
                     ImageUrl = $"{setting.LocalStorage.PartnerCdn}/{uri.PathAndQuery.TrimStart('/')}";
                 }
 
-                if (!string.IsNullOrWhiteSpace(Url) && Url.Contains(YOUCHUAN_CDN, StringComparison.OrdinalIgnoreCase))
+                if (!string.IsNullOrWhiteSpace(Url) && Url.Contains(YOUCHUAN_CDN_PREFIX, StringComparison.OrdinalIgnoreCase))
                 {
                     var uri = new Uri(Url);
                     Url = $"{setting.LocalStorage.PartnerCdn}/{uri.PathAndQuery.TrimStart('/')}";
@@ -1113,7 +1123,7 @@ namespace Midjourney.Base.Models
                 {
                     foreach (var item in ImageUrls)
                     {
-                        if (!string.IsNullOrWhiteSpace(item.Url) && item.Url.Contains(YOUCHUAN_CDN, StringComparison.OrdinalIgnoreCase))
+                        if (!string.IsNullOrWhiteSpace(item.Url) && item.Url.Contains(YOUCHUAN_CDN_PREFIX, StringComparison.OrdinalIgnoreCase))
                         {
                             var uri = new Uri(item.Url);
                             item.Url = $"{setting.LocalStorage.PartnerCdn}/{uri.PathAndQuery.TrimStart('/')}";
@@ -1125,19 +1135,19 @@ namespace Midjourney.Base.Models
                 {
                     foreach (var item in PartnerTaskInfo.ImgUrls)
                     {
-                        if (!string.IsNullOrWhiteSpace(item.Url) && item.Url.Contains(YOUCHUAN_CDN, StringComparison.OrdinalIgnoreCase))
+                        if (!string.IsNullOrWhiteSpace(item.Url) && item.Url.Contains(YOUCHUAN_CDN_PREFIX, StringComparison.OrdinalIgnoreCase))
                         {
                             var uri = new Uri(item.Url);
                             item.Url = $"{setting.LocalStorage.PartnerCdn}/{uri.PathAndQuery.TrimStart('/')}";
                         }
 
-                        if (!string.IsNullOrWhiteSpace(item.Webp) && item.Webp.Contains(YOUCHUAN_CDN, StringComparison.OrdinalIgnoreCase))
+                        if (!string.IsNullOrWhiteSpace(item.Webp) && item.Webp.Contains(YOUCHUAN_CDN_PREFIX, StringComparison.OrdinalIgnoreCase))
                         {
                             var uri = new Uri(item.Webp);
                             item.Webp = $"{setting.LocalStorage.PartnerCdn}/{uri.PathAndQuery.TrimStart('/')}";
                         }
 
-                        if (!string.IsNullOrWhiteSpace(item.Thumbnail) && item.Thumbnail.Contains(YOUCHUAN_CDN, StringComparison.OrdinalIgnoreCase))
+                        if (!string.IsNullOrWhiteSpace(item.Thumbnail) && item.Thumbnail.Contains(YOUCHUAN_CDN_PREFIX, StringComparison.OrdinalIgnoreCase))
                         {
                             var uri = new Uri(item.Thumbnail);
                             item.Thumbnail = $"{setting.LocalStorage.PartnerCdn}/{uri.PathAndQuery.TrimStart('/')}";
