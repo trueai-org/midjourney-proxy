@@ -14,7 +14,7 @@ The most powerful, complete, full-featured, completely free and open source Midj
 
 ⭐ 如果觉得项目不错，请一定帮忙点个 `Star`，万分感谢！
 
-## 👍👍 ChatGPT · Disocord · Midjourney 官方镜像站，官方 1.3 折优惠！
+## 👍👍 ChatGPT · Discord · Midjourney 官方镜像站，官方 1 折优惠！
 
 - 🍎 支持 Discord ChatGPT 所有指令！
 - 😍 多端登录，不限设备，不限网络，永不封号！
