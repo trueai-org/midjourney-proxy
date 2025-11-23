@@ -1128,6 +1128,17 @@ namespace Midjourney.Base.Models
                             var uri = new Uri(item.Url);
                             item.Url = $"{setting.LocalStorage.PartnerCdn}/{uri.PathAndQuery.TrimStart('/')}";
                         }
+
+                        if (!string.IsNullOrWhiteSpace(item.Thumbnail) && item.Thumbnail.Contains(YOUCHUAN_CDN_PREFIX, StringComparison.OrdinalIgnoreCase))
+                        {
+                            var uri = new Uri(item.Thumbnail);
+                            item.Thumbnail = $"{setting.LocalStorage.PartnerCdn}/{uri.PathAndQuery.TrimStart('/')}";
+                        }
+                        else
+                        {
+                            // 清除缩略图
+                            item.Thumbnail = null;
+                        }
                     }
                 }
 
@@ -1274,9 +1285,10 @@ namespace Midjourney.Base.Models
         {
         }
 
-        public TaskInfoImageUrl(string url)
+        public TaskInfoImageUrl(string url, string thumbnail)
         {
             Url = url;
+            Thumbnail = thumbnail;
         }
 
         /// <summary>
@@ -1284,5 +1296,11 @@ namespace Midjourney.Base.Models
         /// </summary>
         [JsonPropertyName("url")]
         public string Url { get; set; }
+
+        /// <summary>
+        /// 缩略图 URL
+        /// </summary>
+        [JsonPropertyName("thumbnail")]
+        public string Thumbnail { get; set; }
     }
 }
