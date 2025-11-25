@@ -49,6 +49,12 @@ namespace Midjourney.Base.Dto
         [SwaggerSchema("垫图base64数组")]
         public List<string> Base64Array { get; set; }
 
+        ///// <summary>
+        ///// 是否为高清视频操作
+        ///// </summary>
+        //[SwaggerSchema("是否为高清视频操作")]
+        //public bool IsHdVideo { get; set; }
+
         /// <summary>
         /// 账号过滤
         /// </summary>

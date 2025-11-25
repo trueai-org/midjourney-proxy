@@ -158,6 +158,7 @@ namespace Midjourney.API.Controllers
 
                 prompt = prompt.Trim();
                 var task = NewTask(imagineDTO);
+
                 task.Action = TaskAction.IMAGINE;
                 task.Prompt = prompt;
                 task.BotType = GetBotType(imagineDTO.BotType);
