@@ -1099,7 +1099,7 @@ namespace Midjourney.API
                     {
                         try
                         {
-                            if (setting.EnableRedis)
+                            if (disInstance.IsRedis)
                             {
                                 var agoTime = new DateTimeOffset(DateTime.Now.AddHours(-1)).ToUnixTimeMilliseconds();
                                 var list = DbHelper.Instance.TaskStore.Where(c => c.InstanceId == account.ChannelId && c.SubmitTime >= agoTime && c.Status != TaskStatus.CANCEL && c.Status != TaskStatus.FAILURE && c.Status != TaskStatus.MODAL && c.Status != TaskStatus.SUCCESS);

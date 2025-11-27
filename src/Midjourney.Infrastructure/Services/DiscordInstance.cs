@@ -109,6 +109,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
         private readonly RedisConcurrent _defaultOrFastConcurrent;
 
+        private readonly bool _isRedis;
+
         public DiscordInstance(
             IMemoryCache memoryCache,
             DiscordAccount account,
@@ -120,6 +122,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
             ITaskService taskService,
             IHttpClientFactory httpClientFactory)
         {
+            _isRedis = GlobalConfiguration.Setting.EnableRedis;
+
             _httpClientFactory = httpClientFactory;
             _logger = Log.Logger;
 
@@ -156,7 +160,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
             _discordAttachmentUrl = $"{discordServer}/api/v9/channels/{account.ChannelId}/attachments";
             _discordMessageUrl = $"{discordServer}/api/v9/channels/{account.ChannelId}/messages";
 
-            if (GlobalConfiguration.Setting.EnableRedis)
+            if (_isRedis)
             {
                 _relaxQueue = new RedisQueue<TaskInfoQueue>(RedisHelper.Instance, $"relax:{account.ChannelId}", account.RelaxCoreSize);
                 _defaultOrFastQueue = new RedisQueue<TaskInfoQueue>(RedisHelper.Instance, $"fast:{account.ChannelId}", account.CoreSize);
@@ -341,7 +345,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
             {
                 var count = 0;
 
-                if (GlobalConfiguration.Setting.EnableRedis)
+                if (_isRedis)
                 {
                     count += _defaultOrFastConcurrent.GetConcurrency(Account.CoreSize);
 
@@ -374,33 +378,35 @@ namespace Midjourney.Infrastructure.LoadBalancer
         {
             get
             {
-                var count = _fastQueueTasks.Count + _relaxQueueTasks.Count;
-
-                if (GlobalConfiguration.Setting.EnableRedis)
+                if (_isRedis)
                 {
-                    count += _defaultOrFastQueue.Count();
+                    var count = _defaultOrFastQueue.Count();
 
                     if (Account.IsYouChuan)
                     {
                         count += _relaxQueue.Count();
                     }
+                    return count;
                 }
-
-                return count;
+                else
+                {
+                    var count = _fastQueueTasks.Count + _relaxQueueTasks.Count;
+                    return count;
+                }
             }
         }
 
         /// <summary>
         /// 是否启用 Redis
         /// </summary>
-        public bool IsRedis => GlobalConfiguration.Setting.EnableRedis;
+        public bool IsRedis => _isRedis;
 
         /// <summary>
         /// 是否存在空闲队列，即：队列是否已满，是否可加入新的任务
         /// </summary>
         public bool IsIdleQueue(GenerationSpeedMode? mode = null)
         {
-            if (IsRedis)
+            if (_isRedis)
             {
                 if (Account.IsYouChuan && mode == GenerationSpeedMode.RELAX)
                 {
@@ -416,7 +422,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
             }
             else
             {
-
                 if (Account.IsYouChuan && mode == GenerationSpeedMode.RELAX)
                 {
                     // 判断 RELAX 队列是否有空闲
@@ -439,8 +444,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 try
                 {
                     // 如果是 redis 作业
-                    var setting = GlobalConfiguration.Setting;
-                    if (!setting.EnableRedis)
+                    if (!_isRedis)
                     {
                         return;
                     }
@@ -741,7 +745,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                         case TaskInfoQueueFunction.REFRESH:
                             {
-
                             }
                             break;
 
@@ -757,16 +760,277 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                         SaveAndNotify(info);
                                         return;
                                     }
+                                }
+                                else
+                                {
+                                    var task = info;
+                                    var submitAction = queue.ModalParam.Dto;
 
-                                    if (info.Status != TaskStatus.CANCEL && info.Status != TaskStatus.SUCCESS && info.Status != TaskStatus.FAILURE)
+                                    var customId = task.GetProperty<string>(Constants.TASK_PROPERTY_CUSTOM_ID, default);
+                                    var messageFlags = task.GetProperty<string>(Constants.TASK_PROPERTY_FLAGS, default)?.ToInt() ?? 0;
+                                    var messageId = task.GetProperty<string>(Constants.TASK_PROPERTY_MESSAGE_ID, default);
+                                    var nonce = task.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default);
+
+                                    // 弹窗确认
+                                    task.RemixModaling = true;
+
+                                    var res = await ActionAsync(messageId, customId, messageFlags, nonce, task);
+                                    if (res.Code != ReturnCode.SUCCESS)
                                     {
-                                        info.StartTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
-                                        info.Status = TaskStatus.SUBMITTED;
-                                        info.Progress = "0%";
+                                        info.Fail(res.Description);
+                                        SaveAndNotify(info);
+                                        return;
                                     }
 
-                                    SaveAndNotify(info);
+                                    // 等待获取 messageId 和交互消息 id
+                                    // 等待最大超时 5min
+                                    var sw = new Stopwatch();
+                                    sw.Start();
+                                    do
+                                    {
+                                        // 等待 2.5s
+                                        Thread.Sleep(2500);
+                                        task = GetRunningTask(task.Id);
+
+                                        if (string.IsNullOrWhiteSpace(task.RemixModalMessageId) || string.IsNullOrWhiteSpace(task.InteractionMetadataId))
+                                        {
+                                            if (sw.ElapsedMilliseconds > 300000)
+                                            {
+                                                info.Fail("超时，未找到消息");
+                                                SaveAndNotify(info);
+                                                return;
+                                            }
+                                        }
+                                    } while (string.IsNullOrWhiteSpace(task.RemixModalMessageId) || string.IsNullOrWhiteSpace(task.InteractionMetadataId));
+
+                                    // 等待 1.2s
+                                    Thread.Sleep(1200);
+
+                                    task.RemixModaling = false;
+
+                                    // 自定义变焦
+                                    if (customId.StartsWith("MJ::CustomZoom::"))
+                                    {
+                                        nonce = SnowFlake.NextId();
+                                        task.Nonce = nonce;
+                                        task.SetProperty(Constants.TASK_PROPERTY_NONCE, nonce);
+
+                                        var result = await ZoomAsync(task, task.RemixModalMessageId, customId, task.PromptEn, nonce);
+                                        if (result.Code != ReturnCode.SUCCESS)
+                                        {
+                                            info.Fail(result.Description);
+                                            SaveAndNotify(info);
+                                            return;
+                                        }
+                                    }
+                                    // 局部重绘
+                                    else if (customId.StartsWith("MJ::Inpaint::"))
+                                    {
+                                        var ifarmeCustomId = task.GetProperty<string>(Constants.TASK_PROPERTY_IFRAME_MODAL_CREATE_CUSTOM_ID, default);
+                                        var result = await InpaintAsync(task, ifarmeCustomId, task.PromptEn, submitAction.MaskBase64);
+                                        if (result.Code != ReturnCode.SUCCESS)
+                                        {
+                                            info.Fail(result.Description);
+                                            SaveAndNotify(info);
+                                            return;
+                                        }
+                                    }
+                                    // 图生文 -> 文生图
+                                    else if (customId.StartsWith("MJ::Job::PicReader::"))
+                                    {
+                                        nonce = SnowFlake.NextId();
+                                        task.Nonce = nonce;
+                                        task.SetProperty(Constants.TASK_PROPERTY_NONCE, nonce);
+
+                                        var result = await PicReaderAsync(task, task.RemixModalMessageId, customId, task.PromptEn, nonce, task.RealBotType ?? task.BotType);
+                                        if (result.Code != ReturnCode.SUCCESS)
+                                        {
+                                            info.Fail(result.Description);
+                                            SaveAndNotify(info);
+                                            return;
+                                        }
+                                    }
+                                    // prompt shorten -> 生图
+                                    else if (customId.StartsWith("MJ::Job::PromptAnalyzer::"))
+                                    {
+                                        nonce = SnowFlake.NextId();
+                                        task.Nonce = nonce;
+                                        task.SetProperty(Constants.TASK_PROPERTY_NONCE, nonce);
+
+                                        // MJ::ImagineModal::1265485889606516808
+                                        customId = $"MJ::ImagineModal::{messageId}";
+                                        var modal = "MJ::ImagineModal::new_prompt";
+
+                                        var result = await RemixAsync(task, task.Action.Value, task.RemixModalMessageId, modal,
+                                            customId, task.PromptEn, nonce, task.RealBotType ?? task.BotType);
+                                        if (result.Code != ReturnCode.SUCCESS)
+                                        {
+                                            info.Fail(result.Description);
+                                            SaveAndNotify(info);
+                                            return;
+                                        }
+                                    }
+                                    // Remix mode
+                                    else if (task.Action == TaskAction.VARIATION || task.Action == TaskAction.REROLL || task.Action == TaskAction.PAN)
+                                    {
+                                        nonce = SnowFlake.NextId();
+                                        task.Nonce = nonce;
+                                        task.SetProperty(Constants.TASK_PROPERTY_NONCE, nonce);
+
+                                        var action = task.Action;
+
+                                        TaskInfo parentTask = null;
+                                        if (!string.IsNullOrWhiteSpace(task.ParentId))
+                                        {
+                                            parentTask = _taskStoreService.Get(task.ParentId);
+                                            if (parentTask == null)
+                                            {
+                                                info.Fail("未找到父级任务");
+                                                SaveAndNotify(info);
+                                                return;
+                                            }
+                                        }
+
+                                        var prevCustomId = parentTask?.GetProperty<string>(Constants.TASK_PROPERTY_REMIX_CUSTOM_ID, default);
+                                        var prevModal = parentTask?.GetProperty<string>(Constants.TASK_PROPERTY_REMIX_MODAL, default);
+
+                                        var modal = "MJ::RemixModal::new_prompt";
+                                        if (action == TaskAction.REROLL)
+                                        {
+                                            // 如果是首次提交，则使用交互 messageId
+                                            if (string.IsNullOrWhiteSpace(prevCustomId))
+                                            {
+                                                // MJ::ImagineModal::1265485889606516808
+                                                customId = $"MJ::ImagineModal::{messageId}";
+                                                modal = "MJ::ImagineModal::new_prompt";
+                                            }
+                                            else
+                                            {
+                                                modal = prevModal;
+
+                                                if (prevModal.Contains("::PanModal"))
+                                                {
+                                                    // 如果是 pan, pan 是根据放大图片的 CUSTOM_ID 进行重绘处理
+                                                    var cus = parentTask?.GetProperty<string>(Constants.TASK_PROPERTY_REMIX_U_CUSTOM_ID, default);
+                                                    if (string.IsNullOrWhiteSpace(cus))
+                                                    {
+                                                        info.Fail("未找到目标图片的 U 操作");
+                                                        SaveAndNotify(info);
+                                                        return;
+                                                    }
+
+                                                    // MJ::JOB::upsample::3::10f78893-eddb-468f-a0fb-55643a94e3b4
+                                                    var arr = cus.Split("::");
+                                                    var hash = arr[4];
+                                                    var i = arr[3];
+
+                                                    var prevArr = prevCustomId.Split("::");
+                                                    var convertedString = $"MJ::PanModal::{prevArr[2]}::{hash}::{i}";
+                                                    customId = convertedString;
+
+                                                    // 在进行 U 时，记录目标图片的 U 的 customId
+                                                    task.SetProperty(Constants.TASK_PROPERTY_REMIX_U_CUSTOM_ID, parentTask?.GetProperty<string>(Constants.TASK_PROPERTY_REMIX_U_CUSTOM_ID, default));
+                                                }
+                                                else
+                                                {
+                                                    customId = prevCustomId;
+                                                }
+
+                                                task.SetProperty(Constants.TASK_PROPERTY_REMIX_CUSTOM_ID, customId);
+                                                task.SetProperty(Constants.TASK_PROPERTY_REMIX_MODAL, modal);
+                                            }
+                                        }
+                                        else if (action == TaskAction.VARIATION)
+                                        {
+                                            var suffix = "0";
+
+                                            // 如果全局开启了高变化，则高变化
+                                            if ((task.RealBotType ?? task.BotType) == EBotType.MID_JOURNEY)
+                                            {
+                                                if (Account.Buttons.Any(x => x.CustomId == "MJ::Settings::HighVariabilityMode::1" && x.Style == 3))
+                                                {
+                                                    suffix = "1";
+                                                }
+                                            }
+                                            else
+                                            {
+                                                if (Account.NijiButtons.Any(x => x.CustomId == "MJ::Settings::HighVariabilityMode::1" && x.Style == 3))
+                                                {
+                                                    suffix = "1";
+                                                }
+                                            }
+
+                                            // 低变化
+                                            if (customId.Contains("low_variation"))
+                                            {
+                                                suffix = "0";
+                                            }
+                                            // 如果是高变化
+                                            else if (customId.Contains("high_variation"))
+                                            {
+                                                suffix = "1";
+                                            }
+
+                                            var parts = customId.Split("::");
+                                            var convertedString = $"MJ::RemixModal::{parts[4]}::{parts[3]}::{suffix}";
+                                            customId = convertedString;
+
+                                            task.SetProperty(Constants.TASK_PROPERTY_REMIX_CUSTOM_ID, customId);
+                                            task.SetProperty(Constants.TASK_PROPERTY_REMIX_MODAL, modal);
+                                        }
+                                        else if (action == TaskAction.PAN)
+                                        {
+                                            modal = "MJ::PanModal::prompt";
+
+                                            // MJ::JOB::pan_left::1::f58e98cb-e76b-4ffa-9ed2-74f0c3fefa5c::SOLO
+                                            // to
+                                            // MJ::PanModal::left::f58e98cb-e76b-4ffa-9ed2-74f0c3fefa5c::1
+
+                                            var parts = customId.Split("::");
+                                            var convertedString = $"MJ::PanModal::{parts[2].Split('_')[1]}::{parts[4]}::{parts[3]}";
+                                            customId = convertedString;
+
+                                            task.SetProperty(Constants.TASK_PROPERTY_REMIX_CUSTOM_ID, customId);
+                                            task.SetProperty(Constants.TASK_PROPERTY_REMIX_MODAL, modal);
+
+                                            // 在进行 U 时，记录目标图片的 U 的 customId
+                                            task.SetProperty(Constants.TASK_PROPERTY_REMIX_U_CUSTOM_ID, parentTask?.GetProperty<string>(Constants.TASK_PROPERTY_REMIX_U_CUSTOM_ID, default));
+                                        }
+                                        else
+                                        {
+                                            info.Fail("未知操作");
+                                            SaveAndNotify(info);
+                                            return;
+                                        }
+
+                                        var result = await RemixAsync(task, task.Action.Value, task.RemixModalMessageId, modal,
+                                            customId, task.PromptEn, nonce, task.RealBotType ?? task.BotType);
+                                        if (result.Code != ReturnCode.SUCCESS)
+                                        {
+                                            if (result.Code != ReturnCode.SUCCESS)
+                                            {
+                                                info.Fail(result.Description);
+                                                SaveAndNotify(info);
+                                                return;
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        info.Fail("不支持的操作");
+                                        SaveAndNotify(info);
+                                        return;
+                                    }
                                 }
+
+                                if (info.Status != TaskStatus.CANCEL && info.Status != TaskStatus.SUCCESS && info.Status != TaskStatus.FAILURE)
+                                {
+                                    info.StartTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+                                    info.Status = TaskStatus.SUBMITTED;
+                                    info.Progress = "0%";
+                                }
+
+                                SaveAndNotify(info);
                             }
                             break;
 
