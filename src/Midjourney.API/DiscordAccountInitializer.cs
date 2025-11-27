@@ -1095,7 +1095,7 @@ namespace Midjourney.API
                     }
 
                     // 程序启动后，如果开启了 redis 则将未开始、已提交、执行中 最近1小时的任务重新加入到队列
-                    if (!_startedAccounts.ContainsKey(account.Id) && disInstance.IsAlive)
+                    if (!_startedAccounts.ContainsKey(account.Id) && disInstance?.IsAlive == true)
                     {
                         try
                         {
