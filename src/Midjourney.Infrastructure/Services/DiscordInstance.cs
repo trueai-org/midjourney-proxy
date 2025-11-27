@@ -28,7 +28,6 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.RegularExpressions;
-using Instances;
 using Microsoft.Extensions.Caching.Memory;
 using Midjourney.Infrastructure.Services;
 using Midjourney.License;
@@ -61,8 +60,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
         private readonly ConcurrentDictionary<string, Task> _taskFutureMap = [];
 
         private readonly Task _longTask;
-        //private readonly Task _longTaskCache;
-
         private readonly CancellationTokenSource _longToken;
         private readonly ManualResetEvent _mre; // 信号
 
@@ -342,7 +339,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         {
             get
             {
-                var count = _runningTasks.Count;
+                var count = 0;
 
                 if (GlobalConfiguration.Setting.EnableRedis)
                 {
@@ -352,6 +349,10 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     {
                         count += _relaxConcurrent.GetConcurrency(Account.RelaxCoreSize);
                     }
+                }
+                else
+                {
+                    count = _runningTasks.Count;
                 }
 
                 return count;
@@ -592,6 +593,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
         {
             try
             {
+                _runningTasks.TryAdd(info.Id, info);
+
                 // 判断当前实例是否可用
                 if (!IsAlive)
                 {
@@ -994,11 +997,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                 }
                                 else
                                 {
-                                   
                                 }
                             }
                             break;
-
 
                         case TaskInfoQueueFunction.RETEXTURE:
                             {
@@ -1023,11 +1024,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                 }
                                 else
                                 {
-
                                 }
                             }
                             break;
-
 
                         case TaskInfoQueueFunction.VIDEO:
                             {
@@ -1052,10 +1051,10 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                 }
                                 else
                                 {
-
                                 }
                             }
                             break;
+
                         default:
                             break;
                     }
@@ -1112,14 +1111,19 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                     _logger.Debug("[{AccountDisplay}] task finished, id: {TaskId}, status: {TaskStatus}", Account.GetDisplay(), info.Id, info.Status);
                 }
-
-                SaveAndNotify(info);
             }
             catch (Exception ex)
             {
                 _logger.Error(ex, "更新任务进度异常 {@0} - {@1}", info.InstanceId, info.Id);
 
                 info.Fail("服务异常，请稍后重试");
+
+                SaveAndNotify(info);
+            }
+            finally
+            {
+                _runningTasks.TryRemove(info.Id, out _);
+                _taskFutureMap.TryRemove(info.Id, out _);
 
                 SaveAndNotify(info);
             }
@@ -1412,65 +1416,65 @@ namespace Midjourney.Infrastructure.LoadBalancer
             }
         }
 
-        /// <summary>
-        /// 退出任务并进行保存和通知。
-        /// </summary>
-        /// <param name="task">任务信息</param>
-        public void ExitTask(TaskInfo task)
-        {
-            _taskFutureMap.TryRemove(task.Id, out _);
-            SaveAndNotify(task);
+        ///// <summary>
+        ///// 退出任务并进行保存和通知。
+        ///// </summary>
+        ///// <param name="task">任务信息</param>
+        //public void ExitTask(TaskInfo task)
+        //{
+        //    _taskFutureMap.TryRemove(task.Id, out _);
+        //    SaveAndNotify(task);
 
-            // 判断 _queueTasks 队列中是否存在指定任务，如果有则移除
-            //if (_queueTasks.Any(c => c.Item1.Id == task.Id))
-            //{
-            //    _queueTasks = new ConcurrentQueue<(TaskInfo, Func<Task<Message>>)>(_queueTasks.Where(c => c.Item1.Id != task.Id));
-            //}
+        //    // 判断 _queueTasks 队列中是否存在指定任务，如果有则移除
+        //    //if (_queueTasks.Any(c => c.Item1.Id == task.Id))
+        //    //{
+        //    //    _queueTasks = new ConcurrentQueue<(TaskInfo, Func<Task<Message>>)>(_queueTasks.Where(c => c.Item1.Id != task.Id));
+        //    //}
 
-            // 判断 _queueTasks 队列中是否存在指定任务，如果有则移除
-            // 使用线程安全的方式移除
-            if (_fastQueueTasks.Any(c => c.Item1.Id == task.Id))
-            {
-                // 移除 _queueTasks 队列中指定的任务
-                var tempQueue = new ConcurrentQueue<(TaskInfo, Func<Task<Message>>)>();
+        //    // 判断 _queueTasks 队列中是否存在指定任务，如果有则移除
+        //    // 使用线程安全的方式移除
+        //    if (_fastQueueTasks.Any(c => c.Item1.Id == task.Id))
+        //    {
+        //        // 移除 _queueTasks 队列中指定的任务
+        //        var tempQueue = new ConcurrentQueue<(TaskInfo, Func<Task<Message>>)>();
 
-                // 将不需要移除的元素加入到临时队列中
-                while (_fastQueueTasks.TryDequeue(out var item))
-                {
-                    if (item.Item1.Id != task.Id)
-                    {
-                        tempQueue.Enqueue(item);
-                    }
-                }
+        //        // 将不需要移除的元素加入到临时队列中
+        //        while (_fastQueueTasks.TryDequeue(out var item))
+        //        {
+        //            if (item.Item1.Id != task.Id)
+        //            {
+        //                tempQueue.Enqueue(item);
+        //            }
+        //        }
 
-                // 交换队列引用
-                _fastQueueTasks = tempQueue;
-            }
+        //        // 交换队列引用
+        //        _fastQueueTasks = tempQueue;
+        //    }
 
-            if (_relaxQueueTasks.Any(c => c.Item1.Id == task.Id))
-            {
-                // 移除 _queueTasks 队列中指定的任务
-                var tempQueue = new ConcurrentQueue<(TaskInfo, Func<Task<Message>>)>();
+        //    if (_relaxQueueTasks.Any(c => c.Item1.Id == task.Id))
+        //    {
+        //        // 移除 _queueTasks 队列中指定的任务
+        //        var tempQueue = new ConcurrentQueue<(TaskInfo, Func<Task<Message>>)>();
 
-                // 将不需要移除的元素加入到临时队列中
-                while (_relaxQueueTasks.TryDequeue(out var item))
-                {
-                    if (item.Item1.Id != task.Id)
-                    {
-                        tempQueue.Enqueue(item);
-                    }
-                }
+        //        // 将不需要移除的元素加入到临时队列中
+        //        while (_relaxQueueTasks.TryDequeue(out var item))
+        //        {
+        //            if (item.Item1.Id != task.Id)
+        //            {
+        //                tempQueue.Enqueue(item);
+        //            }
+        //        }
 
-                // 交换队列引用
-                _relaxQueueTasks = tempQueue;
-            }
-        }
+        //        // 交换队列引用
+        //        _relaxQueueTasks = tempQueue;
+        //    }
+        //}
 
-        /// <summary>
-        /// 获取正在运行的任务Future映射。
-        /// </summary>
-        /// <returns>任务Future映射</returns>
-        public Dictionary<string, Task> GetRunningFutures() => new Dictionary<string, Task>(_taskFutureMap);
+        ///// <summary>
+        ///// 获取正在运行的任务Future映射。
+        ///// </summary>
+        ///// <returns>任务Future映射</returns>
+        //public Dictionary<string, Task> GetRunningFutures() => new Dictionary<string, Task>(_taskFutureMap);
 
         public RedisQueue<TaskInfoQueue> FastQueue => _defaultOrFastQueue;
 
