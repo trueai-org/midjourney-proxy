@@ -22,8 +22,8 @@
 // invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
-using System.Text.Json;
 using CSRedis;
+using Newtonsoft.Json;
 
 namespace Midjourney.Infrastructure.Services
 {
@@ -73,7 +73,7 @@ namespace Midjourney.Infrastructure.Services
         /// <returns>是否成功入队</returns>
         public async Task<bool> EnqueueAsync(T item, int maxSize, int timeoutSeconds = 1, bool ignoreFull = false)
         {
-            var json = JsonSerializer.Serialize(item);
+            var json = item.ToJson();
 
             // 1. 尝试获取分布式锁
             // 这里的 lockSeconds=2 表示锁的有效期，防止死锁
@@ -128,7 +128,7 @@ namespace Midjourney.Infrastructure.Services
 
                 if (!string.IsNullOrWhiteSpace(result))
                 {
-                    return JsonSerializer.Deserialize<T>(result);
+                    return result.ToObject<T>();
                 }
 
                 return null; // 超时未获取到数据
@@ -170,7 +170,7 @@ namespace Midjourney.Infrastructure.Services
             var result = new HashSet<T>();
             foreach (var item in items)
             {
-                var obj = JsonSerializer.Deserialize<T>(item);
+                var obj = item.ToObject<T>();
                 if (obj != null && !result.Contains(obj))
                 {
                     result.Add(obj);

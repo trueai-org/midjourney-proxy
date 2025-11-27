@@ -358,7 +358,7 @@ namespace Midjourney.API.Controllers
         }
 
         /// <summary>
-        /// 任务变化（简单操作）
+        /// 任务变化（简单操作） - 仅用于 Discord 交互（即将废弃，请使用 action 接口）
         /// </summary>
         /// <param name="changeDTO">提交变化任务的DTO</param>
         /// <returns>提交结果</returns>
@@ -441,7 +441,7 @@ namespace Midjourney.API.Controllers
         /// <param name="describeDTO">提交Describe任务的DTO</param>
         /// <returns>提交结果</returns>
         [HttpPost("describe")]
-        public ActionResult<SubmitResultVO> Describe([FromBody] SubmitDescribeDTO describeDTO)
+        public async Task<ActionResult<SubmitResultVO>> Describe([FromBody] SubmitDescribeDTO describeDTO)
         {
             if (string.IsNullOrWhiteSpace(describeDTO.Base64)
                 && string.IsNullOrWhiteSpace(describeDTO.Link))
@@ -496,7 +496,8 @@ namespace Midjourney.API.Controllers
 
             NewTaskDoFilter(task, describeDTO.AccountFilter);
 
-            return Ok(_taskService.SubmitDescribe(task, dataUrl));
+            var data = await _taskService.SubmitDescribe(task, dataUrl);
+            return Ok(data);
         }
 
         /// <summary>
@@ -505,7 +506,7 @@ namespace Midjourney.API.Controllers
         /// <param name="dto"></param>
         /// <returns></returns>
         [HttpPost("shorten")]
-        public ActionResult<SubmitResultVO> Shorten([FromBody] SubmitImagineDTO dto)
+        public async Task<ActionResult<SubmitResultVO>> Shorten([FromBody] SubmitImagineDTO dto)
         {
             var task = NewTask(dto);
 
@@ -532,7 +533,9 @@ namespace Midjourney.API.Controllers
 
             NewTaskDoFilter(task, dto.AccountFilter);
 
-            return Ok(_taskService.ShortenAsync(task));
+            var data = await _taskService.ShortenAsync(task);
+
+            return Ok(data);
         }
 
         /// <summary>
@@ -541,7 +544,7 @@ namespace Midjourney.API.Controllers
         /// <param name="blendDTO">提交Blend任务的DTO</param>
         /// <returns>提交结果</returns>
         [HttpPost("blend")]
-        public ActionResult<SubmitResultVO> Blend([FromBody] SubmitBlendDTO blendDTO)
+        public async Task<ActionResult<SubmitResultVO>> Blend([FromBody] SubmitBlendDTO blendDTO)
         {
             List<string> base64Array = blendDTO.Base64Array;
             if (base64Array == null || base64Array.Count < 2 || base64Array.Count > 5)
@@ -580,7 +583,9 @@ namespace Midjourney.API.Controllers
 
             NewTaskDoFilter(task, blendDTO.AccountFilter);
 
-            return Ok(_taskService.SubmitBlend(task, dataUrlList, blendDTO.Dimensions.Value));
+            var data = await _taskService.SubmitBlend(task, dataUrlList, blendDTO.Dimensions.Value);
+
+            return Ok(data);
         }
 
         /// <summary>
@@ -590,7 +595,7 @@ namespace Midjourney.API.Controllers
         /// <param name="actionDTO"></param>
         /// <returns></returns>
         [HttpPost("action")]
-        public ActionResult<SubmitResultVO> Action([FromBody] SubmitActionDTO actionDTO)
+        public async Task<ActionResult<SubmitResultVO>> Action([FromBody] SubmitActionDTO actionDTO)
         {
             if (string.IsNullOrWhiteSpace(actionDTO.TaskId) || string.IsNullOrWhiteSpace(actionDTO.CustomId))
             {
@@ -743,7 +748,9 @@ namespace Midjourney.API.Controllers
                 task.Action = TaskAction.ACTION;
             }
 
-            return Ok(_taskService.SubmitAction(task, actionDTO));
+            var data = await _taskService.SubmitAction(task, actionDTO);
+
+            return Ok(data);
         }
 
         /// <summary>
@@ -752,7 +759,7 @@ namespace Midjourney.API.Controllers
         /// <param name="actionDTO"></param>
         /// <returns></returns>
         [HttpPost("modal")]
-        public ActionResult<SubmitResultVO> Modal([FromBody] SubmitModalDTO actionDTO)
+        public async Task<ActionResult<SubmitResultVO>> Modal([FromBody] SubmitModalDTO actionDTO)
         {
             if (string.IsNullOrWhiteSpace(actionDTO.TaskId))
             {
@@ -821,7 +828,9 @@ namespace Midjourney.API.Controllers
             // 提交 modal 指示为 true
             task.RemixAutoSubmit = true;
 
-            return Ok(_taskService.SubmitModal(task, actionDTO, dataUrl));
+            var data = await _taskService.SubmitModal(task, actionDTO, dataUrl);
+
+            return Ok(data);
         }
 
         /// <summary>

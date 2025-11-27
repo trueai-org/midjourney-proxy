@@ -1113,25 +1113,33 @@ namespace Midjourney.API
                                     {
                                         if (item.IsPartnerRelax)
                                         {
-                                            if (relaxItems.Any(c => c == item.Id))
+                                            if (relaxItems.Any(c => c?.Info?.Id == item.Id))
                                             {
                                                 continue;
                                             }
 
                                             // 强制加入慢速队列
-                                            var success = await disInstance.RelaxQueue.EnqueueAsync(item.Id, account.RelaxQueueSize, 10, true);
+                                            var success = await disInstance.RelaxQueue.EnqueueAsync(new TaskInfoQueue()
+                                            {
+                                                Info = item,
+                                                Function = TaskInfoQueueFunction.REFRESH,
+                                            }, account.RelaxQueueSize, 10, true);
 
                                             _logger.Information("重启加入慢速队列任务 {@0} - {@1} - {@2}", account.ChannelId, item.Id, success);
                                         }
                                         else
                                         {
-                                            if (fastItems.Any(c => c == item.Id))
+                                            if (fastItems.Any(c => c?.Info?.Id == item.Id))
                                             {
                                                 continue;
                                             }
 
                                             // 强制加入快速队列
-                                            var success = await disInstance.FastQueue.EnqueueAsync(item.Id, account.QueueSize, 10, true);
+                                            var success = await disInstance.FastQueue.EnqueueAsync(new TaskInfoQueue()
+                                            {
+                                                Info = item,
+                                                Function = TaskInfoQueueFunction.REFRESH,
+                                            }, account.QueueSize, 10, true);
 
                                             _logger.Information("重启加入快速队列任务 {@0} - {@1} - {@2}", account.ChannelId, item.Id, success);
                                         }

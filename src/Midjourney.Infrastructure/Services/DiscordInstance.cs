@@ -28,7 +28,9 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Memory;
+using Midjourney.Base.Models;
 using Midjourney.Infrastructure.Services;
 using Midjourney.License;
 using Newtonsoft.Json.Linq;
@@ -102,9 +104,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
         private readonly IHttpClientFactory _httpClientFactory;
 
         // redis 队列
-        private readonly RedisQueue<string> _relaxQueue;
+        private readonly RedisQueue<TaskInfoQueue> _relaxQueue;
 
-        private readonly RedisQueue<string> _defaultOrFastQueue;
+        private readonly RedisQueue<TaskInfoQueue> _defaultOrFastQueue;
 
         // redis 并发
         private readonly RedisConcurrent _relaxConcurrent;
@@ -160,8 +162,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
             if (GlobalConfiguration.Setting.EnableRedis)
             {
-                _relaxQueue = new RedisQueue<string>(RedisHelper.Instance, $"relax:{account.ChannelId}", account.RelaxCoreSize);
-                _defaultOrFastQueue = new RedisQueue<string>(RedisHelper.Instance, $"fast:{account.ChannelId}", account.CoreSize);
+                _relaxQueue = new RedisQueue<TaskInfoQueue>(RedisHelper.Instance, $"relax:{account.ChannelId}", account.RelaxCoreSize);
+                _defaultOrFastQueue = new RedisQueue<TaskInfoQueue>(RedisHelper.Instance, $"fast:{account.ChannelId}", account.CoreSize);
 
                 _relaxConcurrent = new RedisConcurrent(RedisHelper.Instance, $"relax:{account.ChannelId}");
                 _defaultOrFastConcurrent = new RedisConcurrent(RedisHelper.Instance, $"fast:{account.ChannelId}");
@@ -429,10 +431,10 @@ namespace Midjourney.Infrastructure.LoadBalancer
                         if (lockObj != null)
                         {
                             // 内部已经控制了并发和阻塞，这里只需循环调用
-                            var taskId = await _defaultOrFastQueue.DequeueAsync(token);
-                            if (!string.IsNullOrWhiteSpace(taskId))
+                            var req = await _defaultOrFastQueue.DequeueAsync(token);
+                            if (req?.Info != null)
                             {
-                                var info = _taskStoreService.Get(taskId);
+                                var info = _taskStoreService.Get(req.Info.Id);
                                 if (info != null)
                                 {
                                     await AccountBeforeDelay();
@@ -442,7 +444,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                     {
                                         try
                                         {
-                                            await UpdateProgress(info);
+                                            await UpdateProgress(info, req);
                                         }
                                         finally
                                         {
@@ -476,10 +478,10 @@ namespace Midjourney.Infrastructure.LoadBalancer
                             if (lockObj != null)
                             {
                                 // 内部已经控制了并发和阻塞，这里只需循环调用
-                                var taskId = await _relaxQueue.DequeueAsync(token);
-                                if (!string.IsNullOrWhiteSpace(taskId))
+                                var req = await _relaxQueue.DequeueAsync(token);
+                                if (req?.Info != null)
                                 {
-                                    var info = _taskStoreService.Get(taskId);
+                                    var info = _taskStoreService.Get(req.Info.Id);
                                     if (info != null)
                                     {
                                         await AccountBeforeDelay();
@@ -489,7 +491,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                         {
                                             try
                                             {
-                                                await UpdateProgress(info);
+                                                await UpdateProgress(info, req);
                                             }
                                             finally
                                             {
@@ -587,7 +589,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// </summary>
         /// <param name="info"></param>
         /// <returns></returns>
-        public async Task UpdateProgress(TaskInfo info)
+        public async Task UpdateProgress(TaskInfo info, TaskInfoQueue queue)
         {
             try
             {
@@ -599,36 +601,380 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     return;
                 }
 
-                // 任务未提交
-                if (info.Status == TaskStatus.NOT_START)
+                if (info.Status == TaskStatus.NOT_START || (info.Status == TaskStatus.MODAL && queue.Function == TaskInfoQueueFunction.MODAL))
                 {
-                    if (info.IsPartner || info.IsOfficial)
+                    switch (queue.Function)
                     {
-                        var result = await YmTaskService.SubmitTaskAsync(info, _taskStoreService, this);
-                        if (result.Code != ReturnCode.SUCCESS)
-                        {
-                            info.Fail(result.Description);
-                            SaveAndNotify(info);
-                            return;
-                        }
-                    }
-                    else
-                    {
-                        var result = await ImagineAsync(info, info.PromptEn,
-                            info.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default));
-                        if (result.Code != ReturnCode.SUCCESS)
-                        {
-                            info.Fail(result.Description);
-                            SaveAndNotify(info);
-                            return;
-                        }
-                    }
+                        case TaskInfoQueueFunction.SUBMIT:
+                            // 绘画任务未提交
+                            {
+                                if (info.IsPartner || info.IsOfficial)
+                                {
+                                    var result = await YmTaskService.SubmitTaskAsync(info, _taskStoreService, this);
+                                    if (result.Code != ReturnCode.SUCCESS)
+                                    {
+                                        info.Fail(result.Description);
+                                        SaveAndNotify(info);
+                                        return;
+                                    }
+                                }
+                                else
+                                {
+                                    var result = await ImagineAsync(info, info.PromptEn,
+                                        info.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default));
+                                    if (result.Code != ReturnCode.SUCCESS)
+                                    {
+                                        info.Fail(result.Description);
+                                        SaveAndNotify(info);
+                                        return;
+                                    }
+                                }
 
-                    info.StartTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
-                    info.Status = TaskStatus.SUBMITTED;
-                    info.Progress = "0%";
+                                if (info.Status != TaskStatus.CANCEL && info.Status != TaskStatus.SUCCESS && info.Status != TaskStatus.FAILURE)
+                                {
+                                    info.StartTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+                                    info.Status = TaskStatus.SUBMITTED;
+                                    info.Progress = "0%";
+                                }
 
-                    SaveAndNotify(info);
+                                SaveAndNotify(info);
+                            }
+                            break;
+
+                        case TaskInfoQueueFunction.ACTION:
+                            // 变化任务未提交
+                            {
+                                if (info.IsPartner || info.IsOfficial)
+                                {
+                                    var result = await YmTaskService.SubmitActionAsync(info, queue.ActionParam.Dto, queue.ActionParam.TargetTask, _taskStoreService, this);
+                                    if (result.Code != ReturnCode.SUCCESS)
+                                    {
+                                        info.Fail(result.Description);
+                                        SaveAndNotify(info);
+                                        return;
+                                    }
+                                }
+                                else
+                                {
+                                    var result = await ActionAsync(queue.ActionParam.MessageId,
+                                        queue.ActionParam.CustomId,
+                                        queue.ActionParam.MessageFlags,
+                                        queue.ActionParam.Nonce, info);
+
+                                    if (result.Code != ReturnCode.SUCCESS)
+                                    {
+                                        info.Fail(result.Description);
+                                        SaveAndNotify(info);
+                                        return;
+                                    }
+                                }
+
+                                if (info.Status != TaskStatus.CANCEL && info.Status != TaskStatus.SUCCESS && info.Status != TaskStatus.FAILURE)
+                                {
+                                    info.StartTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+                                    info.Status = TaskStatus.SUBMITTED;
+                                    info.Progress = "0%";
+                                }
+
+                                SaveAndNotify(info);
+                            }
+                            break;
+
+                        case TaskInfoQueueFunction.REFRESH:
+                            break;
+
+                        case TaskInfoQueueFunction.MODAL:
+                            {
+                                // 弹窗任务未提交
+                                if (info.IsPartner || info.IsOfficial)
+                                {
+                                    var result = await YmTaskService.SubmitModal(info, queue.ModalParam.TargetTask, queue.ModalParam.Dto, _taskStoreService);
+                                    if (result.Code != ReturnCode.SUCCESS)
+                                    {
+                                        info.Fail(result.Description);
+                                        SaveAndNotify(info);
+                                        return;
+                                    }
+
+                                    if (info.Status != TaskStatus.CANCEL && info.Status != TaskStatus.SUCCESS && info.Status != TaskStatus.FAILURE)
+                                    {
+                                        info.StartTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+                                        info.Status = TaskStatus.SUBMITTED;
+                                        info.Progress = "0%";
+                                    }
+
+                                    SaveAndNotify(info);
+                                }
+                            }
+                            break;
+
+                        case TaskInfoQueueFunction.ZOOM:
+                            {
+                                if (info.IsPartner || info.IsOfficial)
+                                {
+                                }
+                                else
+                                {
+                                    var result = await ZoomAsync(info, queue.ZoomParam.ModalMessageId,
+                                        queue.ZoomParam.CustomId,
+                                        info.PromptEn,
+                                        queue.ZoomParam.Nonce);
+                                    if (result.Code != ReturnCode.SUCCESS)
+                                    {
+                                        info.Fail(result.Description);
+                                        SaveAndNotify(info);
+                                        return;
+                                    }
+
+                                    if (info.Status != TaskStatus.CANCEL && info.Status != TaskStatus.SUCCESS && info.Status != TaskStatus.FAILURE)
+                                    {
+                                        info.StartTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+                                        info.Status = TaskStatus.SUBMITTED;
+                                        info.Progress = "0%";
+                                    }
+
+                                    SaveAndNotify(info);
+                                }
+                            }
+                            break;
+
+                        case TaskInfoQueueFunction.INPAINT:
+                            {
+                                if (info.IsPartner || info.IsOfficial)
+                                {
+                                }
+                                else
+                                {
+                                    var result = await InpaintAsync(info, queue.InpaintParam.ModalCreateCustomId,
+                                        info.PromptEn,
+                                        queue.InpaintParam.MaskBase64);
+                                    if (result.Code != ReturnCode.SUCCESS)
+                                    {
+                                        info.Fail(result.Description);
+                                        SaveAndNotify(info);
+                                        return;
+                                    }
+
+                                    if (info.Status != TaskStatus.CANCEL && info.Status != TaskStatus.SUCCESS && info.Status != TaskStatus.FAILURE)
+                                    {
+                                        info.StartTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+                                        info.Status = TaskStatus.SUBMITTED;
+                                        info.Progress = "0%";
+                                    }
+
+                                    SaveAndNotify(info);
+                                }
+                            }
+                            break;
+
+                        case TaskInfoQueueFunction.PIC_READER:
+                            {
+                                if (info.IsPartner || info.IsOfficial)
+                                {
+                                }
+                                else
+                                {
+                                    var result = await PicReaderAsync(info, queue.PicReaderParam.ModalMessageId,
+                                        queue.PicReaderParam.CustomId,
+                                        info.PromptEn,
+                                        queue.PicReaderParam.Nonce,
+                                        queue.PicReaderParam.BotType);
+                                    if (result.Code != ReturnCode.SUCCESS)
+                                    {
+                                        info.Fail(result.Description);
+                                        SaveAndNotify(info);
+                                        return;
+                                    }
+
+                                    if (info.Status != TaskStatus.CANCEL && info.Status != TaskStatus.SUCCESS && info.Status != TaskStatus.FAILURE)
+                                    {
+                                        info.StartTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+                                        info.Status = TaskStatus.SUBMITTED;
+                                        info.Progress = "0%";
+                                    }
+
+                                    SaveAndNotify(info);
+                                }
+                            }
+                            break;
+
+                        case TaskInfoQueueFunction.PROMPT_ANALYZER:
+                            {
+                                if (info.IsPartner || info.IsOfficial)
+                                {
+                                }
+                                else
+                                {
+                                    var result = await RemixAsync(info, info.Action.Value, queue.PromptAnalyzerParam.ModalMessageId,
+                                        queue.PromptAnalyzerParam.Modal,
+                                        queue.PromptAnalyzerParam.CustomId,
+                                        info.PromptEn,
+                                        queue.PromptAnalyzerParam.Nonce,
+                                        queue.PromptAnalyzerParam.BotType);
+                                    if (result.Code != ReturnCode.SUCCESS)
+                                    {
+                                        info.Fail(result.Description);
+                                        SaveAndNotify(info);
+                                        return;
+                                    }
+
+                                    if (info.Status != TaskStatus.CANCEL && info.Status != TaskStatus.SUCCESS && info.Status != TaskStatus.FAILURE)
+                                    {
+                                        info.StartTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+                                        info.Status = TaskStatus.SUBMITTED;
+                                        info.Progress = "0%";
+                                    }
+
+                                    SaveAndNotify(info);
+                                }
+                            }
+                            break;
+
+                        case TaskInfoQueueFunction.REMIX:
+                            {
+                                if (info.IsPartner || info.IsOfficial)
+                                {
+                                }
+                                else
+                                {
+                                    var result = await RemixAsync(info, info.Action.Value, queue.RemixParam.ModalMessageId,
+                                        queue.RemixParam.Modal,
+                                        queue.RemixParam.CustomId,
+                                        info.PromptEn,
+                                        queue.RemixParam.Nonce,
+                                        queue.RemixParam.BotType);
+                                    if (result.Code != ReturnCode.SUCCESS)
+                                    {
+                                        info.Fail(result.Description);
+                                        SaveAndNotify(info);
+                                        return;
+                                    }
+
+                                    if (info.Status != TaskStatus.CANCEL && info.Status != TaskStatus.SUCCESS && info.Status != TaskStatus.FAILURE)
+                                    {
+                                        info.StartTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+                                        info.Status = TaskStatus.SUBMITTED;
+                                        info.Progress = "0%";
+                                    }
+
+                                    SaveAndNotify(info);
+                                }
+                            }
+                            break;
+
+                        case TaskInfoQueueFunction.DESCRIBE:
+                            {
+                                if (info.IsPartner || info.IsOfficial)
+                                {
+                                    await YmTaskService.Describe(info);
+
+                                    if (info.Buttons.Count > 0)
+                                    {
+                                        await info.SuccessAsync();
+                                    }
+                                    else
+                                    {
+                                        info.Fail("操作失败，请稍后重试");
+                                    }
+
+                                    SaveAndNotify(info);
+
+                                    return;
+                                }
+                                else
+                                {
+                                    var result = await DescribeByLinkAsync(info.ImageUrl,
+                                        info.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default),
+                                        info.RealBotType ?? info.BotType);
+                                    if (result.Code != ReturnCode.SUCCESS)
+                                    {
+                                        info.Fail(result.Description);
+                                        SaveAndNotify(info);
+                                        return;
+                                    }
+
+                                    if (info.Status != TaskStatus.CANCEL && info.Status != TaskStatus.SUCCESS && info.Status != TaskStatus.FAILURE)
+                                    {
+                                        info.StartTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+                                        info.Status = TaskStatus.SUBMITTED;
+                                        info.Progress = "0%";
+                                    }
+
+                                    SaveAndNotify(info);
+                                }
+                            }
+                            break;
+
+                        case TaskInfoQueueFunction.SHORTEN:
+                            {
+                                if (info.IsPartner || info.IsOfficial)
+                                {
+                                }
+                                else
+                                {
+                                    var result = await ShortenAsync(info, info.PromptEn,
+                                        info.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default),
+                                        info.RealBotType ?? info.BotType);
+                                    if (result.Code != ReturnCode.SUCCESS)
+                                    {
+                                        info.Fail(result.Description);
+                                        SaveAndNotify(info);
+                                        return;
+                                    }
+
+                                    if (info.Status != TaskStatus.CANCEL && info.Status != TaskStatus.SUCCESS && info.Status != TaskStatus.FAILURE)
+                                    {
+                                        info.StartTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+                                        info.Status = TaskStatus.SUBMITTED;
+                                        info.Progress = "0%";
+                                    }
+
+                                    SaveAndNotify(info);
+                                }
+                            }
+                            break;
+
+                        case TaskInfoQueueFunction.BLEND:
+                            {
+                                if (info.IsPartner || info.IsOfficial)
+                                {
+                                    var result = await YmTaskService.SubmitTaskAsync(info, _taskStoreService, this);
+                                    if (result.Code != ReturnCode.SUCCESS)
+                                    {
+                                        info.Fail(result.Description);
+                                        SaveAndNotify(info);
+                                        return;
+                                    }
+                                }
+                                else
+                                {
+                                    var result = await BlendAsync(
+                                        queue.BlendParam.FinalFileNames,
+                                        queue.BlendParam.Dimensions,
+                                        info.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default),
+                                        info.RealBotType ?? info.BotType);
+                                    if (result.Code != ReturnCode.SUCCESS)
+                                    {
+                                        info.Fail(result.Description);
+                                        SaveAndNotify(info);
+                                        return;
+                                    }
+                                }
+
+                                if (info.Status != TaskStatus.CANCEL && info.Status != TaskStatus.SUCCESS && info.Status != TaskStatus.FAILURE)
+                                {
+                                    info.StartTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+                                    info.Status = TaskStatus.SUBMITTED;
+                                    info.Progress = "0%";
+                                }
+
+                                SaveAndNotify(info);
+                            }
+                            break;
+
+                        default:
+                            break;
+                    }
                 }
 
                 // 超时处理
@@ -1042,9 +1388,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <returns>任务Future映射</returns>
         public Dictionary<string, Task> GetRunningFutures() => new Dictionary<string, Task>(_taskFutureMap);
 
-        public RedisQueue<string> FastQueue => _defaultOrFastQueue;
+        public RedisQueue<TaskInfoQueue> FastQueue => _defaultOrFastQueue;
 
-        public RedisQueue<string> RelaxQueue => _relaxQueue;
+        public RedisQueue<TaskInfoQueue> RelaxQueue => _relaxQueue;
 
         /// <summary>
         /// 提交任务到 Redis 队列
@@ -1052,8 +1398,10 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <param name="info"></param>
         /// <param name="discordSubmit"></param>
         /// <returns></returns>
-        public async Task<SubmitResultVO> EnqueueAsync(TaskInfo info)
+        public async Task<SubmitResultVO> EnqueueAsync(TaskInfoQueue req)
         {
+            var info = req.Info;
+
             var currentWaitNumbers = 0;
 
             if (info.IsPartnerRelax)
@@ -1067,7 +1415,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                         .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, ChannelId);
                 }
 
-                var success = await _relaxQueue.EnqueueAsync(info.Id, Account.RelaxQueueSize);
+                var success = await _relaxQueue.EnqueueAsync(req, Account.RelaxQueueSize);
                 if (!success)
                 {
                     return SubmitResultVO.Fail(ReturnCode.FAILURE, "提交失败，队列已满，请稍后重试")
@@ -1084,7 +1432,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                         .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, ChannelId);
                 }
 
-                var success = await _defaultOrFastQueue.EnqueueAsync(info.Id, Account.QueueSize);
+                var success = await _defaultOrFastQueue.EnqueueAsync(req, Account.QueueSize);
                 if (!success)
                 {
                     return SubmitResultVO.Fail(ReturnCode.FAILURE, "提交失败，队列已满，请稍后重试")
@@ -2740,5 +3088,285 @@ namespace Midjourney.Infrastructure.LoadBalancer
         {
             await _ymTaskService.OfficialSyncInfo();
         }
+    }
+
+    public class TaskInfoQueue
+    {
+        /// <summary>
+        /// 任务信息
+        /// </summary>
+        public TaskInfo Info { get; set; }
+
+        /// <summary>
+        /// 请求功能
+        /// </summary>
+        public TaskInfoQueueFunction Function { get; set; }
+
+        /// <summary>
+        /// Action 操作请求参数
+        /// </summary>
+        public TaskInfoQueueActionParam ActionParam { get; set; }
+
+        /// <summary>
+        /// Action 操作请求参数
+        /// </summary>
+        public class TaskInfoQueueActionParam
+        {
+            /// <summary>
+            /// 消息 ID
+            /// </summary>
+            public string MessageId { get; set; }
+
+            /// <summary>
+            /// 自定义
+            /// </summary>
+            public string CustomId { get; set; }
+
+            /// <summary>
+            ///
+            /// </summary>
+            public int MessageFlags { get; set; }
+
+            /// <summary>
+            ///
+            /// </summary>
+            public string Nonce { get; set; }
+
+            /// <summary>
+            /// 提交动作 DTO
+            /// </summary>
+            public SubmitActionDTO Dto { get; set; }
+
+            /// <summary>
+            /// 父级任务
+            /// </summary>
+            public TaskInfo TargetTask { get; set; }
+        }
+
+        /// <summary>
+        /// Modal 操作请求参数
+        /// </summary>
+        public TaskInfoQueueModalParam ModalParam { get; set; }
+
+        /// <summary>
+        /// Modal 操作请求参数
+        /// </summary>
+        public class TaskInfoQueueModalParam
+        {
+            /// <summary>
+            /// 自定义
+            /// </summary>
+            public string CustomId { get; set; }
+
+            /// <summary>
+            ///
+            /// </summary>
+            public int MessageFlags { get; set; }
+
+            /// <summary>
+            ///
+            /// </summary>
+            public string Nonce { get; set; }
+
+            /// <summary>
+            /// 提交动作 DTO
+            /// </summary>
+            public SubmitModalDTO Dto { get; set; }
+
+            /// <summary>
+            /// 父级任务
+            /// </summary>
+            public TaskInfo TargetTask { get; set; }
+        }
+
+        /// <summary>
+        /// 自定义变焦任务 请求参数
+        /// </summary>
+        public TaskInfoQueueZoomParam ZoomParam { get; set; }
+
+        /// <summary>
+        /// 自定义变焦任务 请求参数
+        /// </summary>
+        public class TaskInfoQueueZoomParam
+        {
+            /// <summary>
+            /// 自定义
+            /// </summary>
+            public string CustomId { get; set; }
+
+            /// <summary>
+            ///
+            /// </summary>
+            public string Nonce { get; set; }
+
+            /// <summary>
+            /// 模态消息 ID
+            /// </summary>
+            public string ModalMessageId { get; set; }
+        }
+
+        /// <summary>
+        /// 局部重绘任务 请求参数
+        /// </summary>
+        public TaskInfoQueueInpaintParam InpaintParam { get; set; }
+
+        /// <summary>
+        /// 局部重绘任务 请求参数
+        /// </summary>
+        public class TaskInfoQueueInpaintParam
+        {
+            public string ModalCreateCustomId { get; set; }
+            public string MaskBase64 { get; set; }
+        }
+
+        /// <summary>
+        /// 图生文 -> 文生图 请求参数
+        /// </summary>
+        public TaskInfoQueuePicReaderParam PicReaderParam { get; set; }
+
+        /// <summary>
+        /// 图生文 -> 文生图 请求参数
+        /// </summary>
+        public class TaskInfoQueuePicReaderParam
+        {
+            /// <summary>
+            /// 自定义
+            /// </summary>
+            public string CustomId { get; set; }
+
+            /// <summary>
+            ///
+            /// </summary>
+            public string Nonce { get; set; }
+
+            public string ModalMessageId { get; set; }
+
+            public EBotType BotType { get; set; }
+        }
+
+        /// <summary>
+        /// 提示词解析器 请求参数
+        /// </summary>
+        public TaskInfoQueuePromptAnalyzerParam PromptAnalyzerParam { get; set; }
+
+        /// <summary>
+        /// 混合任务 请求参数
+        /// </summary>
+        public TaskInfoQueueRemixParam RemixParam { get; set; }
+
+        /// <summary>
+        /// 混图合成任务 请求参数
+        /// </summary>
+
+        public TaskInfoQueueBlendParam BlendParam { get; set; }
+
+        /// <summary>
+        /// 混图合成任务 请求参数
+        /// </summary>
+        public class TaskInfoQueueBlendParam
+        {
+            public List<string> FinalFileNames { get; set; } = [];
+
+            public BlendDimensions Dimensions { get; set; }
+        }
+
+        /// <summary>
+        /// 提示词解析器 请求参数
+        /// </summary>
+        public class TaskInfoQueuePromptAnalyzerParam
+        {
+            /// <summary>
+            /// 自定义
+            /// </summary>
+            public string CustomId { get; set; }
+
+            /// <summary>
+            ///
+            /// </summary>
+            public string Nonce { get; set; }
+
+            public EBotType BotType { get; set; }
+            public string ModalMessageId { get; set; }
+            public string Modal { get; set; }
+        }
+
+        /// <summary>
+        /// 混合任务 请求参数
+        /// </summary>
+        public class TaskInfoQueueRemixParam
+        {
+            public TaskAction Action { get; set; }
+            public string ModalMessageId { get; set; }
+            public string Modal { get; set; }
+            public string CustomId { get; set; }
+            public string Nonce { get; set; }
+            public EBotType BotType { get; set; }
+        }
+    }
+
+    /// <summary>
+    /// 提交请求功能
+    /// </summary>
+    public enum TaskInfoQueueFunction
+    {
+        /// <summary>
+        /// 提交任务
+        /// </summary>
+        SUBMIT,
+
+        /// <summary>
+        /// 变化任务
+        /// </summary>
+        ACTION,
+
+        /// <summary>
+        /// 图生文任务
+        /// </summary>
+        DESCRIBE,
+
+        /// <summary>
+        /// 混图合成任务
+        /// </summary>
+        BLEND,
+
+        /// <summary>
+        /// 刷新任务 - 待定
+        /// </summary>
+        REFRESH,
+
+        /// <summary>
+        /// 弹窗任务 - 仅悠船/官网
+        /// </summary>
+        MODAL,
+
+        /// <summary>
+        /// 自定义变焦任务 - 仅Discord
+        /// </summary>
+        ZOOM,
+
+        /// <summary>
+        /// 局部重绘任务 - 仅Discord
+        /// </summary>
+        INPAINT,
+
+        /// <summary>
+        /// 图生文 -> 文生图 - 仅Discord
+        /// </summary>
+        PIC_READER,
+
+        /// <summary>
+        /// 提示词解析器 - 仅Discord
+        /// </summary>
+        PROMPT_ANALYZER,
+
+        /// <summary>
+        /// 混合任务 - 仅Discord
+        /// </summary>
+        REMIX,
+
+        /// <summary>
+        /// 提示词简化器 - 仅Discord
+        /// </summary>
+        SHORTEN
     }
 }
