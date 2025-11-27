@@ -24,6 +24,7 @@
 
 using System.Net;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
 using Midjourney.Infrastructure.LoadBalancer;
@@ -138,7 +139,7 @@ namespace Midjourney.API.Controllers
         /// <param name="imagineDTO">提交Imagine任务的DTO</param>
         /// <returns>提交结果</returns>
         [HttpPost("imagine")]
-        public ActionResult<SubmitResultVO> Imagine([FromBody] SubmitImagineDTO imagineDTO)
+        public async Task<ActionResult<SubmitResultVO>> Imagine([FromBody] SubmitImagineDTO imagineDTO)
         {
             try
             {
@@ -199,7 +200,7 @@ namespace Midjourney.API.Controllers
 
                 NewTaskDoFilter(task, imagineDTO.AccountFilter);
 
-                var data = _taskService.SubmitImagine(task, dataUrls);
+                var data = await _taskService.SubmitImagine(task, dataUrls);
                 return Ok(data);
             }
             catch (LogicException lex)

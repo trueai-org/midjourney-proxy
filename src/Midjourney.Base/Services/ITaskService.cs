@@ -67,7 +67,7 @@ namespace Midjourney.Base.Services
         /// <param name="task">任务对象。</param>
         /// <param name="dataUrls">图片数据列表。</param>
         /// <returns>提交结果。</returns>
-        SubmitResultVO SubmitImagine(TaskInfo task, List<DataUrl> dataUrls);
+        Task<SubmitResultVO> SubmitImagine(TaskInfo task, List<DataUrl> dataUrls);
 
         /// <summary>
         /// 提交 show 任务

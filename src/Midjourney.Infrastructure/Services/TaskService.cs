@@ -43,12 +43,18 @@ namespace Midjourney.Infrastructure.Services
         private readonly IMemoryCache _memoryCache;
         private readonly ITaskStoreService _taskStoreService;
         private readonly DiscordLoadBalancer _discordLoadBalancer;
+        private readonly IQueueService _queueService;
 
-        public TaskService(ITaskStoreService taskStoreService, DiscordLoadBalancer discordLoadBalancer, IMemoryCache memoryCache)
+        public TaskService(
+            ITaskStoreService taskStoreService,
+            DiscordLoadBalancer discordLoadBalancer,
+            IMemoryCache memoryCache,
+            IQueueService queueService)
         {
             _memoryCache = memoryCache;
             _taskStoreService = taskStoreService;
             _discordLoadBalancer = discordLoadBalancer;
+            _queueService = queueService;
         }
 
         /// <summary>
@@ -143,7 +149,7 @@ namespace Midjourney.Infrastructure.Services
         /// <param name="info"></param>
         /// <param name="dataUrls"></param>
         /// <returns></returns>
-        public SubmitResultVO SubmitImagine(TaskInfo info, List<DataUrl> dataUrls)
+        public async Task<SubmitResultVO> SubmitImagine(TaskInfo info, List<DataUrl> dataUrls)
         {
             var setting = GlobalConfiguration.Setting;
             var promptEn = info.PromptEn;
@@ -232,6 +238,121 @@ namespace Midjourney.Infrastructure.Services
             info.Mode = mode;
             info.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, instance.ChannelId);
             info.InstanceId = instance.ChannelId;
+
+            // 启用 redis
+            if (setting.EnableRedis)
+            {
+                if (instance.Account.IsYouChuan || instance.Account.IsOfficial)
+                {
+                    var imageUrls = new List<string>();
+                    foreach (var dataUrl in dataUrls)
+                    {
+                        if (instance.Account.IsYouChuan)
+                        {
+                            var link = "";
+                            // 悠船
+                            if (dataUrl.Url?.StartsWith("http", StringComparison.OrdinalIgnoreCase) == true)
+                            {
+                                link = dataUrl.Url;
+
+                                if (setting.EnableYouChuanPromptLink && !link.Contains("youchuan"))
+                                {
+                                    // 悠船官网链接转换
+                                    var ff = new FileFetchHelper();
+                                    var res = await ff.FetchFileAsync(link);
+                                    if (res.Success && !string.IsNullOrWhiteSpace(res.Url))
+                                    {
+                                        link = res.Url;
+                                    }
+                                    else if (res.Success && res.FileBytes.Length > 0)
+                                    {
+                                        var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
+                                        link = await instance.YmTaskService.UploadFile(info, res.FileBytes, taskFileName);
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
+                                link = await instance.YmTaskService.UploadFile(info, dataUrl.Data, taskFileName);
+                            }
+
+                            imageUrls.Add(link);
+                        }
+                        else
+                        {
+                            var taskFileName = $"{info.Id}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
+                            var uploadResult = await instance.UploadAsync(taskFileName, dataUrl);
+                            if (uploadResult.Code != ReturnCode.SUCCESS)
+                            {
+                                return SubmitResultVO.Fail(ReturnCode.FAILURE, uploadResult.Description);
+                            }
+
+                            if (uploadResult.Description.StartsWith("http"))
+                            {
+                                imageUrls.Add(uploadResult.Description);
+                            }
+                            else
+                            {
+                                var finalFileName = uploadResult.Description;
+                                var sendImageResult = await instance.SendImageMessageAsync("upload image: " + finalFileName, finalFileName);
+                                if (sendImageResult.Code != ReturnCode.SUCCESS)
+                                {
+                                    return SubmitResultVO.Fail(ReturnCode.FAILURE, sendImageResult.Description);
+                                }
+                                imageUrls.Add(sendImageResult.Description);
+                            }
+                        }
+                    }
+
+                    if (imageUrls.Any())
+                    {
+                        info.Prompt = string.Join(" ", imageUrls) + " " + info.Prompt;
+                        info.PromptEn = string.Join(" ", imageUrls) + " " + info.PromptEn;
+                        info.Description = "/imagine " + info.Prompt;
+                    }
+
+                    return await instance.EnqueueAsync(info);
+                }
+                else
+                {
+                    var imageUrls = new List<string>();
+                    foreach (var dataUrl in dataUrls)
+                    {
+                        var taskFileName = $"{info.Id}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
+                        var uploadResult = await instance.UploadAsync(taskFileName, dataUrl);
+                        if (uploadResult.Code != ReturnCode.SUCCESS)
+                        {
+                    
+                            return SubmitResultVO.Fail(ReturnCode.FAILURE, uploadResult.Description);
+                        }
+
+                        if (uploadResult.Description.StartsWith("http"))
+                        {
+                            imageUrls.Add(uploadResult.Description);
+                        }
+                        else
+                        {
+                            var finalFileName = uploadResult.Description;
+                            var sendImageResult = await instance.SendImageMessageAsync("upload image: " + finalFileName, finalFileName);
+                            if (sendImageResult.Code != ReturnCode.SUCCESS)
+                            {
+                                return SubmitResultVO.Fail(ReturnCode.FAILURE, sendImageResult.Description);
+                            }
+                            imageUrls.Add(sendImageResult.Description);
+                        }
+                    }
+
+                    if (imageUrls.Any())
+                    {
+                        info.Prompt = string.Join(" ", imageUrls) + " " + info.Prompt;
+                        info.PromptEn = string.Join(" ", imageUrls) + " " + info.PromptEn;
+                        info.Description = "/imagine " + info.Prompt;
+                    }
+
+                    return await instance.EnqueueAsync(info);
+                }
+            }
 
             return instance.SubmitTaskAsync(info, async () =>
             {

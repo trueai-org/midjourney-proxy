@@ -120,6 +120,9 @@ namespace Midjourney.API
 
             // 任务服务
             services.AddSingleton<ITaskService, TaskService>();
+
+            // 队列服务
+            services.AddSingleton<IQueueService, QueueService>();
         }
     }
 }

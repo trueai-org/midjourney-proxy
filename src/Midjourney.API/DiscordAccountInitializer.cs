@@ -22,6 +22,7 @@
 // invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text;
 using LiteDB;
@@ -56,6 +57,11 @@ namespace Midjourney.API
         private Timer _timer;
         private DateTime? _upgradeTime = null;
         private bool _isUpgrading = false; // 是否更新中，避免长时间运行更新
+
+        /// <summary>
+        /// 字典记录启动过的作业
+        /// </summary>
+        private readonly ConcurrentDictionary<string, bool> _startedAccounts = new ConcurrentDictionary<string, bool>();
 
         public DiscordAccountInitializer(
             DiscordLoadBalancer discordLoadBalancer,
@@ -153,7 +159,6 @@ namespace Midjourney.API
                                         }
                                     }
                                 }
-
                             }
                             catch (Exception ex)
                             {
@@ -1088,6 +1093,63 @@ namespace Midjourney.API
                         info.AppendLine($"{account.Id}初始化中... 非工作时间，释放实例耗时: {sw.ElapsedMilliseconds}ms");
                         sw.Restart();
                     }
+
+                    // 程序启动后，如果开启了 redis 则将未开始、已提交、执行中 最近1小时的任务重新加入到队列
+                    if (!_startedAccounts.ContainsKey(account.Id) && disInstance.IsAlive)
+                    {
+                        try
+                        {
+                            if (setting.EnableRedis)
+                            {
+                                var agoTime = new DateTimeOffset(DateTime.Now.AddHours(-1)).ToUnixTimeMilliseconds();
+                                var list = DbHelper.Instance.TaskStore.Where(c => c.InstanceId == account.ChannelId && c.SubmitTime >= agoTime && c.Status != TaskStatus.CANCEL && c.Status != TaskStatus.FAILURE && c.Status != TaskStatus.MODAL && c.Status != TaskStatus.SUCCESS);
+                                if (list.Count > 0)
+                                {
+                                    // 获取所有慢速队列任务
+                                    var relaxItems = disInstance.RelaxQueue.Items();
+                                    var fastItems = disInstance.FastQueue.Items();
+
+                                    foreach (var item in list)
+                                    {
+                                        if (item.IsPartnerRelax)
+                                        {
+                                            if (relaxItems.Any(c => c == item.Id))
+                                            {
+                                                continue;
+                                            }
+
+                                            // 强制加入慢速队列
+                                            var success = await disInstance.RelaxQueue.EnqueueAsync(item.Id, account.RelaxQueueSize, 10, true);
+
+                                            _logger.Information("重启加入慢速队列任务 {@0} - {@1} - {@2}", account.ChannelId, item.Id, success);
+                                        }
+                                        else
+                                        {
+                                            if (fastItems.Any(c => c == item.Id))
+                                            {
+                                                continue;
+                                            }
+
+                                            // 强制加入快速队列
+                                            var success = await disInstance.FastQueue.EnqueueAsync(item.Id, account.QueueSize, 10, true);
+
+                                            _logger.Information("重启加入快速队列任务 {@0} - {@1} - {@2}", account.ChannelId, item.Id, success);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.Error(ex, "重启首次恢复作业异常 {@0}", account.ChannelId);
+
+                            info.AppendLine($"重启首次恢复作业异常 {account.ChannelId}");
+                        }
+                        finally
+                        {
+                            _startedAccounts.TryAdd(account.Id, true);
+                        }
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -1390,12 +1452,20 @@ namespace Midjourney.API
         {
             try
             {
-                // 如果正在执行则释放
-                var disInstance = _discordLoadBalancer.GetDiscordInstance(account.ChannelId);
-                if (disInstance != null)
+                // 如果是悠船或官方，不需要释放
+                if (account.IsYouChuan || account.IsOfficial)
                 {
-                    _discordLoadBalancer.RemoveInstance(disInstance);
-                    disInstance.Dispose();
+
+                }
+                else
+                {
+                    // 如果正在执行则释放
+                    var disInstance = _discordLoadBalancer.GetDiscordInstance(account.ChannelId);
+                    if (disInstance != null)
+                    {
+                        _discordLoadBalancer.RemoveInstance(disInstance);
+                        disInstance.Dispose();
+                    }
                 }
             }
             catch
