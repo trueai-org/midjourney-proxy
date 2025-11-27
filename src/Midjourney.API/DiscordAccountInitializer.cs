@@ -1103,6 +1103,9 @@ namespace Midjourney.API
                             {
                                 var agoTime = new DateTimeOffset(DateTime.Now.AddHours(-1)).ToUnixTimeMilliseconds();
                                 var list = DbHelper.Instance.TaskStore.Where(c => c.InstanceId == account.ChannelId && c.SubmitTime >= agoTime && c.Status != TaskStatus.CANCEL && c.Status != TaskStatus.FAILURE && c.Status != TaskStatus.MODAL && c.Status != TaskStatus.SUCCESS);
+
+                                _logger.Information("重启恢复作业账号 {@0} 任务数 {@1}", account.ChannelId, list.Count);
+
                                 if (list.Count > 0)
                                 {
                                     // 获取所有慢速队列任务

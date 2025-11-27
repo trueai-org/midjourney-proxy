@@ -391,17 +391,40 @@ namespace Midjourney.Infrastructure.LoadBalancer
         }
 
         /// <summary>
+        /// 是否启用 Redis
+        /// </summary>
+        public bool IsRedis => GlobalConfiguration.Setting.EnableRedis;
+
+        /// <summary>
         /// 是否存在空闲队列，即：队列是否已满，是否可加入新的任务
         /// </summary>
         public bool IsIdleQueue(GenerationSpeedMode? mode = null)
         {
-            if (Account.IsYouChuan && mode == GenerationSpeedMode.RELAX)
+            if (IsRedis)
             {
-                // 判断 RELAX 队列是否有空闲
-                return Account.RelaxQueueSize <= 0 || _relaxQueueTasks.Count < Account.RelaxQueueSize;
-            }
+                if (Account.IsYouChuan && mode == GenerationSpeedMode.RELAX)
+                {
+                    var queueCount = _relaxQueue.Count();
 
-            return Account.QueueSize <= 0 || _fastQueueTasks.Count < Account.QueueSize;
+                    // 判断 RELAX 队列是否有空闲
+                    return Account.RelaxQueueSize <= 0 || queueCount < Account.RelaxQueueSize;
+                }
+
+                var defaultOrFastQueueCount = _defaultOrFastQueue.Count();
+
+                return Account.QueueSize <= 0 || defaultOrFastQueueCount < Account.QueueSize;
+            }
+            else
+            {
+
+                if (Account.IsYouChuan && mode == GenerationSpeedMode.RELAX)
+                {
+                    // 判断 RELAX 队列是否有空闲
+                    return Account.RelaxQueueSize <= 0 || _relaxQueueTasks.Count < Account.RelaxQueueSize;
+                }
+
+                return Account.QueueSize <= 0 || _fastQueueTasks.Count < Account.QueueSize;
+            }
         }
 
         /// <summary>
@@ -605,11 +628,45 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                 if (info.Status == TaskStatus.NOT_START || (info.Status == TaskStatus.MODAL && queue.Function == TaskInfoQueueFunction.MODAL))
                 {
+                    // 刷新作业需要特殊处理，一般是重启服务器恢复的作业
+                    if (info.Status == TaskStatus.NOT_START && queue.Function == TaskInfoQueueFunction.REFRESH)
+                    {
+                        // 如果是 imagine 任务
+                        if (info.Action == TaskAction.IMAGINE)
+                        {
+                            queue.Function = TaskInfoQueueFunction.SUBMIT;
+                        }
+                        else if (info.Action == TaskAction.BLEND)
+                        {
+                            queue.Function = TaskInfoQueueFunction.BLEND;
+                        }
+                        else if (info.Action == TaskAction.DESCRIBE)
+                        {
+                            queue.Function = TaskInfoQueueFunction.DESCRIBE;
+                        }
+                        else if (info.Action == TaskAction.EDIT)
+                        {
+                            queue.Function = TaskInfoQueueFunction.EDIT;
+                        }
+                        else if (info.Action == TaskAction.RETEXTURE)
+                        {
+                            queue.Function = TaskInfoQueueFunction.RETEXTURE;
+                        }
+                        else if (info.Action == TaskAction.VIDEO)
+                        {
+                            queue.Function = TaskInfoQueueFunction.VIDEO;
+                        }
+                        else
+                        {
+                            // 其他暂不处理，因为没参数
+                        }
+                    }
+
                     switch (queue.Function)
                     {
                         case TaskInfoQueueFunction.SUBMIT:
-                            // 绘画任务未提交
                             {
+                                // 绘画任务未提交
                                 if (info.IsPartner || info.IsOfficial)
                                 {
                                     var result = await YmTaskService.SubmitTaskAsync(info, _taskStoreService, this);
@@ -622,8 +679,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                 }
                                 else
                                 {
-                                    var result = await ImagineAsync(info, info.PromptEn,
-                                        info.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default));
+                                    var result = await ImagineAsync(info, info.PromptEn, info.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default));
                                     if (result.Code != ReturnCode.SUCCESS)
                                     {
                                         info.Fail(result.Description);
@@ -683,6 +739,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
                             break;
 
                         case TaskInfoQueueFunction.REFRESH:
+                            {
+
+                            }
                             break;
 
                         case TaskInfoQueueFunction.MODAL:
