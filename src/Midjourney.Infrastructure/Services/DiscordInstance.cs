@@ -460,6 +460,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                 var info = _taskStoreService.Get(req.Info.Id);
                                 if (info != null)
                                 {
+                                    // 在执行前休眠，由于消息已经取出来了，但是还没有消费或提交，如果服务器突然宕机，可能会导致提交参数丢失
                                     await AccountBeforeDelay();
 
                                     // 使用 Task.Run 启动后台任务，避免阻塞主线程
