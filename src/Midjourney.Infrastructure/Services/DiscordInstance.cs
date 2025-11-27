@@ -28,9 +28,8 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
+using Instances;
 using Microsoft.Extensions.Caching.Memory;
-using Midjourney.Base.Models;
 using Midjourney.Infrastructure.Services;
 using Midjourney.License;
 using Newtonsoft.Json.Linq;
@@ -972,6 +971,91 @@ namespace Midjourney.Infrastructure.LoadBalancer
                             }
                             break;
 
+                        case TaskInfoQueueFunction.EDIT:
+                            {
+                                if (info.IsPartner || info.IsOfficial)
+                                {
+                                    var result = await YmTaskService.SubmitTaskAsync(info, _taskStoreService, this);
+                                    if (result.Code != ReturnCode.SUCCESS)
+                                    {
+                                        info.Fail(result.Description);
+                                        SaveAndNotify(info);
+                                        return;
+                                    }
+
+                                    if (info.Status != TaskStatus.CANCEL && info.Status != TaskStatus.SUCCESS && info.Status != TaskStatus.FAILURE)
+                                    {
+                                        info.StartTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+                                        info.Status = TaskStatus.SUBMITTED;
+                                        info.Progress = "0%";
+                                    }
+
+                                    SaveAndNotify(info);
+                                }
+                                else
+                                {
+                                   
+                                }
+                            }
+                            break;
+
+
+                        case TaskInfoQueueFunction.RETEXTURE:
+                            {
+                                if (info.IsPartner || info.IsOfficial)
+                                {
+                                    var result = await YmTaskService.SubmitTaskAsync(info, _taskStoreService, this);
+                                    if (result.Code != ReturnCode.SUCCESS)
+                                    {
+                                        info.Fail(result.Description);
+                                        SaveAndNotify(info);
+                                        return;
+                                    }
+
+                                    if (info.Status != TaskStatus.CANCEL && info.Status != TaskStatus.SUCCESS && info.Status != TaskStatus.FAILURE)
+                                    {
+                                        info.StartTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+                                        info.Status = TaskStatus.SUBMITTED;
+                                        info.Progress = "0%";
+                                    }
+
+                                    SaveAndNotify(info);
+                                }
+                                else
+                                {
+
+                                }
+                            }
+                            break;
+
+
+                        case TaskInfoQueueFunction.VIDEO:
+                            {
+                                if (info.IsPartner || info.IsOfficial)
+                                {
+                                    var result = await YmTaskService.SubmitTaskAsync(info, _taskStoreService, this);
+                                    if (result.Code != ReturnCode.SUCCESS)
+                                    {
+                                        info.Fail(result.Description);
+                                        SaveAndNotify(info);
+                                        return;
+                                    }
+
+                                    if (info.Status != TaskStatus.CANCEL && info.Status != TaskStatus.SUCCESS && info.Status != TaskStatus.FAILURE)
+                                    {
+                                        info.StartTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+                                        info.Status = TaskStatus.SUBMITTED;
+                                        info.Progress = "0%";
+                                    }
+
+                                    SaveAndNotify(info);
+                                }
+                                else
+                                {
+
+                                }
+                            }
+                            break;
                         default:
                             break;
                     }
@@ -3367,6 +3451,21 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <summary>
         /// 提示词简化器 - 仅Discord
         /// </summary>
-        SHORTEN
+        SHORTEN,
+
+        /// <summary>
+        /// 高级编辑 - 仅悠船/官网
+        /// </summary>
+        EDIT,
+
+        /// <summary>
+        /// 高级转绘 - 仅悠船/官网
+        /// </summary>
+        RETEXTURE,
+
+        /// <summary>
+        /// 视频生成 - 仅悠船/官网
+        /// </summary>
+        VIDEO
     }
 }

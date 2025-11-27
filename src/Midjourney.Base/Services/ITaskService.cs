@@ -146,7 +146,7 @@ namespace Midjourney.Base.Services
         /// <param name="task"></param>
         /// <param name="dataUrl"></param>
         /// <returns></returns>
-        SubmitResultVO SubmitEdit(TaskInfo task, DataUrl dataUrl);
+        Task<SubmitResultVO> SubmitEdit(TaskInfo task, DataUrl dataUrl);
 
         /// <summary>
         /// 提交转绘任务。
@@ -154,7 +154,7 @@ namespace Midjourney.Base.Services
         /// <param name="task"></param>
         /// <param name="dataUrl"></param>
         /// <returns></returns>
-        SubmitResultVO SubmitRetexture(TaskInfo task, DataUrl dataUrl);
+        Task<SubmitResultVO> SubmitRetexture(TaskInfo task, DataUrl dataUrl);
 
         /// <summary>
         /// 提交视频任务
@@ -163,7 +163,7 @@ namespace Midjourney.Base.Services
         /// <param name="startUrl"></param>
         /// <param name="endUrl"></param>
         /// <returns></returns>
-        SubmitResultVO SubmitVideo(TaskInfo task, TaskInfo targetTask, DataUrl startUrl, DataUrl endUrl, SubmitVideoDTO videoDTO);
+        Task<SubmitResultVO> SubmitVideo(TaskInfo task, TaskInfo targetTask, DataUrl startUrl, DataUrl endUrl, SubmitVideoDTO videoDTO);
 
         /// <summary>
         /// 执行 Modal

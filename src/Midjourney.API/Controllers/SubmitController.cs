@@ -841,7 +841,7 @@ namespace Midjourney.API.Controllers
         /// <returns></returns>
         [HttpPost("edit")]
         [HttpPost("edits")]
-        public ActionResult<SubmitResultVO> Edits([FromBody] SubmitEditsDTO editsDTO)
+        public async Task<ActionResult<SubmitResultVO>> Edits([FromBody] SubmitEditsDTO editsDTO)
         {
             if (string.IsNullOrWhiteSpace(editsDTO.Image) || string.IsNullOrWhiteSpace(editsDTO.Prompt))
             {
@@ -901,7 +901,8 @@ namespace Midjourney.API.Controllers
 
             NewTaskDoFilter(task, editsDTO.AccountFilter);
 
-            return Ok(_taskService.SubmitEdit(task, dataUrl));
+            var data = await _taskService.SubmitEdit(task, dataUrl);
+            return Ok(data);
         }
 
         /// <summary>
@@ -910,7 +911,7 @@ namespace Midjourney.API.Controllers
         /// <param name="editsDTO"></param>
         /// <returns></returns>
         [HttpPost("retexture")]
-        public ActionResult<SubmitResultVO> Retexture([FromBody] SubmitEditsDTO editsDTO)
+        public async Task<ActionResult<SubmitResultVO>> Retexture([FromBody] SubmitEditsDTO editsDTO)
         {
             if (string.IsNullOrWhiteSpace(editsDTO.Image) || string.IsNullOrWhiteSpace(editsDTO.Prompt))
             {
@@ -970,7 +971,8 @@ namespace Midjourney.API.Controllers
 
             NewTaskDoFilter(task, editsDTO.AccountFilter);
 
-            return Ok(_taskService.SubmitRetexture(task, dataUrl));
+            var data = await _taskService.SubmitRetexture(task, dataUrl);
+            return Ok(data);
         }
 
         /// <summary>
@@ -979,7 +981,7 @@ namespace Midjourney.API.Controllers
         /// <param name="videoDTO"></param>
         /// <returns></returns>
         [HttpPost("video")]
-        public ActionResult<SubmitResultVO> Video([FromBody] SubmitVideoDTO videoDTO)
+        public async Task<ActionResult<SubmitResultVO>> Video([FromBody] SubmitVideoDTO videoDTO)
         {
             var setting = GlobalConfiguration.Setting;
             if (!setting.EnableVideo)
@@ -1078,7 +1080,9 @@ namespace Midjourney.API.Controllers
             task.Prompt = videoDTO.Prompt;
             task.PromptEn = promptEn;
 
-            return Ok(_taskService.SubmitVideo(task, targetTask, startUrl, endUrl, videoDTO));
+            var data = await _taskService.SubmitVideo(task, targetTask, startUrl, endUrl, videoDTO);
+
+            return Ok(data);
         }
 
         /// <summary>

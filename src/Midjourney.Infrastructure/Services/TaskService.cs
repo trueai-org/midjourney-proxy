@@ -45,18 +45,15 @@ namespace Midjourney.Infrastructure.Services
         private readonly IMemoryCache _memoryCache;
         private readonly ITaskStoreService _taskStoreService;
         private readonly DiscordLoadBalancer _discordLoadBalancer;
-        private readonly IQueueService _queueService;
 
         public TaskService(
             ITaskStoreService taskStoreService,
             DiscordLoadBalancer discordLoadBalancer,
-            IMemoryCache memoryCache,
-            IQueueService queueService)
+            IMemoryCache memoryCache)
         {
             _memoryCache = memoryCache;
             _taskStoreService = taskStoreService;
             _discordLoadBalancer = discordLoadBalancer;
-            _queueService = queueService;
         }
 
         /// <summary>
@@ -487,8 +484,9 @@ namespace Midjourney.Infrastructure.Services
         /// <param name="info"></param>
         /// <param name="dataUrl"></param>
         /// <returns></returns>
-        public SubmitResultVO SubmitEdit(TaskInfo info, DataUrl dataUrl)
+        public async Task<SubmitResultVO> SubmitEdit(TaskInfo info, DataUrl dataUrl)
         {
+            var setting = GlobalConfiguration.Setting;
             var instance = _discordLoadBalancer.ChooseInstance(info.AccountFilter,
                 isNewTask: true,
                 botType: info.RealBotType ?? info.BotType,
@@ -522,9 +520,88 @@ namespace Midjourney.Infrastructure.Services
             info.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, instance.ChannelId);
             info.InstanceId = instance.ChannelId;
 
+            if (setting.EnableRedis)
+            {
+                if (instance.Account.IsYouChuan)
+                {
+                    var link = "";
+
+                    // 悠船
+                    if (dataUrl.Url?.StartsWith("http", StringComparison.OrdinalIgnoreCase) == true)
+                    {
+                        link = dataUrl.Url;
+
+                        if (setting.EnableYouChuanPromptLink && !link.Contains("youchuan"))
+                        {
+                            // 悠船官网链接转换
+                            var ff = new FileFetchHelper();
+                            var res = await ff.FetchFileAsync(link);
+                            if (res.Success && !string.IsNullOrWhiteSpace(res.Url))
+                            {
+                                link = res.Url;
+                            }
+                            else if (res.Success && res.FileBytes.Length > 0)
+                            {
+                                var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
+                                link = await instance.YmTaskService.UploadFile(info, res.FileBytes, taskFileName);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
+                        link = await instance.YmTaskService.UploadFile(info, dataUrl.Data, taskFileName);
+                    }
+
+                    info.BaseImageUrl = link;
+                }
+                else
+                {
+                    if (dataUrl.Url?.StartsWith("http", StringComparison.OrdinalIgnoreCase) == true)
+                    {
+                        info.BaseImageUrl = dataUrl.Url;
+                    }
+                    else
+                    {
+                        var taskFileName = $"{info.Id}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
+                        var uploadResult = await instance.UploadAsync(taskFileName, dataUrl);
+                        if (uploadResult.Code != ReturnCode.SUCCESS)
+                        {
+                            return SubmitResultVO.Fail(ReturnCode.FAILURE, uploadResult.Description);
+                        }
+
+                        var finalFileName = uploadResult.Description;
+                        var sendImageResult = await instance.SendImageMessageAsync("upload image: " + finalFileName, finalFileName);
+                        if (sendImageResult.Code != ReturnCode.SUCCESS)
+                        {
+                            return SubmitResultVO.Fail(ReturnCode.FAILURE, sendImageResult.Description);
+                        }
+
+                        info.BaseImageUrl = sendImageResult.Description;
+                    }
+                }
+
+                info.Description = "/edit " + info.Prompt;
+                _taskStoreService.Save(info);
+
+                if (string.IsNullOrWhiteSpace(info.BaseImageUrl))
+                {
+                    //return Message.Failure("BaseImageUrl is empty, please check the uploaded image.");
+
+                    return SubmitResultVO.Fail(ReturnCode.FAILURE, "BaseImageUrl is empty, please check the uploaded image.");
+                }
+
+                //return await instance.YmTaskService.SubmitTaskAsync(info, _taskStoreService, instance);
+
+                return await instance.EnqueueAsync(new TaskInfoQueue()
+                {
+                    Info = info,
+                    Function = TaskInfoQueueFunction.EDIT
+                });
+            }
+
             return instance.SubmitTaskAsync(info, async () =>
             {
-                var setting = GlobalConfiguration.Setting;
 
                 if (instance.Account.IsYouChuan)
                 {
@@ -603,8 +680,10 @@ namespace Midjourney.Infrastructure.Services
         /// <param name="info"></param>
         /// <param name="dataUrl"></param>
         /// <returns></returns>
-        public SubmitResultVO SubmitRetexture(TaskInfo info, DataUrl dataUrl)
+        public async Task<SubmitResultVO> SubmitRetexture(TaskInfo info, DataUrl dataUrl)
         {
+            var setting = GlobalConfiguration.Setting;
+
             var instance = _discordLoadBalancer.ChooseInstance(info.AccountFilter,
                 isNewTask: true,
                 botType: info.RealBotType ?? info.BotType,
@@ -638,10 +717,87 @@ namespace Midjourney.Infrastructure.Services
             info.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, instance.ChannelId);
             info.InstanceId = instance.ChannelId;
 
+            if (setting.EnableRedis)
+            {
+                if (instance.Account.IsYouChuan)
+                {
+                    var link = "";
+
+                    // 悠船
+                    if (dataUrl.Url?.StartsWith("http", StringComparison.OrdinalIgnoreCase) == true)
+                    {
+                        link = dataUrl.Url;
+
+                        if (setting.EnableYouChuanPromptLink && !link.Contains("youchuan"))
+                        {
+                            // 悠船官网链接转换
+                            var ff = new FileFetchHelper();
+                            var res = await ff.FetchFileAsync(link);
+                            if (res.Success && !string.IsNullOrWhiteSpace(res.Url))
+                            {
+                                link = res.Url;
+                            }
+                            else if (res.Success && res.FileBytes.Length > 0)
+                            {
+                                var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
+                                link = await instance.YmTaskService.UploadFile(info, res.FileBytes, taskFileName);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
+                        link = await instance.YmTaskService.UploadFile(info, dataUrl.Data, taskFileName);
+                    }
+
+                    info.BaseImageUrl = link;
+                }
+                else
+                {
+                    if (dataUrl.Url?.StartsWith("http", StringComparison.OrdinalIgnoreCase) == true)
+                    {
+                        info.BaseImageUrl = dataUrl.Url;
+                    }
+                    else
+                    {
+                        var taskFileName = $"{info.Id}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
+                        var uploadResult = await instance.UploadAsync(taskFileName, dataUrl);
+                        if (uploadResult.Code != ReturnCode.SUCCESS)
+                        {
+                            return SubmitResultVO.Fail(ReturnCode.FAILURE, uploadResult.Description);
+                        }
+
+                        var finalFileName = uploadResult.Description;
+                        var sendImageResult = await instance.SendImageMessageAsync("upload image: " + finalFileName, finalFileName);
+                        if (sendImageResult.Code != ReturnCode.SUCCESS)
+                        {
+                            return SubmitResultVO.Fail(ReturnCode.FAILURE, sendImageResult.Description);
+                        }
+
+                        info.BaseImageUrl = sendImageResult.Description;
+                    }
+                }
+
+                info.Description = "/retexture " + info.Prompt;
+                info.PromptEn = info.PromptEn + " --dref " + info.BaseImageUrl;
+                _taskStoreService.Save(info);
+
+                if (string.IsNullOrWhiteSpace(info.BaseImageUrl))
+                {
+                    //return Message.Failure("BaseImageUrl is empty, please check the uploaded image.");
+                    return SubmitResultVO.Fail(ReturnCode.FAILURE, "BaseImageUrl is empty, please check the uploaded image.");
+                }
+
+                //return await instance.YmTaskService.SubmitTaskAsync(info, _taskStoreService, instance);
+                return await instance.EnqueueAsync(new TaskInfoQueue()
+                {
+                    Info = info,
+                    Function = TaskInfoQueueFunction.RETEXTURE
+                });
+            }
+
             return instance.SubmitTaskAsync(info, async () =>
             {
-                var setting = GlobalConfiguration.Setting;
-
                 if (instance.Account.IsYouChuan)
                 {
                     var link = "";
@@ -721,8 +877,10 @@ namespace Midjourney.Infrastructure.Services
         /// <param name="startUrl"></param>
         /// <param name="endUrl"></param>
         /// <returns></returns>
-        public SubmitResultVO SubmitVideo(TaskInfo info, TaskInfo targetTask, DataUrl startUrl, DataUrl endUrl, SubmitVideoDTO videoDTO)
+        public async Task<SubmitResultVO> SubmitVideo(TaskInfo info, TaskInfo targetTask, DataUrl startUrl, DataUrl endUrl, SubmitVideoDTO videoDTO)
         {
+            var setting = GlobalConfiguration.Setting;
+
             DiscordInstance instance;
 
             // 高清视频
@@ -796,9 +954,229 @@ namespace Midjourney.Infrastructure.Services
             info.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, instance.ChannelId);
             info.InstanceId = instance.ChannelId;
 
+            if (setting.EnableRedis)
+            {
+
+                var startImageUrl = "";
+                var endImageUrl = "";
+
+                if (instance.Account.IsYouChuan)
+                {
+                    // 开始图片
+                    if (startUrl?.Url?.StartsWith("http", StringComparison.OrdinalIgnoreCase) == true)
+                    {
+                        startImageUrl = startUrl.Url;
+
+                        if (setting.EnableYouChuanPromptLink && !startImageUrl.Contains("youchuan"))
+                        {
+                            var ff = new FileFetchHelper();
+                            var res = await ff.FetchFileAsync(startImageUrl);
+                            if (res.Success && !string.IsNullOrWhiteSpace(res.Url))
+                            {
+                                startImageUrl = res.Url;
+                            }
+                            else if (res.Success && res.FileBytes.Length > 0)
+                            {
+                                var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(startUrl.MimeType)}";
+                                startImageUrl = await instance.YmTaskService.UploadFile(info, res.FileBytes, taskFileName);
+                            }
+                        }
+                    }
+                    else if (startUrl?.Data != null && startUrl.Data.Length > 0)
+                    {
+                        var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(startUrl.MimeType)}";
+                        startImageUrl = await instance.YmTaskService.UploadFile(info, startUrl.Data, taskFileName);
+                    }
+
+                    // 结束图片
+                    if (endUrl?.Url?.StartsWith("http", StringComparison.OrdinalIgnoreCase) == true)
+                    {
+                        endImageUrl = endUrl.Url;
+
+                        if (setting.EnableYouChuanPromptLink && !endImageUrl.Contains("youchuan"))
+                        {
+                            var ff = new FileFetchHelper();
+                            var res = await ff.FetchFileAsync(endImageUrl);
+                            if (res.Success && !string.IsNullOrWhiteSpace(res.Url))
+                            {
+                                endImageUrl = res.Url;
+                            }
+                            else if (res.Success && res.FileBytes.Length > 0)
+                            {
+                                var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(endUrl.MimeType)}";
+                                endImageUrl = await instance.YmTaskService.UploadFile(info, res.FileBytes, taskFileName);
+                            }
+                        }
+                    }
+                    else if (endUrl?.Data != null && endUrl.Data.Length > 0)
+                    {
+                        var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(endUrl.MimeType)}";
+                        endImageUrl = await instance.YmTaskService.UploadFile(info, endUrl.Data, taskFileName);
+                    }
+                }
+                else if (instance.Account.IsOfficial)
+                {
+                    // 开始图片
+                    if (startUrl?.Url?.StartsWith("http", StringComparison.OrdinalIgnoreCase) == true)
+                    {
+                        startImageUrl = startUrl.Url;
+                    }
+                    else if (startUrl?.Data != null && startUrl.Data.Length > 0)
+                    {
+                        var taskFileName = $"{info.Id}.{MimeTypeUtils.GuessFileSuffix(startUrl.MimeType)}";
+                        var uploadResult = await instance.UploadAsync(taskFileName, startUrl);
+                        if (uploadResult.Code != ReturnCode.SUCCESS)
+                        {
+                            return SubmitResultVO.Fail(ReturnCode.FAILURE, uploadResult.Description);
+                        }
+
+                        var finalFileName = uploadResult.Description;
+                        var sendImageResult = await instance.SendImageMessageAsync(("upload image: " + finalFileName), finalFileName);
+                        if (sendImageResult.Code != ReturnCode.SUCCESS)
+                        {
+                            return SubmitResultVO.Fail(ReturnCode.FAILURE, sendImageResult.Description);
+                        }
+
+                        startImageUrl = sendImageResult.Description;
+                    }
+
+                    // 结束图片
+                    if (endUrl?.Url?.StartsWith("http", StringComparison.OrdinalIgnoreCase) == true)
+                    {
+                        endImageUrl = endUrl.Url;
+                    }
+                    else if (endUrl?.Data != null && endUrl.Data.Length > 0)
+                    {
+                        var taskFileName = $"{info.Id}.{MimeTypeUtils.GuessFileSuffix(endUrl.MimeType)}";
+                        var uploadResult = await instance.UploadAsync(taskFileName, endUrl);
+                        if (uploadResult.Code != ReturnCode.SUCCESS)
+                        {
+                            return SubmitResultVO.Fail(ReturnCode.FAILURE, uploadResult.Description);
+                        }
+                        var finalFileName = uploadResult.Description;
+                        var sendImageResult = await instance.SendImageMessageAsync(("upload image: " + finalFileName), finalFileName);
+                        if (sendImageResult.Code != ReturnCode.SUCCESS)
+                        {
+                            return SubmitResultVO.Fail(ReturnCode.FAILURE, sendImageResult.Description);
+                        }
+                        endImageUrl = sendImageResult.Description;
+                    }
+                }
+                else
+                {
+                    //return Message.Failure("当前账号不支持视频任务。");
+                    return SubmitResultVO.Fail(ReturnCode.FAILURE, "当前账号不支持视频任务。");
+                }
+
+                if (!string.IsNullOrWhiteSpace(startImageUrl))
+                {
+                    info.BaseImageUrl = startImageUrl;
+                }
+
+                // 提示词拼接
+                var prompt = info.PromptEn;
+
+                // 开始图片
+                if (!string.IsNullOrWhiteSpace(startImageUrl) && !prompt.Contains(startImageUrl, StringComparison.OrdinalIgnoreCase))
+                {
+                    prompt = $"{startImageUrl} {prompt}";
+                }
+
+                // 如果是视频任务，添加 --video 参数
+                if (!prompt.Contains("--video", StringComparison.OrdinalIgnoreCase))
+                {
+                    prompt += " --video 1";
+                }
+
+                // loop
+                if (videoDTO.Loop && !prompt.Contains("--end", StringComparison.OrdinalIgnoreCase))
+                {
+                    prompt += " --end loop";
+                }
+
+                // 如果有结束图片，则添加 --end 参数
+                if (!string.IsNullOrWhiteSpace(endImageUrl) && !prompt.Contains("--end", StringComparison.OrdinalIgnoreCase))
+                {
+                    prompt += $" --end {endImageUrl}";
+                }
+
+                // motion
+                if (!string.IsNullOrWhiteSpace(videoDTO.Motion) && !prompt.Contains("--motion", StringComparison.OrdinalIgnoreCase))
+                {
+                    prompt += $" --motion {videoDTO.Motion}";
+                }
+
+                // 如果有设置 --bs
+                if (videoDTO.BatchSize > 0 && !prompt.Contains("--bs", StringComparison.OrdinalIgnoreCase))
+                {
+                    // 默认 4 不需要添加参数
+                    var allowBatchSize = new int[] { 1, 2 };
+                    if (allowBatchSize.Contains(videoDTO.BatchSize.Value))
+                    {
+                        prompt += $" --bs {videoDTO.BatchSize}";
+                    }
+                }
+
+                if (videoDTO.Action?.Equals("extend", StringComparison.OrdinalIgnoreCase) == true)
+                {
+                    var customId = "";
+                    if (info.IsPartner)
+                    {
+                        customId = $"MJ::JOB::animate_{videoDTO.Motion.ToLower()}_extend::{videoDTO.Index + 1}::{targetTask.PartnerTaskId}";
+                    }
+                    else
+                    {
+                        customId = $"MJ::JOB::animate_{videoDTO.Motion.ToLower()}_extend::{videoDTO.Index + 1}::{targetTask.OfficialTaskId}";
+                    }
+
+                    info.SetProperty(Constants.TASK_PROPERTY_CUSTOM_ID, customId);
+                    info.PromptEn = prompt;
+                    info.VideoType = videoDTO.VideoType;
+                    info.Description = "/video " + info.Prompt;
+                    _taskStoreService.Save(info);
+
+                    //return await instance.YmTaskService.SubmitActionAsync(info, new SubmitActionDTO()
+                    //{
+                    //    TaskId = targetTask.Id,
+                    //    State = info.State,
+                    //    CustomId = customId
+                    //}, targetTask, _taskStoreService, instance);
+
+                    return await instance.EnqueueAsync(new TaskInfoQueue()
+                    {
+                        Info = info,
+                        Function = TaskInfoQueueFunction.ACTION,
+                        ActionParam = new TaskInfoQueue.TaskInfoQueueActionParam()
+                        {
+                            Dto = new SubmitActionDTO()
+                            {
+                                TaskId = targetTask.Id,
+                                State = info.State,
+                                CustomId = customId
+                            },
+                            TargetTask = targetTask
+                        }
+                    });
+                }
+                else
+                {
+                    info.PromptEn = prompt;
+                    info.Description = "/video " + info.Prompt;
+                    _taskStoreService.Save(info);
+
+                    //return await instance.YmTaskService.SubmitTaskAsync(info, _taskStoreService, instance);
+
+                    return await instance.EnqueueAsync(new TaskInfoQueue()
+                    {
+                        Info = info,
+                        Function = TaskInfoQueueFunction.VIDEO
+                    });
+                }
+            }
+
             return instance.SubmitTaskAsync(info, async () =>
             {
-                var setting = GlobalConfiguration.Setting;
+
                 var startImageUrl = "";
                 var endImageUrl = "";
 
