@@ -1062,8 +1062,16 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                 // 超时处理
                 var timeoutMin = Account.TimeoutMinutes;
-                var sw = new Stopwatch();
-                sw.Start();
+                //var sw = new Stopwatch();
+                //sw.Start();
+
+                if (info.StartTime == null || info.StartTime == 0)
+                {
+                    info.StartTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+                }
+
+                // 转本地时间
+                var startTime = DateTimeOffset.FromUnixTimeMilliseconds(info.StartTime.Value).ToLocalTime();
 
                 if (info.Status == TaskStatus.SUBMITTED || info.Status == TaskStatus.IN_PROGRESS)
                 {
@@ -1079,7 +1087,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                         await Task.Delay(2000);
 
-                        if (sw.ElapsedMilliseconds > timeoutMin * 60 * 1000)
+                        if ((DateTime.Now - startTime).TotalMinutes > timeoutMin)
                         {
                             info.Fail($"执行超时 {timeoutMin} 分钟");
                             SaveAndNotify(info);
@@ -1715,8 +1723,17 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                 // 超时处理
                 var timeoutMin = Account.TimeoutMinutes;
-                var sw = new Stopwatch();
-                sw.Start();
+
+                //var sw = new Stopwatch();
+                //sw.Start();
+
+                if (info.StartTime == null || info.StartTime == 0)
+                {
+                    info.StartTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+                }
+
+                // 转本地时间
+                var startTime = DateTimeOffset.FromUnixTimeMilliseconds(info.StartTime.Value).ToLocalTime();
 
                 while (info.Status == TaskStatus.SUBMITTED || info.Status == TaskStatus.IN_PROGRESS)
                 {
@@ -1732,7 +1749,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                     await Task.Delay(1000);
 
-                    if (sw.ElapsedMilliseconds > timeoutMin * 60 * 1000)
+                    if ((DateTime.Now - startTime).TotalMinutes > timeoutMin)
                     {
                         info.Fail($"执行超时 {timeoutMin} 分钟");
                         SaveAndNotify(info);
