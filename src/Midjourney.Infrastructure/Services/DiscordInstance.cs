@@ -1034,159 +1034,159 @@ namespace Midjourney.Infrastructure.LoadBalancer
                             }
                             break;
 
-                        case TaskInfoQueueFunction.ZOOM:
-                            {
-                                if (info.IsPartner || info.IsOfficial)
-                                {
-                                }
-                                else
-                                {
-                                    var result = await ZoomAsync(info, queue.ZoomParam.ModalMessageId,
-                                        queue.ZoomParam.CustomId,
-                                        info.PromptEn,
-                                        queue.ZoomParam.Nonce);
-                                    if (result.Code != ReturnCode.SUCCESS)
-                                    {
-                                        info.Fail(result.Description);
-                                        SaveAndNotify(info);
-                                        return;
-                                    }
+                        //case TaskInfoQueueFunction.ZOOM:
+                        //    {
+                        //        if (info.IsPartner || info.IsOfficial)
+                        //        {
+                        //        }
+                        //        else
+                        //        {
+                        //            var result = await ZoomAsync(info, queue.ZoomParam.ModalMessageId,
+                        //                queue.ZoomParam.CustomId,
+                        //                info.PromptEn,
+                        //                queue.ZoomParam.Nonce);
+                        //            if (result.Code != ReturnCode.SUCCESS)
+                        //            {
+                        //                info.Fail(result.Description);
+                        //                SaveAndNotify(info);
+                        //                return;
+                        //            }
 
-                                    if (info.Status != TaskStatus.CANCEL && info.Status != TaskStatus.SUCCESS && info.Status != TaskStatus.FAILURE)
-                                    {
-                                        info.StartTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
-                                        info.Status = TaskStatus.SUBMITTED;
-                                        info.Progress = "0%";
-                                    }
+                        //            if (info.Status != TaskStatus.CANCEL && info.Status != TaskStatus.SUCCESS && info.Status != TaskStatus.FAILURE)
+                        //            {
+                        //                info.StartTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+                        //                info.Status = TaskStatus.SUBMITTED;
+                        //                info.Progress = "0%";
+                        //            }
 
-                                    SaveAndNotify(info);
-                                }
-                            }
-                            break;
+                        //            SaveAndNotify(info);
+                        //        }
+                        //    }
+                        //    break;
 
-                        case TaskInfoQueueFunction.INPAINT:
-                            {
-                                if (info.IsPartner || info.IsOfficial)
-                                {
-                                }
-                                else
-                                {
-                                    var result = await InpaintAsync(info, queue.InpaintParam.ModalCreateCustomId,
-                                        info.PromptEn,
-                                        queue.InpaintParam.MaskBase64);
-                                    if (result.Code != ReturnCode.SUCCESS)
-                                    {
-                                        info.Fail(result.Description);
-                                        SaveAndNotify(info);
-                                        return;
-                                    }
+                        //case TaskInfoQueueFunction.INPAINT:
+                        //    {
+                        //        if (info.IsPartner || info.IsOfficial)
+                        //        {
+                        //        }
+                        //        else
+                        //        {
+                        //            var result = await InpaintAsync(info, queue.InpaintParam.ModalCreateCustomId,
+                        //                info.PromptEn,
+                        //                queue.InpaintParam.MaskBase64);
+                        //            if (result.Code != ReturnCode.SUCCESS)
+                        //            {
+                        //                info.Fail(result.Description);
+                        //                SaveAndNotify(info);
+                        //                return;
+                        //            }
 
-                                    if (info.Status != TaskStatus.CANCEL && info.Status != TaskStatus.SUCCESS && info.Status != TaskStatus.FAILURE)
-                                    {
-                                        info.StartTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
-                                        info.Status = TaskStatus.SUBMITTED;
-                                        info.Progress = "0%";
-                                    }
+                        //            if (info.Status != TaskStatus.CANCEL && info.Status != TaskStatus.SUCCESS && info.Status != TaskStatus.FAILURE)
+                        //            {
+                        //                info.StartTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+                        //                info.Status = TaskStatus.SUBMITTED;
+                        //                info.Progress = "0%";
+                        //            }
 
-                                    SaveAndNotify(info);
-                                }
-                            }
-                            break;
+                        //            SaveAndNotify(info);
+                        //        }
+                        //    }
+                        //    break;
 
-                        case TaskInfoQueueFunction.PIC_READER:
-                            {
-                                if (info.IsPartner || info.IsOfficial)
-                                {
-                                }
-                                else
-                                {
-                                    var result = await PicReaderAsync(info, queue.PicReaderParam.ModalMessageId,
-                                        queue.PicReaderParam.CustomId,
-                                        info.PromptEn,
-                                        queue.PicReaderParam.Nonce,
-                                        queue.PicReaderParam.BotType);
-                                    if (result.Code != ReturnCode.SUCCESS)
-                                    {
-                                        info.Fail(result.Description);
-                                        SaveAndNotify(info);
-                                        return;
-                                    }
+                        //case TaskInfoQueueFunction.PIC_READER:
+                        //    {
+                        //        if (info.IsPartner || info.IsOfficial)
+                        //        {
+                        //        }
+                        //        else
+                        //        {
+                        //            var result = await PicReaderAsync(info, queue.PicReaderParam.ModalMessageId,
+                        //                queue.PicReaderParam.CustomId,
+                        //                info.PromptEn,
+                        //                queue.PicReaderParam.Nonce,
+                        //                queue.PicReaderParam.BotType);
+                        //            if (result.Code != ReturnCode.SUCCESS)
+                        //            {
+                        //                info.Fail(result.Description);
+                        //                SaveAndNotify(info);
+                        //                return;
+                        //            }
 
-                                    if (info.Status != TaskStatus.CANCEL && info.Status != TaskStatus.SUCCESS && info.Status != TaskStatus.FAILURE)
-                                    {
-                                        info.StartTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
-                                        info.Status = TaskStatus.SUBMITTED;
-                                        info.Progress = "0%";
-                                    }
+                        //            if (info.Status != TaskStatus.CANCEL && info.Status != TaskStatus.SUCCESS && info.Status != TaskStatus.FAILURE)
+                        //            {
+                        //                info.StartTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+                        //                info.Status = TaskStatus.SUBMITTED;
+                        //                info.Progress = "0%";
+                        //            }
 
-                                    SaveAndNotify(info);
-                                }
-                            }
-                            break;
+                        //            SaveAndNotify(info);
+                        //        }
+                        //    }
+                        //    break;
 
-                        case TaskInfoQueueFunction.PROMPT_ANALYZER:
-                            {
-                                if (info.IsPartner || info.IsOfficial)
-                                {
-                                }
-                                else
-                                {
-                                    var result = await RemixAsync(info, info.Action.Value, queue.PromptAnalyzerParam.ModalMessageId,
-                                        queue.PromptAnalyzerParam.Modal,
-                                        queue.PromptAnalyzerParam.CustomId,
-                                        info.PromptEn,
-                                        queue.PromptAnalyzerParam.Nonce,
-                                        queue.PromptAnalyzerParam.BotType);
-                                    if (result.Code != ReturnCode.SUCCESS)
-                                    {
-                                        info.Fail(result.Description);
-                                        SaveAndNotify(info);
-                                        return;
-                                    }
+                        //case TaskInfoQueueFunction.PROMPT_ANALYZER:
+                        //    {
+                        //        if (info.IsPartner || info.IsOfficial)
+                        //        {
+                        //        }
+                        //        else
+                        //        {
+                        //            var result = await RemixAsync(info, info.Action.Value, queue.PromptAnalyzerParam.ModalMessageId,
+                        //                queue.PromptAnalyzerParam.Modal,
+                        //                queue.PromptAnalyzerParam.CustomId,
+                        //                info.PromptEn,
+                        //                queue.PromptAnalyzerParam.Nonce,
+                        //                queue.PromptAnalyzerParam.BotType);
+                        //            if (result.Code != ReturnCode.SUCCESS)
+                        //            {
+                        //                info.Fail(result.Description);
+                        //                SaveAndNotify(info);
+                        //                return;
+                        //            }
 
-                                    if (info.Status != TaskStatus.CANCEL && info.Status != TaskStatus.SUCCESS && info.Status != TaskStatus.FAILURE)
-                                    {
-                                        info.StartTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
-                                        info.Status = TaskStatus.SUBMITTED;
-                                        info.Progress = "0%";
-                                    }
+                        //            if (info.Status != TaskStatus.CANCEL && info.Status != TaskStatus.SUCCESS && info.Status != TaskStatus.FAILURE)
+                        //            {
+                        //                info.StartTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+                        //                info.Status = TaskStatus.SUBMITTED;
+                        //                info.Progress = "0%";
+                        //            }
 
-                                    SaveAndNotify(info);
-                                }
-                            }
-                            break;
+                        //            SaveAndNotify(info);
+                        //        }
+                        //    }
+                        //    break;
 
-                        case TaskInfoQueueFunction.REMIX:
-                            {
-                                if (info.IsPartner || info.IsOfficial)
-                                {
-                                }
-                                else
-                                {
-                                    var result = await RemixAsync(info, info.Action.Value, queue.RemixParam.ModalMessageId,
-                                        queue.RemixParam.Modal,
-                                        queue.RemixParam.CustomId,
-                                        info.PromptEn,
-                                        queue.RemixParam.Nonce,
-                                        queue.RemixParam.BotType);
-                                    if (result.Code != ReturnCode.SUCCESS)
-                                    {
-                                        info.Fail(result.Description);
-                                        SaveAndNotify(info);
-                                        return;
-                                    }
+                        //case TaskInfoQueueFunction.REMIX:
+                        //    {
+                        //        if (info.IsPartner || info.IsOfficial)
+                        //        {
+                        //        }
+                        //        else
+                        //        {
+                        //            var result = await RemixAsync(info, info.Action.Value, queue.RemixParam.ModalMessageId,
+                        //                queue.RemixParam.Modal,
+                        //                queue.RemixParam.CustomId,
+                        //                info.PromptEn,
+                        //                queue.RemixParam.Nonce,
+                        //                queue.RemixParam.BotType);
+                        //            if (result.Code != ReturnCode.SUCCESS)
+                        //            {
+                        //                info.Fail(result.Description);
+                        //                SaveAndNotify(info);
+                        //                return;
+                        //            }
 
-                                    if (info.Status != TaskStatus.CANCEL && info.Status != TaskStatus.SUCCESS && info.Status != TaskStatus.FAILURE)
-                                    {
-                                        info.StartTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
-                                        info.Status = TaskStatus.SUBMITTED;
-                                        info.Progress = "0%";
-                                    }
+                        //            if (info.Status != TaskStatus.CANCEL && info.Status != TaskStatus.SUCCESS && info.Status != TaskStatus.FAILURE)
+                        //            {
+                        //                info.StartTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+                        //                info.Status = TaskStatus.SUBMITTED;
+                        //                info.Progress = "0%";
+                        //            }
 
-                                    SaveAndNotify(info);
-                                }
-                            }
-                            break;
+                        //            SaveAndNotify(info);
+                        //        }
+                        //    }
+                        //    break;
 
                         case TaskInfoQueueFunction.DESCRIBE:
                             {
@@ -3759,39 +3759,39 @@ namespace Midjourney.Infrastructure.LoadBalancer
         BLEND,
 
         /// <summary>
-        /// 刷新任务 - 待定
-        /// </summary>
-        REFRESH,
-
-        /// <summary>
-        /// 弹窗任务 - 仅悠船/官网
+        /// 弹窗任务
         /// </summary>
         MODAL,
 
         /// <summary>
-        /// 自定义变焦任务 - 仅Discord
+        /// 刷新任务
         /// </summary>
-        ZOOM,
+        REFRESH,
 
-        /// <summary>
-        /// 局部重绘任务 - 仅Discord
-        /// </summary>
-        INPAINT,
+        ///// <summary>
+        ///// 自定义变焦任务 - 仅Discord
+        ///// </summary>
+        //ZOOM,
 
-        /// <summary>
-        /// 图生文 -> 文生图 - 仅Discord
-        /// </summary>
-        PIC_READER,
+        ///// <summary>
+        ///// 局部重绘任务 - 仅Discord
+        ///// </summary>
+        //INPAINT,
 
-        /// <summary>
-        /// 提示词解析器 - 仅Discord
-        /// </summary>
-        PROMPT_ANALYZER,
+        ///// <summary>
+        ///// 图生文 -> 文生图 - 仅Discord
+        ///// </summary>
+        //PIC_READER,
 
-        /// <summary>
-        /// 混合任务 - 仅Discord
-        /// </summary>
-        REMIX,
+        ///// <summary>
+        ///// 提示词解析器 - 仅Discord
+        ///// </summary>
+        //PROMPT_ANALYZER,
+
+        ///// <summary>
+        ///// 混合任务 - 仅Discord
+        ///// </summary>
+        //REMIX,
 
         /// <summary>
         /// 提示词简化器 - 仅Discord
