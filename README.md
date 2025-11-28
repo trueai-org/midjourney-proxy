@@ -363,7 +363,7 @@ docker run --name redis --restart always -p 6379:6379 -v /root/mjopen/redis:/dat
 > Docker Redis 连接字符串参考：
 
 ```bash
-172.17.1.1:6379,password=123456,defaultDatabase=1,prefix=mjopen
+172.17.1.1:6379,password=123456,defaultDatabase=1,prefix=mjopen:
 ```
 
 ### MongoDB 配置
