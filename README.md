@@ -200,9 +200,9 @@ wget -O docker-upgrade.sh https://raw.githubusercontent.com/trueai-org/midjourne
 # 2.更新升级（以后升级只需要执行此脚本即可）
 sh docker-upgrade.sh
 
-# 3. 可选参数
-# 3.1 节点最大任务并行数：-e CONCURRENT=10，默认 -1 不限制
-# 3.2 配置宿主私网 IP：-e HOST_IP=10.0.0.1
+# 3. Docker 环境变量
+# 3.1 节点最大任务并行数：-e CONCURRENT=10，默认不限制
+# 3.2 配置宿主私网 IP：-e HOST_IP=10.0.0.1，默认不配置
 ```
 
 ```bash
