@@ -2181,7 +2181,7 @@ namespace Midjourney.API.Controllers
         [HttpGet("setting")]
         public Result<Setting> GetSetting()
         {
-            var model = GlobalConfiguration.Setting;
+            var model = GlobalConfiguration.Setting.DeepClone();
             if (model == null)
             {
                 throw new LogicException("系统配置错误，请重启服务");
