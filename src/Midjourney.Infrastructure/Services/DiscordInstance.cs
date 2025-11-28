@@ -483,6 +483,21 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                                     await AccountAfterDelay();
                                 }
+                                else
+                                {
+                                    // 释放锁
+                                    lockObj.Dispose();
+
+                                    Log.Warning("Redis 默认队列任务不存在 {@0}", req.Info.Id);
+                                }
+                            }
+                            else
+                            {
+                                // 释放锁
+                                lockObj.Dispose();
+
+                                // 中文日志
+                                Log.Warning("Redis 默认队列出队为空 {@0}", Account.ChannelId);
                             }
                         }
 
@@ -530,6 +545,21 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                                         await AccountAfterDelay();
                                     }
+                                    else
+                                    {
+                                        // 释放锁
+                                        lockObj.Dispose();
+
+                                        Log.Warning("Redis 慢速队列任务不存在 {@0}", req.Info.Id);
+                                    }
+                                }
+                                else
+                                {
+                                    // 释放锁
+                                    lockObj.Dispose();
+
+                                    // 中文日志
+                                    Log.Warning("Redis 慢速队列出队为空 {@0}", Account.ChannelId);
                                 }
                             }
                         }
@@ -3741,32 +3771,32 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <summary>
         /// 提交任务
         /// </summary>
-        SUBMIT,
+        SUBMIT = 0,
 
         /// <summary>
         /// 变化任务
         /// </summary>
-        ACTION,
+        ACTION = 1,
 
         /// <summary>
         /// 图生文任务
         /// </summary>
-        DESCRIBE,
+        DESCRIBE = 2,
 
         /// <summary>
         /// 混图合成任务
         /// </summary>
-        BLEND,
+        BLEND = 3,
 
         /// <summary>
         /// 弹窗任务
         /// </summary>
-        MODAL,
+        MODAL = 4,
 
         /// <summary>
         /// 刷新任务
         /// </summary>
-        REFRESH,
+        REFRESH = 5,
 
         ///// <summary>
         ///// 自定义变焦任务 - 仅Discord
@@ -3796,21 +3826,21 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <summary>
         /// 提示词简化器 - 仅Discord
         /// </summary>
-        SHORTEN,
+        SHORTEN = 10,
 
         /// <summary>
         /// 高级编辑 - 仅悠船/官网
         /// </summary>
-        EDIT,
+        EDIT = 11,
 
         /// <summary>
         /// 高级转绘 - 仅悠船/官网
         /// </summary>
-        RETEXTURE,
+        RETEXTURE = 12,
 
         /// <summary>
         /// 视频生成 - 仅悠船/官网
         /// </summary>
-        VIDEO
+        VIDEO = 13
     }
 }
