@@ -22,9 +22,11 @@
 // invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
-using Microsoft.Extensions.Caching.Memory;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using Microsoft.Extensions.Caching.Memory;
+using Midjourney.Base.Data;
+using Midjourney.Base.Util;
 
 namespace Midjourney.Base
 {
@@ -51,12 +53,23 @@ namespace Midjourney.Base
         /// <summary>
         /// 全局配置项
         /// </summary>
-        public static Setting Setting { get; set; }
+        public static Setting Setting => SettingDb.Instance.Current;
 
         /// <summary>
         /// 网站配置为演示模式
         /// </summary>
         public static bool IsDemoMode => Setting?.IsDemoMode ?? false;
+
+        /// <summary>
+        /// 当前节点全局最大任务并行处理上限
+        /// 默认：-1 不限制，0 不处理任务
+        /// </summary>
+        public static int GlobalMaxConcurrent { get; set; } = -1;
+
+        /// <summary>
+        /// 全局任务并行锁
+        /// </summary>
+        public static AsyncParallelLock GlobalLock { get; set; }
 
         /// <summary>
         /// 静态资源参数映射

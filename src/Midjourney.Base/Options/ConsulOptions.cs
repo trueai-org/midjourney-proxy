@@ -9,9 +9,18 @@
 
         public string ConsulUrl { get; set; } = "http://localhost:8500";
 
+        public string ConsulToken { get; set; } = "";
+
         public string ServiceName { get; set; } = "midjourney-proxy";
 
         public int ServicePort { get; set; } = 8080;
+
+        /// <summary>
+        /// 是否有效
+        /// </summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        public bool IsValid => Enable && !string.IsNullOrEmpty(ConsulUrl) && !string.IsNullOrEmpty(ServiceName);
 
         /// <summary>
         /// 启用版本对比更新检查，启用时以注册中心的服务版本为准，如果版本过低则执行更新检查，然后退出应用程序

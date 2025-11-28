@@ -439,6 +439,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <returns></returns>
         private async Task RunningRedisJob(CancellationToken token)
         {
+            var globalLock = GlobalConfiguration.GlobalLock;
+            var globalLimit = GlobalConfiguration.GlobalMaxConcurrent;
+
             while (!token.IsCancellationRequested)
             {
                 try
@@ -453,6 +456,11 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     var queueCount = await _defaultOrFastQueue.CountAsync();
                     if (queueCount > 0)
                     {
+                        if (globalLimit > 0)
+                        {
+                            await globalLock.LockAsync(token);
+                        }
+
                         // 先尝试获取并发锁
                         var lockObj = _defaultOrFastConcurrent.TryLock(Account.CoreSize);
                         if (lockObj != null)
@@ -461,57 +469,61 @@ namespace Midjourney.Infrastructure.LoadBalancer
                             var req = await _defaultOrFastQueue.DequeueAsync(token);
                             if (req?.Info != null)
                             {
-                                var info = _taskStoreService.Get(req.Info.Id);
-                                if (info != null)
-                                {
-                                    // 在执行前休眠，由于消息已经取出来了，但是还没有消费或提交，如果服务器突然宕机，可能会导致提交参数丢失
-                                    await AccountBeforeDelay();
+                                // 在执行前休眠，由于消息已经取出来了，但是还没有消费或提交，如果服务器突然宕机，可能会导致提交参数丢失
+                                await AccountBeforeDelay();
 
-                                    // 使用 Task.Run 启动后台任务，避免阻塞主线程
-                                    _ = Task.Run(async () =>
+                                // 使用 Task.Run 启动后台任务，避免阻塞主线程
+                                _ = Task.Run(async () =>
+                                {
+                                    try
                                     {
-                                        try
-                                        {
-                                            await UpdateProgress(info, req);
-                                        }
-                                        finally
-                                        {
-                                            // 释放锁
-                                            lockObj.Dispose();
-                                        }
-                                    }, token);
+                                        await UpdateProgress(req);
+                                    }
+                                    finally
+                                    {
+                                        // 释放锁
+                                        lockObj.Dispose();
 
-                                    await AccountAfterDelay();
-                                }
-                                else
-                                {
-                                    // 释放锁
-                                    lockObj.Dispose();
+                                        if (globalLimit > 0)
+                                        {
+                                            globalLock.Unlock();
+                                        }
+                                    }
+                                }, token);
 
-                                    Log.Warning("Redis 默认队列任务不存在 {@0}", req.Info.Id);
-                                }
+                                await AccountAfterDelay();
                             }
                             else
                             {
                                 // 释放锁
                                 lockObj.Dispose();
 
+                                if (globalLimit > 0)
+                                {
+                                    globalLock.Unlock();
+                                }
+
                                 // 中文日志
                                 Log.Warning("Redis 默认队列出队为空 {@0}", Account.ChannelId);
                             }
                         }
-
-                        // 还有任务
-                        if (queueCount > 1)
+                        else
                         {
-                            await Task.Delay(500, token);
-                            continue;
+                            if (globalLimit > 0)
+                            {
+                                globalLock.Unlock();
+                            }
                         }
                     }
 
                     // 只有悠船才有慢速队列
                     if (Account.IsYouChuan)
                     {
+                        if (globalLimit > 0)
+                        {
+                            await globalLock.LockAsync(token);
+                        }
+
                         // 从放松队列获取任务
                         var relaxQueueCount = await _relaxQueue.CountAsync();
                         if (relaxQueueCount > 0)
@@ -524,55 +536,53 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                 var req = await _relaxQueue.DequeueAsync(token);
                                 if (req?.Info != null)
                                 {
-                                    var info = _taskStoreService.Get(req.Info.Id);
-                                    if (info != null)
+                                    // 使用 Task.Run 启动后台任务，避免阻塞主线程
+                                    _ = Task.Run(async () =>
                                     {
-                                        await AccountBeforeDelay();
-
-                                        // 使用 Task.Run 启动后台任务，避免阻塞主线程
-                                        _ = Task.Run(async () =>
+                                        try
                                         {
-                                            try
-                                            {
-                                                await UpdateProgress(info, req);
-                                            }
-                                            finally
-                                            {
-                                                // 释放锁
-                                                lockObj.Dispose();
-                                            }
-                                        }, token);
+                                            await UpdateProgress(req);
+                                        }
+                                        finally
+                                        {
+                                            // 释放锁
+                                            lockObj.Dispose();
 
-                                        await AccountAfterDelay();
-                                    }
-                                    else
-                                    {
-                                        // 释放锁
-                                        lockObj.Dispose();
+                                            if (globalLimit > 0)
+                                            {
+                                                globalLock.Unlock();
+                                            }
+                                        }
+                                    }, token);
 
-                                        Log.Warning("Redis 慢速队列任务不存在 {@0}", req.Info.Id);
-                                    }
+                                    await AccountAfterDelay();
                                 }
                                 else
                                 {
                                     // 释放锁
                                     lockObj.Dispose();
 
+                                    if (globalLimit > 0)
+                                    {
+                                        globalLock.Unlock();
+                                    }
+
                                     // 中文日志
                                     Log.Warning("Redis 慢速队列出队为空 {@0}", Account.ChannelId);
                                 }
                             }
                         }
-
-                        if (relaxQueueCount > 1)
+                        else
                         {
-                            await Task.Delay(500, token);
-                            continue;
+                            if (globalLimit > 0)
+                            {
+                                globalLock.Unlock();
+                            }
                         }
                     }
 
                     // 短延迟
-                    await Task.Delay(1000, token);
+                    await Task.Delay(500, token);
                 }
                 catch (OperationCanceledException)
                 {
@@ -645,12 +655,38 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <summary>
         /// 更新任务进度
         /// </summary>
-        /// <param name="info"></param>
+        /// <param name="queue"></param>
         /// <returns></returns>
-        public async Task UpdateProgress(TaskInfo info, TaskInfoQueue queue)
+        public async Task UpdateProgress(TaskInfoQueue queue)
         {
+            var info = queue?.Info;
+            if (string.IsNullOrWhiteSpace(info?.Id))
+            {
+                return;
+            }
+
             try
             {
+                // 同一个任务锁
+                using var infoLock = RedisHelper.Instance.Lock($"UpdateProgress:{info.Id}", 10);
+                if (infoLock == null)
+                {
+                    return;
+                }
+
+                // 重新获取 info
+                info = _taskStoreService.Get(info.Id);
+                if (info == null)
+                {
+                    return;
+                }
+
+                // 如果任务完成
+                if (info.IsCompleted)
+                {
+                    return;
+                }
+
                 _runningTasks.TryAdd(info.Id, info);
 
                 // 判断当前实例是否可用
@@ -1476,7 +1512,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "更新任务进度异常 {@0} - {@1}", info.InstanceId, info.Id);
+                _logger.Error(ex, "更新任务进度异常 {@0} - {@1}", info?.InstanceId, info?.Id);
 
                 info.Fail("服务异常，请稍后重试");
 
@@ -1484,8 +1520,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
             }
             finally
             {
-                _runningTasks.TryRemove(info.Id, out _);
-                _taskFutureMap.TryRemove(info.Id, out _);
+                _runningTasks.TryRemove(info?.Id, out _);
+                _taskFutureMap.TryRemove(info?.Id, out _);
 
                 SaveAndNotify(info);
             }
@@ -1496,7 +1532,10 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// </summary>
         private void Running()
         {
-            var redisTask = RunningRedisJob(_longToken.Token);
+            if (GlobalConfiguration.GlobalMaxConcurrent != 0)
+            {
+                var redisTask = RunningRedisJob(_longToken.Token);
+            }
 
             while (true)
             {
@@ -2181,6 +2220,11 @@ namespace Midjourney.Infrastructure.LoadBalancer
         {
             try
             {
+                if (task == null)
+                {
+                    return;
+                }
+
                 _taskStoreService.Save(task);
                 _notifyService.NotifyTaskChange(task);
             }

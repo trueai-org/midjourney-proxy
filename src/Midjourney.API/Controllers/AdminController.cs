@@ -415,7 +415,6 @@ namespace Midjourney.API.Controllers
                 .OrderByDescending(f => f.LastWriteTime)
                 .ToList();
 
-
             // 项目目录，而不是 AppContext.BaseDirectory
             //var logFilePath = Path.Combine(Directory.GetCurrentDirectory(), $"logs/{logName}{DateTime.Now:yyyyMMdd}.txt");
             var logFilePath = logFiles.FirstOrDefault()?.FullName;
@@ -1669,7 +1668,6 @@ namespace Midjourney.API.Controllers
                    .Limit(page.PageSize)
                    .ToList();
 
-
                 // 计算用户累计绘图
                 var userIds = list.Select(c => c.Id).ToList();
                 if (userIds.Count > 0)
@@ -1724,7 +1722,6 @@ namespace Midjourney.API.Controllers
 
             // 统计今日绘图数量
             var drawCounter = DrawCounter.UserTodadSuccessCounter;
-
 
             foreach (var item in list)
             {
@@ -2184,7 +2181,7 @@ namespace Midjourney.API.Controllers
         [HttpGet("setting")]
         public Result<Setting> GetSetting()
         {
-            var model = LiteDBHelper.SettingStore.Get(Constants.DEFAULT_SETTING_ID);
+            var model = GlobalConfiguration.Setting;
             if (model == null)
             {
                 throw new LogicException("系统配置错误，请重启服务");
@@ -2306,6 +2303,21 @@ namespace Midjourney.API.Controllers
                 return Result.Fail("授权验证失败，请检查授权码是否正确，如果没有授权码，请输入默认授权码：trueai.org");
             }
 
+            // 如果启用了 Consul，必须授权才能使用
+            if (setting.ConsulOptions?.Enable == true)
+            {
+                if (setting.LicenseKey.Equals("trueai.org", StringComparison.OrdinalIgnoreCase))
+                {
+                    return Result.Fail("购买授权后，才允许使用 Consul 功能");
+                }
+
+                var success = await SettingDb.Instance.IsConsulAvailableAsync(setting);
+                if (!success)
+                {
+                    return Result.Fail("Consul 连接失败，请检查 Consul 地址 / 服务名称是否正确");
+                }
+            }
+
             // 如果启用了 redis 则验证
             if (setting.EnableRedis)
             {
@@ -2335,9 +2347,7 @@ namespace Midjourney.API.Controllers
 
             setting.Id = Constants.DEFAULT_SETTING_ID;
 
-            LiteDBHelper.SettingStore.Update(setting);
-
-            GlobalConfiguration.Setting = setting;
+            await SettingDb.Instance.SaveAsync(setting);
 
             // 日志级别
             Program.SetLogLevel(setting.LogEventLevel);
