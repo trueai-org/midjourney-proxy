@@ -109,7 +109,10 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
         private readonly RedisConcurrent _defaultOrFastConcurrent;
 
-        private readonly bool _isRedis;
+        /// <summary>
+        /// 是否启用 Redis
+        /// </summary>
+        public bool IsValidRedis { get; private set; } = false;
 
         public DiscordInstance(
             IMemoryCache memoryCache,
@@ -122,7 +125,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
             ITaskService taskService,
             IHttpClientFactory httpClientFactory)
         {
-            _isRedis = GlobalConfiguration.Setting.EnableRedis;
+            IsValidRedis = GlobalConfiguration.Setting.IsValidRedis;
 
             _httpClientFactory = httpClientFactory;
             _logger = Log.Logger;
@@ -160,7 +163,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
             _discordAttachmentUrl = $"{discordServer}/api/v9/channels/{account.ChannelId}/attachments";
             _discordMessageUrl = $"{discordServer}/api/v9/channels/{account.ChannelId}/messages";
 
-            if (_isRedis)
+            if (IsValidRedis)
             {
                 _relaxQueue = new RedisQueue<TaskInfoQueue>(RedisHelper.Instance, $"relax:{account.ChannelId}", account.RelaxCoreSize);
                 _defaultOrFastQueue = new RedisQueue<TaskInfoQueue>(RedisHelper.Instance, $"fast:{account.ChannelId}", account.CoreSize);
@@ -345,7 +348,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
             {
                 var count = 0;
 
-                if (_isRedis)
+                if (IsValidRedis)
                 {
                     count += _defaultOrFastConcurrent.GetConcurrency(Account.CoreSize);
 
@@ -378,7 +381,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         {
             get
             {
-                if (_isRedis)
+                if (IsValidRedis)
                 {
                     var count = _defaultOrFastQueue.Count();
 
@@ -397,16 +400,11 @@ namespace Midjourney.Infrastructure.LoadBalancer
         }
 
         /// <summary>
-        /// 是否启用 Redis
-        /// </summary>
-        public bool IsRedis => _isRedis;
-
-        /// <summary>
         /// 是否存在空闲队列，即：队列是否已满，是否可加入新的任务
         /// </summary>
         public bool IsIdleQueue(GenerationSpeedMode? mode = null)
         {
-            if (_isRedis)
+            if (IsValidRedis)
             {
                 if (Account.IsYouChuan && mode == GenerationSpeedMode.RELAX)
                 {
@@ -439,6 +437,11 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <returns></returns>
         private async Task RunningRedisJob(CancellationToken token)
         {
+            if (!IsValidRedis)
+            {
+                return;
+            }
+
             var globalLock = GlobalConfiguration.GlobalLock;
             var globalLimit = GlobalConfiguration.GlobalMaxConcurrent;
 
@@ -446,12 +449,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
             {
                 try
                 {
-                    // 如果是 redis 作业
-                    if (!_isRedis)
-                    {
-                        return;
-                    }
-
                     // 从快速队列获取任务
                     var queueCount = await _defaultOrFastQueue.CountAsync();
                     if (queueCount > 0)

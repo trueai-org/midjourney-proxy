@@ -64,6 +64,13 @@ namespace Midjourney.Base.Models
         public string RedisConnectionString { get; set; }
 
         /// <summary>
+        /// 判断 redis 是否有效
+        /// </summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        public bool IsValidRedis => EnableRedis && !string.IsNullOrWhiteSpace(RedisConnectionString);
+
+        /// <summary>
         /// 启用风控自动验证 - 适用于官网 Cloudflare 验证
         /// </summary>
         public bool EnableRiskControlAutoCaptcha { get; set; }

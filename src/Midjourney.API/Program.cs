@@ -39,6 +39,7 @@ global using TaskStatus = Midjourney.Base.TaskStatus;
 
 using System.Reflection;
 using System.Text.Json.Serialization;
+using CSRedis;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.OpenApi.Models;
@@ -104,27 +105,31 @@ namespace Midjourney.API
                 Log.Information("数据库类型：{0}", setting.DatabaseType);
 
                 // 初始化 Redis 验证是否可连接
-                if (setting.EnableRedis && !string.IsNullOrWhiteSpace(setting.RedisConnectionString))
+                CSRedisClient csredis = null;
+                if (setting.IsValidRedis)
                 {
                     try
                     {
-                        var csredis = new CSRedis.CSRedisClient(setting.RedisConnectionString);
+                        csredis = new CSRedis.CSRedisClient(setting.RedisConnectionString);
                         if (!csredis.Ping())
                         {
+                            csredis = null;
                             setting.EnableRedis = false;
                             isSaveSetting = true;
-
                             Log.Error("Redis 连接失败，已自动禁用 Redis 功能");
                         }
                     }
                     catch (Exception ex)
                     {
+                        csredis = null;
                         setting.EnableRedis = false;
                         isSaveSetting = true;
-
                         Log.Error(ex, "Redis 连接异常，已自动禁用 Redis 功能");
                     }
                 }
+
+                AdaptiveLock.Initialization(csredis);
+                AdaptiveCache.Initialization(csredis);
 
                 // 需要重新保存配置，注意：如果版本过旧，重新保存配置可能会覆盖新的业务，需谨慎处理
                 if (isSaveSetting)

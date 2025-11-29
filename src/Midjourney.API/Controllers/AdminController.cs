@@ -28,6 +28,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using CSRedis;
 using LiteDB;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -2285,6 +2286,20 @@ namespace Midjourney.API.Controllers
                 return Result.Fail("演示模式，禁止操作");
             }
 
+            // 如果是 mongodb 则验证数据库名称
+            if (setting.DatabaseType == DatabaseType.MongoDB)
+            {
+                if (string.IsNullOrWhiteSpace(setting.DatabaseName))
+                {
+                    return Result.Fail("请输入数据库名称");
+                }
+            }
+            var dbSuccess = DbHelper.Verify(setting.DatabaseType, setting.DatabaseConnectionString, setting.DatabaseName);
+            if (!dbSuccess)
+            {
+                return Result.Fail("数据库连接失败，请检查连接字符串/名称是否正确");
+            }
+
             try
             {
                 // 保存时验证授权
@@ -2314,16 +2329,17 @@ namespace Midjourney.API.Controllers
                 var success = await SettingDb.Instance.IsConsulAvailableAsync(setting);
                 if (!success)
                 {
-                    return Result.Fail("Consul 连接失败，请检查 Consul 地址 / 服务名称是否正确");
+                    return Result.Fail("Consul 连接失败，请检查 Consul 地址/服务名称是否正确");
                 }
             }
 
             // 如果启用了 redis 则验证
-            if (setting.EnableRedis)
+            CSRedisClient csredis = null;
+            if (setting.IsValidRedis)
             {
                 try
                 {
-                    var csredis = new CSRedis.CSRedisClient(setting.RedisConnectionString);
+                    csredis = new CSRedisClient(setting.RedisConnectionString);
                     if (!csredis.Ping())
                     {
                         return Result.Fail("Redis 连接失败，请检查连接字符串是否正确");
@@ -2335,6 +2351,8 @@ namespace Midjourney.API.Controllers
                     return Result.Fail("Redis 连接失败，请检查连接字符串是否正确");
                 }
             }
+            AdaptiveLock.Initialization(csredis);
+            AdaptiveCache.Initialization(csredis);
 
             // 如果启用了风控验证
             if (setting.EnableRiskControlAutoCaptcha)
@@ -2354,9 +2372,6 @@ namespace Midjourney.API.Controllers
 
             // 存储服务
             StorageHelper.Configure();
-
-            // 缓存
-            GlobalCacheHelper.Configure();
 
             // 首页缓存
             _memoryCache.Remove("HOME");

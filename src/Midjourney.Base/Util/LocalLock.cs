@@ -21,54 +21,76 @@
 // The use of this software for any form of illegal face swapping,
 // invasion of privacy, or any other unlawful purposes is strictly prohibited. 
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
+
 using System.Collections.Concurrent;
 
 namespace Midjourney.Base.Util
 {
     /// <summary>
-    /// 本地锁（不支持异步 async）
+    /// 本地锁 - v20251129
+    /// 提示：不支持异步，绝对不能在 async 方法中使用，async 方法请使用：AsyncLocalLock
+    /// 说明：Monitor.TryEnter(obj, span) 是一个同步阻塞调用。如果锁被占用，调用它的线程会停下来，原地等待，直到获取到锁或超时。
+    /// Monitor 锁与线程是绑定的：哪个线程 Enter，就必须由哪个线程 Exit。
+    /// 在 async/await 中，当一个 await 操作完成时，代码可能会在任意一个线程池线程上恢复执行，而不一定是原来的线程。
     /// </summary>
     public static class LocalLock
     {
-        private static readonly ConcurrentDictionary<string, object> _lockObjs = new();
+        private static readonly ConcurrentDictionary<string, LockWrapper> _lockWrappers = new();
 
         /// <summary>
-        /// 获取锁（不支持异步 async）
+        /// 锁对象的包装器，包含锁本身和一个引用计数
         /// </summary>
-        /// <param name="key"></param>
-        /// <param name="span"></param>
-        /// <returns></returns>
+        internal sealed class LockWrapper
+        {
+            public object LockObject { get; } = new object();
+
+            // 将属性改为公共字段，以支持 ref 参数
+            public int RefCount;
+        }
+
+        /// <summary>
+        /// 尝试获取锁
+        /// </summary>
         private static bool LockEnter(string key, TimeSpan span)
         {
-            var obj = _lockObjs.GetOrAdd(key, new object());
-            if (Monitor.TryEnter(obj, span))
+            var wrapper = _lockWrappers.GetOrAdd(key, new LockWrapper());
+
+            // 现在这行代码可以正常工作了
+            Interlocked.Increment(ref wrapper.RefCount);
+
+            if (Monitor.TryEnter(wrapper.LockObject, span))
             {
                 return true;
             }
+
+            // 如果获取失败，减少引用计数
+            Interlocked.Decrement(ref wrapper.RefCount);
+
             return false;
         }
 
         /// <summary>
-        /// 退出锁（不支持异步 async）
+        /// 退出锁
         /// </summary>
-        /// <param name="key"></param>
-        /// <returns></returns>
-        private static bool LockExit(string key)
+        private static void LockExit(string key)
         {
-            if (_lockObjs.TryGetValue(key, out object obj) && obj != null)
+            if (_lockWrappers.TryGetValue(key, out var wrapper))
             {
-                Monitor.Exit(obj);
+                Monitor.Exit(wrapper.LockObject);
+
+                Interlocked.Decrement(ref wrapper.RefCount);
+
+                // 如果引用计数为0，说明没有其他线程正在使用这个锁，可以安全移除
+                if (wrapper.RefCount <= 0)
+                {
+                    _lockWrappers.TryRemove(key, out _);
+                }
             }
-            return true;
         }
 
         /// <summary>
         /// 等待并获取锁（不支持异步 async）
         /// </summary>
-        /// <param name="resource"></param>
-        /// <param name="expirationTime">等待锁超时时间，如果超时没有获取到锁，返回 false</param>
-        /// <param name="action"></param>
-        /// <returns></returns>
         public static bool TryLock(string resource, TimeSpan expirationTime, Action action)
         {
             if (LockEnter(resource, expirationTime))

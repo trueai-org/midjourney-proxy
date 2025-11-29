@@ -1099,7 +1099,7 @@ namespace Midjourney.API
                     {
                         try
                         {
-                            if (disInstance.IsRedis)
+                            if (disInstance.IsValidRedis)
                             {
                                 var agoTime = new DateTimeOffset(DateTime.Now.AddHours(-1)).ToUnixTimeMilliseconds();
                                 var list = DbHelper.Instance.TaskStore.Where(c => c.InstanceId == account.ChannelId && c.SubmitTime >= agoTime && c.Status != TaskStatus.CANCEL && c.Status != TaskStatus.FAILURE && c.Status != TaskStatus.MODAL && c.Status != TaskStatus.SUCCESS);
@@ -1463,10 +1463,20 @@ namespace Midjourney.API
         {
             try
             {
-                // 如果是悠船或官方，不需要释放
+                // 如果是悠船或官方，只有修改令牌才释放
                 if (account.IsYouChuan || account.IsOfficial)
                 {
-
+                    // 如果正在执行则释放
+                    var disInstance = _discordLoadBalancer.GetDiscordInstance(account.ChannelId);
+                    if (disInstance != null)
+                    {
+                        // 如果令牌修改了，则必须移除
+                        if (account.UserToken != disInstance?.Account.UserToken)
+                        {
+                            _discordLoadBalancer.RemoveInstance(disInstance);
+                            disInstance.Dispose();
+                        }
+                    }
                 }
                 else
                 {

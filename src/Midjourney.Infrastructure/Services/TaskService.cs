@@ -25,7 +25,9 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.Text.RegularExpressions;
+using Instances;
 using Microsoft.Extensions.Caching.Memory;
+using Midjourney.Base.Services;
 using Midjourney.Infrastructure.LoadBalancer;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -236,7 +238,7 @@ namespace Midjourney.Infrastructure.Services
             info.InstanceId = instance.ChannelId;
 
             // 启用 redis
-            if (instance.IsRedis)
+            if (instance.IsValidRedis)
             {
                 if (instance.Account.IsYouChuan || instance.Account.IsOfficial)
                 {
@@ -517,7 +519,7 @@ namespace Midjourney.Infrastructure.Services
             info.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, instance.ChannelId);
             info.InstanceId = instance.ChannelId;
 
-            if (instance.IsRedis)
+            if (instance.IsValidRedis)
             {
                 if (instance.Account.IsYouChuan)
                 {
@@ -714,7 +716,7 @@ namespace Midjourney.Infrastructure.Services
             info.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, instance.ChannelId);
             info.InstanceId = instance.ChannelId;
 
-            if (instance.IsRedis)
+            if (instance.IsValidRedis)
             {
                 if (instance.Account.IsYouChuan)
                 {
@@ -951,7 +953,7 @@ namespace Midjourney.Infrastructure.Services
             info.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, instance.ChannelId);
             info.InstanceId = instance.ChannelId;
 
-            if (instance.IsRedis)
+            if (instance.IsValidRedis)
             {
                 var startImageUrl = "";
                 var endImageUrl = "";
@@ -1508,7 +1510,7 @@ namespace Midjourney.Infrastructure.Services
             task.IsOfficial = discordInstance.Account.IsOfficial;
 
             // redis
-            if (discordInstance.IsRedis)
+            if (discordInstance.IsValidRedis)
             {
                 var link = "";
 
@@ -1797,7 +1799,7 @@ namespace Midjourney.Infrastructure.Services
             task.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, discordInstance.ChannelId);
             task.InstanceId = discordInstance.ChannelId;
 
-            if (discordInstance.IsRedis)
+            if (discordInstance.IsValidRedis)
             {
                 task.Status = TaskStatus.NOT_START;
                 _taskStoreService.Save(task);
@@ -1847,7 +1849,7 @@ namespace Midjourney.Infrastructure.Services
             task.InstanceId = discordInstance.ChannelId;
             task.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, discordInstance.ChannelId);
 
-            if (discordInstance.IsRedis)
+            if (discordInstance.IsValidRedis)
             {
                 var isYm = task.IsPartner || task.IsOfficial;
                 // youchuan | mj
@@ -2585,7 +2587,7 @@ namespace Midjourney.Infrastructure.Services
             }
 
             // 启用 redis
-            if (discordInstance.IsRedis)
+            if (discordInstance.IsValidRedis)
             {
                 // 悠船 | 官方
                 if (task.IsPartner || task.IsOfficial)
@@ -2710,7 +2712,7 @@ namespace Midjourney.Infrastructure.Services
             task.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, discordInstance.ChannelId);
 
             // 启用 redis
-            if (discordInstance.IsRedis)
+            if (discordInstance.IsValidRedis)
             {
                 if (task.IsPartner || task.IsOfficial)
                 {
