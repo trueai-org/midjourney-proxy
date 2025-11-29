@@ -24,7 +24,7 @@ namespace Midjourney.Base.Util
         private static readonly ConcurrentDictionary<string, SemaphoreSlim> _localSemaphores = new();
 
         /// <summary>
-        /// 项目启动时初始化
+        /// 项目启动时初始化（可以多次调用）
         /// </summary>
         /// <param name="redisClient">如果提供，则启用分布式锁；否则使用本地锁</param>
         public static void Initialization(CSRedisClient redisClient = null)
