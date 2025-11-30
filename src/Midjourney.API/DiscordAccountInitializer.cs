@@ -1516,7 +1516,7 @@ namespace Midjourney.API
 
                     case ENotificationType.CompleteTaskInfo:
                         {
-                            DrawCounter.Complete(notification.TaskInfo, notification.IsSuccess);
+                            DrawCounter.Complete(notification.TaskInfo, notification.IsSuccess, false);
                         }
                         break;
 

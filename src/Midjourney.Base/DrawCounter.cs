@@ -441,7 +441,7 @@ namespace Midjourney.Base
         /// 任务完成时，计数器 +1
         /// </summary>
         /// <param name="info"></param>
-        public static void Complete(TaskInfo info, bool success)
+        public static void Complete(TaskInfo info, bool success, bool isIncr = true)
         {
             if (info == null || info.Action == null)
             {
@@ -461,8 +461,17 @@ namespace Midjourney.Base
                     {
                         // redis
                         var accountTodayAllKey = $"counter_all_{DateTime.Now:yyyyMMdd}:{info.InstanceId}_{mode}";
-                        var accountTodayAllCount = (int)RedisHelper.IncrBy(accountTodayAllKey, 1);
-                        RedisHelper.Expire(accountTodayAllKey, TimeSpan.FromDays(2));
+                        var accountTodayAllCount = 0;
+
+                        if (isIncr)
+                        {
+                            accountTodayAllCount = (int)RedisHelper.IncrBy(accountTodayAllKey, 1);
+                            RedisHelper.Expire(accountTodayAllKey, TimeSpan.FromDays(2));
+                        }
+                        else
+                        {
+                            accountTodayAllCount = RedisHelper.Get<int?>(accountTodayAllKey) ?? 0;
+                        }
 
                         // 统计所有
                         var key = $"{DateTime.Now:yyyyMMdd}_{info.InstanceId}";
@@ -481,8 +490,17 @@ namespace Midjourney.Base
                         {
                             // redis
                             var accountSuccessKey = $"counter_success_{DateTime.Now:yyyyMMdd}:{info.InstanceId}_{mode}_{info.Action}";
-                            var accountSuccessCount = (int)RedisHelper.IncrBy(accountSuccessKey, 1);
-                            RedisHelper.Expire(accountSuccessKey, TimeSpan.FromDays(2));
+
+                            var accountSuccessCount = 0;
+                            if (isIncr)
+                            {
+                                accountSuccessCount = (int)RedisHelper.IncrBy(accountSuccessKey, 1);
+                                RedisHelper.Expire(accountSuccessKey, TimeSpan.FromDays(2));
+                            }
+                            else
+                            {
+                                accountSuccessCount = RedisHelper.Get<int?>(accountSuccessKey) ?? 0;
+                            }
 
                             if (!AccountTodaySuccessCounter.ContainsKey(key))
                             {
@@ -509,8 +527,17 @@ namespace Midjourney.Base
                         {
                             // 个人成功统计
                             var userTodaySuccessKey = $"counter_user_success_{DateTime.Now.Date:yyyyMMdd}:{info.UserId}_{mode}_{info.Action.Value}";
-                            var userTodaySuccessCount = (int)RedisHelper.IncrBy(userTodaySuccessKey, 1);
-                            RedisHelper.Expire(userTodaySuccessKey, TimeSpan.FromDays(2));
+                            var userTodaySuccessCount = 0;
+
+                            if (isIncr)
+                            {
+                                userTodaySuccessCount = (int)RedisHelper.IncrBy(userTodaySuccessKey, 1);
+                                RedisHelper.Expire(userTodaySuccessKey, TimeSpan.FromDays(2));
+                            }
+                            else
+                            {
+                                userTodaySuccessCount = RedisHelper.Get<int?>(userTodaySuccessKey) ?? 0;
+                            }
 
                             var key = $"{DateTime.Now.Date:yyyyMMdd}_{info.UserId}";
                             if (!UserTodadSuccessCounter.ContainsKey(key))
@@ -533,13 +560,17 @@ namespace Midjourney.Base
                     }
                 }
 
-                var notification = new RedisNotification
+                // 增量时才发送通知
+                if (isIncr)
                 {
-                    Type = ENotificationType.CompleteTaskInfo,
-                    IsSuccess = success,
-                    TaskInfo = info
-                };
-                RedisHelper.Publish(Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
+                    var notification = new RedisNotification
+                    {
+                        Type = ENotificationType.CompleteTaskInfo,
+                        IsSuccess = success,
+                        TaskInfo = info
+                    };
+                    RedisHelper.Publish(Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
+                }
 
                 return;
             }
