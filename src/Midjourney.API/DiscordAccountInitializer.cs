@@ -1473,7 +1473,7 @@ namespace Midjourney.API
             {
                 var isSelf = notification.Hostname == Environment.MachineName;
 
-                _logger.Information("收到 Redis 消息, self: {@0}, {@1}", isSelf, notification);
+                _logger.Information("收到 Redis 消息, self: {@0}, {@1}, {@2}, {@3}, {@4}", isSelf, notification.Type, notification.ChannelId, notification.TaskInfoId, notification.TaskInfo?.Id);
 
                 // 判断是否自身发出的
                 if (isSelf)

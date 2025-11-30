@@ -224,7 +224,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                         var notification = new RedisNotification
                         {
                             Type = ENotificationType.AccountCache,
-                            ChannelId = localOld.ChannelId, 
+                            ChannelId = localOld.ChannelId,
                         };
                         RedisHelper.Publish(Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
                     }
@@ -595,7 +595,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     }
 
                     // 短延迟
-                    await Task.Delay(500, token);
+                    await Task.Delay(1000, token);
                 }
                 catch (OperationCanceledException)
                 {
@@ -606,7 +606,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     Log.Error(ex, "Redis Queue Worker Error");
 
                     // 防止死循环报错导致 CPU 飙升，加一个短暂延迟
-                    await Task.Delay(5000, token);
+                    await Task.Delay(1000 * 10, token);
                 }
             }
         }
