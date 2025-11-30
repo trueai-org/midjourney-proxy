@@ -45,6 +45,62 @@ namespace Midjourney.Base.Models
         }
 
         /// <summary>
+        /// 初始化 Key, 用于更新账号/初始化连接/禁用账号等
+        /// </summary>
+        [LiteDB.BsonIgnore]
+        [MongoDB.Bson.Serialization.Attributes.BsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Column(IsIgnore = true)]
+        public string InitializationLockKey => $"account_initialize_lock:{Id}";
+
+        /// <summary>
+        /// 同步账号信息锁 Key, 用于同步 Info / Setting 等
+        /// </summary>
+        [LiteDB.BsonIgnore]
+        [MongoDB.Bson.Serialization.Attributes.BsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Column(IsIgnore = true)]
+        public string InfoLockKey => $"account_sync_lock:{Id}";
+
+        /// <summary>
+        /// Token 刷新锁 Key
+        /// </summary>
+        [LiteDB.BsonIgnore]
+        [MongoDB.Bson.Serialization.Attributes.BsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Column(IsIgnore = true)]
+        public string TokenLockKey => $"account_token_lock:{Id}";
+
+        /// <summary>
+        /// 缓存 key
+        /// </summary>
+        [LiteDB.BsonIgnore]
+        [MongoDB.Bson.Serialization.Attributes.BsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Column(IsIgnore = true)]
+        public string CacheKey => $"account_cache:{Id}";
+
+        /// <summary>
+        /// 添加一个事件用于通知去清理缓存
+        /// </summary>
+        public event Action<bool> ClearCacheEvent;
+
+        /// <summary>
+        /// 清除缓存
+        /// </summary>
+        /// <param name="isPublishToRedis">是否发送 redis 通知</param>
+        public void ClearCache(bool isPublishToRedis = true)
+        {
+            AdaptiveCache.Remove(CacheKey);
+
+            ClearCacheEvent?.Invoke(isPublishToRedis);
+        }
+
+        /// <summary>
         /// 频道ID  = ID
         /// </summary>
         [Display(Name = "频道ID")]
@@ -282,7 +338,6 @@ namespace Midjourney.Base.Models
         /// 摸鱼时间段（只接收变化任务，不接收新的任务）
         /// </summary>
         public string FishingTime { get; set; }
-
 
         /// <summary>
         /// 启用高清视频（Pro or Mega 以上套餐，可以开启此功能）

@@ -22,6 +22,7 @@
 // invasion of privacy, or any other unlawful purposes is strictly prohibited. 
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
+using System.Reflection;
 using Midjourney.Infrastructure.Handle;
 using Midjourney.Infrastructure.LoadBalancer;
 using Midjourney.Infrastructure.Services;
@@ -116,6 +117,12 @@ namespace Midjourney.API
 
             // 任务服务
             services.AddSingleton<ITaskService, TaskService>();
+
+            // 注册 MediatR
+            services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
+
+            services.AddBaseServices(config);
+            services.AddInfrastructureServices(config);
         }
     }
 }

@@ -102,20 +102,9 @@ namespace Midjourney.API.Controllers
             }
 
             var user = _workContext.GetUser();
+            var setting = GlobalConfiguration.Setting;
 
-            var queueTask = _discordLoadBalancer.GetQueueTasks().FirstOrDefault(t => t.Id == id);
-            if (queueTask != null)
-            {
-                if (user.Id == queueTask.UserId || user.Role == EUserRole.ADMIN)
-                {
-                    if (!queueTask.IsCompleted)
-                    {
-                        queueTask.Fail("主动取消任务");
-                        _taskStoreService.Save(queueTask);
-                    }
-                }
-            }
-            else
+            if (setting.IsValidRedis)
             {
                 var targetTask = _discordLoadBalancer.GetRunningTasks().FirstOrDefault(t => t.Id == id);
 
@@ -124,7 +113,6 @@ namespace Midjourney.API.Controllers
                 {
                     targetTask = _taskStoreService.Get(id);
                 }
-
                 if (targetTask != null)
                 {
                     if (user.Id == targetTask.UserId || user.Role == EUserRole.ADMIN)
@@ -133,6 +121,51 @@ namespace Midjourney.API.Controllers
                         {
                             targetTask.Fail("取消任务");
                             _taskStoreService.Save(targetTask);
+                        }
+
+                        var notification = new RedisNotification
+                        {
+                            CacheType = ENotificationType.AccountCache,
+                            ChannelId = targetTask.InstanceId,
+                            TaskInfoId = id
+                        };
+                        RedisHelper.Publish(Constants.REDIS_CHANNEL, notification.ToJson());
+                    }
+                }
+            }
+            else
+            {
+                var queueTask = _discordLoadBalancer.GetQueueTasks().FirstOrDefault(t => t.Id == id);
+                if (queueTask != null)
+                {
+                    if (user.Id == queueTask.UserId || user.Role == EUserRole.ADMIN)
+                    {
+                        if (!queueTask.IsCompleted)
+                        {
+                            queueTask.Fail("主动取消任务");
+                            _taskStoreService.Save(queueTask);
+                        }
+                    }
+                }
+                else
+                {
+                    var targetTask = _discordLoadBalancer.GetRunningTasks().FirstOrDefault(t => t.Id == id);
+
+                    // 如果任务不在队列中，则从存储中获取
+                    if (targetTask == null)
+                    {
+                        targetTask = _taskStoreService.Get(id);
+                    }
+
+                    if (targetTask != null)
+                    {
+                        if (user.Id == targetTask.UserId || user.Role == EUserRole.ADMIN)
+                        {
+                            if (!targetTask.IsCompleted)
+                            {
+                                targetTask.Fail("取消任务");
+                                _taskStoreService.Save(targetTask);
+                            }
                         }
                     }
                 }

@@ -303,10 +303,7 @@ namespace Midjourney.API.Controllers
 
                         // 更新账号信息
                         DbHelper.Instance.AccountStore.Update(item);
-
-                        // 清空缓存
-                        var inc = _loadBalancer.GetDiscordInstance(item.ChannelId);
-                        inc?.ClearAccountCache(item.Id);
+                        item.ClearCache();
 
                         if (!request.Success)
                         {
@@ -684,10 +681,7 @@ namespace Midjourney.API.Controllers
 
                         // 更新账号信息
                         DbHelper.Instance.AccountStore.Update(item);
-
-                        // 清空缓存
-                        var inc = _loadBalancer.GetDiscordInstance(item.ChannelId);
-                        inc?.ClearAccountCache(item.Id);
+                        item.ClearCache();
 
                         if (!request.Success)
                         {
@@ -770,15 +764,11 @@ namespace Midjourney.API.Controllers
                             // https://editor.midjourney.com/captcha/challenge/index.html?hash=OOUxejO94EQNxsCODRVPbg&token=dXDm-gSb4Zlsx-PCkNVyhQ
 
                             var url = $"https://editor.midjourney.com/captcha/challenge/index.html?hash={hashStr}&token={token}";
-
                             item.CfUrl = url;
 
                             // 更新账号信息
                             DbHelper.Instance.AccountStore.Update(item);
-
-                            // 清空缓存
-                            var inc = _loadBalancer.GetDiscordInstance(item.ChannelId);
-                            inc?.ClearAccountCache(item.Id);
+                            item.ClearCache();
                         }
                     }
                     else
@@ -811,11 +801,6 @@ namespace Midjourney.API.Controllers
                 throw new LogicException("账号不存在");
             }
 
-            //if (!item.Lock)
-            //{
-            //    throw new LogicException("不需要 CF 验证");
-            //}
-
             item.Lock = false;
             item.CfHashUrl = null;
             item.CfHashCreated = null;
@@ -824,10 +809,7 @@ namespace Midjourney.API.Controllers
 
             // 更新账号信息
             DbHelper.Instance.AccountStore.Update(item);
-
-            // 清空缓存
-            var inc = _loadBalancer.GetDiscordInstance(item.ChannelId);
-            inc?.ClearAccountCache(item.Id);
+            item.ClearCache();
 
             return Result.Ok();
         }
@@ -943,7 +925,7 @@ namespace Midjourney.API.Controllers
             DbHelper.Instance.AccountStore.Add(account);
 
             // 后台执行
-            _ = _discordAccountInitializer.StartCheckAccount(account);
+            _ = _discordAccountInitializer.StartAccount(account);
 
             // 更新缓存
             if (setting.EnableAccountSponsor && user.Role != EUserRole.ADMIN)
@@ -976,11 +958,6 @@ namespace Midjourney.API.Controllers
             {
                 return Result.Fail("未开启赞助功能，禁止操作");
             }
-
-            //if (_isAnonymous)
-            //{
-            //    return Result.Fail("演示模式，禁止操作");
-            //}
 
             var model = DbHelper.Instance.AccountStore.Get(param.Id);
             if (model == null)
@@ -1105,7 +1082,14 @@ namespace Midjourney.API.Controllers
                 return Result.Fail("禁止修改频道 ID 和服务器 ID");
             }
 
-            await _discordAccountInitializer.ReconnectAccount(param);
+            // 更新账号信息
+            var account = await _discordAccountInitializer.UpdateAccount(model);
+
+            // 释放连接
+            _discordAccountInitializer.DisposeAccount(account);
+
+            // 启动连接
+            await _discordAccountInitializer.StartAccount(account);
 
             return Result.Ok();
         }
@@ -1140,11 +1124,6 @@ namespace Midjourney.API.Controllers
             {
                 return Result.Fail("无权限操作");
             }
-
-            //if (_isAnonymous)
-            //{
-            //    return Result.Fail("演示模式，禁止操作");
-            //}
 
             _discordAccountInitializer.DeleteAccount(id);
 

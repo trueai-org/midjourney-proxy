@@ -414,6 +414,16 @@ namespace Midjourney.Base
         }
 
         /// <summary>
+        /// 转为本地时间
+        /// </summary>
+        /// <param name="timestamp"></param>
+        /// <returns></returns>
+        public static DateTime? ToLocalTime(this long timestamp)
+        {
+            return timestamp > 0 ? DateTimeOffset.FromUnixTimeMilliseconds(timestamp).ToLocalTime().LocalDateTime : null;
+        }
+
+        /// <summary>
         /// String to long time unix
         /// </summary>
         /// <param name="value"></param>

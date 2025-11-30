@@ -11,12 +11,6 @@
         DiscordAccount Account { get; }
 
         /// <summary>
-        /// 清理账号缓存
-        /// </summary>
-        /// <param name="id"></param>
-        void ClearAccountCache(string id);
-
-        /// <summary>
         /// 获取格式化后的 prompt 文本
         /// </summary>
         /// <param name="promptEn"></param>
@@ -25,7 +19,7 @@
         string GetPrompt(string promptEn, TaskInfo info);
 
         /// <summary>
-        /// 
+        /// Discord 辅助
         /// </summary>
         DiscordHelper DiscordHelper { get; }
     }

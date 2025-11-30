@@ -28,7 +28,6 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.RegularExpressions;
-using Microsoft.Extensions.Caching.Memory;
 using Midjourney.Infrastructure.Services;
 using Midjourney.License;
 using Newtonsoft.Json.Linq;
@@ -42,7 +41,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
     /// </summary>
     public class DiscordInstance : IDiscordInstance
     {
-        private readonly object _lockAccount = new object();
+        private readonly object _accountLock = new();
 
         private readonly ILogger _logger = Log.Logger;
 
@@ -70,8 +69,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
         private readonly string _discordInteractionUrl;
         private readonly string _discordAttachmentUrl;
         private readonly string _discordMessageUrl;
-        private readonly IMemoryCache _cache;
         private readonly ITaskService _taskService;
+
+        //private readonly IMemoryCache _cache;
 
         /// <summary>
         /// 当前 FAST 队列任务
@@ -115,7 +115,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
         public bool IsValidRedis { get; private set; } = false;
 
         public DiscordInstance(
-            IMemoryCache memoryCache,
             DiscordAccount account,
             ITaskStoreService taskStoreService,
             INotifyService notifyService,
@@ -142,11 +141,12 @@ namespace Midjourney.Infrastructure.LoadBalancer
             };
 
             _taskService = taskService;
-            _cache = memoryCache;
             _paramsMap = paramsMap;
             _discordHelper = discordHelper;
 
             _account = account;
+            SubscribeToAccount(_account);
+
             _taskStoreService = taskStoreService;
             _notifyService = notifyService;
 
@@ -180,20 +180,70 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
             if (account.IsYouChuan || account.IsOfficial)
             {
-                _ymTaskService = new YmTaskService(account, this, _cache, _httpClientFactory);
+                _ymTaskService = new YmTaskService(account, this, _httpClientFactory);
             }
+        }
+
+        private void SubscribeToAccount(DiscordAccount account)
+        {
+            // 把 handler 保存到局部变量以便 later 能取消订阅
+            Action<bool> handler = null!;
+
+            // 使用捕获的 localOld 保证处理时能定位到当时订阅的实例
+            var localOld = account;
+            handler = (bool isPublishToRedis) =>
+            {
+                try
+                {
+                    // 从存储取最新数据
+                    var acc = DbHelper.Instance.AccountStore.Get(localOld.Id);
+                    if (acc != null && !ReferenceEquals(localOld, acc))
+                    {
+                        // 在替换订阅之前，先从旧实例取消订阅
+                        lock (_accountLock)
+                        {
+                            localOld.ClearCacheEvent -= handler;
+                            _account = acc; // 替换字段
+
+                            // 为新实例订阅同一个 handler（注意这里订阅的是 acc）
+                            acc.ClearCacheEvent += handler;
+
+                            _logger.Information("账号信息已更新订阅。 {@0}", acc.Id);
+                        }
+                    }
+                    // 如果账号被删除了
+                    else if (acc == null)
+                    {
+                        IsInit = false;
+                    }
+
+                    // 如果启用了 redis, 则发布消息告诉其他节点清除缓存
+                    // 避免自己发布自己订阅到
+                    if (IsValidRedis && isPublishToRedis)
+                    {
+                        var notification = new RedisNotification
+                        {
+                            CacheType = ENotificationType.AccountCache,
+                            ChannelId = localOld.ChannelId, // 发送频道 ID
+                        };
+                        RedisHelper.Publish(Constants.REDIS_CHANNEL, notification.ToJson());
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // 记录异常，避免抛出导致发布者中断
+                    _logger.Error(ex, "订阅账号信息变更失败。 {@0}", localOld.Id);
+                }
+            };
+
+            // 进行初次订阅
+            account.ClearCacheEvent += handler;
         }
 
         /// <summary>
         /// 默认会话ID。
         /// </summary>
         public string DefaultSessionId { get; set; } = "f1a313a09ce079ce252459dc70231f30";
-
-        /// <summary>
-        /// 获取实例ID。
-        /// </summary>
-        /// <returns>实例ID</returns>
-        public string ChannelId => Account.ChannelId;
 
         /// <summary>
         ///
@@ -208,52 +258,13 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// 获取Discord账号信息。
         /// </summary>
         /// <returns>Discord账号</returns>
-        public DiscordAccount Account
-        {
-            get
-            {
-                try
-                {
-                    lock (_lockAccount)
-                    {
-                        if (!string.IsNullOrWhiteSpace(_account?.Id))
-                        {
-                            _account = _cache.GetOrCreate($"account:{_account.Id}", (c) =>
-                            {
-                                c.SetAbsoluteExpiration(TimeSpan.FromMinutes(2));
-
-                                // 必须数据库中存在
-                                var acc = DbHelper.Instance.AccountStore.Get(_account.Id);
-                                if (acc != null)
-                                {
-                                    return acc;
-                                }
-
-                                // 如果账号被删除了
-                                IsInit = false;
-
-                                return _account;
-                            });
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.Error(ex, "Failed to get account. {@0}", _account?.Id ?? "unknown");
-                }
-
-                return _account;
-            }
-        }
+        public DiscordAccount Account => _account;
 
         /// <summary>
-        /// 清理账号缓存
+        /// 获取实例ID（由于 ChannelId 不可修改，因此使用原始值即可）
         /// </summary>
-        /// <param name="id"></param>
-        public void ClearAccountCache(string id)
-        {
-            _cache.Remove($"account:{id}");
-        }
+        /// <returns>实例ID</returns>
+        public string ChannelId => Account.ChannelId;
 
         /// <summary>
         /// 是否已初始化完成
@@ -268,25 +279,27 @@ namespace Midjourney.Infrastructure.LoadBalancer
         {
             get
             {
-                if (Account.IsYouChuan)
+                var acc = Account;
+
+                if (acc.IsYouChuan)
                 {
-                    return IsInit && Account != null
-                        && Account.Enable == true
+                    return IsInit && acc != null
+                        && acc.Enable == true
                         && !string.IsNullOrWhiteSpace(_ymTaskService?.YouChuanToken);
                 }
-                else if (Account.IsOfficial)
+                else if (acc.IsOfficial)
                 {
-                    return IsInit && Account != null
-                        && Account.Enable == true
+                    return IsInit && acc != null
+                        && acc.Enable == true
                         && !string.IsNullOrWhiteSpace(_ymTaskService?.OfficialToken);
                 }
                 else
                 {
-                    return IsInit && Account != null
-                     && Account.Enable == true
+                    return IsInit && acc != null
+                     && acc.Enable == true
                      && WebSocketManager != null
                      && WebSocketManager.Running == true
-                     && Account.Lock == false;
+                     && acc.Lock == false;
                 }
             }
         }
@@ -347,14 +360,15 @@ namespace Midjourney.Infrastructure.LoadBalancer
             get
             {
                 var count = 0;
+                var acc = Account;
 
                 if (IsValidRedis)
                 {
-                    count += _defaultOrFastConcurrent.GetConcurrency(Account.CoreSize);
+                    count += _defaultOrFastConcurrent.GetConcurrency(acc.CoreSize);
 
-                    if (Account.IsYouChuan)
+                    if (acc.IsYouChuan)
                     {
-                        count += _relaxConcurrent.GetConcurrency(Account.RelaxCoreSize);
+                        count += _relaxConcurrent.GetConcurrency(acc.RelaxCoreSize);
                     }
                 }
                 else
@@ -404,29 +418,31 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// </summary>
         public bool IsIdleQueue(GenerationSpeedMode? mode = null)
         {
+            var acc = Account;
+
             if (IsValidRedis)
             {
-                if (Account.IsYouChuan && mode == GenerationSpeedMode.RELAX)
+                if (acc.IsYouChuan && mode == GenerationSpeedMode.RELAX)
                 {
                     var queueCount = _relaxQueue.Count();
 
                     // 判断 RELAX 队列是否有空闲
-                    return Account.RelaxQueueSize <= 0 || queueCount < Account.RelaxQueueSize;
+                    return acc.RelaxQueueSize <= 0 || queueCount < acc.RelaxQueueSize;
                 }
 
                 var defaultOrFastQueueCount = _defaultOrFastQueue.Count();
 
-                return Account.QueueSize <= 0 || defaultOrFastQueueCount < Account.QueueSize;
+                return acc.QueueSize <= 0 || defaultOrFastQueueCount < acc.QueueSize;
             }
             else
             {
-                if (Account.IsYouChuan && mode == GenerationSpeedMode.RELAX)
+                if (acc.IsYouChuan && mode == GenerationSpeedMode.RELAX)
                 {
                     // 判断 RELAX 队列是否有空闲
-                    return Account.RelaxQueueSize <= 0 || _relaxQueueTasks.Count < Account.RelaxQueueSize;
+                    return acc.RelaxQueueSize <= 0 || _relaxQueueTasks.Count < acc.RelaxQueueSize;
                 }
 
-                return Account.QueueSize <= 0 || _fastQueueTasks.Count < Account.QueueSize;
+                return acc.QueueSize <= 0 || _fastQueueTasks.Count < acc.QueueSize;
             }
         }
 
@@ -624,8 +640,10 @@ namespace Midjourney.Infrastructure.LoadBalancer
         private async Task AccountAfterDelay(bool isPicReader = false)
         {
             // 计算执行后的间隔
-            var min = Account.AfterIntervalMin;
-            var max = Account.AfterIntervalMax;
+            var acc = Account;
+
+            var min = acc.AfterIntervalMin;
+            var max = acc.AfterIntervalMax;
 
             // 计算 min ~ max随机数
             var afterInterval = 1200;
@@ -696,6 +714,15 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                 if (info.Status == TaskStatus.NOT_START || (info.Status == TaskStatus.MODAL && queue.Function == TaskInfoQueueFunction.MODAL))
                 {
+                    // 判断提交时间是否大于超时
+                    var subTime = DateTimeOffset.FromUnixTimeMilliseconds(info.StartTime.Value).ToLocalTime();
+                    if ((DateTime.Now - subTime).TotalMinutes > Account.TimeoutMinutes)
+                    {
+                        info.Fail("任务提交超时");
+                        SaveAndNotify(info);
+                        return;
+                    }
+
                     // 刷新作业需要特殊处理，一般是重启服务器恢复的作业
                     if (info.Status == TaskStatus.NOT_START && queue.Function == TaskInfoQueueFunction.REFRESH)
                     {
@@ -1449,9 +1476,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                 // 超时处理
                 var timeoutMin = Account.TimeoutMinutes;
-                //var sw = new Stopwatch();
-                //sw.Start();
-
                 if (info.StartTime == null || info.StartTime == 0)
                 {
                     info.StartTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
@@ -1529,6 +1553,68 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// </summary>
         private void Running()
         {
+            // 程序启动后，如果开启了 redis 则将未开始、已提交、执行中 最近1小时的任务重新加入到队列
+            Task.Run(async () =>
+            {
+                try
+                {
+                    if (IsValidRedis)
+                    {
+                        var agoTime = new DateTimeOffset(DateTime.Now.AddHours(-1)).ToUnixTimeMilliseconds();
+                        var list = DbHelper.Instance.TaskStore.Where(c => c.InstanceId == Account.ChannelId && c.SubmitTime >= agoTime && c.Status != TaskStatus.CANCEL && c.Status != TaskStatus.FAILURE && c.Status != TaskStatus.MODAL && c.Status != TaskStatus.SUCCESS);
+
+                        _logger.Information("重启恢复作业账号 {@0} 任务数 {@1}", Account.ChannelId, list.Count);
+
+                        if (list.Count > 0)
+                        {
+                            // 获取所有慢速队列任务
+                            var relaxItems = _relaxQueue.Items();
+                            var fastItems = _defaultOrFastQueue.Items();
+
+                            foreach (var item in list)
+                            {
+                                if (item.IsPartnerRelax)
+                                {
+                                    if (relaxItems.Any(c => c?.Info?.Id == item.Id))
+                                    {
+                                        continue;
+                                    }
+
+                                    // 强制加入慢速队列
+                                    var success = await _relaxQueue.EnqueueAsync(new TaskInfoQueue()
+                                    {
+                                        Info = item,
+                                        Function = TaskInfoQueueFunction.REFRESH,
+                                    }, Account.RelaxQueueSize, 10, true);
+
+                                    _logger.Information("重启加入慢速队列任务 {@0} - {@1} - {@2}", Account.ChannelId, item.Id, success);
+                                }
+                                else
+                                {
+                                    if (fastItems.Any(c => c?.Info?.Id == item.Id))
+                                    {
+                                        continue;
+                                    }
+
+                                    // 强制加入快速队列
+                                    var success = await _defaultOrFastQueue.EnqueueAsync(new TaskInfoQueue()
+                                    {
+                                        Info = item,
+                                        Function = TaskInfoQueueFunction.REFRESH,
+                                    }, Account.QueueSize, 10, true);
+
+                                    _logger.Information("重启加入快速队列任务 {@0} - {@1} - {@2}", Account.ChannelId, item.Id, success);
+                                }
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error(ex, "重启首次恢复作业异常 {@0}", ChannelId);
+                }
+            });
+
             if (GlobalConfiguration.GlobalMaxConcurrent != 0)
             {
                 var redisTask = RunningRedisJob(_longToken.Token);
@@ -1548,7 +1634,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                 try
                 {
-                    if (Account.IsYouChuan)
+                    var acc = Account;
+
+                    if (acc.IsYouChuan)
                     {
                         // 如果队列中没有任务，则等待信号通知
                         if (_fastQueueTasks.Count <= 0 && _relaxQueueTasks.Count <= 0)
@@ -1556,29 +1644,29 @@ namespace Midjourney.Infrastructure.LoadBalancer
                             _mre.WaitOne();
                         }
 
-                        // 如果并发数修改，判断信号最大值是否为 Account.CoreSize
-                        while (_fastLock.MaxParallelism != Account.CoreSize)
+                        // 如果并发数修改，判断信号最大值是否为 acc.CoreSize
+                        while (_fastLock.MaxParallelism != acc.CoreSize)
                         {
                             // 重新设置信号量
                             var oldMax = _fastLock.MaxParallelism;
-                            var newMax = Math.Max(1, Math.Min(Account.CoreSize, 12));
+                            var newMax = Math.Max(1, Math.Min(acc.CoreSize, 12));
                             if (_fastLock.SetMaxParallelism(newMax))
                             {
-                                _logger.Information("频道 {@0} 信号量最大值修改成功，原值：{@1}，当前最大值：{@2} - FAST", Account.ChannelId, oldMax, newMax);
+                                _logger.Information("频道 {@0} 信号量最大值修改成功，原值：{@1}，当前最大值：{@2} - FAST", acc.ChannelId, oldMax, newMax);
                             }
 
                             Thread.Sleep(500);
                         }
 
-                        // 如果并发数修改，判断信号最大值是否为 Account.RelaxCoreSize
-                        while (_relaxLock.MaxParallelism != Account.RelaxCoreSize)
+                        // 如果并发数修改，判断信号最大值是否为 acc.RelaxCoreSize
+                        while (_relaxLock.MaxParallelism != acc.RelaxCoreSize)
                         {
                             // 重新设置信号量
                             var oldMax = _relaxLock.MaxParallelism;
-                            var newMax = Math.Max(1, Math.Min(Account.RelaxCoreSize, 12));
+                            var newMax = Math.Max(1, Math.Min(acc.RelaxCoreSize, 12));
                             if (_relaxLock.SetMaxParallelism(newMax))
                             {
-                                _logger.Information("频道 {@0} 信号量最大值修改成功，原值：{@1}，当前最大值：{@2} - RELAX", Account.ChannelId, oldMax, newMax);
+                                _logger.Information("频道 {@0} 信号量最大值修改成功，原值：{@1}，当前最大值：{@2} - RELAX", acc.ChannelId, oldMax, newMax);
                             }
 
                             Thread.Sleep(500);
@@ -1598,7 +1686,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                 // 判断是否还有资源可用
                                 if (_fastLock.IsLockAvailable())
                                 {
-                                    var preSleep = Account.Interval;
+                                    var preSleep = acc.Interval;
                                     if (preSleep <= 0m)
                                     {
                                         preSleep = 0m;
@@ -1617,8 +1705,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                         });
 
                                         // 计算执行后的间隔
-                                        var min = Account.AfterIntervalMin;
-                                        var max = Account.AfterIntervalMax;
+                                        var min = acc.AfterIntervalMin;
+                                        var max = acc.AfterIntervalMax;
 
                                         // 计算 min ~ max随机数
                                         var afterInterval = 1200;
@@ -1656,7 +1744,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                 // 判断是否还有资源可用
                                 if (_relaxLock.IsLockAvailable())
                                 {
-                                    var preSleep = Account.Interval;
+                                    var preSleep = acc.Interval;
                                     if (preSleep <= 0m)
                                     {
                                         preSleep = 0m;
@@ -1675,8 +1763,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                         });
 
                                         // 计算执行后的间隔
-                                        var min = Account.AfterIntervalMin;
-                                        var max = Account.AfterIntervalMax;
+                                        var min = acc.AfterIntervalMin;
+                                        var max = acc.AfterIntervalMax;
 
                                         // 计算 min ~ max随机数
                                         var afterInterval = 1200;
@@ -1728,15 +1816,15 @@ namespace Midjourney.Infrastructure.LoadBalancer
                             Thread.Sleep(100);
                         }
 
-                        // 如果并发数修改，判断信号最大值是否为 Account.CoreSize
-                        while (_fastLock.MaxParallelism != Account.CoreSize)
+                        // 如果并发数修改，判断信号最大值是否为 acc.CoreSize
+                        while (_fastLock.MaxParallelism != acc.CoreSize)
                         {
                             // 重新设置信号量
                             var oldMax = _fastLock.MaxParallelism;
-                            var newMax = Math.Max(1, Math.Min(Account.CoreSize, 12));
+                            var newMax = Math.Max(1, Math.Min(acc.CoreSize, 12));
                             if (_fastLock.SetMaxParallelism(newMax))
                             {
-                                _logger.Information("频道 {@0} 信号量最大值修改成功，原值：{@1}，当前最大值：{@2}", Account.ChannelId, oldMax, newMax);
+                                _logger.Information("频道 {@0} 信号量最大值修改成功，原值：{@1}，当前最大值：{@2}", acc.ChannelId, oldMax, newMax);
                             }
 
                             Thread.Sleep(500);
@@ -1747,7 +1835,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                             // 判断是否还有资源可用
                             if (_fastLock.IsLockAvailable())
                             {
-                                var preSleep = Account.Interval;
+                                var preSleep = acc.Interval;
                                 if (preSleep <= 0m)
                                 {
                                     preSleep = 0m;
@@ -1766,8 +1854,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                     });
 
                                     // 计算执行后的间隔
-                                    var min = Account.AfterIntervalMin;
-                                    var max = Account.AfterIntervalMax;
+                                    var min = acc.AfterIntervalMin;
+                                    var max = acc.AfterIntervalMax;
 
                                     // 计算 min ~ max随机数
                                     var afterInterval = 1200;
@@ -1806,77 +1894,13 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 }
                 catch (Exception ex)
                 {
-                    _logger.Error(ex, $"后台作业执行异常 {Account?.ChannelId}");
+                    _logger.Error(ex, $"后台作业执行异常 {ChannelId}");
 
                     // 停止 1min
                     Thread.Sleep(1000 * 60);
                 }
             }
         }
-
-        ///// <summary>
-        ///// 退出任务并进行保存和通知。
-        ///// </summary>
-        ///// <param name="task">任务信息</param>
-        //public void ExitTask(TaskInfo task)
-        //{
-        //    _taskFutureMap.TryRemove(task.Id, out _);
-        //    SaveAndNotify(task);
-
-        //    // 判断 _queueTasks 队列中是否存在指定任务，如果有则移除
-        //    //if (_queueTasks.Any(c => c.Item1.Id == task.Id))
-        //    //{
-        //    //    _queueTasks = new ConcurrentQueue<(TaskInfo, Func<Task<Message>>)>(_queueTasks.Where(c => c.Item1.Id != task.Id));
-        //    //}
-
-        //    // 判断 _queueTasks 队列中是否存在指定任务，如果有则移除
-        //    // 使用线程安全的方式移除
-        //    if (_fastQueueTasks.Any(c => c.Item1.Id == task.Id))
-        //    {
-        //        // 移除 _queueTasks 队列中指定的任务
-        //        var tempQueue = new ConcurrentQueue<(TaskInfo, Func<Task<Message>>)>();
-
-        //        // 将不需要移除的元素加入到临时队列中
-        //        while (_fastQueueTasks.TryDequeue(out var item))
-        //        {
-        //            if (item.Item1.Id != task.Id)
-        //            {
-        //                tempQueue.Enqueue(item);
-        //            }
-        //        }
-
-        //        // 交换队列引用
-        //        _fastQueueTasks = tempQueue;
-        //    }
-
-        //    if (_relaxQueueTasks.Any(c => c.Item1.Id == task.Id))
-        //    {
-        //        // 移除 _queueTasks 队列中指定的任务
-        //        var tempQueue = new ConcurrentQueue<(TaskInfo, Func<Task<Message>>)>();
-
-        //        // 将不需要移除的元素加入到临时队列中
-        //        while (_relaxQueueTasks.TryDequeue(out var item))
-        //        {
-        //            if (item.Item1.Id != task.Id)
-        //            {
-        //                tempQueue.Enqueue(item);
-        //            }
-        //        }
-
-        //        // 交换队列引用
-        //        _relaxQueueTasks = tempQueue;
-        //    }
-        //}
-
-        ///// <summary>
-        ///// 获取正在运行的任务Future映射。
-        ///// </summary>
-        ///// <returns>任务Future映射</returns>
-        //public Dictionary<string, Task> GetRunningFutures() => new Dictionary<string, Task>(_taskFutureMap);
-
-        public RedisQueue<TaskInfoQueue> FastQueue => _defaultOrFastQueue;
-
-        public RedisQueue<TaskInfoQueue> RelaxQueue => _relaxQueue;
 
         /// <summary>
         /// 提交任务到 Redis 队列
@@ -2373,7 +2397,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
             finally
             {
                 // 最后清除缓存
-                ClearAccountCache(accountId);
+                Account.ClearCache();
             }
         }
 
@@ -2760,6 +2784,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <returns></returns>
         public string GetPrompt(string prompt, TaskInfo info)
         {
+            var acc = Account;
+
             if (string.IsNullOrWhiteSpace(prompt))
             {
                 return prompt;
@@ -2788,19 +2814,19 @@ namespace Midjourney.Infrastructure.LoadBalancer
             }
 
             // 允许速度模式
-            if (Account.AllowModes?.Count > 0)
+            if (acc.AllowModes?.Count > 0)
             {
                 // 计算不允许的速度模式，并删除相关参数
                 var notAllowModes = new List<string>();
-                if (!Account.AllowModes.Contains(GenerationSpeedMode.RELAX))
+                if (!acc.AllowModes.Contains(GenerationSpeedMode.RELAX))
                 {
                     notAllowModes.Add("--relax");
                 }
-                if (!Account.AllowModes.Contains(GenerationSpeedMode.FAST))
+                if (!acc.AllowModes.Contains(GenerationSpeedMode.FAST))
                 {
                     notAllowModes.Add("--fast");
                 }
-                if (!Account.AllowModes.Contains(GenerationSpeedMode.TURBO))
+                if (!acc.AllowModes.Contains(GenerationSpeedMode.TURBO))
                 {
                     notAllowModes.Add("--turbo");
                 }
@@ -2813,15 +2839,15 @@ namespace Midjourney.Infrastructure.LoadBalancer
             }
 
             // 如果快速模式用完了，且启用自动切换慢速
-            if (Account.FastExhausted && Account.EnableAutoSetRelax == true)
+            if (acc.FastExhausted && acc.EnableAutoSetRelax == true)
             {
                 prompt = prompt.AppendSpeedMode(GenerationSpeedMode.RELAX);
             }
 
             // 指定生成速度模式
-            if (Account.Mode != null)
+            if (acc.Mode != null)
             {
-                prompt = prompt.AppendSpeedMode(Account.Mode);
+                prompt = prompt.AppendSpeedMode(acc.Mode);
             }
 
             //// 处理转义字符引号等
@@ -2878,10 +2904,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
                         }
 
                         // url 缓存默认 24 小时有效
-                        var okUrl = await _cache.GetOrCreateAsync($"tmp:{url}", async entry =>
+                        var okUrl = await AdaptiveCache.GetOrCreateAsync($"fetch:{url}", async () =>
                         {
-                            entry.AbsoluteExpiration = DateTimeOffset.Now.AddHours(24);
-
                             var ff = new FileFetchHelper();
                             var res = await ff.FetchFileAsync(url);
                             if (res.Success && !string.IsNullOrWhiteSpace(res.Url))
@@ -2931,7 +2955,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                             }
 
                             throw new LogicException($"解析链接失败 {url}, {res?.Msg}");
-                        });
+                        }, TimeSpan.FromDays(1));
 
                         urlDic[url] = okUrl;
                     }
@@ -3407,7 +3431,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                         Account.Enable = false;
                         Account.DisabledReason = "Http 请求没有操作权限，禁用账号";
                         DbHelper.Instance.AccountStore.Update(Account);
-                        ClearAccountCache(Account.Id);
+                        Account.ClearCache();
 
                         return Message.Of(ReturnCode.FAILURE, "请求失败，禁用账号");
                     }
@@ -3431,12 +3455,14 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <returns></returns>
         public async Task<Message> FastAsync(string nonce, EBotType botType)
         {
-            if (botType == EBotType.NIJI_JOURNEY && Account.EnableNiji != true)
+            var acc = Account;
+
+            if (botType == EBotType.NIJI_JOURNEY && acc.EnableNiji != true)
             {
                 return Message.Success("忽略提交，未开启 niji");
             }
 
-            if (botType == EBotType.MID_JOURNEY && Account.EnableMj != true)
+            if (botType == EBotType.MID_JOURNEY && acc.EnableMj != true)
             {
                 return Message.Success("忽略提交，未开启 mj");
             }
@@ -3481,33 +3507,35 @@ namespace Midjourney.Infrastructure.LoadBalancer
         {
             try
             {
+                var acc = Account;
+
                 // 快速用完时
                 // 并且开启快速切换慢速模式时
-                if (Account != null && Account.FastExhausted && Account.EnableRelaxToFast == true)
+                if (acc != null && acc.FastExhausted && acc.EnableRelaxToFast == true)
                 {
                     // 每 6~12 小时，和启动时检查账号是否有快速时长
                     await RandomSyncInfo();
 
                     // 判断 info 检查时间是否在 5 分钟内
-                    if (Account.InfoUpdated != null && Account.InfoUpdated.Value.AddMinutes(5) >= DateTime.Now)
+                    if (acc.InfoUpdated != null && acc.InfoUpdated.Value.AddMinutes(5) >= DateTime.Now)
                     {
-                        _logger.Information("自动切换快速模式，验证 {@0}", Account.ChannelId);
+                        _logger.Information("自动切换快速模式，验证 {@0}", acc.ChannelId);
 
                         // 提取 fastime
                         // 如果检查完之后，快速超过 1 小时，则标记为快速未用完
-                        var fastTime = Account.FastTimeRemaining?.ToString()?.Split('/')?.FirstOrDefault()?.Trim();
+                        var fastTime = acc.FastTimeRemaining?.ToString()?.Split('/')?.FirstOrDefault()?.Trim();
                         if (!string.IsNullOrWhiteSpace(fastTime) && double.TryParse(fastTime, out var ftime) && ftime >= 1)
                         {
-                            _logger.Information("自动切换快速模式，开始 {@0}", Account.ChannelId);
+                            _logger.Information("自动切换快速模式，开始 {@0}", acc.ChannelId);
 
                             // 标记未用完快速
-                            Account.FastExhausted = false;
-                            DbHelper.Instance.AccountStore.Update("FastExhausted", Account);
+                            acc.FastExhausted = false;
+                            DbHelper.Instance.AccountStore.Update("FastExhausted", acc);
 
                             // 如果开启了自动切换到快速，则自动切换到快速
                             try
                             {
-                                if (Account.EnableRelaxToFast == true)
+                                if (acc.EnableRelaxToFast == true)
                                 {
                                     Thread.Sleep(2500);
                                     await FastAsync(SnowFlake.NextId(), EBotType.MID_JOURNEY);
@@ -3518,12 +3546,12 @@ namespace Midjourney.Infrastructure.LoadBalancer
                             }
                             catch (Exception ex)
                             {
-                                _logger.Error(ex, "自动切换快速模式，执行异常 {@0}", Account.ChannelId);
+                                _logger.Error(ex, "自动切换快速模式，执行异常 {@0}", acc.ChannelId);
                             }
 
-                            ClearAccountCache(Account.Id);
+                            acc.ClearCache();
 
-                            _logger.Information("自动切换快速模式，执行完成 {@0}", Account.ChannelId);
+                            _logger.Information("自动切换快速模式，执行完成 {@0}", acc.ChannelId);
                         }
                     }
                 }
@@ -3540,34 +3568,36 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <returns></returns>
         public async Task RandomSyncInfo()
         {
-            // 每 6~12 小时
-            if (Account.InfoUpdated == null || Account.InfoUpdated.Value.AddMinutes(5) < DateTime.Now)
+            var acc = Account;
+
+            if (acc.InfoUpdated == null || acc.InfoUpdated.Value.AddMinutes(5) < DateTime.Now)
             {
-                var key = $"fast_exhausted_{Account.ChannelId}";
-                await _cache.GetOrCreateAsync(key, async c =>
+                var key = $"fast_exhausted_{acc.ChannelId}";
+
+                // 随机 1~6 小时
+                var random = new Random();
+                var minutes = random.Next(60, 360);
+                var span = TimeSpan.FromMinutes(minutes);
+
+                await AdaptiveCache.GetOrCreateAsync(key, async () =>
                 {
                     try
                     {
-                        _logger.Information("随机同步账号信息开始 {@0}", Account.ChannelId);
+                        _logger.Information("随机同步账号信息开始 {@0}", acc.ChannelId);
 
-                        // 随机 6~12 小时
-                        var random = new Random();
-                        var minutes = random.Next(360, 600);
-                        c.SetAbsoluteExpiration(TimeSpan.FromMinutes(minutes));
+                        await _taskService.InfoSetting(acc.Id);
 
-                        await _taskService.InfoSetting(Account.Id);
-
-                        _logger.Information("随机同步账号信息完成 {@0}", Account.ChannelId);
+                        _logger.Information("随机同步账号信息完成 {@0}", acc.ChannelId);
 
                         return true;
                     }
                     catch (Exception ex)
                     {
-                        _logger.Error(ex, "随机同步账号信息异常 {@0}", Account.ChannelId);
+                        _logger.Error(ex, "随机同步账号信息异常 {@0}", acc.ChannelId);
                     }
 
                     return false;
-                });
+                }, span);
             }
         }
 

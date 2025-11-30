@@ -28,6 +28,8 @@ namespace Midjourney.Base.Data
     /// </summary>
     public static class Constants
     {
+
+
         /// <summary>
         /// 默认配置 ID
         /// </summary>
@@ -186,5 +188,12 @@ namespace Midjourney.Base.Data
         /// MJ消息已处理标志.
         /// </summary>
         public const string MJ_MESSAGE_HANDLED = "mj_proxy_handled";
+
+        // --------------- redis ---------------
+
+        /// <summary>
+        /// Redis 通知频道名称.
+        /// </summary>
+        public const string REDIS_CHANNEL = "MJ_NOTIFY_CHANNEL";
     }
 }

@@ -84,7 +84,6 @@ namespace Midjourney.API
 
                 // 是否需要重新保存配置
                 var isSaveSetting = false;
-
                 if (setting.DatabaseType == DatabaseType.NONE)
                 {
                     setting.DatabaseType = DatabaseType.LiteDB;
@@ -92,7 +91,6 @@ namespace Midjourney.API
                 }
 
                 // 验证数据库是否可连接
-
                 if (!DbHelper.VerifyConfigure())
                 {
                     // 切换为本地数据库
@@ -259,6 +257,9 @@ namespace Midjourney.API
 
                 // 记录当前目录
                 Log.Information($"Current directory: {Directory.GetCurrentDirectory()}");
+
+                // 在这里把 ServiceProvider 传给静态门面（必须在 Build 之后）
+                MediatorProvider.SetServiceProvider(app.Services);
 
                 if (app.Environment.IsDevelopment())
                 {

@@ -15,11 +15,11 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Additional Terms:
-// This software shall not be used for any illegal activities. 
+// This software shall not be used for any illegal activities.
 // Users must comply with all applicable laws and regulations,
-// particularly those related to image and video processing. 
+// particularly those related to image and video processing.
 // The use of this software for any form of illegal face swapping,
-// invasion of privacy, or any other unlawful purposes is strictly prohibited. 
+// invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
 using System.Collections.Concurrent;
@@ -57,7 +57,8 @@ namespace Midjourney.Infrastructure
         /// </summary>
         public const int CLOSE_CODE_EXCEPTION = 1011;
 
-        private readonly ILogger _logger;
+        private readonly ILogger _logger = Log.Logger;
+
         private readonly DiscordHelper _discordHelper;
         private readonly BotMessageListener _botListener;
         private readonly WebProxy _webProxy;
@@ -150,22 +151,16 @@ namespace Midjourney.Infrastructure
 
         private readonly Task _messageQueueTask;
 
-        private readonly IMemoryCache _memoryCache;
-
         public WebSocketManager(
             DiscordHelper discordHelper,
             BotMessageListener userMessageListener,
             WebProxy webProxy,
-            DiscordInstance discordInstance,
-            IMemoryCache memoryCache)
+            DiscordInstance discordInstance)
         {
             _botListener = userMessageListener;
             _discordHelper = discordHelper;
             _webProxy = webProxy;
             _discordInstance = discordInstance;
-            _memoryCache = memoryCache;
-
-            _logger = Log.Logger;
 
             _messageQueueTask = new Task(MessageQueueDoWork, TaskCreationOptions.LongRunning);
             _messageQueueTask.Start();
@@ -235,7 +230,6 @@ namespace Midjourney.Infrastructure
                     _receiveTask = ReceiveMessagesAsync(_receiveTokenSource.Token);
 
                     _logger.Information("用户 WebSocket 连接已建立 {@0}", Account.ChannelId);
-
                 });
 
                 if (!isLock)
@@ -377,7 +371,6 @@ namespace Midjourney.Infrastructure
                                     _logger.Information("接收消息任务已取消 {@0}", Account.ChannelId);
                                     return;
                                 }
-
                             } while (!result.EndOfMessage && !cancellationToken.IsCancellationRequested);
 
                             ms.Seek(0, SeekOrigin.Begin);
@@ -683,8 +676,6 @@ namespace Midjourney.Infrastructure
             }
         }
 
-
-
         /// <summary>
         /// 收到消息
         /// </summary>
@@ -727,7 +718,6 @@ namespace Midjourney.Infrastructure
                 Thread.Sleep(10);
             }
         }
-
 
         /// <summary>
         /// 创建授权信息
@@ -865,14 +855,18 @@ namespace Midjourney.Infrastructure
                     {
                         // 如果 5 分钟内失败次数超过限制，则禁用账号
                         var ncKey = $"TryNewConnect_{Account.ChannelId}";
-                        _memoryCache.TryGetValue(ncKey, out int count);
+
+                        var count = AdaptiveCache.AddOrUpdate(ncKey, 1, (k, v) => ++v, TimeSpan.FromMinutes(5));
+
+                        //_memoryCache.TryGetValue(ncKey, out int count);
+                        //_memoryCache.Set(ncKey, count + 1, TimeSpan.FromMinutes(5));
+
                         if (count > CONNECT_RETRY_LIMIT)
                         {
                             _logger.Warning("新的连接失败次数超过限制，禁用账号");
                             DisableAccount("新的连接失败次数超过限制，禁用账号");
                             return;
                         }
-                        _memoryCache.Set(ncKey, count + 1, TimeSpan.FromMinutes(5));
 
                         var success = StartAsync(false).ConfigureAwait(false).GetAwaiter().GetResult();
                         if (success)
@@ -912,10 +906,9 @@ namespace Midjourney.Infrastructure
                 // 保存
                 Account.Enable = false;
                 Account.DisabledReason = msg;
-
                 DbHelper.Instance.AccountStore.Update(Account);
+                Account.ClearCache();
 
-                _discordInstance?.ClearAccountCache(Account.Id);
                 _discordInstance?.Dispose();
 
                 // 尝试自动登录
@@ -956,7 +949,6 @@ namespace Midjourney.Infrastructure
                         sw.Restart();
                     }
                 }
-
             }
             catch (Exception ex)
             {
@@ -1123,7 +1115,7 @@ namespace Midjourney.Infrastructure
 
             // 保存
             DbHelper.Instance.AccountStore.Update("Enable,DisabledReason", Account);
-            _discordInstance?.ClearAccountCache(Account.Id);
+            Account.ClearCache();
         }
 
         /// <summary>
@@ -1154,7 +1146,6 @@ namespace Midjourney.Infrastructure
             }
             catch
             {
-
             }
         }
 

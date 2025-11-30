@@ -4,7 +4,7 @@ using CSRedis;
 namespace Midjourney.Base.Util
 {
     /// <summary>
-    /// 自适应锁 - v20251129
+    /// 自适应锁（不允许嵌套） - v20251129
     /// 如果有开启 Redis 则使用 CSRedis 锁，否则使用本地锁（支持异步）
     /// 默认使用 await using 自动释放锁，也可以手动释放
     /// 获取锁时，一定要设置超时时间，默认 5 秒，超过未获取到锁则返回未获取状态

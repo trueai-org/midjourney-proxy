@@ -44,7 +44,6 @@ namespace Midjourney.Infrastructure
         private readonly IEnumerable<BotMessageHandler> _botMessageHandlers;
         private readonly IEnumerable<UserMessageHandler> _userMessageHandlers;
         private readonly Dictionary<string, string> _paramsMap;
-        private readonly IMemoryCache _memoryCache;
         private readonly ITaskService _taskService;
         private readonly IHttpClientFactory _httpClientFactory;
 
@@ -54,7 +53,6 @@ namespace Midjourney.Infrastructure
             IEnumerable<BotMessageHandler> messageHandlers,
             INotifyService notifyService,
             IEnumerable<UserMessageHandler> userMessageHandlers,
-            IMemoryCache memoryCache,
             ITaskService taskService,
             IHttpClientFactory httpClientFactory)
         {
@@ -63,7 +61,6 @@ namespace Midjourney.Infrastructure
             _notifyService = notifyService;
             _botMessageHandlers = messageHandlers;
             _userMessageHandlers = userMessageHandlers;
-            _memoryCache = memoryCache;
 
             var paramsMap = new Dictionary<string, string>();
             var assembly = typeof(GlobalConfiguration).Assembly; // Assembly.GetExecutingAssembly();
@@ -120,9 +117,7 @@ namespace Midjourney.Infrastructure
                 webProxy = new WebProxy(setting.Proxy.Host, setting.Proxy.Port ?? 80);
             }
 
-            var discordInstance = new DiscordInstance(
-                _memoryCache,
-                account,
+            var discordInstance = new DiscordInstance(account,
                 _taskStoreService,
                 _notifyService,
                 _discordHelper,
@@ -156,8 +151,7 @@ namespace Midjourney.Infrastructure
                         _discordHelper,
                         messageListener,
                         webProxy,
-                        discordInstance,
-                        _memoryCache);
+                        discordInstance);
                     await webSocket.StartAsync();
 
                     // 跟踪 wss 连接
