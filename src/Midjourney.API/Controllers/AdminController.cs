@@ -2348,12 +2348,7 @@ namespace Midjourney.API.Controllers
             StorageHelper.Configure();
 
             // 首页缓存
-            _memoryCache.Remove("HOME");
-
-            var now = DateTime.Now.ToString("yyyyMMdd");
-            var key = $"{now}_home";
-
-            _memoryCache.Remove(key);
+            _memoryCache.Remove($"{DateTime.Now:yyyyMMdd}_home");
 
             return Result.Ok();
         }
