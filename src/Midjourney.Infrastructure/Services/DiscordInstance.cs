@@ -715,7 +715,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 if (info.Status == TaskStatus.NOT_START || (info.Status == TaskStatus.MODAL && queue.Function == TaskInfoQueueFunction.MODAL))
                 {
                     // 判断提交时间是否大于超时
-                    var subTime = DateTimeOffset.FromUnixTimeMilliseconds(info.StartTime.Value).ToLocalTime();
+                    var subTime = DateTimeOffset.FromUnixTimeMilliseconds(info.SubmitTime.Value).ToLocalTime();
                     if ((DateTime.Now - subTime).TotalMinutes > Account.TimeoutMinutes)
                     {
                         info.Fail("任务提交超时");
