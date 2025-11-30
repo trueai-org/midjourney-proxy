@@ -410,7 +410,7 @@ namespace Midjourney.API
                     // 订阅 redis 消息
                     if (setting.IsValidRedis)
                     {
-                        RedisHelper.Subscribe((Constants.REDIS_CHANNEL, msg =>
+                        RedisHelper.Subscribe((Constants.REDIS_NOTIFY_CHANNEL, msg =>
                         {
                             try
                             {
@@ -1471,9 +1471,17 @@ namespace Midjourney.API
         {
             try
             {
-                _logger.Information("收到 Redis 消息 {@0}", notification);
+                var isSelf = notification.Hostname == Environment.MachineName;
 
-                switch (notification.CacheType)
+                _logger.Information("收到 Redis 消息, self: {@0}, {@1}", isSelf, notification);
+
+                // 判断是否自身发出的
+                if (isSelf)
+                {
+                    return;
+                }
+
+                switch (notification.Type)
                 {
                     case ENotificationType.AccountCache:
                         {
@@ -1503,6 +1511,12 @@ namespace Midjourney.API
                                     DbHelper.Instance.TaskStore.Update(targetTask);
                                 }
                             }
+                        }
+                        break;
+
+                    case ENotificationType.CompleteTaskInfo:
+                        {
+                            DrawCounter.Complete(notification.TaskInfo, notification.IsSuccess);
                         }
                         break;
 

@@ -223,10 +223,10 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     {
                         var notification = new RedisNotification
                         {
-                            CacheType = ENotificationType.AccountCache,
-                            ChannelId = localOld.ChannelId, // 发送频道 ID
+                            Type = ENotificationType.AccountCache,
+                            ChannelId = localOld.ChannelId, 
                         };
-                        RedisHelper.Publish(Constants.REDIS_CHANNEL, notification.ToJson());
+                        RedisHelper.Publish(Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
                     }
                 }
                 catch (Exception ex)

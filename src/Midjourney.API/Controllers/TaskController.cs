@@ -125,11 +125,11 @@ namespace Midjourney.API.Controllers
 
                         var notification = new RedisNotification
                         {
-                            CacheType = ENotificationType.AccountCache,
+                            Type = ENotificationType.AccountCache,
                             ChannelId = targetTask.InstanceId,
                             TaskInfoId = id
                         };
-                        RedisHelper.Publish(Constants.REDIS_CHANNEL, notification.ToJson());
+                        RedisHelper.Publish(Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
                     }
                 }
             }

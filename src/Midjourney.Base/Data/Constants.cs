@@ -192,8 +192,8 @@ namespace Midjourney.Base.Data
         // --------------- redis ---------------
 
         /// <summary>
-        /// Redis 通知频道名称.
+        /// Redis 通知/订阅频道名称
         /// </summary>
-        public const string REDIS_CHANNEL = "MJ_NOTIFY_CHANNEL";
+        public const string REDIS_NOTIFY_CHANNEL = "MJ_NOTIFY_CHANNEL";
     }
 }

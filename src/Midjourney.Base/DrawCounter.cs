@@ -96,6 +96,18 @@ namespace Midjourney.Base
                     }
                 }
 
+                // 昨天的 key 移除
+                var yesterdayKey = $"{DateTime.Now.Date.AddDays(-1):yyyyMMdd}_{instanceId}";
+                if (AccountTodaySuccessCounter.ContainsKey(yesterdayKey))
+                {
+                    AccountTodaySuccessCounter.TryRemove(yesterdayKey, out _);
+                }
+
+                if (AccountTodayAllCounter.ContainsKey(yesterdayKey))
+                {
+                    AccountTodayAllCounter.TryRemove(yesterdayKey, out _);
+                }
+
                 return true;
             }
 
@@ -236,18 +248,18 @@ namespace Midjourney.Base
                         AccountTodayAllCounter.AddOrUpdate(key, allCounts, (k, v) => allCounts);
                     }
                 }
-            }
 
-            // 昨天的 key 移除
-            var yesterdayKey = $"{DateTime.Now.Date.AddDays(-1):yyyyMMdd}_{instanceId}";
-            if (AccountTodaySuccessCounter.ContainsKey(yesterdayKey))
-            {
-                AccountTodaySuccessCounter.TryRemove(yesterdayKey, out _);
-            }
+                // 昨天的 key 移除
+                var yesterdayKey = $"{DateTime.Now.Date.AddDays(-1):yyyyMMdd}_{instanceId}";
+                if (AccountTodaySuccessCounter.ContainsKey(yesterdayKey))
+                {
+                    AccountTodaySuccessCounter.TryRemove(yesterdayKey, out _);
+                }
 
-            if (AccountTodayAllCounter.ContainsKey(yesterdayKey))
-            {
-                AccountTodayAllCounter.TryRemove(yesterdayKey, out _);
+                if (AccountTodayAllCounter.ContainsKey(yesterdayKey))
+                {
+                    AccountTodayAllCounter.TryRemove(yesterdayKey, out _);
+                }
             }
 
             return true;
@@ -306,6 +318,13 @@ namespace Midjourney.Base
                             }
                         }
                     }
+                }
+
+                // 昨天的 key 移除
+                var yesterdayKey = $"{DateTime.Now.Date.AddDays(-1):yyyyMMdd}_{userId}";
+                if (UserTodadSuccessCounter.ContainsKey(yesterdayKey))
+                {
+                    UserTodadSuccessCounter.TryRemove(yesterdayKey, out _);
                 }
 
                 return true;
@@ -406,13 +425,13 @@ namespace Midjourney.Base
                         }
                     }
                 }
-            }
 
-            // 昨天的 key 移除
-            var yesterdayKey = $"{DateTime.Now.Date.AddDays(-1):yyyyMMdd}_{userId}";
-            if (UserTodadSuccessCounter.ContainsKey(yesterdayKey))
-            {
-                UserTodadSuccessCounter.TryRemove(yesterdayKey, out _);
+                // 昨天的 key 移除
+                var yesterdayKey = $"{DateTime.Now.Date.AddDays(-1):yyyyMMdd}_{userId}";
+                if (UserTodadSuccessCounter.ContainsKey(yesterdayKey))
+                {
+                    UserTodadSuccessCounter.TryRemove(yesterdayKey, out _);
+                }
             }
 
             return true;
@@ -513,6 +532,14 @@ namespace Midjourney.Base
                         }
                     }
                 }
+
+                var notification = new RedisNotification
+                {
+                    Type = ENotificationType.CompleteTaskInfo,
+                    IsSuccess = success,
+                    TaskInfo = info
+                };
+                RedisHelper.Publish(Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
 
                 return;
             }
