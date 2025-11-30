@@ -1037,14 +1037,15 @@ namespace Midjourney.API
                         info.AppendLine($"{account.Id}初始化中... 创建实例耗时: {sw.ElapsedMilliseconds}ms");
                         sw.Restart();
 
-                        // 这里应该等待初始化完成，并获取用户信息验证，获取用户成功后设置为可用状态
-                        // 多账号启动时，等待一段时间再启动下一个账号
-                        await Task.Delay(1000 * 5);
-
+                        // discord 业务
                         if (!account.IsYouChuan && !account.IsOfficial)
                         {
                             try
                             {
+                                // 这里应该等待初始化完成，并获取用户信息验证，获取用户成功后设置为可用状态
+                                // 多账号启动时，等待一段时间再启动下一个账号
+                                await Task.Delay(1000 * 5);
+
                                 // 启动后执行 info setting 操作
                                 await _taskService.InfoSetting(account.Id);
                             }
@@ -1058,26 +1059,26 @@ namespace Midjourney.API
                             sw.Stop();
                             info.AppendLine($"{account.Id}初始化中... 同步 info 耗时: {sw.ElapsedMilliseconds}ms");
                             sw.Restart();
+
+                            // 慢速切换快速模式检查
+                            if (account.EnableRelaxToFast == true)
+                            {
+                                await disInstance?.RelaxToFastValidate();
+                                sw.Stop();
+                                info.AppendLine($"{account.Id}初始化中... 慢速切换快速模式检查耗时: {sw.ElapsedMilliseconds}ms");
+                                sw.Restart();
+                            }
+
+                            // 启用自动同步信息和设置
+                            if (setting.EnableAutoSyncInfoSetting)
+                            {
+                                // 每 6~12 小时，同步账号信息
+                                await disInstance?.RandomSyncInfo();
+                                sw.Stop();
+                                info.AppendLine($"{account.Id}初始化中... 随机同步信息耗时: {sw.ElapsedMilliseconds}ms");
+                                sw.Restart();
+                            }
                         }
-                    }
-
-                    // 慢速切换快速模式检查
-                    if (account.EnableRelaxToFast == true && !account.IsYouChuan && !account.IsOfficial)
-                    {
-                        await disInstance?.RelaxToFastValidate();
-                        sw.Stop();
-                        info.AppendLine($"{account.Id}初始化中... 慢速切换快速模式检查耗时: {sw.ElapsedMilliseconds}ms");
-                        sw.Restart();
-                    }
-
-                    // 启用自动同步信息和设置
-                    if (setting.EnableAutoSyncInfoSetting && !account.IsYouChuan && !account.IsOfficial)
-                    {
-                        // 每 6~12 小时，同步账号信息
-                        await disInstance?.RandomSyncInfo();
-                        sw.Stop();
-                        info.AppendLine($"{account.Id}初始化中... 随机同步信息耗时: {sw.ElapsedMilliseconds}ms");
-                        sw.Restart();
                     }
 
                     if (account.IsYouChuan)
@@ -1379,7 +1380,7 @@ namespace Midjourney.API
             try
             {
                 // 如果是悠船或官方，只有修改令牌才释放
-                if (account.IsYouChuan || account.IsOfficial)
+                if (account.Enable == true && (account.IsYouChuan || account.IsOfficial))
                 {
                     // 如果正在执行则释放
                     var disInstance = _discordLoadBalancer.GetDiscordInstance(account.ChannelId);

@@ -214,17 +214,15 @@ namespace Midjourney.Infrastructure.Services
                 }
             }
 
-            var acc = instance.Account;
-
             if (instance == null)
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
-            if (!acc.IsValidateModeContinueDrawing(info.Mode, info.AccountFilter?.Modes, out var mode))
+            if (!instance.Account.IsValidateModeContinueDrawing(info.Mode, info.AccountFilter?.Modes, out var mode))
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
-            if (!acc.IsAcceptNewTask(mode))
+            if (!instance.Account.IsAcceptNewTask(mode))
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
@@ -233,8 +231,8 @@ namespace Midjourney.Infrastructure.Services
                 return SubmitResultVO.Fail(ReturnCode.FAILURE, "提交失败，队列已满，请稍后重试");
             }
 
-            info.IsPartner = acc.IsYouChuan;
-            info.IsOfficial = acc.IsOfficial;
+            info.IsPartner = instance.Account.IsYouChuan;
+            info.IsOfficial = instance.Account.IsOfficial;
             info.Mode = mode;
             info.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, instance.ChannelId);
             info.InstanceId = instance.ChannelId;
@@ -242,12 +240,12 @@ namespace Midjourney.Infrastructure.Services
             // 启用 redis
             if (instance.IsValidRedis)
             {
-                if (acc.IsYouChuan || acc.IsOfficial)
+                if (instance.Account.IsYouChuan || instance.Account.IsOfficial)
                 {
                     var imageUrls = new List<string>();
                     foreach (var dataUrl in dataUrls)
                     {
-                        if (acc.IsYouChuan)
+                        if (instance.Account.IsYouChuan)
                         {
                             var link = "";
                             // 悠船

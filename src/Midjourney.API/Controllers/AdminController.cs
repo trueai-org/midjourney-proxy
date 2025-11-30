@@ -1066,24 +1066,19 @@ namespace Midjourney.API.Controllers
                 return Result.Fail("无权限操作");
             }
 
-            // 悠船
+            param.ChannelId = model.ChannelId;
+            param.GuildId = model.GuildId;
+
+            // 悠船/官方
             if (model.IsYouChuan || model.IsOfficial)
             {
-                param.ChannelId = model.ChannelId;
-                param.GuildId = model.GuildId;
                 param.EnableMj = true;
                 param.EnableNiji = true;
                 param.IsShorten = false;
             }
 
-            // 不可修改频道 ID
-            if (param.GuildId != model.GuildId || param.ChannelId != model.ChannelId)
-            {
-                return Result.Fail("禁止修改频道 ID 和服务器 ID");
-            }
-
             // 更新账号信息
-            var account = await _discordAccountInitializer.UpdateAccount(model);
+            var account = await _discordAccountInitializer.UpdateAccount(param);
 
             // 释放连接
             _discordAccountInitializer.DisposeAccount(account);
