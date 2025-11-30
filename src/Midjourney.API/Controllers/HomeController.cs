@@ -22,6 +22,7 @@
 // invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
@@ -48,12 +49,12 @@ namespace Midjourney.API.Controllers
         /// </summary>
         /// <returns></returns>
         [HttpGet()]
-        public Result<HomeDto> Info()
+        public async Task<Result<HomeDto>> Info()
         {
             var now = DateTime.Now.ToString("yyyyMMdd");
             var homeKey = $"{now}_home";
 
-            var data = _memoryCache.GetOrCreate(homeKey, c =>
+            var data = await _memoryCache.GetOrCreate(homeKey, async c =>
             {
                 c.SetAbsoluteExpiration(TimeSpan.FromMinutes(10));
 
@@ -125,6 +126,12 @@ namespace Midjourney.API.Controllers
                 .ToDictionary(c => c.ip, c => c.count);
 
                 dto.Tops = tops;
+
+                var localIp = await PrivateNetworkHelper.GetAliyunPrivateIpAsync();
+                if (!string.IsNullOrWhiteSpace(localIp))
+                {
+                    dto.PrivateIp = localIp;
+                }
 
                 return dto;
             });

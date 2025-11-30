@@ -19,7 +19,7 @@ namespace Midjourney.Infrastructure.Services
             _logger = logger;
             _consulOptions = GlobalConfiguration.Setting.ConsulOptions;
 
-            if(_consulOptions?.Enable == true)
+            if (_consulOptions?.Enable == true)
             {
                 var consulClientConfiguration = new ConsulClientConfiguration
                 {
@@ -27,7 +27,7 @@ namespace Midjourney.Infrastructure.Services
                 };
                 _consulClient = new ConsulClient(consulClientConfiguration);
             }
-            
+
             // 生成唯一实例ID（基于机器名+进程ID+时间戳）
             _uniqueInstanceId = $"{Environment.MachineName}-{Environment.ProcessId}-{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
         }
@@ -36,7 +36,11 @@ namespace Midjourney.Infrastructure.Services
         {
             try
             {
-                var localIp = PrivateNetworkHelper.GetPrimaryPrivateIP();
+                var localIp = await PrivateNetworkHelper.GetAliyunPrivateIpAsync();
+                if (string.IsNullOrWhiteSpace(localIp))
+                {
+                    localIp = PrivateNetworkHelper.GetPrimaryPrivateIP();
+                }
 
                 _logger.LogInformation($"尝试注册服务到 Consul: {_consulOptions.ServiceName} at {localIp}:{_consulOptions.ServicePort}");
 

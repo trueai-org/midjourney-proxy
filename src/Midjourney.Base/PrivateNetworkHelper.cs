@@ -9,6 +9,25 @@ namespace Midjourney.Base
     /// </summary>
     public static class PrivateNetworkHelper
     {
+        /// <summary>
+        /// 获取阿里云 ECS 实例的私有 IP 地址
+        /// </summary>
+        /// <returns></returns>
+        public static async Task<string> GetAliyunPrivateIpAsync()
+        {
+            try
+            {
+                using var client = new HttpClient();
+                client.Timeout = TimeSpan.FromSeconds(2);
+                var privateIp = await client.GetStringAsync("http://100.100.100.200/latest/meta-data/private-ipv4");
+                return privateIp.Trim();
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
         #region 私有网络地址范围判断
 
         /// <summary>
