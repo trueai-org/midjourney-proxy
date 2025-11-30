@@ -5,6 +5,7 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
 
 # 安装官方版所需的依赖
 RUN apt-get update && apt-get install -y \
+    curl \
     ffmpeg \
     libgdiplus \
     iputils-ping \
