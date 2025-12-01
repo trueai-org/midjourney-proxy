@@ -410,7 +410,7 @@ namespace Midjourney.API
                     // 订阅 redis 消息
                     if (setting.IsValidRedis)
                     {
-                        RedisHelper.Subscribe((Constants.REDIS_NOTIFY_CHANNEL, msg =>
+                        RedisHelper.Subscribe((RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, msg =>
                         {
                             try
                             {
@@ -1473,18 +1473,21 @@ namespace Midjourney.API
             {
                 var isSelf = notification.Hostname == Environment.MachineName;
 
-                _logger.Information("收到 Redis 消息, self: {@0}, {@1}, {@2}, {@3}, {@4}", isSelf, notification.Type, notification.ChannelId, notification.TaskInfoId, notification.TaskInfo?.Id);
-
-                // 判断是否自身发出的
-                if (isSelf)
-                {
-                    return;
-                }
+                _logger.Information("收到订阅消息, 来源: {@5} - {@6}, 自身 {@0}, {@1}, {@2}, {@3}, {@4}",
+                    isSelf,
+                    notification.Type, notification.ChannelId, notification.TaskInfoId, notification.TaskInfo?.Id,
+                    notification.Hostname, Environment.MachineName);
 
                 switch (notification.Type)
                 {
                     case ENotificationType.AccountCache:
                         {
+                            // 判断是否自身发出的
+                            if (isSelf)
+                            {
+                                return;
+                            }
+
                             // 清除账号缓存消息
                             var instance = _discordLoadBalancer.GetDiscordInstance(notification.ChannelId);
 
@@ -1495,6 +1498,12 @@ namespace Midjourney.API
 
                     case ENotificationType.CancelTaskInfo:
                         {
+                            // 判断是否自身发出的
+                            if (isSelf)
+                            {
+                                return;
+                            }
+
                             var targetTask = _discordLoadBalancer.GetRunningTasks().FirstOrDefault(t => t.Id == notification.TaskInfoId);
 
                             // 如果任务不在队列中，则从存储中获取
@@ -1516,7 +1525,22 @@ namespace Midjourney.API
 
                     case ENotificationType.CompleteTaskInfo:
                         {
+                            // 判断是否自身发出的
+                            if (isSelf)
+                            {
+                                return;
+                            }
+
                             DrawCounter.Complete(notification.TaskInfo, notification.IsSuccess, false);
+                        }
+                        break;
+
+                    case ENotificationType.ProcessedTaskInfo:
+                    case ENotificationType.EnqueueTaskInfo:
+                        {
+                            // 通知任务可以立即执行
+                            var instance = _discordLoadBalancer.GetDiscordInstance(notification.ChannelId);
+                            instance?.NotifyRedisJob();
                         }
                         break;
 

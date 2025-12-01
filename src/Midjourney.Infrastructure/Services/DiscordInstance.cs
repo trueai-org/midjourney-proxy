@@ -28,7 +28,6 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.RegularExpressions;
-using Midjourney.Base.Models;
 using Midjourney.Infrastructure.Services;
 using Midjourney.License;
 using Newtonsoft.Json.Linq;
@@ -107,6 +106,11 @@ namespace Midjourney.Infrastructure.LoadBalancer
         private readonly RedisConcurrent _relaxConcurrent;
 
         private readonly RedisConcurrent _defaultOrFastConcurrent;
+
+        // redis 执行信号锁, 收到到通知后立即执行
+        private readonly object _redisJobLock = new();
+
+        private readonly SemaphoreSlim _redisJobSignal = new(0, 1);
 
         /// <summary>
         /// 是否启用 Redis
@@ -225,7 +229,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                             Type = ENotificationType.AccountCache,
                             ChannelId = localOld.ChannelId,
                         };
-                        RedisHelper.Publish(Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
+                        RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
                     }
                 }
                 catch (Exception ex)
@@ -430,7 +434,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 }
 
                 var defaultOrFastQueueCount = _defaultOrFastQueue.Count();
-
                 return acc.QueueSize <= 0 || defaultOrFastQueueCount < acc.QueueSize;
             }
             else
@@ -442,6 +445,21 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 }
 
                 return acc.QueueSize <= 0 || _fastQueueTasks.Count < acc.QueueSize;
+            }
+        }
+
+        /// <summary>
+        /// 通知 redis 信号可以立即继续了
+        /// </summary>
+        public void NotifyRedisJob()
+        {
+            lock (_redisJobLock)
+            {
+                // 释放信号量
+                if (_redisJobSignal.CurrentCount == 0)
+                {
+                    _redisJobSignal.Release();
+                }
             }
         }
 
@@ -464,6 +482,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
             {
                 try
                 {
+                    // 是否立即执行下一个快速任务
+                    var isContinueDefault = false;
+
                     // 从快速队列获取任务
                     var queueCount = await _defaultOrFastQueue.CountAsync();
                     if (queueCount > 0)
@@ -477,6 +498,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
                         var lockObj = _defaultOrFastConcurrent.TryLock(Account.CoreSize);
                         if (lockObj != null)
                         {
+                            // 如果队列中还有任务，并且获取到锁
+                            isContinueDefault = queueCount > 1;
+
                             // 内部已经控制了并发和阻塞，这里只需循环调用
                             var req = await _defaultOrFastQueue.DequeueAsync(token);
                             if (req?.Info != null)
@@ -500,6 +524,14 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                         {
                                             globalLock.Unlock();
                                         }
+
+                                        // 发送锁我已经释放了
+                                        var notification = new RedisNotification
+                                        {
+                                            Type = ENotificationType.ProcessedTaskInfo,
+                                            ChannelId = ChannelId,
+                                        };
+                                        RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
                                     }
                                 }, token);
 
@@ -515,6 +547,14 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                     globalLock.Unlock();
                                 }
 
+                                // 发送锁我已经释放了
+                                var notification = new RedisNotification
+                                {
+                                    Type = ENotificationType.ProcessedTaskInfo,
+                                    ChannelId = ChannelId,
+                                };
+                                RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
+
                                 // 中文日志
                                 Log.Warning("Redis 默认队列出队为空 {@0}", Account.ChannelId);
                             }
@@ -529,6 +569,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     }
 
                     // 只有悠船才有慢速队列
+                    // 是否立即执行下一个慢速任务
+                    var isContinueRelax = false;
+                    var relaxQueueCount = 0;
                     if (Account.IsYouChuan)
                     {
                         if (globalLimit > 0)
@@ -537,13 +580,16 @@ namespace Midjourney.Infrastructure.LoadBalancer
                         }
 
                         // 从放松队列获取任务
-                        var relaxQueueCount = await _relaxQueue.CountAsync();
+                        relaxQueueCount = await _relaxQueue.CountAsync();
                         if (relaxQueueCount > 0)
                         {
                             // 先尝试获取并发锁
                             var lockObj = _relaxConcurrent.TryLock(Account.RelaxCoreSize);
                             if (lockObj != null)
                             {
+                                // 如果队列中还有任务，并且获取到锁
+                                isContinueDefault = relaxQueueCount > 1;
+
                                 // 内部已经控制了并发和阻塞，这里只需循环调用
                                 var req = await _relaxQueue.DequeueAsync(token);
                                 if (req?.Info != null)
@@ -564,6 +610,14 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                             {
                                                 globalLock.Unlock();
                                             }
+
+                                            // 发送锁我已经释放了
+                                            var notification = new RedisNotification
+                                            {
+                                                Type = ENotificationType.ProcessedTaskInfo,
+                                                ChannelId = ChannelId,
+                                            };
+                                            RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
                                         }
                                     }, token);
 
@@ -579,6 +633,14 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                         globalLock.Unlock();
                                     }
 
+                                    // 发送锁我已经释放了
+                                    var notification = new RedisNotification
+                                    {
+                                        Type = ENotificationType.ProcessedTaskInfo,
+                                        ChannelId = ChannelId,
+                                    };
+                                    RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
+
                                     // 中文日志
                                     Log.Warning("Redis 慢速队列出队为空 {@0}", Account.ChannelId);
                                 }
@@ -593,8 +655,25 @@ namespace Midjourney.Infrastructure.LoadBalancer
                         }
                     }
 
-                    // 短延迟
-                    await Task.Delay(1000, token);
+                    // 并行数未满，且还有队列任务时，立即执行下一次判断
+                    if (isContinueDefault || isContinueRelax)
+                    {
+                        await Task.Delay(200, token);
+                    }
+                    else
+                    {
+                        // 等待 10s 或收到信号唤醒
+                        var signaled = await _redisJobSignal.WaitAsync(1000 * 10, token);
+                        if (signaled)
+                        {
+                            // 由完成时/新任务信号量释放唤醒，立即执行
+                            await Task.Delay(200, token);
+                        }
+                        else
+                        {
+                            // 超时唤醒，继续循环
+                        }
+                    }
                 }
                 catch (OperationCanceledException)
                 {
@@ -1525,7 +1604,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     {
                         _logger.Error(ex, "自动读消息异常 {@0} - {@1}", info.InstanceId, info.Id);
                     }
-
                 }
 
                 // 任务执行完成
@@ -1561,7 +1639,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// </summary>
         private void Running()
         {
-            // 程序启动后，如果开启了 redis 则将未开始、已提交、执行中 最近1小时的任务重新加入到队列
+            // 程序启动后，如果开启了 redis 则将未开始、已提交、执行中 最近12小时的任务重新加入到队列
             Task.Run(async () =>
             {
                 try
@@ -1965,6 +2043,17 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 info.InstanceId = ChannelId;
 
                 _taskStoreService.Save(info);
+
+                // 发送入队提醒
+                if (IsValidRedis)
+                {
+                    var notification = new RedisNotification
+                    {
+                        Type = ENotificationType.EnqueueTaskInfo,
+                        ChannelId = ChannelId,
+                    };
+                    RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
+                }
 
                 if (currentWaitNumbers == 0)
                 {

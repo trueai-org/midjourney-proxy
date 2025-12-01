@@ -569,7 +569,7 @@ namespace Midjourney.Base
                         IsSuccess = success,
                         TaskInfo = info
                     };
-                    RedisHelper.Publish(Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
+                    RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
                 }
 
                 return;

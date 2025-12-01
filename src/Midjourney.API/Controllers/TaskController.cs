@@ -129,7 +129,7 @@ namespace Midjourney.API.Controllers
                             ChannelId = targetTask.InstanceId,
                             TaskInfoId = id
                         };
-                        RedisHelper.Publish(Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
+                        RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
                     }
                 }
             }

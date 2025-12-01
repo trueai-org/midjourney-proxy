@@ -61,8 +61,18 @@
         CancelTaskInfo = 1,
 
         /// <summary>
-        /// 完成作业事件
+        /// 完成作业事件 success | false
         /// </summary>
-        CompleteTaskInfo = 2
+        CompleteTaskInfo = 2,
+
+        /// <summary>
+        /// 入队成功消息
+        /// </summary>
+        EnqueueTaskInfo = 3,
+
+        /// <summary>
+        /// 任务处理完成并解锁
+        /// </summary>
+        ProcessedTaskInfo = 4
     }
 }
