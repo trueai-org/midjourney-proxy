@@ -71,8 +71,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
         private readonly string _discordMessageUrl;
         private readonly ITaskService _taskService;
 
-        //private readonly IMemoryCache _cache;
-
         /// <summary>
         /// 当前 FAST 队列任务
         /// </summary>
@@ -686,6 +684,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 using var infoLock = RedisHelper.Instance.Lock($"UpdateProgress:{info.Id}", 10);
                 if (infoLock == null)
                 {
+                    // 从队列取出后，但是没有消费，可能会造成任务 NOT_START
+                    Log.Warning("获取任务锁失败，跳过处理。 {@0} - {@1} - {@2}", info.Id, info.InstanceId, info.Status);
                     return;
                 }
 
@@ -1528,8 +1528,10 @@ namespace Midjourney.Infrastructure.LoadBalancer
                         _logger.Error(ex, "自动读消息异常 {@0} - {@1}", info.InstanceId, info.Id);
                     }
 
-                    _logger.Debug("[{AccountDisplay}] task finished, id: {TaskId}, status: {TaskStatus}", Account.GetDisplay(), info.Id, info.Status);
                 }
+
+                // 任务执行完成
+                _logger.Information("任务执行结束 {@0} - {@1} - {@2}", info.Id, info.InstanceId, info.Status);
             }
             catch (Exception ex)
             {
@@ -1543,6 +1545,12 @@ namespace Midjourney.Infrastructure.LoadBalancer
             {
                 _runningTasks.TryRemove(info?.Id, out _);
                 _taskFutureMap.TryRemove(info?.Id, out _);
+
+                // 如果任务执行结束，仍然处于未开始状态，则标为失败
+                if (!info.IsCompleted)
+                {
+                    info.Fail("未知错误，任务执行结束仍未完成");
+                }
 
                 SaveAndNotify(info);
             }
