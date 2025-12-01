@@ -715,9 +715,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                 if (info.Status == TaskStatus.NOT_START || (info.Status == TaskStatus.MODAL && queue.Function == TaskInfoQueueFunction.MODAL))
                 {
-                    // 判断提交时间是否大于超时
+                    // 判断提交时间是否大于超时 * 最大队列数
                     var subTime = DateTimeOffset.FromUnixTimeMilliseconds(info.SubmitTime.Value).ToLocalTime();
-                    if ((DateTime.Now - subTime).TotalMinutes > Account.TimeoutMinutes)
+                    if ((DateTime.Now - subTime).TotalMinutes > Account.TimeoutMinutes * 12)
                     {
                         info.Fail("任务提交超时");
                         SaveAndNotify(info);
@@ -1568,7 +1568,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 {
                     if (IsValidRedis)
                     {
-                        var agoTime = new DateTimeOffset(DateTime.Now.AddHours(-1)).ToUnixTimeMilliseconds();
+                        // 预估恢复队列数 * 超时时间的任务
+                        var hour = -1 * 12;
+                        var agoTime = new DateTimeOffset(DateTime.Now.AddHours(hour)).ToUnixTimeMilliseconds();
                         var list = DbHelper.Instance.TaskStore.Where(c => c.InstanceId == Account.ChannelId && c.SubmitTime >= agoTime && c.Status != TaskStatus.CANCEL && c.Status != TaskStatus.FAILURE && c.Status != TaskStatus.MODAL && c.Status != TaskStatus.SUCCESS);
 
                         _logger.Information("重启恢复作业账号 {@0} 任务数 {@1}", Account.ChannelId, list.Count);
