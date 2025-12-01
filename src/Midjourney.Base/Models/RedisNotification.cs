@@ -15,7 +15,7 @@
         public ENotificationType Type { get; set; }
 
         /// <summary>
-        /// 频道 ID - 账号缓存清理通知
+        /// 频道 ID - 账号缓存清理通知 | 入队成功消息 | 任务处理完成并解锁
         /// </summary>
         public string ChannelId { get; set; }
 

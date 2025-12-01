@@ -1472,11 +1472,13 @@ namespace Midjourney.API
             try
             {
                 var isSelf = notification.Hostname == Environment.MachineName;
+                var use = (int)(DateTime.Now - notification.Timestamp).TotalMilliseconds;
 
-                _logger.Information("收到订阅消息, 来源: {@5} - {@6}, 自身 {@0}, {@1}, {@2}, {@3}, {@4}",
+                _logger.Information("收到订阅消息, 用时: {@7} ms, 来源: {@5} -> {@6}, self: {@0}, type: {@1}, cid: {@2}, tid: {@3}, tiId: {@4}",
                     isSelf,
                     notification.Type, notification.ChannelId, notification.TaskInfoId, notification.TaskInfo?.Id,
-                    notification.Hostname, Environment.MachineName);
+                    notification.Hostname, Environment.MachineName,
+                    use);
 
                 switch (notification.Type)
                 {
