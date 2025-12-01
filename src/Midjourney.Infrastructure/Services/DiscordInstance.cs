@@ -28,6 +28,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.RegularExpressions;
+using Midjourney.Base.Models;
 using Midjourney.Infrastructure.Services;
 using Midjourney.License;
 using Newtonsoft.Json.Linq;
@@ -765,9 +766,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                 if (info.IsPartner || info.IsOfficial)
                                 {
                                     var result = await YmTaskService.SubmitTaskAsync(info, _taskStoreService, this);
-                                    if (result.Code != ReturnCode.SUCCESS)
+                                    if (result?.Code != ReturnCode.SUCCESS)
                                     {
-                                        info.Fail(result.Description);
+                                        info.Fail(result?.Description ?? "未知错误");
                                         SaveAndNotify(info);
                                         return;
                                     }
@@ -775,15 +776,15 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                 else
                                 {
                                     var result = await ImagineAsync(info, info.PromptEn, info.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default));
-                                    if (result.Code != ReturnCode.SUCCESS)
+                                    if (result?.Code != ReturnCode.SUCCESS)
                                     {
-                                        info.Fail(result.Description);
+                                        info.Fail(result?.Description ?? "未知错误");
                                         SaveAndNotify(info);
                                         return;
                                     }
                                 }
 
-                                if (info.Status != TaskStatus.CANCEL && info.Status != TaskStatus.SUCCESS && info.Status != TaskStatus.FAILURE)
+                                if (!info.IsCompleted)
                                 {
                                     info.StartTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
                                     info.Status = TaskStatus.SUBMITTED;
@@ -800,9 +801,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                 if (info.IsPartner || info.IsOfficial)
                                 {
                                     var result = await YmTaskService.SubmitActionAsync(info, queue.ActionParam.Dto, queue.ActionParam.TargetTask, _taskStoreService, this);
-                                    if (result.Code != ReturnCode.SUCCESS)
+                                    if (result?.Code != ReturnCode.SUCCESS)
                                     {
-                                        info.Fail(result.Description);
+                                        info.Fail(result?.Description ?? "未知错误");
                                         SaveAndNotify(info);
                                         return;
                                     }
@@ -813,10 +814,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                         queue.ActionParam.CustomId,
                                         queue.ActionParam.MessageFlags,
                                         queue.ActionParam.Nonce, info);
-
-                                    if (result.Code != ReturnCode.SUCCESS)
+                                    if (result?.Code != ReturnCode.SUCCESS)
                                     {
-                                        info.Fail(result.Description);
+                                        info.Fail(result?.Description ?? "未知错误");
                                         SaveAndNotify(info);
                                         return;
                                     }
@@ -844,9 +844,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                 if (info.IsPartner || info.IsOfficial)
                                 {
                                     var result = await YmTaskService.SubmitModal(info, queue.ModalParam.TargetTask, queue.ModalParam.Dto, _taskStoreService);
-                                    if (result.Code != ReturnCode.SUCCESS)
+                                    if (result?.Code != ReturnCode.SUCCESS)
                                     {
-                                        info.Fail(result.Description);
+                                        info.Fail(result?.Description ?? "未知错误");
                                         SaveAndNotify(info);
                                         return;
                                     }
@@ -865,9 +865,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                     task.RemixModaling = true;
 
                                     var res = await ActionAsync(messageId, customId, messageFlags, nonce, task);
-                                    if (res.Code != ReturnCode.SUCCESS)
+                                    if (res?.Code != ReturnCode.SUCCESS)
                                     {
-                                        info.Fail(res.Description);
+                                        info.Fail(res?.Description ?? "未知错误");
                                         SaveAndNotify(info);
                                         return;
                                     }
@@ -906,9 +906,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                         task.SetProperty(Constants.TASK_PROPERTY_NONCE, nonce);
 
                                         var result = await ZoomAsync(task, task.RemixModalMessageId, customId, task.PromptEn, nonce);
-                                        if (result.Code != ReturnCode.SUCCESS)
+                                        if (result?.Code != ReturnCode.SUCCESS)
                                         {
-                                            info.Fail(result.Description);
+                                            info.Fail(result?.Description ?? "未知错误");
                                             SaveAndNotify(info);
                                             return;
                                         }
@@ -918,9 +918,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                     {
                                         var ifarmeCustomId = task.GetProperty<string>(Constants.TASK_PROPERTY_IFRAME_MODAL_CREATE_CUSTOM_ID, default);
                                         var result = await InpaintAsync(task, ifarmeCustomId, task.PromptEn, submitAction.MaskBase64);
-                                        if (result.Code != ReturnCode.SUCCESS)
+                                        if (result?.Code != ReturnCode.SUCCESS)
                                         {
-                                            info.Fail(result.Description);
+                                            info.Fail(result?.Description ?? "未知错误");
                                             SaveAndNotify(info);
                                             return;
                                         }
@@ -933,9 +933,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                         task.SetProperty(Constants.TASK_PROPERTY_NONCE, nonce);
 
                                         var result = await PicReaderAsync(task, task.RemixModalMessageId, customId, task.PromptEn, nonce, task.RealBotType ?? task.BotType);
-                                        if (result.Code != ReturnCode.SUCCESS)
+                                        if (result?.Code != ReturnCode.SUCCESS)
                                         {
-                                            info.Fail(result.Description);
+                                            info.Fail(result?.Description ?? "未知错误");
                                             SaveAndNotify(info);
                                             return;
                                         }
@@ -953,9 +953,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                                         var result = await RemixAsync(task, task.Action.Value, task.RemixModalMessageId, modal,
                                             customId, task.PromptEn, nonce, task.RealBotType ?? task.BotType);
-                                        if (result.Code != ReturnCode.SUCCESS)
+                                        if (result?.Code != ReturnCode.SUCCESS)
                                         {
-                                            info.Fail(result.Description);
+                                            info.Fail(result?.Description ?? "未知错误");
                                             SaveAndNotify(info);
                                             return;
                                         }
@@ -1095,14 +1095,11 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                                         var result = await RemixAsync(task, task.Action.Value, task.RemixModalMessageId, modal,
                                             customId, task.PromptEn, nonce, task.RealBotType ?? task.BotType);
-                                        if (result.Code != ReturnCode.SUCCESS)
+                                        if (result?.Code != ReturnCode.SUCCESS)
                                         {
-                                            if (result.Code != ReturnCode.SUCCESS)
-                                            {
-                                                info.Fail(result.Description);
-                                                SaveAndNotify(info);
-                                                return;
-                                            }
+                                            info.Fail(result?.Description ?? "未知错误");
+                                            SaveAndNotify(info);
+                                            return;
                                         }
                                     }
                                     else
@@ -1302,14 +1299,15 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                     var result = await DescribeByLinkAsync(info.ImageUrl,
                                         info.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default),
                                         info.RealBotType ?? info.BotType);
-                                    if (result.Code != ReturnCode.SUCCESS)
+
+                                    if (result?.Code != ReturnCode.SUCCESS)
                                     {
-                                        info.Fail(result.Description);
+                                        info.Fail(result?.Description ?? "未知错误");
                                         SaveAndNotify(info);
                                         return;
                                     }
 
-                                    if (info.Status != TaskStatus.CANCEL && info.Status != TaskStatus.SUCCESS && info.Status != TaskStatus.FAILURE)
+                                    if (!info.IsCompleted)
                                     {
                                         info.StartTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
                                         info.Status = TaskStatus.SUBMITTED;
@@ -1331,14 +1329,14 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                     var result = await ShortenAsync(info, info.PromptEn,
                                         info.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default),
                                         info.RealBotType ?? info.BotType);
-                                    if (result.Code != ReturnCode.SUCCESS)
+                                    if (result?.Code != ReturnCode.SUCCESS)
                                     {
-                                        info.Fail(result.Description);
+                                        info.Fail(result?.Description ?? "未知错误");
                                         SaveAndNotify(info);
                                         return;
                                     }
 
-                                    if (info.Status != TaskStatus.CANCEL && info.Status != TaskStatus.SUCCESS && info.Status != TaskStatus.FAILURE)
+                                    if (!info.IsCompleted)
                                     {
                                         info.StartTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
                                         info.Status = TaskStatus.SUBMITTED;
@@ -1355,9 +1353,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                 if (info.IsPartner || info.IsOfficial)
                                 {
                                     var result = await YmTaskService.SubmitTaskAsync(info, _taskStoreService, this);
-                                    if (result.Code != ReturnCode.SUCCESS)
+                                    if (result?.Code != ReturnCode.SUCCESS)
                                     {
-                                        info.Fail(result.Description);
+                                        info.Fail(result?.Description ?? "未知错误");
                                         SaveAndNotify(info);
                                         return;
                                     }
@@ -1369,15 +1367,15 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                         queue.BlendParam.Dimensions,
                                         info.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default),
                                         info.RealBotType ?? info.BotType);
-                                    if (result.Code != ReturnCode.SUCCESS)
+                                    if (result?.Code != ReturnCode.SUCCESS)
                                     {
-                                        info.Fail(result.Description);
+                                        info.Fail(result?.Description ?? "未知错误");
                                         SaveAndNotify(info);
                                         return;
                                     }
                                 }
 
-                                if (info.Status != TaskStatus.CANCEL && info.Status != TaskStatus.SUCCESS && info.Status != TaskStatus.FAILURE)
+                                if (!info.IsCompleted)
                                 {
                                     info.StartTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
                                     info.Status = TaskStatus.SUBMITTED;
@@ -1393,14 +1391,14 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                 if (info.IsPartner || info.IsOfficial)
                                 {
                                     var result = await YmTaskService.SubmitTaskAsync(info, _taskStoreService, this);
-                                    if (result.Code != ReturnCode.SUCCESS)
+                                    if (result?.Code != ReturnCode.SUCCESS)
                                     {
-                                        info.Fail(result.Description);
+                                        info.Fail(result?.Description ?? "未知错误");
                                         SaveAndNotify(info);
                                         return;
                                     }
 
-                                    if (info.Status != TaskStatus.CANCEL && info.Status != TaskStatus.SUCCESS && info.Status != TaskStatus.FAILURE)
+                                    if (!info.IsCompleted)
                                     {
                                         info.StartTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
                                         info.Status = TaskStatus.SUBMITTED;
@@ -1420,14 +1418,14 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                 if (info.IsPartner || info.IsOfficial)
                                 {
                                     var result = await YmTaskService.SubmitTaskAsync(info, _taskStoreService, this);
-                                    if (result.Code != ReturnCode.SUCCESS)
+                                    if (result?.Code != ReturnCode.SUCCESS)
                                     {
-                                        info.Fail(result.Description);
+                                        info.Fail(result?.Description ?? "未知错误");
                                         SaveAndNotify(info);
                                         return;
                                     }
 
-                                    if (info.Status != TaskStatus.CANCEL && info.Status != TaskStatus.SUCCESS && info.Status != TaskStatus.FAILURE)
+                                    if (!info.IsCompleted)
                                     {
                                         info.StartTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
                                         info.Status = TaskStatus.SUBMITTED;
@@ -1447,14 +1445,14 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                 if (info.IsPartner || info.IsOfficial)
                                 {
                                     var result = await YmTaskService.SubmitTaskAsync(info, _taskStoreService, this);
-                                    if (result.Code != ReturnCode.SUCCESS)
+                                    if (result?.Code != ReturnCode.SUCCESS)
                                     {
-                                        info.Fail(result.Description);
+                                        info.Fail(result?.Description ?? "未知错误");
                                         SaveAndNotify(info);
                                         return;
                                     }
 
-                                    if (info.Status != TaskStatus.CANCEL && info.Status != TaskStatus.SUCCESS && info.Status != TaskStatus.FAILURE)
+                                    if (!info.IsCompleted)
                                     {
                                         info.StartTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
                                         info.Status = TaskStatus.SUBMITTED;
@@ -1535,7 +1533,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "更新任务进度异常 {@0} - {@1}", info?.InstanceId, info?.Id);
+                _logger.Error(ex, "更新任务进度异常 {@0} - {@1}", info.Id, info.InstanceId);
 
                 info.Fail("服务异常，请稍后重试");
 
@@ -1543,12 +1541,14 @@ namespace Midjourney.Infrastructure.LoadBalancer
             }
             finally
             {
-                _runningTasks.TryRemove(info?.Id, out _);
-                _taskFutureMap.TryRemove(info?.Id, out _);
+                _runningTasks.TryRemove(info.Id, out _);
+                _taskFutureMap.TryRemove(info.Id, out _);
 
                 // 如果任务执行结束，仍然处于未开始状态，则标为失败
                 if (!info.IsCompleted)
                 {
+                    _logger.Error("未知错误，任务执行结束仍未完成 {@0} - {@1} - {@2}", info.Id, info.InstanceId, info.Status);
+
                     info.Fail("未知错误，任务执行结束仍未完成");
                 }
 
