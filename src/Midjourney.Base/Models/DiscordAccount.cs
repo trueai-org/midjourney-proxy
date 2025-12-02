@@ -106,7 +106,7 @@ namespace Midjourney.Base.Models
                 var notification = new RedisNotification
                 {
                     Type = ENotificationType.AccountCache,
-                    ChannelId = this.ChannelId,
+                    ChannelId = this.ChannelId
                 };
                 RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
             }

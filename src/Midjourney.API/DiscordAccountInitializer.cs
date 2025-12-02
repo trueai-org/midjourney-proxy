@@ -891,7 +891,7 @@ namespace Midjourney.API
 
             var info = new StringBuilder();
 
-            info.AppendLine($"{account.ChannelId} 开始检查");
+            //info.AppendLine($"{account.ChannelId} 开始检查");
 
             var db = DbHelper.Instance.AccountStore;
             DiscordInstance disInstance = null;
@@ -1497,17 +1497,19 @@ namespace Midjourney.API
                         {
                             // 清除账号缓存消息
                             var instance = _discordLoadBalancer.GetDiscordInstance(notification.ChannelId);
-
-                            // 仅清理本地缓存
-                            instance?.Account.ClearCache(false);
-
-                            // 判断账号是否被删除了
-                            if (!string.IsNullOrWhiteSpace(instance?.Account.Id))
+                            if (instance != null)
                             {
-                                var account = DbHelper.Instance.AccountStore.Get(instance.Account?.Id);
-                                if (account == null)
+                                // 仅清理本地缓存
+                                instance.Account.ClearCache(false);
+
+                                // 判断账号是否被删除了
+                                if (!string.IsNullOrWhiteSpace(instance.Account.Id))
                                 {
-                                    instance?.Dispose(false);
+                                    var account = DbHelper.Instance.AccountStore.Get(instance.Account.Id);
+                                    if (account == null)
+                                    {
+                                        instance?.Dispose(false);
+                                    }
                                 }
                             }
                         }

@@ -691,6 +691,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                         {
                                             Type = ENotificationType.DisposeLock,
                                             ChannelId = ChannelId,
+                                            TaskInfoId = req?.Info?.Id
                                         };
                                         RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
                                     }
@@ -713,6 +714,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                 {
                                     Type = ENotificationType.DisposeLock,
                                     ChannelId = ChannelId,
+                                    TaskInfoId = req?.Info?.Id
                                 };
                                 RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
 
@@ -777,6 +779,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                             {
                                                 Type = ENotificationType.DisposeLock,
                                                 ChannelId = ChannelId,
+                                                TaskInfoId = req?.Info?.Id
                                             };
                                             RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
                                         }
@@ -799,6 +802,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                     {
                                         Type = ENotificationType.DisposeLock,
                                         ChannelId = ChannelId,
+                                        TaskInfoId = req?.Info?.Id
                                     };
                                     RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
 
@@ -2212,6 +2216,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     {
                         Type = ENotificationType.EnqueueTaskInfo,
                         ChannelId = ChannelId,
+                        TaskInfoId = info.Id
                     };
                     RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
                 }

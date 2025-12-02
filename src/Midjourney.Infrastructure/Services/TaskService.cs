@@ -578,7 +578,9 @@ namespace Midjourney.Infrastructure.Services
                 }
 
                 info.Description = "/edit " + info.Prompt;
-                _taskStoreService.Save(info);
+
+                // 入队前不保存
+                //_taskStoreService.Save(info);
 
                 if (string.IsNullOrWhiteSpace(info.BaseImageUrl))
                 {
@@ -775,7 +777,9 @@ namespace Midjourney.Infrastructure.Services
 
                 info.Description = "/retexture " + info.Prompt;
                 info.PromptEn = info.PromptEn + " --dref " + info.BaseImageUrl;
-                _taskStoreService.Save(info);
+
+                // 入队前不保存
+                //_taskStoreService.Save(info);
 
                 if (string.IsNullOrWhiteSpace(info.BaseImageUrl))
                 {
@@ -1127,7 +1131,9 @@ namespace Midjourney.Infrastructure.Services
                     info.PromptEn = prompt;
                     info.VideoType = videoDTO.VideoType;
                     info.Description = "/video " + info.Prompt;
-                    _taskStoreService.Save(info);
+
+                    // 入队前不保存
+                    //_taskStoreService.Save(info);
 
                     //return await instance.YmTaskService.SubmitActionAsync(info, new SubmitActionDTO()
                     //{
@@ -1156,7 +1162,9 @@ namespace Midjourney.Infrastructure.Services
                 {
                     info.PromptEn = prompt;
                     info.Description = "/video " + info.Prompt;
-                    _taskStoreService.Save(info);
+
+                    // 入队前不保存
+                    //_taskStoreService.Save(info);
 
                     //return await instance.YmTaskService.SubmitTaskAsync(info, _taskStoreService, instance);
 
@@ -1554,7 +1562,8 @@ namespace Midjourney.Infrastructure.Services
                     task.ImageUrl = link;
                     task.Status = TaskStatus.NOT_START;
 
-                    _taskStoreService.Save(task);
+                    // 入队前不保存
+                    //_taskStoreService.Save(task);
 
                     return await discordInstance.EnqueueAsync(new TaskInfoQueue()
                     {
@@ -1632,7 +1641,8 @@ namespace Midjourney.Infrastructure.Services
                 task.ImageUrl = link;
                 task.Status = TaskStatus.NOT_START;
 
-                _taskStoreService.Save(task);
+                // 入队前不保存
+                //_taskStoreService.Save(task);
 
                 //             return await discordInstance.DescribeByLinkAsync(link, task.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default),
                 //task.RealBotType ?? task.BotType);
@@ -1797,7 +1807,9 @@ namespace Midjourney.Infrastructure.Services
             if (discordInstance.IsValidRedis)
             {
                 task.Status = TaskStatus.NOT_START;
-                _taskStoreService.Save(task);
+
+                // 入队前不保存
+                //_taskStoreService.Save(task);
 
                 return await discordInstance.EnqueueAsync(new TaskInfoQueue()
                 {
@@ -1934,7 +1946,8 @@ namespace Midjourney.Infrastructure.Services
                         }
                     }
 
-                    _taskStoreService.Save(task);
+                    // 入队前不保存
+                    //_taskStoreService.Save(task);
 
                     //return await discordInstance.YmTaskService.SubmitTaskAsync(task, _taskStoreService, discordInstance);
 
@@ -2569,6 +2582,7 @@ namespace Midjourney.Infrastructure.Services
                     {
                         // 如果是 REMIX 任务，则设置任务状态为 modal
                         task.Status = TaskStatus.MODAL;
+
                         _taskStoreService.Save(task);
 
                         // 状态码为 21
