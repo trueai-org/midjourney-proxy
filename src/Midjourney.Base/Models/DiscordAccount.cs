@@ -87,7 +87,7 @@ namespace Midjourney.Base.Models
         /// <summary>
         /// 添加一个事件用于通知去清理缓存
         /// </summary>
-        public event Action<bool> ClearCacheEvent;
+        public event Action ClearCacheEvent;
 
         /// <summary>
         /// 清除缓存
@@ -97,7 +97,19 @@ namespace Midjourney.Base.Models
         {
             AdaptiveCache.Remove(CacheKey);
 
-            ClearCacheEvent?.Invoke(isPublishToRedis);
+            ClearCacheEvent?.Invoke();
+
+            // 如果启用了 redis, 则发布消息告诉其他节点清除缓存
+            // 避免自己发布自己订阅到
+            if (GlobalConfiguration.Setting.IsValidRedis && isPublishToRedis)
+            {
+                var notification = new RedisNotification
+                {
+                    Type = ENotificationType.AccountCache,
+                    ChannelId = this.ChannelId,
+                };
+                RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
+            }
         }
 
         /// <summary>

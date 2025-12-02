@@ -201,11 +201,11 @@ namespace Midjourney.Infrastructure.LoadBalancer
         private void SubscribeToAccount(DiscordAccount account)
         {
             // 把 handler 保存到局部变量以便 later 能取消订阅
-            Action<bool> handler = null!;
+            Action handler = null!;
 
             // 使用捕获的 localOld 保证处理时能定位到当时订阅的实例
             var localOld = account;
-            handler = (bool isPublishToRedis) =>
+            handler = () =>
             {
                 try
                 {
@@ -229,18 +229,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     else if (acc == null)
                     {
                         IsInit = false;
-                    }
-
-                    // 如果启用了 redis, 则发布消息告诉其他节点清除缓存
-                    // 避免自己发布自己订阅到
-                    if (IsValidRedis && isPublishToRedis)
-                    {
-                        var notification = new RedisNotification
-                        {
-                            Type = ENotificationType.AccountCache,
-                            ChannelId = localOld.ChannelId,
-                        };
-                        RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
                     }
                 }
                 catch (Exception ex)
