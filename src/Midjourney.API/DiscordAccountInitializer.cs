@@ -1015,6 +1015,26 @@ namespace Midjourney.API
                             sw.Stop();
                             info.AppendLine($"{account.Id}初始化中... 获取 NIJI 私聊频道 ID 耗时: {sw.ElapsedMilliseconds}ms");
                             sw.Restart();
+
+                            try
+                            {
+                                // 这里应该等待初始化完成，并获取用户信息验证，获取用户成功后设置为可用状态
+                                // 多账号启动时，等待一段时间再启动下一个账号
+                                await Task.Delay(1000 * 5);
+
+                                // 启动后执行 info setting 操作
+                                await _taskService.InfoSetting(account.Id);
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.Error(ex, "同步 info 异常 {@0}", account.ChannelId);
+
+                                info.AppendLine($"{account.Id}初始化中... 同步 info 异常");
+                            }
+
+                            sw.Stop();
+                            info.AppendLine($"{account.Id}初始化中... 同步 info 耗时: {sw.ElapsedMilliseconds}ms");
+                            sw.Restart();
                         }
 
                         db.Update("NijiBotChannelId,PrivateChannelId,AllowModes,SubChannels,SubChannelValues,FastExhausted", account);
@@ -1050,26 +1070,6 @@ namespace Midjourney.API
                         // discord 账号信息同步
                         if (!account.IsYouChuan && !account.IsOfficial)
                         {
-                            try
-                            {
-                                // 这里应该等待初始化完成，并获取用户信息验证，获取用户成功后设置为可用状态
-                                // 多账号启动时，等待一段时间再启动下一个账号
-                                await Task.Delay(1000 * 5);
-
-                                // 启动后执行 info setting 操作
-                                await _taskService.InfoSetting(account.Id);
-                            }
-                            catch (Exception ex)
-                            {
-                                _logger.Error(ex, "同步 info 异常 {@0}", account.ChannelId);
-
-                                info.AppendLine($"{account.Id}初始化中... 同步 info 异常");
-                            }
-
-                            sw.Stop();
-                            info.AppendLine($"{account.Id}初始化中... 同步 info 耗时: {sw.ElapsedMilliseconds}ms");
-                            sw.Restart();
-
                             // 慢速切换快速模式检查
                             if (account.EnableRelaxToFast == true)
                             {
