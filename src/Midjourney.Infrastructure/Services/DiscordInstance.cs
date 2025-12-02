@@ -222,7 +222,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                             // 为新实例订阅同一个 handler（注意这里订阅的是 acc）
                             acc.ClearCacheEvent += handler;
 
-                            _logger.Information("账号信息已更新订阅。 {@0}", acc.Id);
+                            _logger.Information("账号信息已更新订阅 {@0}", acc.ChannelId);
                         }
                     }
                     // 如果账号被删除了
@@ -2590,7 +2590,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <summary>
         /// 释放资源
         /// </summary>
-        public void Dispose()
+        public void Dispose(bool isPublishToRedis = true)
         {
             var accountId = Account?.Id;
 
@@ -2669,7 +2669,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
             finally
             {
                 // 最后清除缓存
-                Account.ClearCache();
+                Account.ClearCache(isPublishToRedis);
             }
         }
 

@@ -891,7 +891,7 @@ namespace Midjourney.API
 
             var info = new StringBuilder();
 
-            info.AppendLine($"{account.ChannelId} 开始初始化");
+            info.AppendLine($"{account.ChannelId} 开始检查");
 
             var db = DbHelper.Instance.AccountStore;
             DiscordInstance disInstance = null;
@@ -923,9 +923,9 @@ namespace Midjourney.API
                 // 判断是否在工作时间内
                 var now = new DateTimeOffset(DateTime.Now.Date).ToUnixTimeMilliseconds();
 
-                sw.Stop();
-                info.AppendLine($"{account.ChannelId} 初始化中... 获取任务数耗时: {sw.ElapsedMilliseconds}ms");
-                sw.Restart();
+                //sw.Stop();
+                //info.AppendLine($"{account.ChannelId} 初始化中... 获取任务数耗时: {sw.ElapsedMilliseconds}ms");
+                //sw.Restart();
 
                 // 随机延期token
                 if (setting.EnableAutoExtendToken && !account.IsYouChuan && !account.IsOfficial)
@@ -1173,10 +1173,9 @@ namespace Midjourney.API
             {
                 swAll.Stop();
 
-                info.AppendLine($"{account.ChannelId} 初始化完成, 总耗时: {swAll.ElapsedMilliseconds}ms");
+                info.AppendLine($"{account.ChannelId} 检查完成, 总耗时: {swAll.ElapsedMilliseconds}ms");
 
-                // 调试级别日志
-                _logger.Debug(info.ToString());
+                _logger.Information(info.ToString());
             }
         }
 
@@ -1505,10 +1504,13 @@ namespace Midjourney.API
                             instance?.Account.ClearCache(false);
 
                             // 判断账号是否被删除了
-                            var account = DbHelper.Instance.AccountStore.Get(notification.ChannelId);
-                            if (account == null)
+                            if (!string.IsNullOrWhiteSpace(instance?.Account.Id))
                             {
-                                instance?.Dispose();
+                                var account = DbHelper.Instance.AccountStore.Get(instance.Account?.Id);
+                                if (account == null)
+                                {
+                                    instance?.Dispose(false);
+                                }
                             }
                         }
                         break;
