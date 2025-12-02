@@ -349,6 +349,11 @@ namespace Midjourney.Base.Models
         public string Seed { get; set; }
 
         /// <summary>
+        /// 种子错误信息，如果获取种子失败时记录错误原因。
+        /// </summary>
+        public string SeedError { get; set; }
+
+        /// <summary>
         /// Seed 消息 ID
         /// </summary>
         public string SeedMessageId { get; set; }

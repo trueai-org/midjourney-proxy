@@ -410,12 +410,12 @@ namespace Midjourney.API
                     // 订阅 redis 消息
                     if (setting.IsValidRedis)
                     {
-                        RedisHelper.Subscribe((RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, msg =>
+                        RedisHelper.Subscribe((RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, async msg =>
                         {
                             try
                             {
                                 var notification = msg.Body.ToObject<RedisNotification>();
-                                OnRedisReceived(notification);
+                                await OnRedisReceived(notification);
                             }
                             catch (Exception ex)
                             {
@@ -699,7 +699,7 @@ namespace Midjourney.API
                         _isUpgrading = false;
                     }
 
-                    if (!_isUpgrading && (_upgradeTime == null || (DateTime.Now - _upgradeTime.Value).TotalHours > 1))
+                    if (!_isUpgrading && (_upgradeTime == null || (DateTime.Now - _upgradeTime.Value).TotalHours > 6))
                     {
                         _upgradeTime = DateTime.Now;
                         _isUpgrading = true;
@@ -858,7 +858,7 @@ namespace Midjourney.API
 
             if (!isLock)
             {
-                _logger.Warning("初始化所有账号中，请稍后重试...");
+                _logger.Debug("初始化所有账号中，请稍后重试...");
             }
 
             await Task.CompletedTask;
@@ -874,7 +874,8 @@ namespace Midjourney.API
                 return;
             }
 
-            await using var lockHandle = await AdaptiveLock.LockAsync(account.InitializationLockKey, 5);
+            // 自适应锁
+            await using var lockHandle = await AdaptiveLock.LockAsync(account.InitializationLockKey, 10);
             if (!lockHandle.IsAcquired)
             {
                 return;
@@ -889,7 +890,8 @@ namespace Midjourney.API
             sw.Start();
 
             var info = new StringBuilder();
-            info.AppendLine($"{account.Id}初始化中...");
+
+            info.AppendLine($"{account.ChannelId} 开始初始化");
 
             var db = DbHelper.Instance.AccountStore;
             DiscordInstance disInstance = null;
@@ -907,7 +909,6 @@ namespace Midjourney.API
                     {
                         account.IsAutoLogining = false;
                         account.LoginMessage = "登录超时";
-
                         db.Update("IsAutoLogining,LoginMessage", account);
                     }
                 }
@@ -921,10 +922,9 @@ namespace Midjourney.API
 
                 // 判断是否在工作时间内
                 var now = new DateTimeOffset(DateTime.Now.Date).ToUnixTimeMilliseconds();
-                //var dayCount = (int)DbHelper.Instance.TaskStore.Count(c => c.InstanceId == account.ChannelId && c.SubmitTime >= now);
 
                 sw.Stop();
-                info.AppendLine($"{account.Id}初始化中... 获取任务数耗时: {sw.ElapsedMilliseconds}ms");
+                info.AppendLine($"{account.ChannelId} 初始化中... 获取任务数耗时: {sw.ElapsedMilliseconds}ms");
                 sw.Restart();
 
                 // 随机延期token
@@ -932,7 +932,7 @@ namespace Midjourney.API
                 {
                     await RandomSyncToken(account);
                     sw.Stop();
-                    info.AppendLine($"{account.Id}初始化中... 随机延期token耗时: {sw.ElapsedMilliseconds}ms");
+                    info.AppendLine($"{account.ChannelId}初始化中... 随机延期token耗时: {sw.ElapsedMilliseconds}ms");
                     sw.Restart();
                 }
 
@@ -942,12 +942,15 @@ namespace Midjourney.API
                     if (disInstance == null)
                     {
                         // 初始化子频道
-                        account.InitSubChannels();
+                        if (!account.IsYouChuan && !account.IsOfficial)
+                        {
+                            account.InitSubChannels();
+                        }
 
                         // 快速时长校验
                         // 如果 fastTime <= 0.1，则标记为快速用完
                         var fastTime = account.FastTimeRemaining?.ToString()?.Split('/')?.FirstOrDefault()?.Trim();
-                        if (!string.IsNullOrWhiteSpace(fastTime) && double.TryParse(fastTime, out var ftime) && ftime <= 0.1)
+                        if (!string.IsNullOrWhiteSpace(fastTime) && double.TryParse(fastTime, out var ftime) && ftime <= 0.2)
                         {
                             account.FastExhausted = true;
                         }
@@ -960,7 +963,6 @@ namespace Midjourney.API
                         if (account.FastExhausted == true && account.EnableAutoSetRelax == true)
                         {
                             account.AllowModes = new List<GenerationSpeedMode>() { GenerationSpeedMode.RELAX };
-
                             if (account.CoreSize > 3)
                             {
                                 account.CoreSize = 3;
@@ -1036,8 +1038,12 @@ namespace Midjourney.API
                         sw.Stop();
                         info.AppendLine($"{account.Id}初始化中... 创建实例耗时: {sw.ElapsedMilliseconds}ms");
                         sw.Restart();
+                    }
 
-                        // discord 业务
+                    // 无最大并行限制
+                    if (GlobalConfiguration.GlobalMaxConcurrent != 0)
+                    {
+                        // discord 账号信息同步
                         if (!account.IsYouChuan && !account.IsOfficial)
                         {
                             try
@@ -1079,16 +1085,16 @@ namespace Midjourney.API
                                 sw.Restart();
                             }
                         }
-                    }
 
-                    if (account.IsYouChuan)
-                    {
-                        await disInstance?.YouChuanSyncInfo();
-                    }
+                        if (account.IsYouChuan)
+                        {
+                            await disInstance?.YouChuanSyncInfo();
+                        }
 
-                    if (account.IsOfficial)
-                    {
-                        await disInstance?.OfficialSyncInfo();
+                        if (account.IsOfficial)
+                        {
+                            await disInstance?.OfficialSyncInfo();
+                        }
                     }
                 }
                 else
@@ -1112,10 +1118,10 @@ namespace Midjourney.API
             catch (Exception ex)
             {
                 sw.Stop();
-                info.AppendLine($"{account.Id}初始化中... 异常: {ex.Message} 耗时: {sw.ElapsedMilliseconds}ms");
+                info.AppendLine($"{account.ChannelId} 初始化中... 异常: {ex.Message} 耗时: {sw.ElapsedMilliseconds}ms");
                 sw.Restart();
 
-                _logger.Error(ex, "Account({@0}) init fail, disabled: {@1}", account.ChannelId, ex.Message);
+                _logger.Error(ex, $"{account.ChannelId} 初始化失败");
 
                 if (setting.EnableAutoLogin && !account.IsYouChuan && !account.IsOfficial)
                 {
@@ -1166,9 +1172,11 @@ namespace Midjourney.API
             finally
             {
                 swAll.Stop();
-                info.AppendLine($"{account.Id}初始化完成, 总耗时: {swAll.ElapsedMilliseconds}ms");
 
-                _logger.Information(info.ToString());
+                info.AppendLine($"{account.ChannelId} 初始化完成, 总耗时: {swAll.ElapsedMilliseconds}ms");
+
+                // 调试级别日志
+                _logger.Debug(info.ToString());
             }
         }
 
@@ -1467,7 +1475,7 @@ namespace Midjourney.API
         /// 处理 Redis 消息通知
         /// </summary>
         /// <param name="notification"></param>
-        public void OnRedisReceived(RedisNotification notification)
+        public async Task OnRedisReceived(RedisNotification notification)
         {
             try
             {
@@ -1495,6 +1503,13 @@ namespace Midjourney.API
 
                             // 仅清理本地缓存
                             instance?.Account.ClearCache(false);
+
+                            // 判断账号是否被删除了
+                            var account = DbHelper.Instance.AccountStore.Get(notification.ChannelId);
+                            if (account == null)
+                            {
+                                instance?.Dispose();
+                            }
                         }
                         break;
 
@@ -1519,6 +1534,7 @@ namespace Midjourney.API
                                 if (!targetTask.IsCompleted)
                                 {
                                     targetTask.Fail("取消任务");
+
                                     DbHelper.Instance.TaskStore.Update(targetTask);
                                 }
                             }
@@ -1537,12 +1553,20 @@ namespace Midjourney.API
                         }
                         break;
 
-                    case ENotificationType.ProcessedTaskInfo:
+                    case ENotificationType.DisposeLock:
                     case ENotificationType.EnqueueTaskInfo:
                         {
                             // 通知任务可以立即执行
                             var instance = _discordLoadBalancer.GetDiscordInstance(notification.ChannelId);
                             instance?.NotifyRedisJob();
+                        }
+                        break;
+
+                    case ENotificationType.SeedTaskInfo:
+                        {
+                            // 收到获取种子任务请求
+                            var instance = _discordLoadBalancer.GetDiscordInstance(notification.ChannelId);
+                            await instance?.GetSeed(notification.TaskInfo);
                         }
                         break;
 

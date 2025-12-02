@@ -117,6 +117,11 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// </summary>
         public bool IsValidRedis { get; private set; } = false;
 
+        /// <summary>
+        /// 种子获取任务锁，最大并行任务不超过，默认 12，非官方 128
+        /// </summary>
+        private readonly AsyncParallelLock _seekLock = new(12);
+
         public DiscordInstance(
             DiscordAccount account,
             ITaskStoreService taskStoreService,
@@ -156,6 +161,12 @@ namespace Midjourney.Infrastructure.LoadBalancer
             // 最小 1, 最大 12
             _fastLock = new AsyncParallelLock(Math.Max(1, Math.Min(account.CoreSize, 12)));
             _relaxLock = new AsyncParallelLock(Math.Max(1, Math.Min(account.RelaxCoreSize, 12)));
+
+            // 种子获取任务并行，如果非官方
+            if (!account.IsOfficial)
+            {
+                _seekLock = new AsyncParallelLock(128);
+            }
 
             // 初始化信号器
             _mre = new ManualResetEvent(false);
@@ -387,9 +398,32 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// 获取队列中的任务列表。
         /// </summary>
         /// <returns>队列中的任务列表</returns>
-        public List<TaskInfo> GetQueueTasks() => new List<TaskInfo>(_fastQueueTasks.Select(c => c.Item1) ?? [])
-            .Concat(_relaxQueueTasks.Select(c => c.Item1) ?? [])
-            .ToList();
+        public List<TaskInfo> GetQueueTasks()
+        {
+            if (IsValidRedis)
+            {
+                var list = new List<TaskInfo>();
+                var defaultOrFastQueueTasks = _defaultOrFastQueue.Items();
+                if (defaultOrFastQueueTasks != null && defaultOrFastQueueTasks.Count > 0)
+                {
+                    list.AddRange(defaultOrFastQueueTasks.Select(c => c.Info));
+                }
+
+                if (Account.IsYouChuan)
+                {
+                    var relaxQueueTasks = _relaxQueue.Items();
+                    if (relaxQueueTasks != null && relaxQueueTasks.Count > 0)
+                    {
+                        list.AddRange(relaxQueueTasks.Select(c => c.Info));
+                    }
+                }
+                return list;
+            }
+
+            return new List<TaskInfo>(_fastQueueTasks.Select(c => c.Item1) ?? [])
+                .Concat(_relaxQueueTasks.Select(c => c.Item1) ?? [])
+                .ToList();
+        }
 
         /// <summary>
         /// 获取队列中的任务数量。
@@ -445,6 +479,145 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 }
 
                 return acc.QueueSize <= 0 || _fastQueueTasks.Count < acc.QueueSize;
+            }
+        }
+
+        /// <summary>
+        /// 获取图片 seed
+        /// </summary>
+        /// <param name="task"></param>
+        /// <returns></returns>
+        public async Task GetSeed(TaskInfo task)
+        {
+            if (task == null || string.IsNullOrWhiteSpace(task.Id))
+            {
+                return;
+            }
+
+            // 确保最大并行数，不超过 N
+            await _seekLock.LockAsync();
+
+            try
+            {
+                await using var lockHandle = await AdaptiveLock.LockAsync($"GetSeed:{task.Id}", 30);
+                if (!lockHandle.IsAcquired)
+                {
+                    // 没有获取到锁，直接返回
+                    return;
+                }
+
+                task = _taskStoreService.Get(task.Id);
+                if (task == null)
+                {
+                    return;
+                }
+                if (!string.IsNullOrWhiteSpace(task.Seed))
+                {
+                    return;
+                }
+
+                // 如果是悠船或官方
+                if (task.IsPartner || task.IsOfficial)
+                {
+                    var seek = await YmTaskService.GetSeed(task);
+                    if (!string.IsNullOrWhiteSpace(seek))
+                    {
+                        task.Seed = seek;
+                    }
+                    else
+                    {
+                        task.SeedError = "未找到 seed";
+                    }
+                    return;
+                }
+
+                // 请配置私聊频道
+                var privateChannelId = string.Empty;
+                if ((task.RealBotType ?? task.BotType) == EBotType.MID_JOURNEY)
+                {
+                    privateChannelId = Account.PrivateChannelId;
+                }
+                else
+                {
+                    privateChannelId = Account.NijiBotChannelId;
+                }
+
+                if (string.IsNullOrWhiteSpace(privateChannelId))
+                {
+                    task.SeedError = "请配置私聊频道";
+                    return;
+                }
+
+                AddRunningTask(task);
+
+                var hash = task.GetProperty<string>(Constants.TASK_PROPERTY_MESSAGE_HASH, default);
+
+                var nonce = SnowFlake.NextId();
+                task.Nonce = nonce;
+                task.SetProperty(Constants.TASK_PROPERTY_NONCE, nonce);
+
+                // /show job_id
+                // https://discord.com/api/v9/interactions
+                var res = await SeedAsync(hash, nonce, task.RealBotType ?? task.BotType);
+                if (res.Code != ReturnCode.SUCCESS)
+                {
+                    task.SeedError = res.Description;
+                    return;
+                }
+
+                // 等待获取 seed messageId
+                // 等待最大超时 5min
+                var sw = new Stopwatch();
+                sw.Start();
+
+                do
+                {
+                    Thread.Sleep(100);
+                    task = GetRunningTask(task.Id);
+
+                    if (string.IsNullOrWhiteSpace(task.SeedMessageId))
+                    {
+                        if (sw.ElapsedMilliseconds > 1000 * 60 * 3)
+                        {
+                            task.SeedError = "超时，未找到 seed messageId";
+                            return;
+                        }
+                    }
+                } while (string.IsNullOrWhiteSpace(task.SeedMessageId));
+
+                // 添加反应
+                // https://discord.com/api/v9/channels/1256495659683676190/messages/1260598192333127701/reactions/✉️/@me?location=Message&type=0
+                var url = $"https://discord.com/api/v9/channels/{privateChannelId}/messages/{task.SeedMessageId}/reactions/%E2%9C%89%EF%B8%8F/%40me?location=Message&type=0";
+                var msgRes = await SeedMessagesAsync(url);
+                if (msgRes.Code != ReturnCode.SUCCESS)
+                {
+                    task.SeedError = res.Description;
+                    return;
+                }
+
+                sw.Start();
+                do
+                {
+                    Thread.Sleep(500);
+                    task = GetRunningTask(task.Id);
+
+                    if (string.IsNullOrWhiteSpace(task.Seed))
+                    {
+                        if (sw.ElapsedMilliseconds > 1000 * 60 * 3)
+                        {
+                            task.SeedError = "超时，未找到 seed";
+                            return;
+                        }
+                    }
+                } while (string.IsNullOrWhiteSpace(task.Seed));
+            }
+            finally
+            {
+                _seekLock.Unlock();
+
+                RemoveRunningTask(task);
+
+                DbHelper.Instance.TaskStore.Update("Seed,SeedError,SeedMessageId", task);
             }
         }
 
@@ -528,7 +701,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                         // 发送锁我已经释放了
                                         var notification = new RedisNotification
                                         {
-                                            Type = ENotificationType.ProcessedTaskInfo,
+                                            Type = ENotificationType.DisposeLock,
                                             ChannelId = ChannelId,
                                         };
                                         RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
@@ -550,7 +723,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                 // 发送锁我已经释放了
                                 var notification = new RedisNotification
                                 {
-                                    Type = ENotificationType.ProcessedTaskInfo,
+                                    Type = ENotificationType.DisposeLock,
                                     ChannelId = ChannelId,
                                 };
                                 RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
@@ -614,7 +787,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                             // 发送锁我已经释放了
                                             var notification = new RedisNotification
                                             {
-                                                Type = ENotificationType.ProcessedTaskInfo,
+                                                Type = ENotificationType.DisposeLock,
                                                 ChannelId = ChannelId,
                                             };
                                             RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
@@ -636,7 +809,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                     // 发送锁我已经释放了
                                     var notification = new RedisNotification
                                     {
-                                        Type = ENotificationType.ProcessedTaskInfo,
+                                        Type = ENotificationType.DisposeLock,
                                         ChannelId = ChannelId,
                                     };
                                     RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());

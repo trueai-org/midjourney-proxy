@@ -25,9 +25,7 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.Text.RegularExpressions;
-using Instances;
 using Microsoft.Extensions.Caching.Memory;
-using Midjourney.Base.Services;
 using Midjourney.Infrastructure.LoadBalancer;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -325,7 +323,6 @@ namespace Midjourney.Infrastructure.Services
                         var uploadResult = await instance.UploadAsync(taskFileName, dataUrl);
                         if (uploadResult.Code != ReturnCode.SUCCESS)
                         {
-
                             return SubmitResultVO.Fail(ReturnCode.FAILURE, uploadResult.Description);
                         }
 
@@ -601,7 +598,6 @@ namespace Midjourney.Infrastructure.Services
 
             return instance.SubmitTaskAsync(info, async () =>
             {
-
                 if (instance.Account.IsYouChuan)
                 {
                     var link = "";
@@ -1174,7 +1170,6 @@ namespace Midjourney.Infrastructure.Services
 
             return instance.SubmitTaskAsync(info, async () =>
             {
-
                 var startImageUrl = "";
                 var endImageUrl = "";
 
@@ -1989,7 +1984,6 @@ namespace Midjourney.Infrastructure.Services
                         }
 
                         finalFileNames.Add(uploadResult.Description);
-
                     }
 
                     //return await discordInstance.BlendAsync(finalFileNames, dimensions,
@@ -2140,7 +2134,6 @@ namespace Midjourney.Infrastructure.Services
                         }
 
                         finalFileNames.Add(uploadResult.Description);
-
                     }
 
                     return await discordInstance.BlendAsync(finalFileNames, dimensions,
@@ -2972,12 +2965,13 @@ namespace Midjourney.Infrastructure.Services
         /// <returns></returns>
         public async Task<SubmitResultVO> SubmitSeed(TaskInfo task)
         {
+            var setting = GlobalConfiguration.Setting;
+
             var discordInstance = _discordLoadBalancer.GetDiscordInstanceIsAlive(task.InstanceId);
             if (discordInstance == null)
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
-
             if (!discordInstance.Account.IsValidateModeContinueDrawing(task.Mode, task.AccountFilter?.Modes, out var mode))
             {
                 return SubmitResultVO.Fail(ReturnCode.FAILURE, "无可用的账号实例");
@@ -2986,8 +2980,75 @@ namespace Midjourney.Infrastructure.Services
             {
                 return SubmitResultVO.Fail(ReturnCode.FAILURE, "提交失败，队列已满，请稍后重试");
             }
-
             task.Mode = mode;
+
+            // redis 模式
+            if (setting.IsValidRedis)
+            {
+                // 如果是悠船则直接获取
+                if (task.IsPartner)
+                {
+                    var seek = await discordInstance.YmTaskService.GetSeed(task);
+                    if (!string.IsNullOrWhiteSpace(seek))
+                    {
+                        task.Seed = seek;
+                        _taskStoreService.Save(task);
+                        return SubmitResultVO.Of(ReturnCode.SUCCESS, "成功", seek);
+                    }
+                    else
+                    {
+                        return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "未找到 seed");
+                    }
+                }
+                else
+                {
+                    // 清空错误
+                    task.SeedError = null;
+                    _taskStoreService.Save(task);
+
+                    // 否则由其他节点队列处理
+                    // 发送 redis 消息后并等待结果返回
+                    var notification = new RedisNotification
+                    {
+                        Type = ENotificationType.SeedTaskInfo,
+                        TaskInfo = task,
+                        ChannelId = task.InstanceId
+                    };
+                    RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
+
+                    var maxDelay = 1000 * 60;
+                    do
+                    {
+                        await Task.Delay(500);
+                        maxDelay -= 500;
+
+                        task = _taskStoreService.Get(task.Id);
+                        if (!string.IsNullOrWhiteSpace(task.Seed))
+                        {
+                            return SubmitResultVO.Of(ReturnCode.SUCCESS, "成功", task.Seed);
+                        }
+                        else if (!string.IsNullOrWhiteSpace(task.SeedError))
+                        {
+                            return SubmitResultVO.Fail(ReturnCode.FAILURE, task.SeedError);
+                        }
+                    } while (string.IsNullOrWhiteSpace(task.Seed) && maxDelay > 0);
+
+                    task = _taskStoreService.Get(task.Id);
+
+                    if (!string.IsNullOrWhiteSpace(task.Seed))
+                    {
+                        return SubmitResultVO.Of(ReturnCode.SUCCESS, "成功", task.Seed);
+                    }
+                    else if (!string.IsNullOrWhiteSpace(task.SeedError))
+                    {
+                        return SubmitResultVO.Fail(ReturnCode.FAILURE, task.SeedError);
+                    }
+                    else
+                    {
+                        return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "未找到 seed");
+                    }
+                }
+            }
 
             // 如果是悠船或官方
             if (task.IsPartner || task.IsOfficial)
@@ -2996,9 +3057,7 @@ namespace Midjourney.Infrastructure.Services
                 if (!string.IsNullOrWhiteSpace(seek))
                 {
                     task.Seed = seek;
-
                     _taskStoreService.Save(task);
-
                     return SubmitResultVO.Of(ReturnCode.SUCCESS, "成功", seek);
                 }
                 else

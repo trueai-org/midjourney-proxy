@@ -84,7 +84,7 @@ namespace Midjourney.API.Controllers
         [HttpGet("{id}/fetch")]
         public ActionResult<TaskInfo> Fetch(string id)
         {
-            var queueTask = _discordLoadBalancer.GetQueueTasks().FirstOrDefault(t => t.Id == id);
+            var queueTask = _discordLoadBalancer.GetRunningTasks()?.FirstOrDefault(x => x.Id == id);
             return queueTask ?? _taskStoreService.Get(id);
         }
 
@@ -125,8 +125,7 @@ namespace Midjourney.API.Controllers
 
                         var notification = new RedisNotification
                         {
-                            Type = ENotificationType.AccountCache,
-                            ChannelId = targetTask.InstanceId,
+                            Type = ENotificationType.CancelTaskInfo,
                             TaskInfoId = id
                         };
                         RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
@@ -151,7 +150,7 @@ namespace Midjourney.API.Controllers
                 {
                     var targetTask = _discordLoadBalancer.GetRunningTasks().FirstOrDefault(t => t.Id == id);
 
-                    // 如果任务不在队列中，则从存储中获取
+                    // 如果任务不在执行中，则从存储中获取
                     if (targetTask == null)
                     {
                         targetTask = _taskStoreService.Get(id);
@@ -216,7 +215,8 @@ namespace Midjourney.API.Controllers
         [HttpGet("queue")]
         public ActionResult<List<TaskInfo>> Queue()
         {
-            return Ok(_discordLoadBalancer.GetQueueTasks().OrderBy(t => t.SubmitTime).ToList());
+            var list = _discordLoadBalancer.GetQueueTasks().OrderBy(t => t.SubmitTime).ToList();
+            return Ok(list);
         }
 
         /// <summary>
@@ -239,39 +239,37 @@ namespace Midjourney.API.Controllers
         [HttpPost("list-by-ids")]
         public ActionResult<List<TaskInfo>> ListByCondition([FromBody] TaskConditionDTO conditionDTO)
         {
-            if (conditionDTO.Ids == null || !conditionDTO.Ids.Any())
+            if (conditionDTO.Ids == null || conditionDTO.Ids.Count == 0)
             {
                 return Ok(new List<TaskInfo>());
             }
 
-            var ids = conditionDTO.Ids.Where(c => !string.IsNullOrWhiteSpace(c)).Select(c => c.Trim()).Distinct().ToList();
-
-            var result = new List<TaskInfo>();
-            var notInQueueIds = new HashSet<string>(ids);
-
-            foreach (var task in _discordLoadBalancer.GetQueueTasks())
+            var ids = conditionDTO.Ids.ToTrimList();
+            if (ids.Count == 0)
             {
-                if (notInQueueIds.Contains(task.Id))
+                return Ok(new List<TaskInfo>());
+            }
+
+            // 从执行中的任务获取
+            var result = _discordLoadBalancer.GetRunningTasks().Where(c => ids.Contains(c.Id)).ToList();
+
+            var notIds = new HashSet<string>();
+            foreach (var id in ids)
+            {
+                if (!notIds.Contains(id))
                 {
-                    result.Add(task);
-                    notInQueueIds.Remove(task.Id);
+                    if (!result.Any(c => c.Id == id))
+                    {
+                        notIds.Add(id);
+                    }
                 }
             }
 
-            var list = _taskStoreService.GetList(notInQueueIds.ToList());
-            if (list.Any())
+            var list = _taskStoreService.GetList(notIds.ToList());
+            if (list.Count > 0)
             {
                 result.AddRange(list);
             }
-
-            //foreach (var id in notInQueueIds)
-            //{
-            //    var task = _taskStoreService.Get(id);
-            //    if (task != null)
-            //    {
-            //        result.Add(task);
-            //    }
-            //}
 
             return Ok(result);
         }

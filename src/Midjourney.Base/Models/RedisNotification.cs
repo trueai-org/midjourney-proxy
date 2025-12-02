@@ -51,7 +51,7 @@
     public enum ENotificationType
     {
         /// <summary>
-        /// 账号缓存清理通知
+        /// 账号缓存清理通知/账号更新
         /// </summary>
         AccountCache = 0,
 
@@ -61,18 +61,23 @@
         CancelTaskInfo = 1,
 
         /// <summary>
-        /// 完成作业事件 success | false
+        /// 完成作业事件 - 统计成功/失败
         /// </summary>
         CompleteTaskInfo = 2,
 
         /// <summary>
-        /// 入队成功消息
+        /// 入队成功消息 - 可以继续处理下一个任务
         /// </summary>
         EnqueueTaskInfo = 3,
 
         /// <summary>
-        /// 任务处理完成并解锁
+        /// 任务处理完成释放了并行锁 - 可以继续处理下一个任务
         /// </summary>
-        ProcessedTaskInfo = 4
+        DisposeLock = 4,
+
+        /// <summary>
+        /// 获取 Seek 种子任务
+        /// </summary>
+        SeedTaskInfo = 5
     }
 }

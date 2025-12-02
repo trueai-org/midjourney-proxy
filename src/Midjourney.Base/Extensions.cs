@@ -15,21 +15,21 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Additional Terms:
-// This software shall not be used for any illegal activities. 
+// This software shall not be used for any illegal activities.
 // Users must comply with all applicable laws and regulations,
-// particularly those related to image and video processing. 
+// particularly those related to image and video processing.
 // The use of this software for any form of illegal face swapping,
-// invasion of privacy, or any other unlawful purposes is strictly prohibited. 
+// invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
-using LiteDB;
-using Midjourney.Base.Data;
-using MongoDB.Driver.Linq;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Linq.Expressions;
 using System.Net;
 using System.Text.RegularExpressions;
+using LiteDB;
+using Midjourney.Base.Data;
+using MongoDB.Driver.Linq;
 
 namespace Midjourney.Base
 {
@@ -45,6 +45,16 @@ namespace Midjourney.Base
         public static string TrimPath(this string path)
         {
             return path?.Trim().Trim('/').Trim('\\').Trim('/').Trim();
+        }
+
+        /// <summary>
+        /// string[] 过滤空字符串, 过滤重复项
+        /// </summary>
+        /// <param name="source"></param>
+        /// <returns></returns>
+        public static List<string> ToTrimList(this IEnumerable<string> source)
+        {
+            return source?.Where(c => !string.IsNullOrWhiteSpace(c))?.Select(c => c?.Trim())?.Distinct()?.ToList() ?? [];
         }
 
         /// <summary>
@@ -142,7 +152,6 @@ namespace Midjourney.Base
 
             // 去除 -- 开头的参数
             prompt = Regex.Replace(prompt, @"\x20+--[a-z]+.*$", string.Empty, RegexOptions.IgnoreCase);
-
 
             // 替换多余的 <<link>> 为 <link>
             // 针对 " -- " discord 会返回为空
@@ -582,8 +591,6 @@ namespace Midjourney.Base
             return url + "?" + style;
         }
 
-
-
         /// <summary>
         /// 移除速度模式
         /// </summary>
@@ -630,10 +637,13 @@ namespace Midjourney.Base
             {
                 case GenerationSpeedMode.RELAX:
                     return prompt + " --relax";
+
                 case GenerationSpeedMode.FAST:
                     return prompt + " --fast";
+
                 case GenerationSpeedMode.TURBO:
                     return prompt + " --turbo";
+
                 default:
                     return prompt;
             }
