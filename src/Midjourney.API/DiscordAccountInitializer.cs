@@ -1495,12 +1495,6 @@ namespace Midjourney.API
                 {
                     case ENotificationType.AccountCache:
                         {
-                            // 判断是否自身发出的
-                            if (isSelf)
-                            {
-                                return;
-                            }
-
                             // 清除账号缓存消息
                             var instance = _discordLoadBalancer.GetDiscordInstance(notification.ChannelId);
 
