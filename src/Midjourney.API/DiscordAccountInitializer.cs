@@ -1173,7 +1173,7 @@ namespace Midjourney.API
             {
                 swAll.Stop();
 
-                info.AppendLine($"{account.ChannelId} 检查完成, 总耗时: {swAll.ElapsedMilliseconds}ms");
+                info.Append($"{account.ChannelId} 检查完成, 总耗时: {swAll.ElapsedMilliseconds}ms");
 
                 _logger.Information(info.ToString());
             }
