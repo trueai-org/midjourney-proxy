@@ -899,7 +899,11 @@ namespace Midjourney.API
             try
             {
                 // 获取获取值
-                account = db.Get(account.Id)!;
+                account = db.Get(account.Id);
+                if (account == null)
+                {
+                    return;
+                }
 
                 // 如果账号处于登录中
                 if (account.IsAutoLogining && !account.IsYouChuan && !account.IsOfficial)
