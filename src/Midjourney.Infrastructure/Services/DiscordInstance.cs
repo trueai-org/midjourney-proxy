@@ -918,17 +918,19 @@ namespace Midjourney.Infrastructure.LoadBalancer
         public async Task UpdateProgress(TaskInfoQueue queue)
         {
             var info = queue?.Info;
-            if (string.IsNullOrWhiteSpace(info?.Id))
+
+            if (info == null || string.IsNullOrWhiteSpace(info?.Id))
             {
-                Log.Error("任务信息无效，跳过处理。 {@0}", info);
+                Log.Error("任务信息无效，跳过处理。 {@0}", queue);
                 return;
             }
 
-            // 开始
-            Log.Information("开始处理任务。 {@0} - {@1} - {@2}", info.Id, info.InstanceId, info.Status);
-
             try
             {
+
+                // 开始
+                Log.Information("开始处理任务。 {@0} - {@1} - {@2}", info.Id, info.InstanceId, info.Status);
+
                 // 同一个任务锁
                 using var infoLock = RedisHelper.Instance.Lock($"UpdateProgress:{info.Id}", 10);
                 if (infoLock == null)
@@ -1072,7 +1074,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                     }
                                 }
 
-                                if (info.Status != TaskStatus.CANCEL && info.Status != TaskStatus.SUCCESS && info.Status != TaskStatus.FAILURE)
+                                if (!info.IsCompleted)
                                 {
                                     info.StartTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
                                     info.Status = TaskStatus.SUBMITTED;
@@ -1360,7 +1362,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                     }
                                 }
 
-                                if (info.Status != TaskStatus.CANCEL && info.Status != TaskStatus.SUCCESS && info.Status != TaskStatus.FAILURE)
+                                if (!info.IsCompleted)
                                 {
                                     info.StartTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
                                     info.Status = TaskStatus.SUBMITTED;
@@ -1370,160 +1372,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                 SaveAndNotify(info);
                             }
                             break;
-
-                        //case TaskInfoQueueFunction.ZOOM:
-                        //    {
-                        //        if (info.IsPartner || info.IsOfficial)
-                        //        {
-                        //        }
-                        //        else
-                        //        {
-                        //            var result = await ZoomAsync(info, queue.ZoomParam.ModalMessageId,
-                        //                queue.ZoomParam.CustomId,
-                        //                info.PromptEn,
-                        //                queue.ZoomParam.Nonce);
-                        //            if (result.Code != ReturnCode.SUCCESS)
-                        //            {
-                        //                info.Fail(result.Description);
-                        //                SaveAndNotify(info);
-                        //                return;
-                        //            }
-
-                        //            if (info.Status != TaskStatus.CANCEL && info.Status != TaskStatus.SUCCESS && info.Status != TaskStatus.FAILURE)
-                        //            {
-                        //                info.StartTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
-                        //                info.Status = TaskStatus.SUBMITTED;
-                        //                info.Progress = "0%";
-                        //            }
-
-                        //            SaveAndNotify(info);
-                        //        }
-                        //    }
-                        //    break;
-
-                        //case TaskInfoQueueFunction.INPAINT:
-                        //    {
-                        //        if (info.IsPartner || info.IsOfficial)
-                        //        {
-                        //        }
-                        //        else
-                        //        {
-                        //            var result = await InpaintAsync(info, queue.InpaintParam.ModalCreateCustomId,
-                        //                info.PromptEn,
-                        //                queue.InpaintParam.MaskBase64);
-                        //            if (result.Code != ReturnCode.SUCCESS)
-                        //            {
-                        //                info.Fail(result.Description);
-                        //                SaveAndNotify(info);
-                        //                return;
-                        //            }
-
-                        //            if (info.Status != TaskStatus.CANCEL && info.Status != TaskStatus.SUCCESS && info.Status != TaskStatus.FAILURE)
-                        //            {
-                        //                info.StartTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
-                        //                info.Status = TaskStatus.SUBMITTED;
-                        //                info.Progress = "0%";
-                        //            }
-
-                        //            SaveAndNotify(info);
-                        //        }
-                        //    }
-                        //    break;
-
-                        //case TaskInfoQueueFunction.PIC_READER:
-                        //    {
-                        //        if (info.IsPartner || info.IsOfficial)
-                        //        {
-                        //        }
-                        //        else
-                        //        {
-                        //            var result = await PicReaderAsync(info, queue.PicReaderParam.ModalMessageId,
-                        //                queue.PicReaderParam.CustomId,
-                        //                info.PromptEn,
-                        //                queue.PicReaderParam.Nonce,
-                        //                queue.PicReaderParam.BotType);
-                        //            if (result.Code != ReturnCode.SUCCESS)
-                        //            {
-                        //                info.Fail(result.Description);
-                        //                SaveAndNotify(info);
-                        //                return;
-                        //            }
-
-                        //            if (info.Status != TaskStatus.CANCEL && info.Status != TaskStatus.SUCCESS && info.Status != TaskStatus.FAILURE)
-                        //            {
-                        //                info.StartTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
-                        //                info.Status = TaskStatus.SUBMITTED;
-                        //                info.Progress = "0%";
-                        //            }
-
-                        //            SaveAndNotify(info);
-                        //        }
-                        //    }
-                        //    break;
-
-                        //case TaskInfoQueueFunction.PROMPT_ANALYZER:
-                        //    {
-                        //        if (info.IsPartner || info.IsOfficial)
-                        //        {
-                        //        }
-                        //        else
-                        //        {
-                        //            var result = await RemixAsync(info, info.Action.Value, queue.PromptAnalyzerParam.ModalMessageId,
-                        //                queue.PromptAnalyzerParam.Modal,
-                        //                queue.PromptAnalyzerParam.CustomId,
-                        //                info.PromptEn,
-                        //                queue.PromptAnalyzerParam.Nonce,
-                        //                queue.PromptAnalyzerParam.BotType);
-                        //            if (result.Code != ReturnCode.SUCCESS)
-                        //            {
-                        //                info.Fail(result.Description);
-                        //                SaveAndNotify(info);
-                        //                return;
-                        //            }
-
-                        //            if (info.Status != TaskStatus.CANCEL && info.Status != TaskStatus.SUCCESS && info.Status != TaskStatus.FAILURE)
-                        //            {
-                        //                info.StartTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
-                        //                info.Status = TaskStatus.SUBMITTED;
-                        //                info.Progress = "0%";
-                        //            }
-
-                        //            SaveAndNotify(info);
-                        //        }
-                        //    }
-                        //    break;
-
-                        //case TaskInfoQueueFunction.REMIX:
-                        //    {
-                        //        if (info.IsPartner || info.IsOfficial)
-                        //        {
-                        //        }
-                        //        else
-                        //        {
-                        //            var result = await RemixAsync(info, info.Action.Value, queue.RemixParam.ModalMessageId,
-                        //                queue.RemixParam.Modal,
-                        //                queue.RemixParam.CustomId,
-                        //                info.PromptEn,
-                        //                queue.RemixParam.Nonce,
-                        //                queue.RemixParam.BotType);
-                        //            if (result.Code != ReturnCode.SUCCESS)
-                        //            {
-                        //                info.Fail(result.Description);
-                        //                SaveAndNotify(info);
-                        //                return;
-                        //            }
-
-                        //            if (info.Status != TaskStatus.CANCEL && info.Status != TaskStatus.SUCCESS && info.Status != TaskStatus.FAILURE)
-                        //            {
-                        //                info.StartTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
-                        //                info.Status = TaskStatus.SUBMITTED;
-                        //                info.Progress = "0%";
-                        //            }
-
-                        //            SaveAndNotify(info);
-                        //        }
-                        //    }
-                        //    break;
 
                         case TaskInfoQueueFunction.DESCRIBE:
                             {
