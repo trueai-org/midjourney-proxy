@@ -59,7 +59,7 @@ namespace Midjourney.Infrastructure.Services
             _redis = redis;
             _queueKey = $"queue:{queueName}";
             _lockKey = $"lock:queue:{queueName}"; // 锁的Key
-            _blockTimeoutSeconds = 1; // BLPOP 超时时间
+            _blockTimeoutSeconds = 5; // BLPOP 超时时间
             _consumerSemaphore = new SemaphoreSlim(maxConcurrency);
         }
 

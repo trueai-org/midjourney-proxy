@@ -920,8 +920,12 @@ namespace Midjourney.Infrastructure.LoadBalancer
             var info = queue?.Info;
             if (string.IsNullOrWhiteSpace(info?.Id))
             {
+                Log.Error("任务信息无效，跳过处理。 {@0}", info);
                 return;
             }
+
+            // 开始
+            Log.Information("开始处理任务。 {@0} - {@1} - {@2}", info.Id, info.InstanceId, info.Status);
 
             try
             {
@@ -938,12 +942,14 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 info = _taskStoreService.Get(info.Id);
                 if (info == null)
                 {
+                    Log.Warning("任务不存在，跳过处理。 {@0}", info.Id);
                     return;
                 }
 
                 // 如果任务完成
                 if (info.IsCompleted)
                 {
+                    Log.Information("任务已完成，跳过处理。 {@0} - {@1} - {@2}", info.Id, info.InstanceId, info.Status);
                     return;
                 }
 
