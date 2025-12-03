@@ -426,6 +426,7 @@ namespace Midjourney.API
                                                 {
                                                     // 判断最后一条是否存在
                                                     var success = 0;
+                                                    var error = 0;
                                                     var last = mongo.GetCollection<TaskInfo>().Find(x => true).SortByDescending(c => c.SubmitTime).FirstOrDefault();
                                                     if (last != null)
                                                     {
@@ -437,20 +438,29 @@ namespace Midjourney.API
                                                             var taskIds = mongo.GetCollection<TaskInfo>().Find(x => true).Project(c => c.Id).ToList();
                                                             foreach (var tid in taskIds)
                                                             {
-                                                                var info = mongo.GetCollection<TaskInfo>().Find(x => x.Id == tid).FirstOrDefault();
-                                                                if (info != null)
+                                                                try
                                                                 {
-                                                                    // 判断是否存在
-                                                                    var exist = taskStore.Any(c => c.Id == info.Id);
-                                                                    if (!exist)
+                                                                    var info = mongo.GetCollection<TaskInfo>().Find(x => x.Id == tid).FirstOrDefault();
+                                                                    if (info != null)
                                                                     {
-                                                                        taskStore.Add(info);
-                                                                        success++;
+                                                                        // 判断是否存在
+                                                                        var exist = taskStore.Any(c => c.Id == info.Id);
+                                                                        if (!exist)
+                                                                        {
+                                                                            taskStore.Add(info);
+                                                                            success++;
+                                                                        }
                                                                     }
+                                                                }
+                                                                catch (Exception ex)
+                                                                {
+                                                                    error++;
+
+                                                                    _logger.Error(ex, "MongoDB 自动迁移绘图任务数异常 TaskId: {@0}", tid);
                                                                 }
                                                             }
 
-                                                            _logger.Information("MongoDB 自动迁移绘图任务数据 success: {@0}", success);
+                                                            _logger.Information("MongoDB 自动迁移绘图任务数据 success: {@0}, error: {@1}", success, error);
                                                         }
                                                     }
                                                 });
