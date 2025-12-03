@@ -2184,10 +2184,10 @@ namespace Midjourney.API.Controllers
                     model.Openai.GptApiKey = "****";
                 }
 
-                //if (!string.IsNullOrWhiteSpace(model.MongoDefaultConnectionString))
-                //{
-                //    model.MongoDefaultConnectionString = "****";
-                //}
+                if (!string.IsNullOrWhiteSpace(model.MongoDefaultConnectionString))
+                {
+                    model.MongoDefaultConnectionString = "****";
+                }
 
                 if (model.AliyunOss != null)
                 {

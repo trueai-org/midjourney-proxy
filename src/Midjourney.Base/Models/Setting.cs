@@ -64,6 +64,32 @@ namespace Midjourney.Base.Models
         public string RedisConnectionString { get; set; }
 
         /// <summary>
+        /// MongoDB 自动迁移任务
+        /// 启动时将 MongoDB 数据迁移到迁移到当前数据库
+        /// </summary>
+        public bool IsAutoMigrateMongo { get; set; }
+
+        /// <summary>
+        /// MongoDB 默认连接字符串
+        /// </summary>
+        public string MongoDefaultConnectionString { get; set; }
+
+        /// <summary>
+        /// MongoDB 默认数据库
+        /// </summary>
+        public string MongoDefaultDatabase { get; set; }
+
+        /// <summary>
+        /// 自动收录官网违禁词到违禁词库
+        /// </summary>
+        public bool EnableAutoCollectOfficialBannedWords { get; set; } = true;
+
+        /// <summary>
+        /// 用户触发违规词后，自动清除用户的提示词中的违规词
+        /// </summary>
+        public bool EnableAutoClearUserBannedWords { get; set; } = false;
+
+        /// <summary>
         /// 判断 redis 是否有效
         /// </summary>
         [System.Text.Json.Serialization.JsonIgnore]
@@ -199,6 +225,8 @@ namespace Midjourney.Base.Models
         public string LicenseKey { get; set; } = "trueai.org";
 
         /// <summary>
+        /// LiteDB 自动迁移任务
+        /// 启动时将 MongoDB 数据迁移到迁移到当前数据库
         /// 本地数据库是否自动迁移到其他数据库
         /// </summary>
         public bool IsAutoMigrate { get; set; }
@@ -251,7 +279,7 @@ namespace Midjourney.Base.Models
         /// <summary>
         /// 邮件发送配置
         /// </summary>
-        public SmtpConfig Smtp { get; set; }
+        public SmtpConfig Smtp { get; set; } = new();
 
         /// <summary>
         /// CF 验证服务器地址

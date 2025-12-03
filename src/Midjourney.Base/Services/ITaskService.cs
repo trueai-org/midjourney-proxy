@@ -59,7 +59,7 @@ namespace Midjourney.Base.Services
         /// </summary>
         /// <param name="promptEn"></param>
         /// <exception cref="BannedPromptException"></exception>
-        void CheckBanned(string promptEn);
+        string CheckBanned(string promptEn);
 
         /// <summary>
         /// 提交 Imagine 任务。

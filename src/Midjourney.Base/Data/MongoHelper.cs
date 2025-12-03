@@ -185,4 +185,43 @@ namespace Midjourney.Base.Data
             }
         }
     }
+
+    /// <summary>
+    /// MongoDB 工厂
+    /// </summary>
+    public static class MongoDbFactory
+    {
+        /// <summary>
+        /// 创建 MongoDB 实例
+        /// </summary>
+        /// <param name="connectionString"></param>
+        /// <param name="databaseName"></param>
+        /// <returns></returns>
+        public static IMongoDatabase Create(string connectionString, string databaseName)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
+            ArgumentException.ThrowIfNullOrWhiteSpace(databaseName);
+            var client = new MongoClient(connectionString);
+            var database = client.GetDatabase(databaseName);
+            return database;
+        }
+
+        /// <summary>
+        /// 验证 mongo 连接
+        /// </summary>
+        /// <param name="database"></param>
+        /// <returns></returns>
+        public static bool VerifyConnection(this IMongoDatabase database)
+        {
+            try
+            {
+                return database.RunCommandAsync((Command<BsonDocument>)"{ping:1}").Wait(2000);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "MongoDB 连接失败");
+                return false;
+            }
+        }
+    }
 }

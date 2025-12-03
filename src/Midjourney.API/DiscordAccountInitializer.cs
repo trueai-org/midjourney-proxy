@@ -195,13 +195,12 @@ namespace Midjourney.API
                     // 初始化数据库索引
                     DbHelper.Instance.IndexInit();
 
+                    // 迁移 account user domain banded
                     // 是否开启 LiteDB 自动迁移
-                    if (setting.DatabaseType != DatabaseType.NONE && setting.DatabaseType != DatabaseType.LiteDB && setting.IsAutoMigrate)
+                    if (setting.DatabaseType != DatabaseType.LiteDB && setting.DatabaseType != DatabaseType.MongoDB && setting.IsAutoMigrate)
                     {
-                        // 迁移 account user domain banded
                         try
                         {
-                            // 如果 liteAccountIds 的数据在 mongoAccountIds 不存在，则迁移到 mongodb
                             // account 迁移
                             var liteAccountIds = LiteDBHelper.AccountStore.GetAllIds();
                             var accountStore = DbHelper.Instance.AccountStore;
@@ -282,14 +281,196 @@ namespace Midjourney.API
                         // 迁移 task
                         try
                         {
-                            _ = Task.Run(() =>
+                            _ = Task.Run(async () =>
                             {
-                                TaskInfoAutoMigrate();
+                                try
+                                {
+                                    await AdaptiveLock.ExecuteWithLock("TaskInfoAutoMigrate", TimeSpan.FromSeconds(10), () =>
+                                    {
+                                        // 判断最后一条是否存在
+                                        var success = 0;
+                                        var last = LiteDBHelper.TaskStore.GetCollection().Query().OrderByDescending(c => c.SubmitTime).FirstOrDefault();
+                                        if (last != null)
+                                        {
+                                            var taskStore = DbHelper.Instance.TaskStore;
+
+                                            var lastModel = taskStore.Single(c => c.Id == last.Id);
+                                            if (lastModel == null)
+                                            {
+                                                // 迁移数据
+                                                var taskIds = LiteDBHelper.TaskStore.GetCollection().Query().Select(c => c.Id).ToList();
+                                                foreach (var tid in taskIds)
+                                                {
+                                                    var info = LiteDBHelper.TaskStore.Get(tid);
+                                                    if (info != null)
+                                                    {
+                                                        // 判断是否存在
+                                                        var exist = taskStore.Any(c => c.Id == info.Id);
+                                                        if (!exist)
+                                                        {
+                                                            taskStore.Add(info);
+                                                            success++;
+                                                        }
+                                                    }
+                                                }
+
+                                                _logger.Information("LiteDB 自动迁移绘图任务数据 success: {@0}", success);
+                                            }
+                                        }
+                                    });
+                                }
+                                catch (Exception ex)
+                                {
+                                    _logger.Error(ex, "LiteDB 自动迁移绘图任务数据 error");
+                                }
                             });
                         }
                         catch (Exception ex)
                         {
                             _logger.Error(ex, "LiteDB 数据迁移任务信息异常");
+                        }
+                    }
+
+                    // 迁移 account user domain banded
+                    // 是否开启 MongoDB 自动迁移
+                    if (setting.DatabaseType != DatabaseType.LiteDB && setting.DatabaseType != DatabaseType.MongoDB && setting.IsAutoMigrateMongo)
+                    {
+                        try
+                        {
+                            // 创建 mongodb 实例
+                            if (!string.IsNullOrWhiteSpace(setting.MongoDefaultConnectionString) && !string.IsNullOrWhiteSpace(setting.MongoDefaultDatabase))
+                            {
+                                var mongo = MongoDbFactory.Create(setting.MongoDefaultConnectionString, setting.MongoDefaultDatabase);
+                                if (mongo.VerifyConnection())
+                                {
+                                    // account 迁移
+                                    var sourceAccountIds = mongo.GetCollection<DiscordAccount>().Find(x => true).Project(c => c.Id).ToList();
+                                    var accountStore = DbHelper.Instance.AccountStore;
+                                    var targetAccountIds = accountStore.GetAllIds();
+                                    var accountIds = sourceAccountIds.Except(targetAccountIds).ToList();
+                                    if (accountIds.Count > 0)
+                                    {
+                                        var sourceAccounts = mongo.GetCollection<DiscordAccount>().Find(x => true).ToList();
+                                        foreach (var id in accountIds)
+                                        {
+                                            var model = sourceAccounts.FirstOrDefault(c => c.Id == id);
+                                            if (model != null)
+                                            {
+                                                accountStore.Add(model);
+                                            }
+                                        }
+                                    }
+
+                                    // user 迁移
+                                    var sourceUserIds = mongo.GetCollection<User>().Find(x => true).Project(c => c.Id).ToList();
+                                    var userStore = DbHelper.Instance.UserStore;
+                                    var targetUserIds = userStore.GetAllIds();
+                                    var userIds = sourceUserIds.Except(targetUserIds).ToList();
+                                    if (userIds.Count > 0)
+                                    {
+                                        var sourceUsers = mongo.GetCollection<User>().Find(x => true).ToList();
+                                        foreach (var id in userIds)
+                                        {
+                                            var model = sourceUsers.FirstOrDefault(c => c.Id == id);
+                                            if (model != null)
+                                            {
+                                                userStore.Add(model);
+                                            }
+                                        }
+                                    }
+
+                                    // domain 迁移
+                                    var sourceDomainIds = mongo.GetCollection<DomainTag>().Find(x => true).Project(c => c.Id).ToList();
+                                    var domainStore = DbHelper.Instance.DomainStore;
+                                    var targetDomainIds = domainStore.GetAllIds();
+                                    var domainIds = sourceDomainIds.Except(targetDomainIds).ToList();
+                                    if (domainIds.Count > 0)
+                                    {
+                                        var sourceDomains = mongo.GetCollection<DomainTag>().Find(x => true).ToList();
+                                        foreach (var id in domainIds)
+                                        {
+                                            var model = sourceDomains.FirstOrDefault(c => c.Id == id);
+                                            if (model != null)
+                                            {
+                                                domainStore.Add(model);
+                                            }
+                                        }
+                                    }
+
+                                    // banded 迁移
+                                    var sourceBannedIds = mongo.GetCollection<BannedWord>().Find(x => true).Project(c => c.Id).ToList();
+                                    var bannedStore = DbHelper.Instance.BannedWordStore;
+                                    var targetBannedIds = bannedStore.GetAllIds();
+                                    var bannedIds = sourceBannedIds.Except(targetBannedIds).ToList();
+                                    if (bannedIds.Count > 0)
+                                    {
+                                        var sourceBanneds = mongo.GetCollection<BannedWord>().Find(x => true).ToList();
+                                        foreach (var id in bannedIds)
+                                        {
+                                            var model = sourceBanneds.FirstOrDefault(c => c.Id == id);
+                                            if (model != null)
+                                            {
+                                                bannedStore.Add(model);
+                                            }
+                                        }
+                                    }
+
+                                    // 迁移 task
+                                    try
+                                    {
+                                        _ = Task.Run(async () =>
+                                        {
+                                            try
+                                            {
+                                                await AdaptiveLock.ExecuteWithLock("TaskInfoAutoMigrate", TimeSpan.FromSeconds(10), () =>
+                                                {
+                                                    // 判断最后一条是否存在
+                                                    var success = 0;
+                                                    var last = mongo.GetCollection<TaskInfo>().Find(x => true).SortByDescending(c => c.SubmitTime).FirstOrDefault();
+                                                    if (last != null)
+                                                    {
+                                                        var taskStore = DbHelper.Instance.TaskStore;
+                                                        var lastModel = taskStore.Single(c => c.Id == last.Id);
+                                                        if (lastModel == null)
+                                                        {
+                                                            // 迁移数据
+                                                            var taskIds = mongo.GetCollection<TaskInfo>().Find(x => true).Project(c => c.Id).ToList();
+                                                            foreach (var tid in taskIds)
+                                                            {
+                                                                var info = mongo.GetCollection<TaskInfo>().Find(x => x.Id == tid).FirstOrDefault();
+                                                                if (info != null)
+                                                                {
+                                                                    // 判断是否存在
+                                                                    var exist = taskStore.Any(c => c.Id == info.Id);
+                                                                    if (!exist)
+                                                                    {
+                                                                        taskStore.Add(info);
+                                                                        success++;
+                                                                    }
+                                                                }
+                                                            }
+
+                                                            _logger.Information("MongoDB 自动迁移绘图任务数据 success: {@0}", success);
+                                                        }
+                                                    }
+                                                });
+                                            }
+                                            catch (Exception ex)
+                                            {
+                                                _logger.Error(ex, "MongoDB 自动迁移绘图任务数据 error");
+                                            }
+                                        });
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        _logger.Error(ex, "MongoDB 数据迁移任务信息异常");
+                                    }
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.Error(ex, "MongoDB 数据迁移基本信息异常");
                         }
                     }
 
@@ -446,53 +627,6 @@ namespace Midjourney.API
             catch (Exception ex)
             {
                 _logger.Error(ex, "启动异常");
-            }
-        }
-
-        /// <summary>
-        /// 自动迁移绘图任务数据
-        /// </summary>
-        public void TaskInfoAutoMigrate()
-        {
-            try
-            {
-                LocalLock.TryLock("TaskInfoAutoMigrate", TimeSpan.FromSeconds(10), () =>
-                {
-                    // 判断最后一条是否存在
-                    var success = 0;
-                    var last = LiteDBHelper.TaskStore.GetCollection().Query().OrderByDescending(c => c.SubmitTime).FirstOrDefault();
-                    if (last != null)
-                    {
-                        var taskStore = DbHelper.Instance.TaskStore;
-
-                        var lastModel = taskStore.Single(c => c.Id == last.Id);
-                        if (lastModel == null)
-                        {
-                            // 迁移数据
-                            var taskIds = LiteDBHelper.TaskStore.GetCollection().Query().Select(c => c.Id).ToList();
-                            foreach (var tid in taskIds)
-                            {
-                                var info = LiteDBHelper.TaskStore.Get(tid);
-                                if (info != null)
-                                {
-                                    // 判断是否存在
-                                    var exist = taskStore.Any(c => c.Id == info.Id);
-                                    if (!exist)
-                                    {
-                                        taskStore.Add(info);
-                                        success++;
-                                    }
-                                }
-                            }
-
-                            _logger.Information("自动迁移绘图任务数据 success: {@0}", success);
-                        }
-                    }
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "自动迁移绘图任务数据 error");
             }
         }
 

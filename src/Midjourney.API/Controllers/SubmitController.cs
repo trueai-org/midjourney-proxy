@@ -24,7 +24,6 @@
 
 using System.Net;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
 using Midjourney.Infrastructure.LoadBalancer;
@@ -112,9 +111,11 @@ namespace Midjourney.API.Controllers
                     case "1":
                         _storageOption = EStorageOption.Official;
                         break;
+
                     case "2":
                         _storageOption = EStorageOption.Partner;
                         break;
+
                     default:
                         break;
                 }
@@ -173,9 +174,10 @@ namespace Midjourney.API.Controllers
                 }
 
                 string promptEn = TranslatePrompt(prompt, task.RealBotType ?? task.BotType);
+
                 try
                 {
-                    _taskService.CheckBanned(promptEn);
+                    promptEn = _taskService.CheckBanned(promptEn);
                 }
                 catch (BannedPromptException e)
                 {
@@ -519,7 +521,7 @@ namespace Midjourney.API.Controllers
             var promptEn = TranslatePrompt(prompt, task.RealBotType ?? task.BotType);
             try
             {
-                _taskService.CheckBanned(promptEn);
+                promptEn = _taskService.CheckBanned(promptEn);
             }
             catch (BannedPromptException e)
             {
@@ -800,7 +802,7 @@ namespace Midjourney.API.Controllers
             var promptEn = TranslatePrompt(prompt, task.RealBotType ?? task.BotType);
             try
             {
-                _taskService.CheckBanned(promptEn);
+                promptEn = _taskService.CheckBanned(promptEn);
             }
             catch (BannedPromptException e)
             {
@@ -884,7 +886,7 @@ namespace Midjourney.API.Controllers
 
             try
             {
-                _taskService.CheckBanned(promptEn);
+                promptEn = _taskService.CheckBanned(promptEn);
             }
             catch (BannedPromptException e)
             {
@@ -954,7 +956,7 @@ namespace Midjourney.API.Controllers
 
             try
             {
-                _taskService.CheckBanned(promptEn);
+                promptEn = _taskService.CheckBanned(promptEn);
             }
             catch (BannedPromptException e)
             {
@@ -1019,7 +1021,7 @@ namespace Midjourney.API.Controllers
 
             try
             {
-                _taskService.CheckBanned(promptEn);
+                promptEn = _taskService.CheckBanned(promptEn);
             }
             catch (BannedPromptException e)
             {
@@ -1067,7 +1069,6 @@ namespace Midjourney.API.Controllers
                 {
                     return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "关联任务状态错误"));
                 }
-
 
                 task.InstanceId = targetTask.InstanceId;
                 task.ParentId = targetTask.Id;
