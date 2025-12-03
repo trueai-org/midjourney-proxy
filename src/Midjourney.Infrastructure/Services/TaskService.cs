@@ -3192,10 +3192,31 @@ namespace Midjourney.Infrastructure.Services
             }
             else if (model.IsOfficial)
             {
+                // 1小时最多调用 10 次，否则会触发封号
+                var countKey = $"info_setting_count:{discordInstance.ChannelId}_{DateTime.Now:yyyyMMddHH}";
+                var count = AdaptiveCache.Get<int?>(countKey);
+                if (count > 10)
+                {
+                    Log.Warning("官方同步信息调用过于频繁，已跳过执行，ChannelId={@0}", discordInstance.ChannelId);
+                    return;
+                }
+
                 await discordInstance.YmTaskService.OfficialSyncInfo(true);
+
+                // 记录调用次数
+                AdaptiveCache.AddOrUpdate(countKey, 1, (k, v) => ++v, TimeSpan.FromHours(1));
             }
             else
             {
+                // 1小时最多调用 10 次，否则会触发封号
+                var countKey = $"info_setting_count:{discordInstance.ChannelId}_{DateTime.Now:yyyyMMddHH}";
+                var count = AdaptiveCache.Get<int?>(countKey);
+                if (count > 10)
+                {
+                    Log.Warning("Discord同步调用过于频繁，已跳过执行，ChannelId={@0}", discordInstance.ChannelId);
+                    return;
+                }
+
                 if (discordInstance.Account.EnableMj == true)
                 {
                     var res3 = await discordInstance.SettingAsync(SnowFlake.NextId(), EBotType.MID_JOURNEY);
@@ -3240,6 +3261,9 @@ namespace Midjourney.Infrastructure.Services
                         Log.Error(ex, "同步 Niji 信息异常");
                     }
                 }
+
+                // 记录调用次数
+                AdaptiveCache.AddOrUpdate(countKey, 1, (k, v) => ++v, TimeSpan.FromHours(1));
             }
         }
 
@@ -3322,7 +3346,7 @@ namespace Midjourney.Infrastructure.Services
         public async Task MjPlusMigration(MjPlusMigrationDto dto)
         {
             var key = "mjplus";
-            var islock = AsyncLocalLock.IsLockAvailable(key);
+            var islock = AsyncLocalLock.HasActiveReference(key);
             if (!islock)
             {
                 throw new LogicException("迁移任务执行中...");

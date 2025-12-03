@@ -1,10 +1,10 @@
-﻿using System.Collections.Concurrent;
-using CSRedis;
+﻿using CSRedis;
+using Serilog;
 
 namespace Midjourney.Base.Util
 {
     /// <summary>
-    /// 自适应锁（不允许嵌套） - v20251129
+    /// 自适应锁（不允许嵌套） - v20251203
     /// 如果有开启 Redis 则使用 CSRedis 锁，否则使用本地锁（支持异步）
     /// 默认使用 await using 自动释放锁，也可以手动释放
     /// 获取锁时，一定要设置超时时间，默认 5 秒，超过未获取到锁则返回未获取状态
@@ -17,11 +17,6 @@ namespace Midjourney.Base.Util
         /// 是否启用分布式锁
         /// </summary>
         public static bool IsDistributed { get; private set; }
-
-        /// <summary>
-        /// 本地锁的信号量池，为每个键管理一个独立的 SemaphoreSlim
-        /// </summary>
-        private static readonly ConcurrentDictionary<string, SemaphoreSlim> _localSemaphores = new();
 
         /// <summary>
         /// 项目启动时初始化（可以多次调用）
@@ -66,8 +61,10 @@ namespace Midjourney.Base.Util
                     // 成功，返回一个持有 redisLock 对象的句柄
                     return new LockHandle(key, redisLock, isAcquired: redisLock != null);
                 }
-                catch
+                catch (Exception ex)
                 {
+                    Log.Warning(ex, "获取分布式锁时发生异常 {@0}", key);
+
                     // 获取失败（如超时），返回一个未持有的句柄
                     return new LockHandle(key, null, isAcquired: false);
                 }
@@ -75,14 +72,15 @@ namespace Midjourney.Base.Util
             else
             {
                 // --- 本地锁逻辑 ---
-                var semaphore = _localSemaphores.GetOrAdd(key, new SemaphoreSlim(1, 1));
+                bool acquired;
+
                 try
                 {
                     // 等待获取信号量
-                    bool acquired = await semaphore.WaitAsync(TimeSpan.FromSeconds(timeoutSeconds));
+                    acquired = await AsyncLocalLock.LockEnterAsync(key, TimeSpan.FromSeconds(timeoutSeconds));
 
                     // 返回一个持有 semaphore 对象的句柄
-                    return new LockHandle(key, semaphore, acquired);
+                    return new LockHandle(key, null, acquired);
                 }
                 catch
                 {
@@ -98,7 +96,16 @@ namespace Midjourney.Base.Util
         /// </summary>
         public static async Task<T> ExecuteWithLock<T>(string key, TimeSpan timeout, Func<T> action)
         {
-            await using var lockHandle = await LockAsync(key, (int)timeout.TotalSeconds);
+            if (timeout <= TimeSpan.Zero)
+                throw new ArgumentOutOfRangeException(nameof(timeout), "超时时间必须大于零。");
+            var seconds = Math.Max(1, (int)Math.Ceiling(timeout.TotalSeconds));
+
+            await using var lockHandle = await LockAsync(key, seconds);
+            if (!lockHandle.IsAcquired)
+            {
+                throw new TimeoutException($"无法在 {timeout.TotalSeconds} 秒内获取锁: {key}");
+            }
+
             return action();
         }
 
@@ -107,7 +114,15 @@ namespace Midjourney.Base.Util
         /// </summary>
         public static async Task<T> ExecuteWithLockAsync<T>(string key, TimeSpan timeout, Func<Task<T>> action)
         {
-            await using var lockHandle = await LockAsync(key, (int)timeout.TotalSeconds);
+            if (timeout <= TimeSpan.Zero)
+                throw new ArgumentOutOfRangeException(nameof(timeout), "超时时间必须大于零。");
+            var seconds = Math.Max(1, (int)Math.Ceiling(timeout.TotalSeconds));
+
+            await using var lockHandle = await LockAsync(key, seconds);
+            if (!lockHandle.IsAcquired)
+            {
+                throw new TimeoutException($"无法在 {timeout.TotalSeconds} 秒内获取锁: {key}");
+            }
             return await action();
         }
 
@@ -120,7 +135,15 @@ namespace Midjourney.Base.Util
         /// <returns></returns>
         public static async Task ExecuteWithLock(string key, TimeSpan timeout, Action action)
         {
-            await using var lockHandle = await LockAsync(key, (int)timeout.TotalSeconds);
+            if (timeout <= TimeSpan.Zero)
+                throw new ArgumentOutOfRangeException(nameof(timeout), "超时时间必须大于零。");
+            var seconds = Math.Max(1, (int)Math.Ceiling(timeout.TotalSeconds));
+
+            await using var lockHandle = await LockAsync(key, seconds);
+            if (!lockHandle.IsAcquired)
+            {
+                throw new TimeoutException($"无法在 {timeout.TotalSeconds} 秒内获取锁: {key}");
+            }
             action();
         }
 
@@ -133,7 +156,15 @@ namespace Midjourney.Base.Util
         /// <returns></returns>
         public static async Task ExecuteWithLockAsync(string key, TimeSpan timeout, Func<Task> action)
         {
-            await using var lockHandle = await LockAsync(key, (int)timeout.TotalSeconds);
+            if (timeout <= TimeSpan.Zero)
+                throw new ArgumentOutOfRangeException(nameof(timeout), "超时时间必须大于零。");
+            var seconds = Math.Max(1, (int)Math.Ceiling(timeout.TotalSeconds));
+
+            await using var lockHandle = await LockAsync(key, seconds);
+            if (!lockHandle.IsAcquired)
+            {
+                throw new TimeoutException($"无法在 {timeout.TotalSeconds} 秒内获取锁: {key}");
+            }
             await action();
         }
 
@@ -150,9 +181,9 @@ namespace Midjourney.Base.Util
             private readonly string _key;
 
             /// <summary>
-            /// 内部锁实例，可能是 SemaphoreSlim (本地锁) 或 CSRedisClientLock (分布式锁)
+            /// Redis 锁实例
             /// </summary>
-            private readonly object _lockInstance;
+            private readonly CSRedisClientLock _lockInstance;
 
             /// <summary>
             /// 锁是否已成功获取
@@ -160,16 +191,16 @@ namespace Midjourney.Base.Util
             public bool IsAcquired { get; }
 
             /// <summary>
-            /// 是否已被释放
+            /// 使用 int 配合 Interlocked, 0: 未释放, 1: 已释放
             /// </summary>
-            private bool _disposed;
+            private int _disposed;
 
             /// <summary>
             /// 内部构造函数，由 AdaptiveLock.LockAsync 调用
             /// </summary>
             /// <param name="lockInstance">实际的锁对象</param>
             /// <param name="isAcquired">是否成功获取</param>
-            internal LockHandle(string key, object lockInstance, bool isAcquired)
+            internal LockHandle(string key, CSRedisClientLock lockInstance, bool isAcquired)
             {
                 _key = key;
                 _lockInstance = lockInstance;
@@ -181,32 +212,29 @@ namespace Midjourney.Base.Util
             /// </summary>
             public async ValueTask DisposeAsync()
             {
-                // 如果已经释放，或者从未获取，则直接返回
-                if (_disposed || !IsAcquired || _lockInstance == null)
+                // 原子操作：如果已经释放过，直接返回
+                if (Interlocked.Exchange(ref _disposed, 1) != 0)
+                {
+                    return;
+                }
+
+                // 如果从未获取锁，无需释放
+                if (!IsAcquired)
                 {
                     return;
                 }
 
                 // 根据锁的实际类型执行释放操作
-                if (_lockInstance is CSRedisClientLock redisLock)
+                if (_lockInstance != null)
                 {
                     // 释放分布式锁
-                    redisLock.Dispose();
+                    _lockInstance.Dispose();
                 }
-                else if (_lockInstance is SemaphoreSlim semaphore)
+                else
                 {
                     // 释放本地锁
-                    semaphore.Release();
-
-                    // 判断是否还有信号量被占用
-                    if (semaphore.CurrentCount == 1)
-                    {
-                        // 没有被占用，可以安全移除
-                        _localSemaphores.TryRemove(_key, out _);
-                    }
+                    AsyncLocalLock.LockExit(_key);
                 }
-
-                _disposed = true;
 
                 await ValueTask.CompletedTask; // 返回一个已完成的 ValueTask
             }

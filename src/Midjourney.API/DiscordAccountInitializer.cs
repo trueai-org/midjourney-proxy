@@ -1015,7 +1015,11 @@ namespace Midjourney.API
                             sw.Stop();
                             info.AppendLine($"{account.Id}初始化中... 获取 NIJI 私聊频道 ID 耗时: {sw.ElapsedMilliseconds}ms");
                             sw.Restart();
+                        }
 
+                        // 高频同步 info setting 一定会封号
+                        if (!account.IsYouChuan && !account.IsOfficial)
+                        {
                             try
                             {
                                 // 这里应该等待初始化完成，并获取用户信息验证，获取用户成功后设置为可用状态
@@ -1031,11 +1035,11 @@ namespace Midjourney.API
 
                                 info.AppendLine($"{account.Id}初始化中... 同步 info 异常");
                             }
-
-                            sw.Stop();
-                            info.AppendLine($"{account.Id}初始化中... 同步 info 耗时: {sw.ElapsedMilliseconds}ms");
-                            sw.Restart();
                         }
+
+                        sw.Stop();
+                        info.AppendLine($"{account.Id}初始化中... 同步 info 耗时: {sw.ElapsedMilliseconds}ms");
+                        sw.Restart();
 
                         db.Update("NijiBotChannelId,PrivateChannelId,AllowModes,SubChannels,SubChannelValues,FastExhausted", account);
                         account.ClearCache();

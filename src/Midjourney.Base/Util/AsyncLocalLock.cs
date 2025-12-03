@@ -27,42 +27,98 @@ using System.Collections.Concurrent;
 namespace Midjourney.Base.Util
 {
     /// <summary>
-    /// 异步本地锁 - v20251129
+    /// 异步本地锁 - v20251203
     /// </summary>
     public static class AsyncLocalLock
     {
-        private static readonly ConcurrentDictionary<string, SemaphoreSlim> _lockObjs = new();
+        private static readonly ConcurrentDictionary<string, LockWrapper> _lockWrappers = new();
+        private static readonly object _cleanupLock = new();
+
+        /// <summary>
+        /// 锁包装器，包含信号量和引用计数
+        /// </summary>
+        private sealed class LockWrapper
+        {
+            public SemaphoreSlim Semaphore { get; } = new SemaphoreSlim(1, 1);
+
+            /// <summary>
+            /// 引用计数：包括正在等待和已获取锁的总数
+            /// </summary>
+            public int RefCount;
+        }
 
         /// <summary>
         /// 获取锁
         /// </summary>
-        /// <param name="key"></param>
-        /// <param name="span"></param>
-        /// <returns></returns>
-        private static async Task<bool> LockEnterAsync(string key, TimeSpan span)
+        public static async Task<bool> LockEnterAsync(string key, TimeSpan span)
         {
-            var semaphore = _lockObjs.GetOrAdd(key, new SemaphoreSlim(1, 1));
-            return await semaphore.WaitAsync(span);
+            ArgumentException.ThrowIfNullOrWhiteSpace(key);
+
+            LockWrapper wrapper;
+
+            // 增加引用计数
+            lock (_cleanupLock)
+            {
+                wrapper = _lockWrappers.GetOrAdd(key, _ => new LockWrapper());
+                wrapper.RefCount++;
+            }
+
+            bool acquired = false;
+            try
+            {
+                acquired = await wrapper.Semaphore.WaitAsync(span);
+                return acquired;
+            }
+            finally
+            {
+                if (!acquired)
+                {
+                    // 获取失败，回滚引用计数
+                    lock (_cleanupLock)
+                    {
+                        wrapper.RefCount--;
+                        if (wrapper.RefCount <= 0)
+                        {
+                            if (_lockWrappers.TryRemove(KeyValuePair.Create(key, wrapper)))
+                            {
+                                wrapper.Semaphore.Dispose();
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         /// <summary>
         /// 退出锁
         /// </summary>
-        /// <param name="key"></param>
-        private static void LockExit(string key)
+        public static void LockExit(string key)
         {
-            if (_lockObjs.TryGetValue(key, out SemaphoreSlim semaphore))
-            {
-                if (semaphore != null)
-                {
-                    // 释放本地锁
-                    semaphore.Release();
+            ArgumentException.ThrowIfNullOrWhiteSpace(key);
 
-                    // 判断是否还有信号量被占用
-                    if (semaphore.CurrentCount == 1)
+            lock (_cleanupLock)
+            {
+                if (!_lockWrappers.TryGetValue(key, out var wrapper) || wrapper == null)
+                {
+                    return;
+                }
+
+                try
+                {
+                    wrapper.Semaphore.Release();
+                }
+                catch (SemaphoreFullException)
+                {
+                    // 重复释放，忽略
+                    return;
+                }
+
+                wrapper.RefCount--;
+                if (wrapper.RefCount <= 0)
+                {
+                    if (_lockWrappers.TryRemove(KeyValuePair.Create(key, wrapper)))
                     {
-                        // 没有被占用，可以安全移除
-                        _lockObjs.TryRemove(key, out _);
+                        wrapper.Semaphore.Dispose();
                     }
                 }
             }
@@ -71,12 +127,11 @@ namespace Midjourney.Base.Util
         /// <summary>
         /// 等待并获取锁
         /// </summary>
-        /// <param name="resource"></param>
-        /// <param name="expirationTime">等待锁超时时间，如果超时没有获取到锁，返回 false</param>
-        /// <param name="action"></param>
-        /// <returns></returns>
         public static async Task<bool> TryLockAsync(string resource, TimeSpan expirationTime, Func<Task> action)
         {
+            ArgumentException.ThrowIfNullOrWhiteSpace(resource);
+            ArgumentNullException.ThrowIfNull(action);
+
             if (await LockEnterAsync(resource, expirationTime))
             {
                 try
@@ -93,17 +148,43 @@ namespace Midjourney.Base.Util
         }
 
         /// <summary>
-        /// 判断指定的锁是否可用
+        /// 等待并获取锁（带返回值）
         /// </summary>
-        /// <param name="key"></param>
-        /// <returns></returns>
-        public static bool IsLockAvailable(string key)
+        public static async Task<(bool Success, T Result)> TryLockAsync<T>(string resource,
+            TimeSpan expirationTime, Func<Task<T>> func)
         {
-            if (_lockObjs.TryGetValue(key, out SemaphoreSlim semaphore) && semaphore != null)
+            ArgumentException.ThrowIfNullOrWhiteSpace(resource);
+            ArgumentNullException.ThrowIfNull(func);
+
+            if (await LockEnterAsync(resource, expirationTime))
             {
-                return semaphore.CurrentCount > 0;
+                try
+                {
+                    return (true, await func());
+                }
+                finally
+                {
+                    LockExit(resource);
+                }
             }
-            return true;
+            return (false, default);
+        }
+
+        /// <summary>
+        /// 获取当前活跃的锁数量（用于调试/监控）
+        /// </summary>
+        public static int ActiveLockCount => _lockWrappers.Count;
+
+        /// <summary>
+        /// 检查指定资源是否有活跃引用
+        /// </summary>
+        public static bool HasActiveReference(string resource)
+        {
+            lock (_cleanupLock)
+            {
+                return _lockWrappers.TryGetValue(resource, out var wrapper)
+                       && wrapper.RefCount > 0;
+            }
         }
     }
 }
