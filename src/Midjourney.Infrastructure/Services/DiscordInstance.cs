@@ -927,12 +927,11 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
             try
             {
-
                 // 开始
                 Log.Information("开始处理任务。 {@0} - {@1} - {@2}", info.Id, info.InstanceId, info.Status);
 
                 // 同一个任务锁
-                using var infoLock = RedisHelper.Instance.Lock($"UpdateProgress:{info.Id}", 10);
+                using var infoLock = RedisHelper.Instance.Lock($"UpdateProgress:{info.Id}", 15);
                 if (infoLock == null)
                 {
                     // 从队列取出后，但是没有消费，可能会造成任务 NOT_START
@@ -1641,12 +1640,10 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 _runningTasks.TryRemove(info.Id, out _);
                 _taskFutureMap.TryRemove(info.Id, out _);
 
-                // 如果任务执行结束，仍然处于未开始状态，则标为失败
+                // 如果任务执行结束，仍然处于未开始状态
                 if (!info.IsCompleted)
                 {
-                    _logger.Error("未知错误，任务执行结束仍未完成 {@0} - {@1} - {@2}", info.Id, info.InstanceId, info.Status);
-
-                    info.Fail("未知错误，任务执行结束仍未完成");
+                    _logger.Error("警告：未知错误，任务执行结束仍未完成 {@0} - {@1} - {@2}", info.Id, info.InstanceId, info.Status);
                 }
 
                 SaveAndNotify(info);
@@ -2017,51 +2014,61 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <returns></returns>
         public async Task<SubmitResultVO> EnqueueAsync(TaskInfoQueue req)
         {
+            if (req?.Info == null)
+            {
+                return SubmitResultVO.Fail(ReturnCode.FAILURE, "未知错误，请稍后重试");
+            }
+
             var info = req.Info;
-
-            var currentWaitNumbers = 0;
-
-            if (info.IsPartnerRelax)
-            {
-                // 在任务提交时，前面的的任务数量
-                currentWaitNumbers = await _relaxQueue.CountAsync();
-
-                if (Account.RelaxQueueSize > 0 && currentWaitNumbers >= Account.RelaxQueueSize)
-                {
-                    return SubmitResultVO.Fail(ReturnCode.FAILURE, "提交失败，队列已满，请稍后重试")
-                        .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, ChannelId);
-                }
-
-                var success = await _relaxQueue.EnqueueAsync(req, Account.RelaxQueueSize);
-                if (!success)
-                {
-                    return SubmitResultVO.Fail(ReturnCode.FAILURE, "提交失败，队列已满，请稍后重试")
-                        .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, ChannelId);
-                }
-            }
-            else
-            {
-                // 在任务提交时，前面的的任务数量
-                currentWaitNumbers = await _defaultOrFastQueue.CountAsync();
-                if (Account.QueueSize > 0 && currentWaitNumbers >= Account.QueueSize)
-                {
-                    return SubmitResultVO.Fail(ReturnCode.FAILURE, "提交失败，队列已满，请稍后重试")
-                        .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, ChannelId);
-                }
-
-                var success = await _defaultOrFastQueue.EnqueueAsync(req, Account.QueueSize);
-                if (!success)
-                {
-                    return SubmitResultVO.Fail(ReturnCode.FAILURE, "提交失败，队列已满，请稍后重试")
-                        .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, ChannelId);
-                }
-            }
+            info.InstanceId = ChannelId;
 
             try
             {
-                info.InstanceId = ChannelId;
+                var currentWaitNumbers = 0;
 
-                _taskStoreService.Save(info);
+                if (info.IsPartnerRelax)
+                {
+                    // 在任务提交时，前面的的任务数量
+                    currentWaitNumbers = await _relaxQueue.CountAsync();
+
+                    if (Account.RelaxQueueSize > 0 && currentWaitNumbers >= Account.RelaxQueueSize)
+                    {
+                        return SubmitResultVO.Fail(ReturnCode.FAILURE, "提交失败，队列已满，请稍后重试")
+                            .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, ChannelId);
+                    }
+
+                    // 先保存到数据库，再加入到队列
+                    _taskStoreService.Save(info);
+                    var success = await _relaxQueue.EnqueueAsync(req, Account.RelaxQueueSize);
+                    if (!success)
+                    {
+                        _taskStoreService.Delete(info.Id);
+
+                        return SubmitResultVO.Fail(ReturnCode.FAILURE, "提交失败，队列已满，请稍后重试")
+                            .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, ChannelId);
+                    }
+                }
+                else
+                {
+                    // 在任务提交时，前面的的任务数量
+                    currentWaitNumbers = await _defaultOrFastQueue.CountAsync();
+                    if (Account.QueueSize > 0 && currentWaitNumbers >= Account.QueueSize)
+                    {
+                        return SubmitResultVO.Fail(ReturnCode.FAILURE, "提交失败，队列已满，请稍后重试")
+                            .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, ChannelId);
+                    }
+
+                    // 先保存到数据库，再加入到队列
+                    _taskStoreService.Save(info);
+                    var success = await _defaultOrFastQueue.EnqueueAsync(req, Account.QueueSize);
+                    if (!success)
+                    {
+                        _taskStoreService.Delete(info.Id);
+
+                        return SubmitResultVO.Fail(ReturnCode.FAILURE, "提交失败，队列已满，请稍后重试")
+                            .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, ChannelId);
+                    }
+                }
 
                 // 发送入队提醒
                 if (IsValidRedis)
