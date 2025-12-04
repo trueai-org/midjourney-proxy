@@ -301,16 +301,23 @@ namespace Midjourney.API
                                                 var taskIds = LiteDBHelper.TaskStore.GetCollection().Query().Select(c => c.Id).ToList();
                                                 foreach (var tid in taskIds)
                                                 {
-                                                    var info = LiteDBHelper.TaskStore.Get(tid);
-                                                    if (info != null)
+                                                    try
                                                     {
-                                                        // 判断是否存在
-                                                        var exist = taskStore.Any(c => c.Id == info.Id);
-                                                        if (!exist)
+                                                        var info = LiteDBHelper.TaskStore.Get(tid);
+                                                        if (info != null)
                                                         {
-                                                            taskStore.Add(info);
-                                                            success++;
+                                                            // 判断是否存在
+                                                            var exist = taskStore.Any(c => c.Id == info.Id);
+                                                            if (!exist)
+                                                            {
+                                                                taskStore.Add(info);
+                                                                success++;
+                                                            }
                                                         }
+                                                    }
+                                                    catch (Exception ex)
+                                                    {
+                                                        _logger.Error(ex, "LiteDB 自动迁移绘图任务数异常 TaskId: {@0}", tid);
                                                     }
                                                 }
 
@@ -1161,30 +1168,6 @@ namespace Midjourney.API
                             sw.Restart();
                         }
 
-                        // 高频同步 info setting 一定会封号
-                        if (!account.IsYouChuan && !account.IsOfficial)
-                        {
-                            try
-                            {
-                                // 这里应该等待初始化完成，并获取用户信息验证，获取用户成功后设置为可用状态
-                                // 多账号启动时，等待一段时间再启动下一个账号
-                                await Task.Delay(1000 * 5);
-
-                                // 启动后执行 info setting 操作
-                                await _taskService.InfoSetting(account.Id);
-                            }
-                            catch (Exception ex)
-                            {
-                                _logger.Error(ex, "同步 info 异常 {@0}", account.ChannelId);
-
-                                info.AppendLine($"{account.Id}初始化中... 同步 info 异常");
-                            }
-                        }
-
-                        sw.Stop();
-                        info.AppendLine($"{account.Id}初始化中... 同步 info 耗时: {sw.ElapsedMilliseconds}ms");
-                        sw.Restart();
-
                         db.Update("NijiBotChannelId,PrivateChannelId,AllowModes,SubChannels,SubChannelValues,FastExhausted", account);
                         account.ClearCache();
 
@@ -1210,6 +1193,30 @@ namespace Midjourney.API
                         sw.Stop();
                         info.AppendLine($"{account.Id}初始化中... 创建实例耗时: {sw.ElapsedMilliseconds}ms");
                         sw.Restart();
+
+                        // 高频同步 info setting 一定会封号
+                        if (!account.IsYouChuan && !account.IsOfficial)
+                        {
+                            try
+                            {
+                                // 这里应该等待初始化完成，并获取用户信息验证，获取用户成功后设置为可用状态
+                                // 多账号启动时，等待一段时间再启动下一个账号
+                                await Task.Delay(1000 * 5);
+
+                                // 启动后执行 info setting 操作
+                                await _taskService.InfoSetting(account.Id);
+
+                                sw.Stop();
+                                info.AppendLine($"{account.Id}初始化中... 同步 info 耗时: {sw.ElapsedMilliseconds}ms");
+                                sw.Restart();
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.Error(ex, "同步 info 异常 {@0}", account.ChannelId);
+
+                                info.AppendLine($"{account.Id}初始化中... 同步 info 异常");
+                            }
+                        }
                     }
 
                     // 无最大并行限制
