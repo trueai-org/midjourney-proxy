@@ -67,6 +67,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <param name="shorten"></param>
         /// <param name="preferredSpeedMode">首选速度模式，优先使用此模式过滤</param>
         /// <param name="isYm">悠船/官方账号</param>
+        /// <param name="isHdVideo"></param>
+        /// <param name="isRedisUpscale">是否为 redis 模式下的放大任务，如果 redis 放大任务，则不验证队列长度</param>
         public DiscordInstance ChooseInstance(
             AccountFilter accountFilter = null,
             bool? isNewTask = null,
@@ -81,12 +83,13 @@ namespace Midjourney.Infrastructure.LoadBalancer
             bool? isYm = null,
             bool? isVideo = null,
             bool? isHdVideo = null,
-            bool? isYouChuan = null)
+            bool? isYouChuan = null,
+            bool? isRedisUpscale = null)
         {
             var list = GetAliveInstances()
 
                 // 过滤有空闲队列的实例
-                .Where(c => c.IsIdleQueue(preferredSpeedMode))
+                .WhereIf(isRedisUpscale != true, c => c.IsIdleQueue(preferredSpeedMode))
 
                 // 允许继续绘图
                 .Where(c => c.Account.IsDailyLimitContinueDrawing(preferredSpeedMode) && c.Account.Enable == true)

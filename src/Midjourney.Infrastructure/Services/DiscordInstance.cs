@@ -28,8 +28,6 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.RegularExpressions;
-using Instances;
-using Microsoft.Identity.Client;
 using Midjourney.Infrastructure.Services;
 using Midjourney.License;
 using Newtonsoft.Json.Linq;
@@ -103,6 +101,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
         private readonly RedisQueue<TaskInfoQueue> _relaxQueue;
 
         private readonly RedisQueue<TaskInfoQueue> _defaultOrFastQueue;
+
+        // 放大专属队列, 不占用并发数
+        private readonly RedisQueue<TaskInfoQueue> _upscaleQueue;
 
         // redis 并发
         private readonly RedisConcurrent _relaxConcurrent;
@@ -181,6 +182,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
             if (IsValidRedis)
             {
+                _upscaleQueue = new RedisQueue<TaskInfoQueue>(RedisHelper.Instance, $"upscale:{account.ChannelId}", 12);
+
                 _relaxQueue = new RedisQueue<TaskInfoQueue>(RedisHelper.Instance, $"relax:{account.ChannelId}", account.RelaxCoreSize);
                 _defaultOrFastQueue = new RedisQueue<TaskInfoQueue>(RedisHelper.Instance, $"fast:{account.ChannelId}", account.CoreSize);
 
@@ -646,7 +649,47 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 try
                 {
                     // 是否立即执行下一个快速任务
-                    var isContinueDefault = false;
+                    var isContinueNext = false;
+
+                    // 放大任务队列，不判断并发数
+                    var upscaleQueueCount = await _upscaleQueue.CountAsync();
+                    if (upscaleQueueCount > 0)
+                    {
+                        var req = await _upscaleQueue.DequeueAsync(token);
+                        if (req?.Info != null)
+                        {
+                            // 如果队列中还有任务
+                            isContinueNext = upscaleQueueCount > 1;
+
+                            // 在执行前休眠，由于消息已经取出来了，但是还没有消费或提交，如果服务器突然宕机，可能会导致提交参数丢失
+                            await AccountBeforeDelay();
+
+                            // 使用 Task.Run 启动后台任务，避免阻塞主线程
+                            _ = Task.Run(async () =>
+                            {
+                                try
+                                {
+                                    await UpdateProgress(req);
+                                }
+                                finally
+                                {
+                                    // 发送锁我已经释放了
+                                    var notification = new RedisNotification
+                                    {
+                                        Type = ENotificationType.DisposeLock,
+                                        ChannelId = ChannelId,
+                                        TaskInfoId = req?.Info?.Id
+                                    };
+                                    RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
+                                }
+                            }, token);
+                            await AccountAfterDelay();
+                        }
+                        else
+                        {
+                            Log.Warning("Redis 放大队列出队为空 {@0}", Account.ChannelId);
+                        }
+                    }
 
                     // 从快速队列获取任务
                     var queueCount = await _defaultOrFastQueue.CountAsync();
@@ -662,7 +705,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                         if (lockObj != null)
                         {
                             // 如果队列中还有任务，并且获取到锁
-                            isContinueDefault = queueCount > 1;
+                            isContinueNext = isContinueNext || queueCount > 1;
 
                             // 内部已经控制了并发和阻塞，这里只需循环调用
                             var req = await _defaultOrFastQueue.DequeueAsync(token);
@@ -735,7 +778,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                     // 只有悠船才有慢速队列
                     // 是否立即执行下一个慢速任务
-                    var isContinueRelax = false;
                     var relaxQueueCount = 0;
                     if (Account.IsYouChuan)
                     {
@@ -753,7 +795,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                             if (lockObj != null)
                             {
                                 // 如果队列中还有任务，并且获取到锁
-                                isContinueDefault = relaxQueueCount > 1;
+                                isContinueNext = isContinueNext || relaxQueueCount > 1;
 
                                 // 内部已经控制了并发和阻塞，这里只需循环调用
                                 var req = await _relaxQueue.DequeueAsync(token);
@@ -822,8 +864,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
                         }
                     }
 
-                    // 并行数未满，且还有队列任务时，立即执行下一次判断
-                    if (isContinueDefault || isContinueRelax)
+                    // 队列可能还有任务时，立即执行下一次判断
+                    if (isContinueNext)
                     {
                         await Task.Delay(200, token);
                     }
@@ -2047,7 +2089,23 @@ namespace Midjourney.Infrastructure.LoadBalancer
             {
                 var currentWaitNumbers = 0;
 
-                if (info.IsPartnerRelax)
+                // 如果是放大任务，则加入放大队列
+                if (info.Action == TaskAction.UPSCALE)
+                {
+                    // 先保存到数据库，再加入到队列
+                    _taskStoreService.Save(info);
+
+                    // 放大队列允许溢出
+                    var success = await _upscaleQueue.EnqueueAsync(req, -1, ignoreFull: true);
+                    if (!success)
+                    {
+                        _taskStoreService.Delete(info.Id);
+
+                        return SubmitResultVO.Fail(ReturnCode.FAILURE, "提交失败，队列已满，请稍后重试")
+                            .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, ChannelId);
+                    }
+                }
+                else if (info.IsPartnerRelax)
                 {
                     // 在任务提交时，前面的的任务数量
                     currentWaitNumbers = await _relaxQueue.CountAsync();

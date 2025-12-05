@@ -2417,8 +2417,10 @@ namespace Midjourney.Infrastructure.Services
                 // 通过子频道过滤可用账号
                 if (ids.Count > 0)
                 {
-                    discordInstance = _discordLoadBalancer.ChooseInstance(accountFilter: task.AccountFilter,
-                        botType: task.RealBotType ?? task.BotType, ids: ids);
+                    discordInstance = _discordLoadBalancer.ChooseInstance(
+                        accountFilter: task.AccountFilter,
+                        botType: task.RealBotType ?? task.BotType, ids: ids,
+                        isRedisUpscale: GlobalConfiguration.Setting.IsValidRedis && task.Action == TaskAction.UPSCALE);
 
                     if (discordInstance != null)
                     {
@@ -2445,7 +2447,8 @@ namespace Midjourney.Infrastructure.Services
                         isNewTask: true,
                         botType: task.RealBotType ?? task.BotType,
                         preferredSpeedMode: task.Mode,
-                        isYouChuan: true);
+                        isYouChuan: true,
+                        isRedisUpscale: GlobalConfiguration.Setting.IsValidRedis && task.Action == TaskAction.UPSCALE);
                 }
             }
 
@@ -2464,9 +2467,9 @@ namespace Midjourney.Infrastructure.Services
             task.IsOfficial = discordInstance.Account.IsOfficial;
             task.InstanceId = discordInstance.ChannelId;
 
-            if (task.Action == TaskAction.UPSCALE && (task.IsPartner || task.IsOfficial))
+            if (GlobalConfiguration.Setting.IsValidRedis && task.Action == TaskAction.UPSCALE)
             {
-                // 悠船/官方放大不验证额度
+                // redis 模式下放大不验证速度和额度
             }
             else
             {
