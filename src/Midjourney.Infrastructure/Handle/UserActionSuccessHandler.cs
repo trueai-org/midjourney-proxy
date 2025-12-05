@@ -22,6 +22,7 @@
 // invasion of privacy, or any other unlawful purposes is strictly prohibited. 
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 using Midjourney.Infrastructure.LoadBalancer;
+using Serilog;
 
 namespace Midjourney.Infrastructure.Handle
 {
@@ -46,6 +47,15 @@ namespace Midjourney.Infrastructure.Handle
                 && parseData != null && parseActionData != null
                 && message.Author.Bot == true && message.Author.Username.Contains("journey Bot", StringComparison.OrdinalIgnoreCase))
             {
+                // 检查是否是视频扩展完成消息
+                var customId = message.Interaction?.Name;
+                if (parseActionData.Action == TaskAction.VIDEO || (content != null && content.Contains("extended", StringComparison.OrdinalIgnoreCase)))
+                {
+                    var contentPreview = content != null ? content.Substring(0, Math.Min(200, content.Length)) : "";
+                    Log.Information("收到视频操作完成消息: Action={Action}, Prompt={Prompt}, Content={Content}",
+                        parseActionData.Action, parseData.Prompt, contentPreview);
+                }
+
                 FindAndFinishImageTask(instance, parseActionData.Action, parseData.Prompt, message);
             }
         }

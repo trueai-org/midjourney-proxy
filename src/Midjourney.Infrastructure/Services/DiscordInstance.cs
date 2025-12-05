@@ -28,6 +28,8 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.RegularExpressions;
+using Instances;
+using Microsoft.Identity.Client;
 using Midjourney.Infrastructure.Services;
 using Midjourney.License;
 using Newtonsoft.Json.Linq;
@@ -940,10 +942,12 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 }
 
                 // 重新获取 info
+                var oldId = info.Id;
+
                 info = _taskStoreService.Get(info.Id);
                 if (info == null)
                 {
-                    Log.Warning("任务不存在，跳过处理。 {@0}", info.Id);
+                    Log.Warning("任务不存在，跳过处理。 {@0}", oldId);
                     return;
                 }
 
@@ -1560,6 +1564,23 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                 }
                                 else
                                 {
+                                    var result = await ImagineAsync(info, info.PromptEn,
+                                        info.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default));
+                                    if (result?.Code != ReturnCode.SUCCESS)
+                                    {
+                                        info.Fail(result?.Description ?? "未知错误");
+                                        SaveAndNotify(info);
+                                        return;
+                                    }
+
+                                    if (!info.IsCompleted)
+                                    {
+                                        info.StartTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+                                        info.Status = TaskStatus.SUBMITTED;
+                                        info.Progress = "0%";
+                                    }
+
+                                    SaveAndNotify(info);
                                 }
                             }
                             break;

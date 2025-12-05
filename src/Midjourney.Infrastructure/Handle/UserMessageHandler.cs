@@ -86,6 +86,7 @@ namespace Midjourney.Infrastructure.Handle
             return botType;
         }
 
+
         protected void FindAndFinishImageTask(DiscordInstance instance, TaskAction action, string finalPrompt, EventData message)
         {
             // 跳过 Waiting to start 消息
@@ -111,10 +112,7 @@ namespace Midjourney.Infrastructure.Handle
             string imageUrl = GetImageUrl(message);
             string messageHash = discordHelper.GetMessageHash(imageUrl);
 
-            // 优先级1: 通过MessageId匹配
             var task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && c.MessageId == msgId).FirstOrDefault();
-
-            // 优先级2: 通过InteractionMetadataId匹配
             if (task == null && !string.IsNullOrWhiteSpace(message.InteractionMetadata?.Id))
             {
                 task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && c.InteractionMetadataId == message.InteractionMetadata.Id).FirstOrDefault();
@@ -126,171 +124,56 @@ namespace Midjourney.Infrastructure.Handle
                 }
             }
 
+            // 如果依然找不到任务，可能是 NIJI 任务
+            // 不判断 && botType == EBotType.NIJI_JOURNEY
             var botType = GetBotType(message);
 
-            // 优先级3: 通过PromptFull匹配（严格模式：多个候选任务时不匹配）
+            // 优先使用 full prompt 进行匹配
             if (task == null)
             {
                 if (!string.IsNullOrWhiteSpace(fullPrompt))
                 {
-                    var candidateTasks = instance
-                        .FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && (c.BotType == botType || c.RealBotType == botType) && c.PromptFull == fullPrompt)
-                        .OrderByDescending(c => c.Status == TaskStatus.SUBMITTED ? 1 : 0)
-                        .ThenByDescending(c => c.SubmitTime ?? 0)
-                        .ToList();
-
-                    if (candidateTasks.Count > 0)
-                    {
-                        task = candidateTasks.First();
-                        if (candidateTasks.Count > 1)
-                        {
-                            Log.Warning("USER PromptFull匹配发现多个相同提示词的任务, Count: {Count}, MessageId: {MessageId}, 选择最近提交的任务: {TaskId} (SubmitTime: {SubmitTime})",
-                                candidateTasks.Count, msgId, task.Id, task.SubmitTime?.ToDateTimeString() ?? "N/A");
-                        }
-                    }
+                    task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && (c.BotType == botType || c.RealBotType == botType) && c.PromptFull == fullPrompt)
+                    .OrderBy(c => c.StartTime).FirstOrDefault();
                 }
             }
 
-            // 优先级4: 通过FormatPrompt匹配（仅精确匹配，避免误匹配）
             if (task == null)
             {
                 var prompt = finalPrompt.FormatPrompt();
 
                 if (!string.IsNullOrWhiteSpace(prompt))
                 {
-                    var candidateTasks = instance
+                    task = instance
                         .FindRunningTask(c =>
                         (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED)
                         && (c.BotType == botType || c.RealBotType == botType)
                         && !string.IsNullOrWhiteSpace(c.PromptEn)
-                        && c.PromptEn.FormatPrompt() == prompt)  // ✅ 仅精确匹配，移除危险的EndsWith/StartsWith
-                        .OrderByDescending(c => c.Status == TaskStatus.SUBMITTED ? 1 : 0)
-                        .ThenByDescending(c => c.SubmitTime ?? 0)
-                        .ToList();
-
-                    if (candidateTasks.Count > 0)
-                    {
-                        task = candidateTasks.First();
-                        if (candidateTasks.Count > 1)
-                        {
-                            Log.Warning("USER FormatPrompt匹配发现多个相同提示词的任务, Count: {Count}, MessageId: {MessageId}, Prompt: {Prompt}, 选择最近提交的任务: {TaskId} (SubmitTime: {SubmitTime})",
-                                candidateTasks.Count, msgId, prompt.Substring(0, Math.Min(50, prompt.Length)), task.Id, task.SubmitTime?.ToDateTimeString() ?? "N/A");
-                        }
-                    }
+                        && (c.PromptEn.FormatPrompt() == prompt || c.PromptEn.FormatPrompt().EndsWith(prompt) || prompt.StartsWith(c.PromptEn.FormatPrompt())))
+                        .OrderBy(c => c.StartTime).FirstOrDefault();
+                }
+                else
+                {
+                    // 如果最终提示词为空，则可能是重绘、混图等任务
+                    task = instance
+                        .FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED)
+                        && (c.BotType == botType || c.RealBotType == botType) && c.Action == action)
+                        .OrderBy(c => c.StartTime).FirstOrDefault();
                 }
             }
 
-            // 优先级5: 通过FormatPromptParam匹配（仅精确匹配，避免误匹配）
+
+            // 如果依然找不到任务，保留 prompt link 进行匹配
             if (task == null)
             {
                 var prompt = finalPrompt.FormatPromptParam();
                 if (!string.IsNullOrWhiteSpace(prompt))
                 {
-                    var candidateTasks = instance
+                    task = instance
                             .FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) &&
                             (c.BotType == botType || c.RealBotType == botType) && !string.IsNullOrWhiteSpace(c.PromptEn)
-                            && c.PromptEn.FormatPromptParam() == prompt)  // ✅ 仅精确匹配，移除危险的EndsWith/StartsWith
-                            .OrderByDescending(c => c.Status == TaskStatus.SUBMITTED ? 1 : 0)
-                            .ThenByDescending(c => c.SubmitTime ?? 0)
-                            .ToList();
-
-                    if (candidateTasks.Count > 0)
-                    {
-                        task = candidateTasks.First();
-                        if (candidateTasks.Count > 1)
-                        {
-                            Log.Warning("USER FormatPromptParam匹配发现多个相同提示词的任务, Count: {Count}, MessageId: {MessageId}, Prompt: {Prompt}, 选择最近提交的任务: {TaskId} (SubmitTime: {SubmitTime})",
-                                candidateTasks.Count, msgId, prompt.Substring(0, Math.Min(50, prompt.Length)), task.Id, task.SubmitTime?.ToDateTimeString() ?? "N/A");
-                        }
-                    }
-                }
-            }
-
-            // 优先级6: 改进的空prompt匹配逻辑
-            if (task == null)
-            {
-                // 对于特定的任务类型，当prompt为空时提供更精确的匹配
-                if (action == TaskAction.VIDEO || action == TaskAction.VIDEO_EXTEND ||
-                    action == TaskAction.BLEND || action == TaskAction.DESCRIBE ||
-                    action == TaskAction.ACTION)
-                {
-                    // 首先尝试通过imageUrl匹配，如果任务的prompt包含相同的URL
-                    if (!string.IsNullOrWhiteSpace(imageUrl))
-                    {
-                        task = instance.FindRunningTask(c =>
-                            (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) &&
-                            (c.BotType == botType || c.RealBotType == botType) &&
-                            c.Action == action &&
-                            !string.IsNullOrWhiteSpace(c.PromptEn) && c.PromptEn.Contains(imageUrl))
+                            && (c.PromptEn.FormatPromptParam() == prompt || c.PromptEn.FormatPromptParam().EndsWith(prompt) || prompt.StartsWith(c.PromptEn.FormatPromptParam())))
                             .OrderBy(c => c.StartTime).FirstOrDefault();
-                    }
-
-                    // 如果通过URL匹配失败，尝试通过messageHash匹配
-                    if (task == null && !string.IsNullOrWhiteSpace(messageHash))
-                    {
-                        task = instance.FindRunningTask(c =>
-                            (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) &&
-                            (c.BotType == botType || c.RealBotType == botType) &&
-                            c.Action == action &&
-                            (c.JobId == messageHash || c.MessageId == messageHash))
-                            .OrderBy(c => c.StartTime).FirstOrDefault();
-                    }
-
-                    // 最后才使用原有的模糊匹配，但增加时间窗口限制和唯一性保证
-                    if (task == null)
-                    {
-                        // 缩短时间窗口到2分钟，减少误匹配概率
-                        var cutoffTime = DateTimeOffset.Now.AddMinutes(-2).ToUnixTimeMilliseconds();
-                        var candidateTasks = instance.FindRunningTask(c =>
-                            (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) &&
-                            (c.BotType == botType || c.RealBotType == botType) &&
-                            c.Action == action &&
-                            c.StartTime >= cutoffTime)
-                            .OrderBy(c => c.StartTime)
-                            .ToList();
-
-                        // 如果只有一个候选任务，才认为匹配成功；如果有多个，说明无法准确区分，记录警告
-                        if (candidateTasks.Count == 1)
-                        {
-                            task = candidateTasks.First();
-                            Log.Warning("USER 使用模糊匹配找到任务, TaskId: {TaskId}, Action: {Action}, 建议优化任务提交时的唯一标识",
-                                task.Id, action);
-                        }
-                        else if (candidateTasks.Count > 1)
-                        {
-                            Log.Error("USER 发现多个候选任务无法区分, Count: {Count}, Action: {Action}, MessageId: {MessageId}, 可能导致任务混淆！",
-                                candidateTasks.Count, action, msgId);
-                            // 不匹配任何任务，避免错误匹配
-                            task = null;
-                        }
-                    }
-                }
-                else
-                {
-                    // 其他任务类型使用原有逻辑，但增加时间窗口限制和唯一性保证
-                    var cutoffTime = DateTimeOffset.Now.AddMinutes(-2).ToUnixTimeMilliseconds();
-                    var candidateTasks = instance.FindRunningTask(c =>
-                        (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) &&
-                        (c.BotType == botType || c.RealBotType == botType) &&
-                        c.Action == action &&
-                        c.StartTime >= cutoffTime)
-                        .OrderBy(c => c.StartTime)
-                        .ToList();
-
-                    // 如果只有一个候选任务，才认为匹配成功；如果有多个，说明无法准确区分，记录警告
-                    if (candidateTasks.Count == 1)
-                    {
-                        task = candidateTasks.First();
-                        Log.Warning("USER 使用模糊匹配找到任务, TaskId: {TaskId}, Action: {Action}, 建议优化任务提交时的唯一标识",
-                            task.Id, action);
-                    }
-                    else if (candidateTasks.Count > 1)
-                    {
-                        Log.Error("USER 发现多个候选任务无法区分, Count: {Count}, Action: {Action}, MessageId: {MessageId}, 可能导致任务混淆！",
-                            candidateTasks.Count, action, msgId);
-                        // 不匹配任务，避免错误匹配
-                        task = null;
-                    }
                 }
             }
 
@@ -313,8 +196,58 @@ namespace Midjourney.Infrastructure.Handle
             task.ImageUrl = imageUrl;
             task.JobId = messageHash;
 
-            FinishTask(task, message);
-            task.Awake();
+            // 检查是否是视频扩展的第一步（放大）
+            var isVideoExtend = !string.IsNullOrWhiteSpace(task.GetProperty<string>(Constants.TASK_PROPERTY_VIDEO_EXTEND_TARGET_TASK_ID, default));
+
+            if (!isVideoExtend)
+            {
+                // 普通任务，直接完成
+                FinishTask(task, message);
+                task.Awake();
+            }
+            else
+            {
+                // 视频扩展任务，需要先设置 Buttons 等属性，然后触发扩展操作
+
+                // 🎯 关键：先设置 Buttons 和其他属性（从 FinishTask 中提取）
+                var image = message.Attachments?.FirstOrDefault();
+                if (image != null)
+                {
+                    task.Width = image.Width;
+                    task.Height = image.Height;
+                    task.Url = image.Url;
+                    task.ProxyUrl = image.ProxyUrl;
+                    task.Size = image.Size;
+                    task.ContentType = image.ContentType;
+                }
+
+                task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_ID, message.Id);
+                task.SetProperty(Constants.TASK_PROPERTY_FLAGS, Convert.ToInt32(message.Flags));
+
+                // ✅ 设置 Buttons（这是关键！）
+                task.Buttons = message.Components.SelectMany(x => x.Components)
+                    .Select(btn =>
+                    {
+                        return new CustomComponentModel
+                        {
+                            CustomId = btn.CustomId ?? string.Empty,
+                            Emoji = btn.Emoji?.Name ?? string.Empty,
+                            Label = btn.Label ?? string.Empty,
+                            Style = (int?)btn.Style ?? 0,
+                            Type = (int?)btn.Type ?? 0,
+                        };
+                    }).Where(c => c != null && !string.IsNullOrWhiteSpace(c.CustomId)).ToList();
+
+                task.Status = TaskStatus.IN_PROGRESS;
+                task.Description = "/video extend";
+                task.Progress = "0%";
+
+                Log.Information("视频放大完成（FindAndFinishImageTask），准备触发扩展操作: TaskId={TaskId}, ButtonsCount={ButtonsCount}",
+                    task.Id, task.Buttons?.Count ?? 0);
+
+                // 触发第二步（扩展）
+                CheckAndTriggerVideoExtend(instance, task, messageHash);
+            }
         }
 
         /// <summary>
