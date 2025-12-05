@@ -82,7 +82,7 @@ namespace Midjourney.Base.Models
         /// <summary>
         /// 自动收录官网违禁词到违禁词库
         /// </summary>
-        public bool EnableAutoCollectOfficialBannedWords { get; set; } = true;
+        public bool EnableAutoCollectOfficialBannedWords { get; set; } = false;
 
         /// <summary>
         /// 用户触发违规词后，自动清除用户的提示词中的违规词

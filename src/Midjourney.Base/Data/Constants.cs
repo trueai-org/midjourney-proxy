@@ -189,6 +189,32 @@ namespace Midjourney.Base.Data
         /// </summary>
         public const string MJ_MESSAGE_HANDLED = "mj_proxy_handled";
 
+        /// <summary>
+        /// 语言参数，用于指定返回的语言
+        /// </summary>
+        public const string TASK_PROPERTY_LANGUAGE = "language";
+
+        /// <summary>
+        /// 视频扩展的目标任务ID（用于记录需要在哪个任务完成后执行扩展）
+        /// </summary>
+        public const string TASK_PROPERTY_VIDEO_EXTEND_TARGET_TASK_ID = "video_extend_target_task_id";
+
+        /// <summary>
+        /// 视频扩展的原始提示词
+        /// </summary>
+        public const string TASK_PROPERTY_VIDEO_EXTEND_PROMPT = "video_extend_prompt";
+
+        /// <summary>
+        /// 视频扩展的 motion 参数
+        /// </summary>
+        public const string TASK_PROPERTY_VIDEO_EXTEND_MOTION = "video_extend_motion";
+
+        /// <summary>
+        /// 视频扩展的 index 参数
+        /// </summary>
+        public const string TASK_PROPERTY_VIDEO_EXTEND_INDEX = "video_extend_index";
+
+
         // --------------- redis ---------------
 
         /// <summary>

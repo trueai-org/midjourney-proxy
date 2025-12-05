@@ -104,6 +104,70 @@ namespace Midjourney.Infrastructure.Services
             return prompt;
         }
 
+        public string TranslateToChinese(string prompt)
+        {
+            var appid = GlobalConfiguration.Setting?.BaiduTranslate?.Appid;
+            var appSecret = GlobalConfiguration.Setting?.BaiduTranslate?.AppSecret;
+
+            if (string.IsNullOrWhiteSpace(appid) || string.IsNullOrWhiteSpace(appSecret))
+            {
+                return prompt;
+            }
+
+            if (string.IsNullOrWhiteSpace(prompt))
+            {
+                return prompt;
+            }
+
+            string salt = new Random().Next(10000, 99999).ToString();
+            string sign = ComputeMd5Hash(appid + prompt + salt + appSecret);
+
+            var body = new Dictionary<string, string>
+            {
+                { "from", "en" },
+                { "to", "zh" },
+                { "appid", appid },
+                { "salt", salt },
+                { "q", prompt },
+                { "sign", sign }
+            };
+
+            try
+            {
+                using (var client = new HttpClient())
+                {
+                    var content = new FormUrlEncodedContent(body);
+                    var response = client.PostAsync(TRANSLATE_API, content).Result;
+
+                    if (!response.IsSuccessStatusCode || string.IsNullOrWhiteSpace(response.Content.ReadAsStringAsync().Result))
+                    {
+                        throw new InvalidOperationException($"{response.StatusCode} - {response.Content.ReadAsStringAsync().Result}");
+                    }
+
+                    var result = JsonDocument.Parse(response.Content.ReadAsStringAsync().Result);
+                    if (result.RootElement.TryGetProperty("error_code", out var errorCode))
+                    {
+                        throw new InvalidOperationException($"{errorCode.GetString()} - {result.RootElement.GetProperty("error_msg").GetString()}");
+                    }
+
+                    var transResult = result.RootElement.GetProperty("trans_result").EnumerateArray();
+                    var translatedStrings = new List<string>();
+                    foreach (var item in transResult)
+                    {
+                        translatedStrings.Add(item.GetProperty("dst").GetString());
+                    }
+
+                    return string.Join("\n", translatedStrings);
+                }
+            }
+            catch (Exception e)
+            {
+                Log.Warning(e, "Failed to call Baidu Translate to Chinese");
+            }
+
+            return prompt;
+        }
+
         private static string ComputeMd5Hash(string input)
         {
             using (var md5 = MD5.Create())

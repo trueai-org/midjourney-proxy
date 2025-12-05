@@ -2337,6 +2337,24 @@ namespace Midjourney.API.Controllers
                 }
             }
 
+            // 翻译服务
+            if (setting.TranslateWay == TranslateWay.GPT
+                && !string.IsNullOrWhiteSpace(setting.Openai?.GptApiKey))
+            {
+                var gptTranslate = new GPTTranslateService();
+                TranslateHelper.Initialize(gptTranslate);
+            }
+            else if (setting.TranslateWay == TranslateWay.BAIDU
+                && !string.IsNullOrWhiteSpace(setting.BaiduTranslate?.AppSecret))
+            {
+                var baiduTranslate = new BaiduTranslateService();
+                TranslateHelper.Initialize(baiduTranslate);
+            }
+            else
+            {
+                TranslateHelper.Initialize(null);
+            }
+
             setting.Id = Constants.DEFAULT_SETTING_ID;
 
             await SettingDb.Instance.SaveAsync(setting);

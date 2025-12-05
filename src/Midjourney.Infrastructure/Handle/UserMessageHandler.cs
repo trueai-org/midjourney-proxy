@@ -111,7 +111,10 @@ namespace Midjourney.Infrastructure.Handle
             string imageUrl = GetImageUrl(message);
             string messageHash = discordHelper.GetMessageHash(imageUrl);
 
+            // 优先级1: 通过MessageId匹配
             var task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && c.MessageId == msgId).FirstOrDefault();
+
+            // 优先级2: 通过InteractionMetadataId匹配
             if (task == null && !string.IsNullOrWhiteSpace(message.InteractionMetadata?.Id))
             {
                 task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && c.InteractionMetadataId == message.InteractionMetadata.Id).FirstOrDefault();
@@ -123,56 +126,171 @@ namespace Midjourney.Infrastructure.Handle
                 }
             }
 
-            // 如果依然找不到任务，可能是 NIJI 任务
-            // 不判断 && botType == EBotType.NIJI_JOURNEY
             var botType = GetBotType(message);
 
-            // 优先使用 full prompt 进行匹配
+            // 优先级3: 通过PromptFull匹配（严格模式：多个候选任务时不匹配）
             if (task == null)
             {
                 if (!string.IsNullOrWhiteSpace(fullPrompt))
                 {
-                    task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && (c.BotType == botType || c.RealBotType == botType) && c.PromptFull == fullPrompt)
-                    .OrderBy(c => c.StartTime).FirstOrDefault();
+                    var candidateTasks = instance
+                        .FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && (c.BotType == botType || c.RealBotType == botType) && c.PromptFull == fullPrompt)
+                        .OrderByDescending(c => c.Status == TaskStatus.SUBMITTED ? 1 : 0)
+                        .ThenByDescending(c => c.SubmitTime ?? 0)
+                        .ToList();
+
+                    if (candidateTasks.Count > 0)
+                    {
+                        task = candidateTasks.First();
+                        if (candidateTasks.Count > 1)
+                        {
+                            Log.Warning("USER PromptFull匹配发现多个相同提示词的任务, Count: {Count}, MessageId: {MessageId}, 选择最近提交的任务: {TaskId} (SubmitTime: {SubmitTime})",
+                                candidateTasks.Count, msgId, task.Id, task.SubmitTime?.ToDateTimeString() ?? "N/A");
+                        }
+                    }
                 }
             }
 
+            // 优先级4: 通过FormatPrompt匹配（仅精确匹配，避免误匹配）
             if (task == null)
             {
                 var prompt = finalPrompt.FormatPrompt();
 
                 if (!string.IsNullOrWhiteSpace(prompt))
                 {
-                    task = instance
+                    var candidateTasks = instance
                         .FindRunningTask(c =>
                         (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED)
                         && (c.BotType == botType || c.RealBotType == botType)
                         && !string.IsNullOrWhiteSpace(c.PromptEn)
-                        && (c.PromptEn.FormatPrompt() == prompt || c.PromptEn.FormatPrompt().EndsWith(prompt) || prompt.StartsWith(c.PromptEn.FormatPrompt())))
-                        .OrderBy(c => c.StartTime).FirstOrDefault();
-                }
-                else
-                {
-                    // 如果最终提示词为空，则可能是重绘、混图等任务
-                    task = instance
-                        .FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED)
-                        && (c.BotType == botType || c.RealBotType == botType) && c.Action == action)
-                        .OrderBy(c => c.StartTime).FirstOrDefault();
+                        && c.PromptEn.FormatPrompt() == prompt)  // ✅ 仅精确匹配，移除危险的EndsWith/StartsWith
+                        .OrderByDescending(c => c.Status == TaskStatus.SUBMITTED ? 1 : 0)
+                        .ThenByDescending(c => c.SubmitTime ?? 0)
+                        .ToList();
+
+                    if (candidateTasks.Count > 0)
+                    {
+                        task = candidateTasks.First();
+                        if (candidateTasks.Count > 1)
+                        {
+                            Log.Warning("USER FormatPrompt匹配发现多个相同提示词的任务, Count: {Count}, MessageId: {MessageId}, Prompt: {Prompt}, 选择最近提交的任务: {TaskId} (SubmitTime: {SubmitTime})",
+                                candidateTasks.Count, msgId, prompt.Substring(0, Math.Min(50, prompt.Length)), task.Id, task.SubmitTime?.ToDateTimeString() ?? "N/A");
+                        }
+                    }
                 }
             }
 
-
-            // 如果依然找不到任务，保留 prompt link 进行匹配
+            // 优先级5: 通过FormatPromptParam匹配（仅精确匹配，避免误匹配）
             if (task == null)
             {
                 var prompt = finalPrompt.FormatPromptParam();
                 if (!string.IsNullOrWhiteSpace(prompt))
                 {
-                    task = instance
+                    var candidateTasks = instance
                             .FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) &&
                             (c.BotType == botType || c.RealBotType == botType) && !string.IsNullOrWhiteSpace(c.PromptEn)
-                            && (c.PromptEn.FormatPromptParam() == prompt || c.PromptEn.FormatPromptParam().EndsWith(prompt) || prompt.StartsWith(c.PromptEn.FormatPromptParam())))
+                            && c.PromptEn.FormatPromptParam() == prompt)  // ✅ 仅精确匹配，移除危险的EndsWith/StartsWith
+                            .OrderByDescending(c => c.Status == TaskStatus.SUBMITTED ? 1 : 0)
+                            .ThenByDescending(c => c.SubmitTime ?? 0)
+                            .ToList();
+
+                    if (candidateTasks.Count > 0)
+                    {
+                        task = candidateTasks.First();
+                        if (candidateTasks.Count > 1)
+                        {
+                            Log.Warning("USER FormatPromptParam匹配发现多个相同提示词的任务, Count: {Count}, MessageId: {MessageId}, Prompt: {Prompt}, 选择最近提交的任务: {TaskId} (SubmitTime: {SubmitTime})",
+                                candidateTasks.Count, msgId, prompt.Substring(0, Math.Min(50, prompt.Length)), task.Id, task.SubmitTime?.ToDateTimeString() ?? "N/A");
+                        }
+                    }
+                }
+            }
+
+            // 优先级6: 改进的空prompt匹配逻辑
+            if (task == null)
+            {
+                // 对于特定的任务类型，当prompt为空时提供更精确的匹配
+                if (action == TaskAction.VIDEO || action == TaskAction.VIDEO_EXTEND ||
+                    action == TaskAction.BLEND || action == TaskAction.DESCRIBE ||
+                    action == TaskAction.ACTION)
+                {
+                    // 首先尝试通过imageUrl匹配，如果任务的prompt包含相同的URL
+                    if (!string.IsNullOrWhiteSpace(imageUrl))
+                    {
+                        task = instance.FindRunningTask(c =>
+                            (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) &&
+                            (c.BotType == botType || c.RealBotType == botType) &&
+                            c.Action == action &&
+                            !string.IsNullOrWhiteSpace(c.PromptEn) && c.PromptEn.Contains(imageUrl))
                             .OrderBy(c => c.StartTime).FirstOrDefault();
+                    }
+
+                    // 如果通过URL匹配失败，尝试通过messageHash匹配
+                    if (task == null && !string.IsNullOrWhiteSpace(messageHash))
+                    {
+                        task = instance.FindRunningTask(c =>
+                            (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) &&
+                            (c.BotType == botType || c.RealBotType == botType) &&
+                            c.Action == action &&
+                            (c.JobId == messageHash || c.MessageId == messageHash))
+                            .OrderBy(c => c.StartTime).FirstOrDefault();
+                    }
+
+                    // 最后才使用原有的模糊匹配，但增加时间窗口限制和唯一性保证
+                    if (task == null)
+                    {
+                        // 缩短时间窗口到2分钟，减少误匹配概率
+                        var cutoffTime = DateTimeOffset.Now.AddMinutes(-2).ToUnixTimeMilliseconds();
+                        var candidateTasks = instance.FindRunningTask(c =>
+                            (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) &&
+                            (c.BotType == botType || c.RealBotType == botType) &&
+                            c.Action == action &&
+                            c.StartTime >= cutoffTime)
+                            .OrderBy(c => c.StartTime)
+                            .ToList();
+
+                        // 如果只有一个候选任务，才认为匹配成功；如果有多个，说明无法准确区分，记录警告
+                        if (candidateTasks.Count == 1)
+                        {
+                            task = candidateTasks.First();
+                            Log.Warning("USER 使用模糊匹配找到任务, TaskId: {TaskId}, Action: {Action}, 建议优化任务提交时的唯一标识",
+                                task.Id, action);
+                        }
+                        else if (candidateTasks.Count > 1)
+                        {
+                            Log.Error("USER 发现多个候选任务无法区分, Count: {Count}, Action: {Action}, MessageId: {MessageId}, 可能导致任务混淆！",
+                                candidateTasks.Count, action, msgId);
+                            // 不匹配任何任务，避免错误匹配
+                            task = null;
+                        }
+                    }
+                }
+                else
+                {
+                    // 其他任务类型使用原有逻辑，但增加时间窗口限制和唯一性保证
+                    var cutoffTime = DateTimeOffset.Now.AddMinutes(-2).ToUnixTimeMilliseconds();
+                    var candidateTasks = instance.FindRunningTask(c =>
+                        (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) &&
+                        (c.BotType == botType || c.RealBotType == botType) &&
+                        c.Action == action &&
+                        c.StartTime >= cutoffTime)
+                        .OrderBy(c => c.StartTime)
+                        .ToList();
+
+                    // 如果只有一个候选任务，才认为匹配成功；如果有多个，说明无法准确区分，记录警告
+                    if (candidateTasks.Count == 1)
+                    {
+                        task = candidateTasks.First();
+                        Log.Warning("USER 使用模糊匹配找到任务, TaskId: {TaskId}, Action: {Action}, 建议优化任务提交时的唯一标识",
+                            task.Id, action);
+                    }
+                    else if (candidateTasks.Count > 1)
+                    {
+                        Log.Error("USER 发现多个候选任务无法区分, Count: {Count}, Action: {Action}, MessageId: {MessageId}, 可能导致任务混淆！",
+                            candidateTasks.Count, action, msgId);
+                        // 不匹配任务，避免错误匹配
+                        task = null;
+                    }
                 }
             }
 
@@ -197,6 +315,117 @@ namespace Midjourney.Infrastructure.Handle
 
             FinishTask(task, message);
             task.Awake();
+        }
+
+        /// <summary>
+        /// 检查并触发视频扩展操作
+        /// </summary>
+        protected void CheckAndTriggerVideoExtend(DiscordInstance instance, TaskInfo upscaleTask, string messageHash)
+        {
+            try
+            {
+                // 检查任务是否有视频扩展标记
+                var videoExtendTargetTaskId = upscaleTask.GetProperty<string>(Constants.TASK_PROPERTY_VIDEO_EXTEND_TARGET_TASK_ID, default);
+                if (string.IsNullOrWhiteSpace(videoExtendTargetTaskId))
+                {
+                    return;
+                }
+
+                // 获取扩展相关参数
+                var extendPrompt = upscaleTask.GetProperty<string>(Constants.TASK_PROPERTY_VIDEO_EXTEND_PROMPT, default);
+                var extendMotion = upscaleTask.GetProperty<string>(Constants.TASK_PROPERTY_VIDEO_EXTEND_MOTION, default);
+                var extendIndex = upscaleTask.GetProperty<int>(Constants.TASK_PROPERTY_VIDEO_EXTEND_INDEX, 1);
+
+                if (string.IsNullOrWhiteSpace(extendMotion))
+                {
+                    extendMotion = "high";
+                }
+
+                Log.Information("🎬 视频放大完成，准备触发扩展操作: UpscaleTaskId={UpscaleTaskId}, TargetTaskId={TargetTaskId}, Motion={Motion}, Index={Index}, ButtonsCount={ButtonsCount}",
+                    upscaleTask.Id, videoExtendTargetTaskId, extendMotion, extendIndex, upscaleTask.Buttons?.Count ?? 0);
+
+                // 🎯 关键改进：从 Buttons 中查找正确的 extend customId，而不是自己构建
+                // 因为 upscale 后的 JobId 可能不是正确的 hash 值
+                var extendButton = upscaleTask.Buttons?.FirstOrDefault(x =>
+                    x.CustomId?.Contains($"animate_{extendMotion}_extend") == true);
+
+                if (extendButton == null || string.IsNullOrWhiteSpace(extendButton.CustomId))
+                {
+                    Log.Warning("❌ 找不到 extend 按钮: UpscaleTaskId={TaskId}, Motion={Motion}, Buttons={@Buttons}",
+                        upscaleTask.Id, extendMotion, upscaleTask.Buttons);
+
+                    // 标记任务失败
+                    upscaleTask.Status = TaskStatus.FAILURE;
+                    upscaleTask.FailReason = $"找不到 extend 按钮 (motion: {extendMotion})";
+                    DbHelper.Instance.TaskStore.Update(upscaleTask);
+                    upscaleTask.Awake();
+                    return;
+                }
+
+                var extendCustomId = extendButton.CustomId;
+
+                // 异步触发扩展操作
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        // 等待 1.5 秒，确保消息已完全处理
+                        await Task.Delay(1500);
+
+                        // 创建一个新的 nonce 用于 extend 操作
+                        var extendNonce = SnowFlake.NextId();
+
+                        // 更新当前任务（upscaleTask 就是用户看到的任务）
+                        upscaleTask.Nonce = extendNonce;
+                        upscaleTask.Status = TaskStatus.SUBMITTED;
+                        upscaleTask.Action = TaskAction.VIDEO;
+                        upscaleTask.Description = "/video extend";
+                        upscaleTask.Progress = "0%";
+                        upscaleTask.PromptEn = extendPrompt;
+                        upscaleTask.RemixAutoSubmit = instance.Account.RemixAutoSubmit && (instance.Account.MjRemixOn || instance.Account.NijiRemixOn);
+
+                        upscaleTask.SetProperty(Constants.TASK_PROPERTY_CUSTOM_ID, extendCustomId);
+                        upscaleTask.SetProperty(Constants.TASK_PROPERTY_NONCE, extendNonce);
+                        upscaleTask.SetProperty(Constants.TASK_PROPERTY_MESSAGE_ID, upscaleTask.MessageId);
+                        upscaleTask.SetProperty(Constants.TASK_PROPERTY_VIDEO_EXTEND_PROMPT, extendPrompt);
+
+                        // 清除 video extend 标记，避免任务完成时再次触发
+                        upscaleTask.SetProperty(Constants.TASK_PROPERTY_VIDEO_EXTEND_TARGET_TASK_ID, null);
+                        upscaleTask.SetProperty(Constants.TASK_PROPERTY_VIDEO_EXTEND_MOTION, null);
+                        upscaleTask.SetProperty(Constants.TASK_PROPERTY_VIDEO_EXTEND_INDEX, null);
+
+                        // 如果开启了 remix 自动提交，标记任务状态
+                        if (upscaleTask.RemixAutoSubmit)
+                        {
+                            upscaleTask.RemixModaling = true;
+                        }
+
+                        // 调用 Action 接口触发扩展
+                        var result = await instance.ActionAsync(upscaleTask.MessageId, extendCustomId,
+                            upscaleTask.GetProperty<int>(Constants.TASK_PROPERTY_FLAGS, 0),
+                            extendNonce, upscaleTask);
+
+                        if (result.Code == ReturnCode.SUCCESS)
+                        {
+                            Log.Information("视频扩展 extend action 触发成功: TaskId={TaskId}", upscaleTask.Id);
+                        }
+                        else
+                        {
+                            Log.Error("视频扩展 extend action 触发失败: TaskId={TaskId}, Error={Error}",
+                                upscaleTask.Id, result.Description);
+                            upscaleTask.Fail(result.Description);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Error(ex, "执行视频扩展操作时发生异常: UpscaleTaskId={UpscaleTaskId}", upscaleTask.Id);
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "检查视频扩展时发生异常: UpscaleTaskId={UpscaleTaskId}", upscaleTask.Id);
+            }
         }
 
         protected void FinishTask(TaskInfo task, EventData message)

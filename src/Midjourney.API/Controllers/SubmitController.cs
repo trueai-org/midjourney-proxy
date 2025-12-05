@@ -40,7 +40,7 @@ namespace Midjourney.API.Controllers
     [Route("mj-relax/mj/submit")]
     public class SubmitController : ControllerBase
     {
-        private readonly ITranslateService _translateService;
+        //private readonly ITranslateService _translateService;
         private readonly ITaskStoreService _taskStoreService;
 
         private readonly DiscordHelper _discordHelper;
@@ -64,7 +64,7 @@ namespace Midjourney.API.Controllers
         private readonly EStorageOption? _storageOption;
 
         public SubmitController(
-            ITranslateService translateService,
+            //ITranslateService translateService,
             ITaskStoreService taskStoreService,
             ITaskService taskService,
             ILogger<SubmitController> logger,
@@ -75,7 +75,7 @@ namespace Midjourney.API.Controllers
             IMemoryCache memoryCache)
         {
             _memoryCache = memoryCache;
-            _translateService = translateService;
+            //_translateService = translateService;
             _taskStoreService = taskStoreService;
             _setting = GlobalConfiguration.Setting;
             _taskService = taskService;
@@ -492,6 +492,7 @@ namespace Midjourney.API.Controllers
 
             task.BotType = GetBotType(describeDTO.BotType);
             task.Action = TaskAction.DESCRIBE;
+            task.Language = describeDTO.Language;
 
             string taskFileName = $"{task.Id}.{FileFetchHelper.GuessFileSuffix(dataUrl.MimeType, dataUrl.Url)}";
             task.Description = $"/describe {taskFileName}";
@@ -1370,9 +1371,10 @@ namespace Midjourney.API.Controllers
         /// <returns>翻译后的提示词</returns>
         private string TranslatePrompt(string prompt, EBotType botType)
         {
+            var translateService = TranslateHelper.Instance;
             var setting = GlobalConfiguration.Setting;
-
-            if (_setting.TranslateWay == TranslateWay.NULL || string.IsNullOrWhiteSpace(prompt) || !_translateService.ContainsChinese(prompt))
+            if (translateService == null ||
+                _setting.TranslateWay == TranslateWay.NULL || string.IsNullOrWhiteSpace(prompt) || !translateService.ContainsChinese(prompt))
             {
                 return prompt;
             }
@@ -1412,7 +1414,7 @@ namespace Midjourney.API.Controllers
             }
             if (!string.IsNullOrWhiteSpace(text))
             {
-                text = _translateService.TranslateToEnglish(text).Trim();
+                text = translateService.TranslateToEnglish(text).Trim();
             }
             if (!string.IsNullOrWhiteSpace(paramStr))
             {
@@ -1422,7 +1424,7 @@ namespace Midjourney.API.Controllers
                 if (paramNomatcher.Success)
                 {
                     string paramNoStr = paramNomatcher.Groups[1].Value.Trim();
-                    string paramNoStrEn = _translateService.TranslateToEnglish(paramNoStr).Trim();
+                    string paramNoStrEn = translateService.TranslateToEnglish(paramNoStr).Trim();
 
                     // 提取 --no 之前的参数
                     paramStr = paramStr.Substring(0, paramNomatcher.Index);

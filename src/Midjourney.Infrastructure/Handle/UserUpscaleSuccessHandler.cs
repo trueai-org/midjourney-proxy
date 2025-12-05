@@ -168,8 +168,27 @@ namespace Midjourney.Infrastructure.Handle
             task.ImageUrl = imageUrl;
             task.JobId = messageHash;
 
-            FinishTask(task, message);
-            task.Awake();
+            // 检查是否是视频扩展的第一步（放大）
+            var isVideoExtend = !string.IsNullOrWhiteSpace(task.GetProperty<string>(Constants.TASK_PROPERTY_VIDEO_EXTEND_TARGET_TASK_ID, default));
+
+            if (!isVideoExtend)
+            {
+                // 普通放大任务，直接完成
+                FinishTask(task, message);
+                task.Awake();
+            }
+            else
+            {
+                // 视频扩展任务，不要完成，继续触发扩展操作
+                task.Status = TaskStatus.IN_PROGRESS;
+                task.Description = "/video extend";
+                task.Progress = "0%";
+
+                Log.Information("视频放大完成，准备触发扩展操作: TaskId={TaskId}", task.Id);
+
+                // 触发第二步（扩展）
+                CheckAndTriggerVideoExtend(instance, task, messageHash);
+            }
         }
 
         public static ContentParseData GetParseData(string content)

@@ -323,9 +323,14 @@ namespace Midjourney.Base.Util
             // 尝试从 MimeTypes 获取扩展名
             if (!string.IsNullOrWhiteSpace(contentType))
             {
-                extension = MimeTypes.GetMimeTypeExtensions(contentType)
-                    .Where(c => WHITE_EXTENSIONS.Contains(c))
-                    .FirstOrDefault();
+                //extension = MimeTypes.GetMimeTypeExtensions(contentType)
+                //    .Where(c => WHITE_EXTENSIONS.Contains(c))
+                //    .FirstOrDefault();
+
+                if (MimeKit.MimeTypes.TryGetExtension(contentType, out var ext) && WHITE_EXTENSIONS.Contains(ext?.Trim('.')))
+                {
+                    extension = ext.Trim('.');
+                }
             }
 
             // 使用 MimeKit + MimeDetective 根据文件内容推断 MIME 类型

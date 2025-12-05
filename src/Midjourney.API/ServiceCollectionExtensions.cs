@@ -71,13 +71,21 @@ namespace Midjourney.API
             services.AddSingleton<INotifyService, NotifyServiceImpl>();
 
             // 翻译服务
-            if (config.TranslateWay == TranslateWay.GPT)
+            if (config.TranslateWay == TranslateWay.GPT
+                && !string.IsNullOrWhiteSpace(config.Openai?.GptApiKey))
             {
-                services.AddSingleton<ITranslateService, GPTTranslateService>();
+                var gptTranslate = new GPTTranslateService();
+                TranslateHelper.Initialize(gptTranslate);
+            }
+            else if (config.TranslateWay == TranslateWay.BAIDU
+                && !string.IsNullOrWhiteSpace(config.BaiduTranslate?.AppSecret))
+            {
+                var baiduTranslate = new BaiduTranslateService();
+                TranslateHelper.Initialize(baiduTranslate);
             }
             else
             {
-                services.AddSingleton<ITranslateService, BaiduTranslateService>();
+                TranslateHelper.Initialize(null);
             }
 
             // 存储服务

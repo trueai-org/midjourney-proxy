@@ -28,6 +28,8 @@ namespace Midjourney.Base.Services
     {
         string TranslateToEnglish(string prompt);
 
+        string TranslateToChinese(string prompt);
+
         bool ContainsChinese(string prompt);
     }
 }
