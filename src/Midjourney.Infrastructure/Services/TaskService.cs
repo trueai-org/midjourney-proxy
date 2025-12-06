@@ -331,7 +331,7 @@ namespace Midjourney.Infrastructure.Services
                         info.Description = "/imagine " + info.Prompt;
                     }
 
-                    return await instance.EnqueueAsync(new TaskInfoQueue()
+                    return await instance.RedisEnqueue(new TaskInfoQueue()
                     {
                         Info = info,
                         Function = TaskInfoQueueFunction.SUBMIT
@@ -372,7 +372,7 @@ namespace Midjourney.Infrastructure.Services
                         info.Description = "/imagine " + info.Prompt;
                     }
 
-                    return await instance.EnqueueAsync(new TaskInfoQueue()
+                    return await instance.RedisEnqueue(new TaskInfoQueue()
                     {
                         Info = info,
                         Function = TaskInfoQueueFunction.SUBMIT
@@ -614,7 +614,7 @@ namespace Midjourney.Infrastructure.Services
 
                 //return await instance.YmTaskService.SubmitTaskAsync(info, _taskStoreService, instance);
 
-                return await instance.EnqueueAsync(new TaskInfoQueue()
+                return await instance.RedisEnqueue(new TaskInfoQueue()
                 {
                     Info = info,
                     Function = TaskInfoQueueFunction.EDIT
@@ -811,7 +811,7 @@ namespace Midjourney.Infrastructure.Services
                 }
 
                 //return await instance.YmTaskService.SubmitTaskAsync(info, _taskStoreService, instance);
-                return await instance.EnqueueAsync(new TaskInfoQueue()
+                return await instance.RedisEnqueue(new TaskInfoQueue()
                 {
                     Info = info,
                     Function = TaskInfoQueueFunction.RETEXTURE
@@ -1219,7 +1219,7 @@ namespace Midjourney.Infrastructure.Services
                         //    CustomId = customId
                         //}, targetTask, _taskStoreService, instance);
 
-                        return await instance.EnqueueAsync(new TaskInfoQueue()
+                        return await instance.RedisEnqueue(new TaskInfoQueue()
                         {
                             Info = info,
                             Function = TaskInfoQueueFunction.ACTION,
@@ -1279,7 +1279,7 @@ namespace Midjourney.Infrastructure.Services
                         //    targetTask.GetProperty<int>(Constants.TASK_PROPERTY_FLAGS, default),
                         //    info.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default), info);
 
-                        return await instance.EnqueueAsync(new TaskInfoQueue()
+                        return await instance.RedisEnqueue(new TaskInfoQueue()
                         {
                             Info = info,
                             Function = TaskInfoQueueFunction.ACTION,
@@ -1303,7 +1303,7 @@ namespace Midjourney.Infrastructure.Services
 
                     //return await instance.YmTaskService.SubmitTaskAsync(info, _taskStoreService, instance);
 
-                    return await instance.EnqueueAsync(new TaskInfoQueue()
+                    return await instance.RedisEnqueue(new TaskInfoQueue()
                     {
                         Info = info,
                         Function = TaskInfoQueueFunction.VIDEO
@@ -1800,7 +1800,7 @@ namespace Midjourney.Infrastructure.Services
                     // 入队前不保存
                     //_taskStoreService.Save(task);
 
-                    return await discordInstance.EnqueueAsync(new TaskInfoQueue()
+                    return await discordInstance.RedisEnqueue(new TaskInfoQueue()
                     {
                         Info = task,
                         Function = TaskInfoQueueFunction.DESCRIBE
@@ -1882,7 +1882,7 @@ namespace Midjourney.Infrastructure.Services
                 //             return await discordInstance.DescribeByLinkAsync(link, task.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default),
                 //task.RealBotType ?? task.BotType);
 
-                return await discordInstance.EnqueueAsync(new TaskInfoQueue()
+                return await discordInstance.RedisEnqueue(new TaskInfoQueue()
                 {
                     Info = task,
                     Function = TaskInfoQueueFunction.DESCRIBE
@@ -2046,7 +2046,7 @@ namespace Midjourney.Infrastructure.Services
                 // 入队前不保存
                 //_taskStoreService.Save(task);
 
-                return await discordInstance.EnqueueAsync(new TaskInfoQueue()
+                return await discordInstance.RedisEnqueue(new TaskInfoQueue()
                 {
                     Info = task,
                     Function = TaskInfoQueueFunction.SHORTEN
@@ -2186,7 +2186,7 @@ namespace Midjourney.Infrastructure.Services
 
                     //return await discordInstance.YmTaskService.SubmitTaskAsync(task, _taskStoreService, discordInstance);
 
-                    return await discordInstance.EnqueueAsync(new TaskInfoQueue()
+                    return await discordInstance.RedisEnqueue(new TaskInfoQueue()
                     {
                         Info = task,
                         Function = TaskInfoQueueFunction.BLEND
@@ -2237,7 +2237,7 @@ namespace Midjourney.Infrastructure.Services
                     //return await discordInstance.BlendAsync(finalFileNames, dimensions,
                     //    task.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default), task.RealBotType ?? task.BotType);
 
-                    return await discordInstance.EnqueueAsync(new TaskInfoQueue()
+                    return await discordInstance.RedisEnqueue(new TaskInfoQueue()
                     {
                         Info = task,
                         Function = TaskInfoQueueFunction.BLEND,
@@ -2837,7 +2837,7 @@ namespace Midjourney.Infrastructure.Services
                 // 悠船 | 官方
                 if (task.IsPartner || task.IsOfficial)
                 {
-                    return await discordInstance.EnqueueAsync(new TaskInfoQueue()
+                    return await discordInstance.RedisEnqueue(new TaskInfoQueue()
                     {
                         Info = task,
                         Function = TaskInfoQueueFunction.ACTION,
@@ -2850,7 +2850,7 @@ namespace Midjourney.Infrastructure.Services
                 }
                 else
                 {
-                    return await discordInstance.EnqueueAsync(new TaskInfoQueue()
+                    return await discordInstance.RedisEnqueue(new TaskInfoQueue()
                     {
                         Info = task,
                         Function = TaskInfoQueueFunction.ACTION,
@@ -2963,7 +2963,7 @@ namespace Midjourney.Infrastructure.Services
                 {
                     var parentTask = _taskStoreService.Get(task.ParentId);
 
-                    return await discordInstance.EnqueueAsync(new TaskInfoQueue()
+                    return await discordInstance.RedisEnqueue(new TaskInfoQueue()
                     {
                         Info = task,
                         Function = TaskInfoQueueFunction.MODAL,
@@ -2975,7 +2975,7 @@ namespace Midjourney.Infrastructure.Services
                     });
                 }
 
-                return await discordInstance.EnqueueAsync(new TaskInfoQueue()
+                return await discordInstance.RedisEnqueue(new TaskInfoQueue()
                 {
                     Info = task,
                     Function = TaskInfoQueueFunction.MODAL,

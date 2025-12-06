@@ -630,11 +630,423 @@ namespace Midjourney.Infrastructure.LoadBalancer
         }
 
         /// <summary>
-        /// 执行 Redis 作业
+        /// 提交任务前休眠
+        /// </summary>
+        /// <returns></returns>
+        private async Task AccountBeforeDelay()
+        {
+            // 账号休眠
+            var preSleep = Account.Interval;
+            if (preSleep <= 0m)
+            {
+                preSleep = 0m;
+            }
+
+            // 提交任务前间隔
+            // 当一个作业完成后，是否先等待一段时间再提交下一个作业
+            if (preSleep > 0)
+            {
+                await Task.Delay((int)(preSleep * 1000));
+            }
+        }
+
+        /// <summary>
+        /// 提交任务后休眠
+        /// </summary>
+        /// <param name="isPicReader"></param>
+        /// <returns></returns>
+        private async Task AccountAfterDelay(bool isPicReader = false)
+        {
+            // 计算执行后的间隔
+            var acc = Account;
+
+            var min = acc.AfterIntervalMin;
+            var max = acc.AfterIntervalMax;
+
+            // 计算 min ~ max随机数
+            var afterInterval = 1200;
+            if (max > min && min >= 0m)
+            {
+                afterInterval = new Random().Next((int)(min * 1000), (int)(max * 1000));
+            }
+            else if (max == min && min >= 0m)
+            {
+                afterInterval = (int)(min * 1000);
+            }
+
+            if (isPicReader)
+            {
+                // 批量任务操作提交间隔 1.2s + 6.8s
+                await Task.Delay(afterInterval + 6800);
+            }
+            else
+            {
+                await Task.Delay(afterInterval);
+            }
+        }
+
+        /// <summary>
+        /// 后台服务执行任务
+        /// </summary>
+        private void Running()
+        {
+            // 程序启动后，如果开启了 redis 则将未开始、已提交、执行中 最近12小时的任务重新加入到队列
+            Task.Run(async () =>
+            {
+                try
+                {
+                    if (IsValidRedis)
+                    {
+                        // 预估恢复队列数 * 超时时间的任务
+                        var hour = -1 * 12;
+                        var agoTime = new DateTimeOffset(DateTime.Now.AddHours(hour)).ToUnixTimeMilliseconds();
+                        var list = DbHelper.Instance.TaskStore.Where(c => c.InstanceId == Account.ChannelId && c.SubmitTime >= agoTime && c.Status != TaskStatus.CANCEL && c.Status != TaskStatus.FAILURE && c.Status != TaskStatus.MODAL && c.Status != TaskStatus.SUCCESS);
+
+                        _logger.Information("重启恢复作业账号 {@0} 任务数 {@1}", Account.ChannelId, list.Count);
+
+                        if (list.Count > 0)
+                        {
+                            // 获取所有慢速队列任务
+                            var relaxItems = _relaxQueue.Items();
+                            var fastItems = _defaultOrFastQueue.Items();
+
+                            foreach (var item in list)
+                            {
+                                if (item.IsPartnerRelax)
+                                {
+                                    if (relaxItems.Any(c => c?.Info?.Id == item.Id))
+                                    {
+                                        continue;
+                                    }
+
+                                    // 强制加入慢速队列
+                                    var success = await _relaxQueue.EnqueueAsync(new TaskInfoQueue()
+                                    {
+                                        Info = item,
+                                        Function = TaskInfoQueueFunction.REFRESH,
+                                    }, Account.RelaxQueueSize, 10, true);
+
+                                    _logger.Information("重启加入慢速队列任务 {@0} - {@1} - {@2}", Account.ChannelId, item.Id, success);
+                                }
+                                else
+                                {
+                                    if (fastItems.Any(c => c?.Info?.Id == item.Id))
+                                    {
+                                        continue;
+                                    }
+
+                                    // 强制加入快速队列
+                                    var success = await _defaultOrFastQueue.EnqueueAsync(new TaskInfoQueue()
+                                    {
+                                        Info = item,
+                                        Function = TaskInfoQueueFunction.REFRESH,
+                                    }, Account.QueueSize, 10, true);
+
+                                    _logger.Information("重启加入快速队列任务 {@0} - {@1} - {@2}", Account.ChannelId, item.Id, success);
+                                }
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error(ex, "重启首次恢复作业异常 {@0}", ChannelId);
+                }
+            });
+
+            if (GlobalConfiguration.GlobalMaxConcurrent != 0)
+            {
+                var redisTask = RedisJobRun(_longToken.Token);
+            }
+
+            while (true)
+            {
+                try
+                {
+                    if (_longToken.Token.IsCancellationRequested)
+                    {
+                        // 清理资源（如果需要）
+                        break;
+                    }
+                }
+                catch { }
+
+                try
+                {
+                    var acc = Account;
+
+                    if (acc.IsYouChuan)
+                    {
+                        // 如果队列中没有任务，则等待信号通知
+                        if (_fastQueueTasks.Count <= 0 && _relaxQueueTasks.Count <= 0)
+                        {
+                            _mre.WaitOne();
+                        }
+
+                        // 如果并发数修改，判断信号最大值是否为 acc.CoreSize
+                        while (_fastLock.MaxParallelism != acc.CoreSize)
+                        {
+                            // 重新设置信号量
+                            var oldMax = _fastLock.MaxParallelism;
+                            var newMax = Math.Max(1, Math.Min(acc.CoreSize, 12));
+                            if (_fastLock.SetMaxParallelism(newMax))
+                            {
+                                _logger.Information("频道 {@0} 信号量最大值修改成功，原值：{@1}，当前最大值：{@2} - FAST", acc.ChannelId, oldMax, newMax);
+                            }
+
+                            Thread.Sleep(500);
+                        }
+
+                        // 如果并发数修改，判断信号最大值是否为 acc.RelaxCoreSize
+                        while (_relaxLock.MaxParallelism != acc.RelaxCoreSize)
+                        {
+                            // 重新设置信号量
+                            var oldMax = _relaxLock.MaxParallelism;
+                            var newMax = Math.Max(1, Math.Min(acc.RelaxCoreSize, 12));
+                            if (_relaxLock.SetMaxParallelism(newMax))
+                            {
+                                _logger.Information("频道 {@0} 信号量最大值修改成功，原值：{@1}，当前最大值：{@2} - RELAX", acc.ChannelId, oldMax, newMax);
+                            }
+
+                            Thread.Sleep(500);
+                        }
+
+                        while (true)
+                        {
+                            var isFast = _fastQueueTasks.TryPeek(out _);
+                            var isRelax = _relaxQueueTasks.TryPeek(out _);
+                            if (!isFast && !isRelax)
+                            {
+                                break;
+                            }
+
+                            if (isFast)
+                            {
+                                // 判断是否还有资源可用
+                                if (_fastLock.IsLockAvailable())
+                                {
+                                    var preSleep = acc.Interval;
+                                    if (preSleep <= 0m)
+                                    {
+                                        preSleep = 0m;
+                                    }
+
+                                    // 提交任务前间隔
+                                    // 当一个作业完成后，是否先等待一段时间再提交下一个作业
+                                    Thread.Sleep((int)(preSleep * 1000));
+
+                                    // 从队列中移除任务，并开始执行
+                                    if (_fastQueueTasks.TryDequeue(out var fastInfo))
+                                    {
+                                        _taskFutureMap[fastInfo.Item1.Id] = Task.Run(async () =>
+                                        {
+                                            await ExecuteTaskAsync(fastInfo.Item1, fastInfo.Item2);
+                                        });
+
+                                        // 计算执行后的间隔
+                                        var min = acc.AfterIntervalMin;
+                                        var max = acc.AfterIntervalMax;
+
+                                        // 计算 min ~ max随机数
+                                        var afterInterval = 1200;
+                                        if (max > min && min >= 0m)
+                                        {
+                                            afterInterval = new Random().Next((int)(min * 1000), (int)(max * 1000));
+                                        }
+                                        else if (max == min && min >= 0m)
+                                        {
+                                            afterInterval = (int)(min * 1000);
+                                        }
+
+                                        // 如果是图生文操作
+                                        if (fastInfo.Item1.GetProperty<string>(Constants.TASK_PROPERTY_CUSTOM_ID, default)?.Contains("PicReader") == true)
+                                        {
+                                            // 批量任务操作提交间隔 1.2s + 6.8s
+                                            Thread.Sleep(afterInterval + 6800);
+                                        }
+                                        else
+                                        {
+                                            // 队列提交间隔
+                                            Thread.Sleep(afterInterval);
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    // 如果没有可用资源，等待
+                                    Thread.Sleep(100);
+                                }
+                            }
+
+                            if (isRelax)
+                            {
+                                // 判断是否还有资源可用
+                                if (_relaxLock.IsLockAvailable())
+                                {
+                                    var preSleep = acc.Interval;
+                                    if (preSleep <= 0m)
+                                    {
+                                        preSleep = 0m;
+                                    }
+
+                                    // 提交任务前间隔
+                                    // 当一个作业完成后，是否先等待一段时间再提交下一个作业
+                                    Thread.Sleep((int)(preSleep * 1000));
+
+                                    // 从队列中移除任务，并开始执行
+                                    if (_relaxQueueTasks.TryDequeue(out var relaxInfo))
+                                    {
+                                        _taskFutureMap[relaxInfo.Item1.Id] = Task.Run(async () =>
+                                        {
+                                            await ExecuteTaskAsync(relaxInfo.Item1, relaxInfo.Item2);
+                                        });
+
+                                        // 计算执行后的间隔
+                                        var min = acc.AfterIntervalMin;
+                                        var max = acc.AfterIntervalMax;
+
+                                        // 计算 min ~ max随机数
+                                        var afterInterval = 1200;
+                                        if (max > min && min >= 0m)
+                                        {
+                                            afterInterval = new Random().Next((int)(min * 1000), (int)(max * 1000));
+                                        }
+                                        else if (max == min && min >= 0m)
+                                        {
+                                            afterInterval = (int)(min * 1000);
+                                        }
+
+                                        // 如果是图生文操作
+                                        if (relaxInfo.Item1.GetProperty<string>(Constants.TASK_PROPERTY_CUSTOM_ID, default)?.Contains("PicReader") == true)
+                                        {
+                                            // 批量任务操作提交间隔 1.2s + 6.8s
+                                            Thread.Sleep(afterInterval + 6800);
+                                        }
+                                        else
+                                        {
+                                            // 队列提交间隔
+                                            Thread.Sleep(afterInterval);
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    // 如果没有可用资源，等待
+                                    Thread.Sleep(100);
+                                }
+                            }
+                        }
+
+                        // 重新设置信号
+                        _mre.Reset();
+                    }
+                    else
+                    {
+                        // 如果队列中没有任务，则等待信号通知
+                        if (_fastQueueTasks.Count <= 0)
+                        {
+                            _mre.WaitOne();
+                        }
+
+                        // 判断是否还有资源可用
+                        while (!_fastLock.IsLockAvailable())
+                        {
+                            // 等待
+                            Thread.Sleep(100);
+                        }
+
+                        // 如果并发数修改，判断信号最大值是否为 acc.CoreSize
+                        while (_fastLock.MaxParallelism != acc.CoreSize)
+                        {
+                            // 重新设置信号量
+                            var oldMax = _fastLock.MaxParallelism;
+                            var newMax = Math.Max(1, Math.Min(acc.CoreSize, 12));
+                            if (_fastLock.SetMaxParallelism(newMax))
+                            {
+                                _logger.Information("频道 {@0} 信号量最大值修改成功，原值：{@1}，当前最大值：{@2}", acc.ChannelId, oldMax, newMax);
+                            }
+
+                            Thread.Sleep(500);
+                        }
+
+                        while (_fastQueueTasks.TryPeek(out var info))
+                        {
+                            // 判断是否还有资源可用
+                            if (_fastLock.IsLockAvailable())
+                            {
+                                var preSleep = acc.Interval;
+                                if (preSleep <= 0m)
+                                {
+                                    preSleep = 0m;
+                                }
+
+                                // 提交任务前间隔
+                                // 当一个作业完成后，是否先等待一段时间再提交下一个作业
+                                Thread.Sleep((int)(preSleep * 1000));
+
+                                // 从队列中移除任务，并开始执行
+                                if (_fastQueueTasks.TryDequeue(out info))
+                                {
+                                    _taskFutureMap[info.Item1.Id] = Task.Run(async () =>
+                                    {
+                                        await ExecuteTaskAsync(info.Item1, info.Item2);
+                                    });
+
+                                    // 计算执行后的间隔
+                                    var min = acc.AfterIntervalMin;
+                                    var max = acc.AfterIntervalMax;
+
+                                    // 计算 min ~ max随机数
+                                    var afterInterval = 1200;
+                                    if (max > min && min >= 0m)
+                                    {
+                                        afterInterval = new Random().Next((int)(min * 1000), (int)(max * 1000));
+                                    }
+                                    else if (max == min && min >= 0m)
+                                    {
+                                        afterInterval = (int)(min * 1000);
+                                    }
+
+                                    // 如果是图生文操作
+                                    if (info.Item1.GetProperty<string>(Constants.TASK_PROPERTY_CUSTOM_ID, default)?.Contains("PicReader") == true)
+                                    {
+                                        // 批量任务操作提交间隔 1.2s + 6.8s
+                                        Thread.Sleep(afterInterval + 6800);
+                                    }
+                                    else
+                                    {
+                                        // 队列提交间隔
+                                        Thread.Sleep(afterInterval);
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                // 如果没有可用资源，等待
+                                Thread.Sleep(100);
+                            }
+                        }
+
+                        // 重新设置信号
+                        _mre.Reset();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error(ex, $"后台作业执行异常 {ChannelId}");
+
+                    // 停止 1min
+                    Thread.Sleep(1000 * 60);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 执行 Redis 后台作业
         /// </summary>
         /// <param name="token"></param>
         /// <returns></returns>
-        private async Task RunningRedisJob(CancellationToken token)
+        private async Task RedisJobRun(CancellationToken token)
         {
             if (!IsValidRedis)
             {
@@ -648,46 +1060,68 @@ namespace Midjourney.Infrastructure.LoadBalancer
             {
                 try
                 {
-                    // 是否立即执行下一个快速任务
+                    // 是否立即执行下一个任务
                     var isContinueNext = false;
 
                     // 放大任务队列，不判断并发数
-                    var upscaleQueueCount = await _upscaleQueue.CountAsync();
-                    if (upscaleQueueCount > 0)
+                    if (Account.IsYouChuan || Account.IsOfficial)
                     {
-                        var req = await _upscaleQueue.DequeueAsync(token);
-                        if (req?.Info != null)
+                        // 悠船 | 官方立即执行全部放大任务
+                        var upscaleQueueCount = 0;
+                        do
                         {
-                            // 如果队列中还有任务
-                            isContinueNext = upscaleQueueCount > 1;
-
-                            // 在执行前休眠，由于消息已经取出来了，但是还没有消费或提交，如果服务器突然宕机，可能会导致提交参数丢失
-                            await AccountBeforeDelay();
-
-                            // 使用 Task.Run 启动后台任务，避免阻塞主线程
-                            _ = Task.Run(async () =>
+                            upscaleQueueCount = await _upscaleQueue.CountAsync();
+                            if (upscaleQueueCount > 0)
                             {
-                                try
+                                var req = await _upscaleQueue.DequeueAsync(token);
+                                if (req?.Info != null)
                                 {
-                                    await UpdateProgress(req);
-                                }
-                                finally
-                                {
-                                    // 发送锁我已经释放了
-                                    var notification = new RedisNotification
+                                    // 使用 Task.Run 启动后台任务，避免阻塞主线程
+                                    _ = Task.Run(async () =>
                                     {
-                                        Type = ENotificationType.DisposeLock,
-                                        ChannelId = ChannelId,
-                                        TaskInfoId = req?.Info?.Id
-                                    };
-                                    RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
+                                        try
+                                        {
+                                            await RedisQueueUpdateProgress(req);
+                                        }
+                                        finally
+                                        {
+                                            // 由于不占用并发锁，所以不需要释放锁通知
+                                        }
+                                    }, token);
                                 }
-                            }, token);
-                            await AccountAfterDelay();
-                        }
-                        else
+                            }
+                        } while (upscaleQueueCount > 1);
+                    }
+                    else
+                    {
+                        // Discord 放大任务插队优先执行
+                        var upscaleQueueCount = await _upscaleQueue.CountAsync();
+                        if (upscaleQueueCount > 0)
                         {
-                            Log.Warning("Redis 放大队列出队为空 {@0}", Account.ChannelId);
+                            var req = await _upscaleQueue.DequeueAsync(token);
+                            if (req?.Info != null)
+                            {
+                                // 如果队列中还有任务
+                                isContinueNext = isContinueNext || upscaleQueueCount > 1;
+
+                                // 在执行前休眠，由于消息已经取出来了，但是还没有消费或提交，如果服务器突然宕机，可能会导致提交参数丢失
+                                await AccountBeforeDelay();
+
+                                // 使用 Task.Run 启动后台任务，避免阻塞主线程
+                                _ = Task.Run(async () =>
+                                {
+                                    try
+                                    {
+                                        await RedisQueueUpdateProgress(req);
+                                    }
+                                    finally
+                                    {
+                                        // 由于不占用并发锁，所以不需要释放锁通知
+                                    }
+                                }, token);
+
+                                await AccountAfterDelay();
+                            }
                         }
                     }
 
@@ -719,7 +1153,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                 {
                                     try
                                     {
-                                        await UpdateProgress(req);
+                                        await RedisQueueUpdateProgress(req);
                                     }
                                     finally
                                     {
@@ -806,7 +1240,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                     {
                                         try
                                         {
-                                            await UpdateProgress(req);
+                                            await RedisQueueUpdateProgress(req);
                                         }
                                         finally
                                         {
@@ -899,67 +1333,126 @@ namespace Midjourney.Infrastructure.LoadBalancer
         }
 
         /// <summary>
-        /// 提交任务前休眠
+        /// 提交任务到 Redis 队列
         /// </summary>
+        /// <param name="info"></param>
+        /// <param name="discordSubmit"></param>
         /// <returns></returns>
-        private async Task AccountBeforeDelay()
+        public async Task<SubmitResultVO> RedisEnqueue(TaskInfoQueue req)
         {
-            // 账号休眠
-            var preSleep = Account.Interval;
-            if (preSleep <= 0m)
+            if (req?.Info == null)
             {
-                preSleep = 0m;
+                return SubmitResultVO.Fail(ReturnCode.FAILURE, "未知错误，请稍后重试");
             }
 
-            // 提交任务前间隔
-            // 当一个作业完成后，是否先等待一段时间再提交下一个作业
-            if (preSleep > 0)
+            var info = req.Info;
+            info.InstanceId = ChannelId;
+
+            try
             {
-                await Task.Delay((int)(preSleep * 1000));
+                var currentWaitNumbers = 0;
+
+                // 如果是放大任务，则加入放大队列
+                if (info.Action == TaskAction.UPSCALE)
+                {
+                    // 先保存到数据库，再加入到队列
+                    _taskStoreService.Save(info);
+
+                    // 放大队列允许溢出
+                    var success = await _upscaleQueue.EnqueueAsync(req, -1, ignoreFull: true);
+                    if (!success)
+                    {
+                        _taskStoreService.Delete(info.Id);
+
+                        return SubmitResultVO.Fail(ReturnCode.FAILURE, "提交失败，队列已满，请稍后重试")
+                            .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, ChannelId);
+                    }
+                }
+                else if (info.IsPartnerRelax)
+                {
+                    // 在任务提交时，前面的的任务数量
+                    currentWaitNumbers = await _relaxQueue.CountAsync();
+
+                    if (Account.RelaxQueueSize > 0 && currentWaitNumbers >= Account.RelaxQueueSize)
+                    {
+                        return SubmitResultVO.Fail(ReturnCode.FAILURE, "提交失败，队列已满，请稍后重试")
+                            .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, ChannelId);
+                    }
+
+                    // 先保存到数据库，再加入到队列
+                    _taskStoreService.Save(info);
+                    var success = await _relaxQueue.EnqueueAsync(req, Account.RelaxQueueSize);
+                    if (!success)
+                    {
+                        _taskStoreService.Delete(info.Id);
+
+                        return SubmitResultVO.Fail(ReturnCode.FAILURE, "提交失败，队列已满，请稍后重试")
+                            .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, ChannelId);
+                    }
+                }
+                else
+                {
+                    // 在任务提交时，前面的的任务数量
+                    currentWaitNumbers = await _defaultOrFastQueue.CountAsync();
+                    if (Account.QueueSize > 0 && currentWaitNumbers >= Account.QueueSize)
+                    {
+                        return SubmitResultVO.Fail(ReturnCode.FAILURE, "提交失败，队列已满，请稍后重试")
+                            .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, ChannelId);
+                    }
+
+                    // 先保存到数据库，再加入到队列
+                    _taskStoreService.Save(info);
+                    var success = await _defaultOrFastQueue.EnqueueAsync(req, Account.QueueSize);
+                    if (!success)
+                    {
+                        _taskStoreService.Delete(info.Id);
+
+                        return SubmitResultVO.Fail(ReturnCode.FAILURE, "提交失败，队列已满，请稍后重试")
+                            .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, ChannelId);
+                    }
+                }
+
+                // 发送入队提醒
+                if (IsValidRedis)
+                {
+                    var notification = new RedisNotification
+                    {
+                        Type = ENotificationType.EnqueueTaskInfo,
+                        ChannelId = ChannelId,
+                        TaskInfoId = info.Id
+                    };
+                    RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
+                }
+
+                if (currentWaitNumbers == 0)
+                {
+                    return SubmitResultVO.Of(ReturnCode.SUCCESS, "提交成功", info.Id)
+                        .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, ChannelId);
+                }
+                else
+                {
+                    return SubmitResultVO.Of(ReturnCode.IN_QUEUE, $"排队中，前面还有{currentWaitNumbers}个任务", info.Id)
+                        .SetProperty("numberOfQueues", currentWaitNumbers)
+                        .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, ChannelId);
+                }
+            }
+            catch (Exception e)
+            {
+                _logger.Error(e, "submit task error");
+
+                _taskStoreService.Delete(info.Id);
+
+                return SubmitResultVO.Fail(ReturnCode.FAILURE, "提交失败，系统异常")
+                    .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, ChannelId);
             }
         }
 
         /// <summary>
-        /// 提交任务后休眠
-        /// </summary>
-        /// <param name="isPicReader"></param>
-        /// <returns></returns>
-        private async Task AccountAfterDelay(bool isPicReader = false)
-        {
-            // 计算执行后的间隔
-            var acc = Account;
-
-            var min = acc.AfterIntervalMin;
-            var max = acc.AfterIntervalMax;
-
-            // 计算 min ~ max随机数
-            var afterInterval = 1200;
-            if (max > min && min >= 0m)
-            {
-                afterInterval = new Random().Next((int)(min * 1000), (int)(max * 1000));
-            }
-            else if (max == min && min >= 0m)
-            {
-                afterInterval = (int)(min * 1000);
-            }
-
-            if (isPicReader)
-            {
-                // 批量任务操作提交间隔 1.2s + 6.8s
-                await Task.Delay(afterInterval + 6800);
-            }
-            else
-            {
-                await Task.Delay(afterInterval);
-            }
-        }
-
-        /// <summary>
-        /// 更新任务进度
+        /// 更新 Redis 队列任务进度
         /// </summary>
         /// <param name="queue"></param>
         /// <returns></returns>
-        public async Task UpdateProgress(TaskInfoQueue queue)
+        public async Task RedisQueueUpdateProgress(TaskInfoQueue queue)
         {
             var info = queue?.Info;
 
@@ -1710,477 +2203,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 }
 
                 SaveAndNotify(info);
-            }
-        }
-
-        /// <summary>
-        /// 后台服务执行任务
-        /// </summary>
-        private void Running()
-        {
-            // 程序启动后，如果开启了 redis 则将未开始、已提交、执行中 最近12小时的任务重新加入到队列
-            Task.Run(async () =>
-            {
-                try
-                {
-                    if (IsValidRedis)
-                    {
-                        // 预估恢复队列数 * 超时时间的任务
-                        var hour = -1 * 12;
-                        var agoTime = new DateTimeOffset(DateTime.Now.AddHours(hour)).ToUnixTimeMilliseconds();
-                        var list = DbHelper.Instance.TaskStore.Where(c => c.InstanceId == Account.ChannelId && c.SubmitTime >= agoTime && c.Status != TaskStatus.CANCEL && c.Status != TaskStatus.FAILURE && c.Status != TaskStatus.MODAL && c.Status != TaskStatus.SUCCESS);
-
-                        _logger.Information("重启恢复作业账号 {@0} 任务数 {@1}", Account.ChannelId, list.Count);
-
-                        if (list.Count > 0)
-                        {
-                            // 获取所有慢速队列任务
-                            var relaxItems = _relaxQueue.Items();
-                            var fastItems = _defaultOrFastQueue.Items();
-
-                            foreach (var item in list)
-                            {
-                                if (item.IsPartnerRelax)
-                                {
-                                    if (relaxItems.Any(c => c?.Info?.Id == item.Id))
-                                    {
-                                        continue;
-                                    }
-
-                                    // 强制加入慢速队列
-                                    var success = await _relaxQueue.EnqueueAsync(new TaskInfoQueue()
-                                    {
-                                        Info = item,
-                                        Function = TaskInfoQueueFunction.REFRESH,
-                                    }, Account.RelaxQueueSize, 10, true);
-
-                                    _logger.Information("重启加入慢速队列任务 {@0} - {@1} - {@2}", Account.ChannelId, item.Id, success);
-                                }
-                                else
-                                {
-                                    if (fastItems.Any(c => c?.Info?.Id == item.Id))
-                                    {
-                                        continue;
-                                    }
-
-                                    // 强制加入快速队列
-                                    var success = await _defaultOrFastQueue.EnqueueAsync(new TaskInfoQueue()
-                                    {
-                                        Info = item,
-                                        Function = TaskInfoQueueFunction.REFRESH,
-                                    }, Account.QueueSize, 10, true);
-
-                                    _logger.Information("重启加入快速队列任务 {@0} - {@1} - {@2}", Account.ChannelId, item.Id, success);
-                                }
-                            }
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.Error(ex, "重启首次恢复作业异常 {@0}", ChannelId);
-                }
-            });
-
-            if (GlobalConfiguration.GlobalMaxConcurrent != 0)
-            {
-                var redisTask = RunningRedisJob(_longToken.Token);
-            }
-
-            while (true)
-            {
-                try
-                {
-                    if (_longToken.Token.IsCancellationRequested)
-                    {
-                        // 清理资源（如果需要）
-                        break;
-                    }
-                }
-                catch { }
-
-                try
-                {
-                    var acc = Account;
-
-                    if (acc.IsYouChuan)
-                    {
-                        // 如果队列中没有任务，则等待信号通知
-                        if (_fastQueueTasks.Count <= 0 && _relaxQueueTasks.Count <= 0)
-                        {
-                            _mre.WaitOne();
-                        }
-
-                        // 如果并发数修改，判断信号最大值是否为 acc.CoreSize
-                        while (_fastLock.MaxParallelism != acc.CoreSize)
-                        {
-                            // 重新设置信号量
-                            var oldMax = _fastLock.MaxParallelism;
-                            var newMax = Math.Max(1, Math.Min(acc.CoreSize, 12));
-                            if (_fastLock.SetMaxParallelism(newMax))
-                            {
-                                _logger.Information("频道 {@0} 信号量最大值修改成功，原值：{@1}，当前最大值：{@2} - FAST", acc.ChannelId, oldMax, newMax);
-                            }
-
-                            Thread.Sleep(500);
-                        }
-
-                        // 如果并发数修改，判断信号最大值是否为 acc.RelaxCoreSize
-                        while (_relaxLock.MaxParallelism != acc.RelaxCoreSize)
-                        {
-                            // 重新设置信号量
-                            var oldMax = _relaxLock.MaxParallelism;
-                            var newMax = Math.Max(1, Math.Min(acc.RelaxCoreSize, 12));
-                            if (_relaxLock.SetMaxParallelism(newMax))
-                            {
-                                _logger.Information("频道 {@0} 信号量最大值修改成功，原值：{@1}，当前最大值：{@2} - RELAX", acc.ChannelId, oldMax, newMax);
-                            }
-
-                            Thread.Sleep(500);
-                        }
-
-                        while (true)
-                        {
-                            var isFast = _fastQueueTasks.TryPeek(out _);
-                            var isRelax = _relaxQueueTasks.TryPeek(out _);
-                            if (!isFast && !isRelax)
-                            {
-                                break;
-                            }
-
-                            if (isFast)
-                            {
-                                // 判断是否还有资源可用
-                                if (_fastLock.IsLockAvailable())
-                                {
-                                    var preSleep = acc.Interval;
-                                    if (preSleep <= 0m)
-                                    {
-                                        preSleep = 0m;
-                                    }
-
-                                    // 提交任务前间隔
-                                    // 当一个作业完成后，是否先等待一段时间再提交下一个作业
-                                    Thread.Sleep((int)(preSleep * 1000));
-
-                                    // 从队列中移除任务，并开始执行
-                                    if (_fastQueueTasks.TryDequeue(out var fastInfo))
-                                    {
-                                        _taskFutureMap[fastInfo.Item1.Id] = Task.Run(async () =>
-                                        {
-                                            await ExecuteTaskAsync(fastInfo.Item1, fastInfo.Item2);
-                                        });
-
-                                        // 计算执行后的间隔
-                                        var min = acc.AfterIntervalMin;
-                                        var max = acc.AfterIntervalMax;
-
-                                        // 计算 min ~ max随机数
-                                        var afterInterval = 1200;
-                                        if (max > min && min >= 0m)
-                                        {
-                                            afterInterval = new Random().Next((int)(min * 1000), (int)(max * 1000));
-                                        }
-                                        else if (max == min && min >= 0m)
-                                        {
-                                            afterInterval = (int)(min * 1000);
-                                        }
-
-                                        // 如果是图生文操作
-                                        if (fastInfo.Item1.GetProperty<string>(Constants.TASK_PROPERTY_CUSTOM_ID, default)?.Contains("PicReader") == true)
-                                        {
-                                            // 批量任务操作提交间隔 1.2s + 6.8s
-                                            Thread.Sleep(afterInterval + 6800);
-                                        }
-                                        else
-                                        {
-                                            // 队列提交间隔
-                                            Thread.Sleep(afterInterval);
-                                        }
-                                    }
-                                }
-                                else
-                                {
-                                    // 如果没有可用资源，等待
-                                    Thread.Sleep(100);
-                                }
-                            }
-
-                            if (isRelax)
-                            {
-                                // 判断是否还有资源可用
-                                if (_relaxLock.IsLockAvailable())
-                                {
-                                    var preSleep = acc.Interval;
-                                    if (preSleep <= 0m)
-                                    {
-                                        preSleep = 0m;
-                                    }
-
-                                    // 提交任务前间隔
-                                    // 当一个作业完成后，是否先等待一段时间再提交下一个作业
-                                    Thread.Sleep((int)(preSleep * 1000));
-
-                                    // 从队列中移除任务，并开始执行
-                                    if (_relaxQueueTasks.TryDequeue(out var relaxInfo))
-                                    {
-                                        _taskFutureMap[relaxInfo.Item1.Id] = Task.Run(async () =>
-                                        {
-                                            await ExecuteTaskAsync(relaxInfo.Item1, relaxInfo.Item2);
-                                        });
-
-                                        // 计算执行后的间隔
-                                        var min = acc.AfterIntervalMin;
-                                        var max = acc.AfterIntervalMax;
-
-                                        // 计算 min ~ max随机数
-                                        var afterInterval = 1200;
-                                        if (max > min && min >= 0m)
-                                        {
-                                            afterInterval = new Random().Next((int)(min * 1000), (int)(max * 1000));
-                                        }
-                                        else if (max == min && min >= 0m)
-                                        {
-                                            afterInterval = (int)(min * 1000);
-                                        }
-
-                                        // 如果是图生文操作
-                                        if (relaxInfo.Item1.GetProperty<string>(Constants.TASK_PROPERTY_CUSTOM_ID, default)?.Contains("PicReader") == true)
-                                        {
-                                            // 批量任务操作提交间隔 1.2s + 6.8s
-                                            Thread.Sleep(afterInterval + 6800);
-                                        }
-                                        else
-                                        {
-                                            // 队列提交间隔
-                                            Thread.Sleep(afterInterval);
-                                        }
-                                    }
-                                }
-                                else
-                                {
-                                    // 如果没有可用资源，等待
-                                    Thread.Sleep(100);
-                                }
-                            }
-                        }
-
-                        // 重新设置信号
-                        _mre.Reset();
-                    }
-                    else
-                    {
-                        // 如果队列中没有任务，则等待信号通知
-                        if (_fastQueueTasks.Count <= 0)
-                        {
-                            _mre.WaitOne();
-                        }
-
-                        // 判断是否还有资源可用
-                        while (!_fastLock.IsLockAvailable())
-                        {
-                            // 等待
-                            Thread.Sleep(100);
-                        }
-
-                        // 如果并发数修改，判断信号最大值是否为 acc.CoreSize
-                        while (_fastLock.MaxParallelism != acc.CoreSize)
-                        {
-                            // 重新设置信号量
-                            var oldMax = _fastLock.MaxParallelism;
-                            var newMax = Math.Max(1, Math.Min(acc.CoreSize, 12));
-                            if (_fastLock.SetMaxParallelism(newMax))
-                            {
-                                _logger.Information("频道 {@0} 信号量最大值修改成功，原值：{@1}，当前最大值：{@2}", acc.ChannelId, oldMax, newMax);
-                            }
-
-                            Thread.Sleep(500);
-                        }
-
-                        while (_fastQueueTasks.TryPeek(out var info))
-                        {
-                            // 判断是否还有资源可用
-                            if (_fastLock.IsLockAvailable())
-                            {
-                                var preSleep = acc.Interval;
-                                if (preSleep <= 0m)
-                                {
-                                    preSleep = 0m;
-                                }
-
-                                // 提交任务前间隔
-                                // 当一个作业完成后，是否先等待一段时间再提交下一个作业
-                                Thread.Sleep((int)(preSleep * 1000));
-
-                                // 从队列中移除任务，并开始执行
-                                if (_fastQueueTasks.TryDequeue(out info))
-                                {
-                                    _taskFutureMap[info.Item1.Id] = Task.Run(async () =>
-                                    {
-                                        await ExecuteTaskAsync(info.Item1, info.Item2);
-                                    });
-
-                                    // 计算执行后的间隔
-                                    var min = acc.AfterIntervalMin;
-                                    var max = acc.AfterIntervalMax;
-
-                                    // 计算 min ~ max随机数
-                                    var afterInterval = 1200;
-                                    if (max > min && min >= 0m)
-                                    {
-                                        afterInterval = new Random().Next((int)(min * 1000), (int)(max * 1000));
-                                    }
-                                    else if (max == min && min >= 0m)
-                                    {
-                                        afterInterval = (int)(min * 1000);
-                                    }
-
-                                    // 如果是图生文操作
-                                    if (info.Item1.GetProperty<string>(Constants.TASK_PROPERTY_CUSTOM_ID, default)?.Contains("PicReader") == true)
-                                    {
-                                        // 批量任务操作提交间隔 1.2s + 6.8s
-                                        Thread.Sleep(afterInterval + 6800);
-                                    }
-                                    else
-                                    {
-                                        // 队列提交间隔
-                                        Thread.Sleep(afterInterval);
-                                    }
-                                }
-                            }
-                            else
-                            {
-                                // 如果没有可用资源，等待
-                                Thread.Sleep(100);
-                            }
-                        }
-
-                        // 重新设置信号
-                        _mre.Reset();
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.Error(ex, $"后台作业执行异常 {ChannelId}");
-
-                    // 停止 1min
-                    Thread.Sleep(1000 * 60);
-                }
-            }
-        }
-
-        /// <summary>
-        /// 提交任务到 Redis 队列
-        /// </summary>
-        /// <param name="info"></param>
-        /// <param name="discordSubmit"></param>
-        /// <returns></returns>
-        public async Task<SubmitResultVO> EnqueueAsync(TaskInfoQueue req)
-        {
-            if (req?.Info == null)
-            {
-                return SubmitResultVO.Fail(ReturnCode.FAILURE, "未知错误，请稍后重试");
-            }
-
-            var info = req.Info;
-            info.InstanceId = ChannelId;
-
-            try
-            {
-                var currentWaitNumbers = 0;
-
-                // 如果是放大任务，则加入放大队列
-                if (info.Action == TaskAction.UPSCALE)
-                {
-                    // 先保存到数据库，再加入到队列
-                    _taskStoreService.Save(info);
-
-                    // 放大队列允许溢出
-                    var success = await _upscaleQueue.EnqueueAsync(req, -1, ignoreFull: true);
-                    if (!success)
-                    {
-                        _taskStoreService.Delete(info.Id);
-
-                        return SubmitResultVO.Fail(ReturnCode.FAILURE, "提交失败，队列已满，请稍后重试")
-                            .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, ChannelId);
-                    }
-                }
-                else if (info.IsPartnerRelax)
-                {
-                    // 在任务提交时，前面的的任务数量
-                    currentWaitNumbers = await _relaxQueue.CountAsync();
-
-                    if (Account.RelaxQueueSize > 0 && currentWaitNumbers >= Account.RelaxQueueSize)
-                    {
-                        return SubmitResultVO.Fail(ReturnCode.FAILURE, "提交失败，队列已满，请稍后重试")
-                            .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, ChannelId);
-                    }
-
-                    // 先保存到数据库，再加入到队列
-                    _taskStoreService.Save(info);
-                    var success = await _relaxQueue.EnqueueAsync(req, Account.RelaxQueueSize);
-                    if (!success)
-                    {
-                        _taskStoreService.Delete(info.Id);
-
-                        return SubmitResultVO.Fail(ReturnCode.FAILURE, "提交失败，队列已满，请稍后重试")
-                            .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, ChannelId);
-                    }
-                }
-                else
-                {
-                    // 在任务提交时，前面的的任务数量
-                    currentWaitNumbers = await _defaultOrFastQueue.CountAsync();
-                    if (Account.QueueSize > 0 && currentWaitNumbers >= Account.QueueSize)
-                    {
-                        return SubmitResultVO.Fail(ReturnCode.FAILURE, "提交失败，队列已满，请稍后重试")
-                            .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, ChannelId);
-                    }
-
-                    // 先保存到数据库，再加入到队列
-                    _taskStoreService.Save(info);
-                    var success = await _defaultOrFastQueue.EnqueueAsync(req, Account.QueueSize);
-                    if (!success)
-                    {
-                        _taskStoreService.Delete(info.Id);
-
-                        return SubmitResultVO.Fail(ReturnCode.FAILURE, "提交失败，队列已满，请稍后重试")
-                            .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, ChannelId);
-                    }
-                }
-
-                // 发送入队提醒
-                if (IsValidRedis)
-                {
-                    var notification = new RedisNotification
-                    {
-                        Type = ENotificationType.EnqueueTaskInfo,
-                        ChannelId = ChannelId,
-                        TaskInfoId = info.Id
-                    };
-                    RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
-                }
-
-                if (currentWaitNumbers == 0)
-                {
-                    return SubmitResultVO.Of(ReturnCode.SUCCESS, "提交成功", info.Id)
-                        .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, ChannelId);
-                }
-                else
-                {
-                    return SubmitResultVO.Of(ReturnCode.IN_QUEUE, $"排队中，前面还有{currentWaitNumbers}个任务", info.Id)
-                        .SetProperty("numberOfQueues", currentWaitNumbers)
-                        .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, ChannelId);
-                }
-            }
-            catch (Exception e)
-            {
-                _logger.Error(e, "submit task error");
-
-                _taskStoreService.Delete(info.Id);
-
-                return SubmitResultVO.Fail(ReturnCode.FAILURE, "提交失败，系统异常")
-                    .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, ChannelId);
             }
         }
 
