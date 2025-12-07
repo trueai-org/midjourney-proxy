@@ -171,18 +171,18 @@ namespace Midjourney.Base.Models
         /// </summary>
         public bool? EnableNiji { get; set; }
 
-        /// <summary>
-        /// 启用快速模式用完自动切换到慢速模式
-        /// </summary>
-        public bool? EnableFastToRelax { get; set; }
+        ///// <summary>
+        ///// 启用快速模式用完自动切换到慢速模式（仅用于 discord 账号切换到慢速模式）
+        ///// </summary>
+        //public bool? EnableFastToRelax { get; set; }
+
+        ///// <summary>
+        ///// 启用时，当有快速时长时，自动切换到快速模式（废弃）
+        ///// </summary>
+        //public bool? EnableRelaxToFast { get; set; }
 
         /// <summary>
-        /// 启用时，当有快速时长时，自动切换到快速模式
-        /// </summary>
-        public bool? EnableRelaxToFast { get; set; }
-
-        /// <summary>
-        /// 表示快速模式是否已经用完了（用于 discord 账号判断）
+        /// 表示快速模式是否已经用完了
         /// </summary>
         public bool FastExhausted { get; set; }
 
@@ -545,10 +545,10 @@ namespace Midjourney.Base.Models
         /// </summary>
         public int DayRelaxDrawLimit { get; set; } = -1;
 
-        /// <summary>
-        /// 当日已绘图次数（废弃）
-        /// </summary>
-        public int DayDrawCount { get; set; } = 0;
+        ///// <summary>
+        ///// 当日已绘图次数（废弃）
+        ///// </summary>
+        //public int DayDrawCount { get; set; } = 0;
 
         /// <summary>
         /// 今日慢速绘图总数（包含失败，不包含放大）
@@ -621,6 +621,14 @@ namespace Midjourney.Base.Models
         [Column(IsIgnore = true)]
         public string RiskControlUnlockTimeFormat => RiskControlUnlockTime != null && RiskControlUnlockTime > DateTime.Now ?
             RiskControlUnlockTime.Value.ToString("yyyy-MM-dd HH:mm:ss") : "";
+
+        /// <summary>
+        /// 是否为 Discord 账号
+        /// </summary>
+        [LiteDB.BsonIgnore]
+        [MongoDB.Bson.Serialization.Attributes.BsonIgnore]
+        [Column(IsIgnore = true)]
+        public bool IsDiscord => !IsYouChuan && !IsOfficial;
 
         /// <summary>
         /// 是否为悠船账号
@@ -1403,8 +1411,8 @@ namespace Midjourney.Base.Models
 
                 EnableMj = configAccount.EnableMj,
                 EnableNiji = configAccount.EnableNiji,
-                EnableFastToRelax = configAccount.EnableFastToRelax,
-                EnableRelaxToFast = configAccount.EnableRelaxToFast,
+                //EnableFastToRelax = configAccount.EnableFastToRelax,
+                //EnableRelaxToFast = configAccount.EnableRelaxToFast,
                 EnableAutoSetRelax = configAccount.EnableAutoSetRelax,
 
                 LoginAccount = configAccount.LoginAccount,

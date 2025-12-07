@@ -1117,7 +1117,7 @@ namespace Midjourney.API
                         // 自动设置慢速，如果快速用完
                         if (account.FastExhausted == true && account.EnableAutoSetRelax == true)
                         {
-                            account.AllowModes = new List<GenerationSpeedMode>() { GenerationSpeedMode.RELAX };
+                            account.AllowModes = [GenerationSpeedMode.RELAX];
                             if (account.CoreSize > 3)
                             {
                                 account.CoreSize = 3;
@@ -1194,66 +1194,57 @@ namespace Midjourney.API
                         info.AppendLine($"{account.Id}初始化中... 创建实例耗时: {sw.ElapsedMilliseconds}ms");
                         sw.Restart();
 
+                        // 首次创建实例后同步账号信息
                         // 高频同步 info setting 一定会封号
-                        if (!account.IsYouChuan && !account.IsOfficial)
+                        try
                         {
-                            try
-                            {
-                                // 这里应该等待初始化完成，并获取用户信息验证，获取用户成功后设置为可用状态
-                                // 多账号启动时，等待一段时间再启动下一个账号
-                                await Task.Delay(1000 * 5);
+                            // 这里应该等待初始化完成，并获取用户信息验证，获取用户成功后设置为可用状态
+                            // 多账号启动时，等待一段时间再启动下一个账号
+                            await Task.Delay(1000 * 5);
 
-                                // 启动后执行 info setting 操作
-                                await _taskService.InfoSetting(account.Id);
+                            // 启动后强制同步
+                            await disInstance.SyncInfoSetting(true);
 
-                                sw.Stop();
-                                info.AppendLine($"{account.Id}初始化中... 同步 info 耗时: {sw.ElapsedMilliseconds}ms");
-                                sw.Restart();
-                            }
-                            catch (Exception ex)
-                            {
-                                _logger.Error(ex, "同步 info 异常 {@0}", account.ChannelId);
+                            sw.Stop();
+                            info.AppendLine($"{account.Id}初始化中... 同步 info 耗时: {sw.ElapsedMilliseconds}ms");
+                            sw.Restart();
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.Error(ex, "同步 info 异常 {@0}", account.ChannelId);
 
-                                info.AppendLine($"{account.Id}初始化中... 同步 info 异常");
-                            }
+                            info.AppendLine($"{account.Id}初始化中... 同步 info 异常");
                         }
                     }
 
                     // 无最大并行限制
                     if (GlobalConfiguration.GlobalMaxConcurrent != 0)
                     {
-                        // discord 账号信息同步
-                        if (!account.IsYouChuan && !account.IsOfficial)
-                        {
-                            // 慢速切换快速模式检查
-                            if (account.EnableRelaxToFast == true)
-                            {
-                                await disInstance?.RelaxToFastValidate();
-                                sw.Stop();
-                                info.AppendLine($"{account.Id}初始化中... 慢速切换快速模式检查耗时: {sw.ElapsedMilliseconds}ms");
-                                sw.Restart();
-                            }
+                        // 账号信息自动同步
+                        await disInstance?.SyncInfoSetting();
 
-                            // 启用自动同步信息和设置
-                            if (setting.EnableAutoSyncInfoSetting)
-                            {
-                                // 每 6~12 小时，同步账号信息
-                                await disInstance?.RandomSyncInfo();
-                                sw.Stop();
-                                info.AppendLine($"{account.Id}初始化中... 随机同步信息耗时: {sw.ElapsedMilliseconds}ms");
-                                sw.Restart();
-                            }
-                        }
+                        //// discord 账号信息同步
+                        //if (account.IsDiscord)
+                        //{
+                        //    // 启用自动同步信息和设置
+                        //    if (setting.EnableAutoSyncInfoSetting)
+                        //    {
+                        //        // 每 6~12 小时，同步账号信息
+                        //        await disInstance?.RandomSyncInfo();
+                        //        sw.Stop();
+                        //        info.AppendLine($"{account.Id}初始化中... 随机同步信息耗时: {sw.ElapsedMilliseconds}ms");
+                        //        sw.Restart();
+                        //    }
 
-                        if (account.IsYouChuan)
-                        {
-                            await disInstance?.YouChuanSyncInfo();
-                        }
-
-                        if (account.IsOfficial)
-                        {
-                            await disInstance?.OfficialSyncInfo();
-                        }
+                        //    // 慢速切换快速模式检查
+                        //    if (account.EnableRelaxToFast == true)
+                        //    {
+                        //        await disInstance?.RelaxToFastValidate();
+                        //        sw.Stop();
+                        //        info.AppendLine($"{account.Id}初始化中... 慢速切换快速模式检查耗时: {sw.ElapsedMilliseconds}ms");
+                        //        sw.Restart();
+                        //    }
+                        //}
                     }
                 }
                 else
@@ -1488,8 +1479,8 @@ namespace Midjourney.API
             model.LoginMessage = null;
 
             model.EnableAutoSetRelax = param.EnableAutoSetRelax;
-            model.EnableRelaxToFast = param.EnableRelaxToFast;
-            model.EnableFastToRelax = param.EnableFastToRelax;
+            //model.EnableRelaxToFast = param.EnableRelaxToFast;
+            //model.EnableFastToRelax = param.EnableFastToRelax;
             model.IsBlend = param.IsBlend;
             model.IsDescribe = param.IsDescribe;
             model.IsShorten = param.IsShorten;
@@ -1724,6 +1715,20 @@ namespace Midjourney.API
                             // 收到获取种子任务请求
                             var instance = _discordLoadBalancer.GetDiscordInstance(notification.ChannelId);
                             await instance?.GetSeed(notification.TaskInfo);
+                        }
+                        break;
+
+                    case ENotificationType.DecreaseFastCount:
+                        {
+                            var instance = _discordLoadBalancer.GetDiscordInstance(notification.ChannelId);
+                            instance?.DecreaseFastAvailableCount(notification.DecreaseCount);
+                        }
+                        break;
+
+                    case ENotificationType.DecreaseRelaxCount:
+                        {
+                            var instance = _discordLoadBalancer.GetDiscordInstance(notification.ChannelId);
+                            instance?.DecreaseYouchuanRelaxAvailableCount(notification.DecreaseCount);
                         }
                         break;
 

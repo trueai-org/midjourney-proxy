@@ -731,7 +731,7 @@ namespace Midjourney.Base.Models
 
             // 为IMAGINE类型任务或包含upsample按钮的任务生成图片URL数组
             bool shouldGenerateImageUrls = false;
-            int batchSize = GetBatchSize();
+            int batchSize = GetVideoBatchSize();
 
             // 检查是否为IMAGINE类型任务
             if (Action == TaskAction.IMAGINE && !string.IsNullOrWhiteSpace(JobId))
@@ -802,7 +802,7 @@ namespace Midjourney.Base.Models
                         // 更新 properties 里的 finalPrompt 为翻译后的中文
                         SetProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, translatedPrompt);
 
-                        Log.Information("DESCRIBE 任务结果已翻译为中文: TaskId={@0}, Prompt={@1}", Id,  translatedPrompt);
+                        Log.Information("DESCRIBE 任务结果已翻译为中文: TaskId={@0}, Prompt={@1}", Id, translatedPrompt);
                     }
                     else
                     {
@@ -821,7 +821,11 @@ namespace Midjourney.Base.Models
             UpdateUserDrawCount(true);
         }
 
-        private int GetBatchSize()
+        /// <summary>
+        /// 获取视频批量处理数量
+        /// </summary>
+        /// <returns></returns>
+        public int GetVideoBatchSize()
         {
             string promptSource = PromptFull;
 

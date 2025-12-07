@@ -584,7 +584,12 @@ namespace Midjourney.API.Controllers
                 return Result.Fail("演示模式，禁止操作");
             }
 
-            await _taskService.InfoSetting(id);
+            var success = await _taskService.SyncInfoSetting(id, true);
+            if (!success)
+            {
+                return Result.Fail("同步失败，请稍后重试");
+            }
+
             return Result.Ok();
         }
 
@@ -828,7 +833,12 @@ namespace Midjourney.API.Controllers
                 return Result.Fail("演示模式，禁止操作");
             }
 
-            await _taskService.AccountChangeVersion(id, version);
+            var success = await _taskService.AccountChangeVersion(id, version);
+            if (!success)
+            {
+                return Result.Fail("修改版本或同步信息失败");
+            }
+
             return Result.Ok();
         }
 

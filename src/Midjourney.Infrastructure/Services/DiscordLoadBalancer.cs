@@ -94,8 +94,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 // 允许继续绘图
                 .Where(c => c.Account.IsDailyLimitContinueDrawing(preferredSpeedMode) && c.Account.Enable == true)
 
-                // 首选速度绘图判断
-                .Where(c => c.Account.IsValidateModeContinueDrawing(preferredSpeedMode, accountFilter?.Modes, out _))
+                // 首选速度绘图判断 + 计数器验证
+                .Where(c => c.Account.IsValidateModeContinueDrawing(preferredSpeedMode, accountFilter?.Modes, out var confirmMode)
+                && c.IsValidAvailableCount(confirmMode))
 
                 // 判断悠船或官方账号
                 .WhereIf(isYm == true, c => c.Account.IsYouChuan || c.Account.IsOfficial)

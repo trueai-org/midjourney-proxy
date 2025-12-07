@@ -431,10 +431,10 @@ namespace Midjourney.Base.Models
         /// </summary>
         public bool EnableAutoVerifyAccount { get; set; }
 
-        /// <summary>
-        /// 启用自动同步信息和设置
-        /// </summary>
-        public bool EnableAutoSyncInfoSetting { get; set; }
+        ///// <summary>
+        ///// 启用自动同步信息和设置（废弃）
+        ///// </summary>
+        //public bool EnableAutoSyncInfoSetting { get; set; }
 
         /// <summary>
         /// 启用 token 自动延期
@@ -852,15 +852,15 @@ namespace Midjourney.Base.Models
         /// </summary>
         public bool EnableNiji { get; set; } = true;
 
-        /// <summary>
-        /// 启用快速模式用完自动切换到慢速模式
-        /// </summary>
-        public bool EnableFastToRelax { get; set; }
+        ///// <summary>
+        ///// 启用快速模式用完自动切换到慢速模式
+        ///// </summary>
+        //public bool EnableFastToRelax { get; set; }
 
-        /// <summary>
-        /// 启用时，当有快速时长时，自动切换到快速模式
-        /// </summary>
-        public bool EnableRelaxToFast { get; set; }
+        ///// <summary>
+        ///// 启用时，当有快速时长时，自动切换到快速模式
+        ///// </summary>
+        //public bool EnableRelaxToFast { get; set; }
 
         /// <summary>
         /// 自动设置慢速

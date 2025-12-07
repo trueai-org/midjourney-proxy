@@ -1,4 +1,5 @@
-﻿using CSRedis;
+﻿using System.Collections.Concurrent;
+using CSRedis;
 using Microsoft.Extensions.Caching.Memory;
 using Serilog;
 
@@ -14,6 +15,21 @@ namespace Midjourney.Base
         /// 本地内存缓存实例
         /// </summary>
         private static readonly MemoryCache _memoryCache = new(new MemoryCacheOptions());
+
+        /// <summary>
+        /// 于内存模式下线程安全计数器的字典
+        /// </summary>
+        private static readonly ConcurrentDictionary<string, long> _counters = new();
+
+        /// <summary>
+        /// 于内存模式下计数器过期定时器的字典
+        /// </summary>
+        private static readonly ConcurrentDictionary<string, Timer> _counterTimers = new();
+
+        /// <summary>
+        /// 计数器锁对象
+        /// </summary>
+        private static readonly object _counterLock = new();
 
         /// <summary>
         /// 是否启用分布式锁
@@ -379,6 +395,244 @@ namespace Midjourney.Base
             else
             {
                 return Exists(key);
+            }
+        }
+
+        /// <summary>
+        /// 线程安全的递增操作
+        /// </summary>
+        /// <param name="key">缓存键</param>
+        /// <param name="value">递增值，默认为1</param>
+        /// <param name="expiry">过期时间（仅在键首次创建时生效，后续递增不会刷新过期时间）</param>
+        /// <returns>递增后的值</returns>
+        public static long Increment(string key, long value = 1, TimeSpan? expiry = null)
+        {
+            if (IsDistributed)
+            {
+                var result = RedisHelper.IncrBy(key, value);
+                if (expiry.HasValue)
+                {
+                    RedisHelper.Expire(key, expiry.Value);
+                }
+                return result;
+            }
+            else
+            {
+                var isNew = !_counters.ContainsKey(key);
+                var result = _counters.AddOrUpdate(key, value, (k, oldValue) => oldValue + value);
+
+                // 仅在首次创建时设置过期时间
+                if (isNew && expiry.HasValue)
+                {
+                    SetCounterExpiry(key, expiry.Value);
+                }
+                return result;
+            }
+        }
+
+        /// <summary>
+        /// 线程安全的递减操作
+        /// </summary>
+        /// <param name="key">缓存键</param>
+        /// <param name="value">递减值，默认为1</param>
+        /// <param name="expiry">过期时间（仅在键首次创建时生效，后续递减不会刷新过期时间）</param>
+        /// <returns>递减后的值</returns>
+        public static long Decrement(string key, long value = 1, TimeSpan? expiry = null)
+        {
+            if (IsDistributed)
+            {
+                var result = RedisHelper.IncrBy(key, -value);
+                if (expiry.HasValue)
+                {
+                    RedisHelper.Expire(key, expiry.Value);
+                }
+                return result;
+            }
+            else
+            {
+                var isNew = !_counters.ContainsKey(key);
+                var result = _counters.AddOrUpdate(key, -value, (k, oldValue) => oldValue - value);
+
+                // 仅在首次创建时设置过期时间
+                if (isNew && expiry.HasValue)
+                {
+                    SetCounterExpiry(key, expiry.Value);
+                }
+                return result;
+            }
+        }
+
+        /// <summary>
+        /// 线程安全的异步递增操作
+        /// </summary>
+        /// <param name="key">缓存键</param>
+        /// <param name="value">递增值，默认为1</param>
+        /// <param name="expiry">过期时间（仅在键首次创建时生效，后续递增不会刷新过期时间）</param>
+        /// <returns>递增后的值</returns>
+        public static async Task<long> IncrementAsync(string key, long value = 1, TimeSpan? expiry = null)
+        {
+            if (IsDistributed)
+            {
+                var result = await RedisHelper.IncrByAsync(key, value);
+                if (expiry.HasValue)
+                {
+                    await RedisHelper.ExpireAsync(key, expiry.Value);
+                }
+                return result;
+            }
+            else
+            {
+                return Increment(key, value, expiry);
+            }
+        }
+
+        /// <summary>
+        /// 线程安全的异步递减操作
+        /// </summary>
+        /// <param name="key">缓存键</param>
+        /// <param name="value">递减值，默认为1</param>
+        /// <param name="expiry">过期时间（仅在键首次创建时生效，后续递减不会刷新过期时间）</param>
+        /// <returns>递减后的值</returns>
+        public static async Task<long> DecrementAsync(string key, long value = 1, TimeSpan? expiry = null)
+        {
+            if (IsDistributed)
+            {
+                var result = await RedisHelper.IncrByAsync(key, -value);
+                if (expiry.HasValue)
+                {
+                    await RedisHelper.ExpireAsync(key, expiry.Value);
+                }
+                return result;
+            }
+            else
+            {
+                return Decrement(key, value, expiry);
+            }
+        }
+
+        /// <summary>
+        /// 获取计数器当前值
+        /// </summary>
+        /// <param name="key">缓存键</param>
+        /// <returns>当前值，如果不存在则返回0</returns>
+        public static long GetCounter(string key)
+        {
+            if (IsDistributed)
+            {
+                return RedisHelper.Get<long>(key);
+            }
+            else
+            {
+                return _counters.TryGetValue(key, out var value) ? value : 0;
+            }
+        }
+
+        /// <summary>
+        /// 异步获取计数器当前值
+        /// </summary>
+        /// <param name="key">缓存键</param>
+        /// <returns>当前值，如果不存在则返回0</returns>
+        public static async Task<long> GetCounterAsync(string key)
+        {
+            if (IsDistributed)
+            {
+                return await RedisHelper.GetAsync<long>(key);
+            }
+            else
+            {
+                return GetCounter(key);
+            }
+        }
+
+        /// <summary>
+        /// 移除计数器
+        /// </summary>
+        /// <param name="key">缓存键</param>
+        /// <returns>是否成功移除</returns>
+        public static bool RemoveCounter(string key)
+        {
+            if (IsDistributed)
+            {
+                return RedisHelper.Del(key) > 0;
+            }
+            else
+            {
+                ClearCounterTimer(key);
+                return _counters.TryRemove(key, out _);
+            }
+        }
+
+        /// <summary>
+        /// 设置计数器过期时间（内存模式专用）
+        /// </summary>
+        private static void SetCounterExpiry(string key, TimeSpan expiry)
+        {
+            lock (_counterLock)
+            {
+                // 清除已有的定时器
+                ClearCounterTimer(key);
+
+                // 创建新的定时器
+                var timer = new Timer(_ =>
+                {
+                    _counters.TryRemove(key, out var t);
+
+                    ClearCounterTimer(key);
+                }, null, expiry, Timeout.InfiniteTimeSpan);
+
+                _counterTimers[key] = timer;
+            }
+        }
+
+        /// <summary>
+        /// 清除计数器定时器（内存模式专用）
+        /// </summary>
+        private static void ClearCounterTimer(string key)
+        {
+            if (_counterTimers.TryRemove(key, out var timer))
+            {
+                timer?.Dispose();
+            }
+        }
+
+        /// <summary>
+        /// 设置计数器过期时间
+        /// </summary>
+        /// <param name="key">缓存键</param>
+        /// <param name="expiry">过期时间</param>
+        /// <returns>是否设置成功</returns>
+        public static bool SetCounterExpire(string key, TimeSpan expiry)
+        {
+            if (IsDistributed)
+            {
+                return RedisHelper.Expire(key, expiry);
+            }
+            else
+            {
+                if (_counters.ContainsKey(key))
+                {
+                    SetCounterExpiry(key, expiry);
+                    return true;
+                }
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 异步设置计数器过期时间
+        /// </summary>
+        /// <param name="key">缓存键</param>
+        /// <param name="expiry">过期时间</param>
+        /// <returns>是否设置成功</returns>
+        public static async Task<bool> SetCounterExpireAsync(string key, TimeSpan expiry)
+        {
+            if (IsDistributed)
+            {
+                return await RedisHelper.ExpireAsync(key, expiry);
+            }
+            else
+            {
+                return SetCounterExpire(key, expiry);
             }
         }
     }

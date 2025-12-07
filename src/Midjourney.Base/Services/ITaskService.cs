@@ -184,7 +184,7 @@ namespace Midjourney.Base.Services
         /// 执行 info setting 操作
         /// </summary>
         /// <returns></returns>
-        Task InfoSetting(string id);
+        Task<bool> SyncInfoSetting(string id, bool isClearCache = false);
 
         /// <summary>
         /// 修改版本
@@ -192,7 +192,7 @@ namespace Midjourney.Base.Services
         /// <param name="id"></param>
         /// <param name="version"></param>
         /// <returns></returns>
-        Task AccountChangeVersion(string id, string version);
+        Task<bool> AccountChangeVersion(string id, string version);
 
         /// <summary>
         /// 执行操作

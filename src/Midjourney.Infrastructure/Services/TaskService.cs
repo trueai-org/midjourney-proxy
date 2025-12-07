@@ -25,9 +25,8 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
+using Instances;
 using Microsoft.Extensions.Caching.Memory;
-using Midjourney.Base.Models;
 using Midjourney.Infrastructure.LoadBalancer;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -240,6 +239,10 @@ namespace Midjourney.Infrastructure.Services
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
             if (!instance.Account.IsValidateModeContinueDrawing(info.Mode, info.AccountFilter?.Modes, out var mode))
+            {
+                return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
+            }
+            if (!instance.IsValidAvailableCount(mode))
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
@@ -520,6 +523,10 @@ namespace Midjourney.Infrastructure.Services
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
+            if (!instance.IsValidAvailableCount(mode))
+            {
+                return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
+            }
             if (!instance.Account.IsAcceptNewTask(mode))
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
@@ -715,6 +722,10 @@ namespace Midjourney.Infrastructure.Services
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
             if (!instance.Account.IsValidateModeContinueDrawing(info.Mode, info.AccountFilter?.Modes, out var mode))
+            {
+                return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
+            }
+            if (!instance.IsValidAvailableCount(mode))
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
@@ -953,6 +964,10 @@ namespace Midjourney.Infrastructure.Services
             }
 
             if (!instance.Account.IsValidateModeContinueDrawing(info.Mode, info.AccountFilter?.Modes, out var mode))
+            {
+                return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
+            }
+            if (!instance.IsValidAvailableCount(mode))
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
@@ -1202,7 +1217,6 @@ namespace Midjourney.Infrastructure.Services
                         {
                             customId = $"MJ::JOB::animate_{videoDTO.Motion.ToLower()}_extend::{videoDTO.Index + 1}::{targetTask.OfficialTaskId}";
                         }
-
 
                         info.SetProperty(Constants.TASK_PROPERTY_CUSTOM_ID, customId);
                         info.PromptEn = prompt;
@@ -2477,7 +2491,10 @@ namespace Midjourney.Infrastructure.Services
                 {
                     return SubmitResultVO.Fail(ReturnCode.FAILURE, "无可用的账号实例");
                 }
-
+                if (!discordInstance.IsValidAvailableCount(mode))
+                {
+                    return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
+                }
                 if (!discordInstance.IsIdleQueue(mode))
                 {
                     return SubmitResultVO.Fail(ReturnCode.FAILURE, "提交失败，队列已满，请稍后重试");
@@ -2941,12 +2958,14 @@ namespace Midjourney.Infrastructure.Services
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
-
             if (!discordInstance.Account.IsValidateModeContinueDrawing(task.Mode, task.AccountFilter?.Modes, out mode))
             {
                 return SubmitResultVO.Fail(ReturnCode.FAILURE, "无可用的账号实例");
             }
-
+            if (!discordInstance.IsValidAvailableCount(mode))
+            {
+                return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
+            }
             if (!discordInstance.IsIdleQueue(mode))
             {
                 return SubmitResultVO.Fail(ReturnCode.FAILURE, "提交失败，队列已满，请稍后重试");
@@ -3224,15 +3243,22 @@ namespace Midjourney.Infrastructure.Services
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
-            if (!discordInstance.Account.IsValidateModeContinueDrawing(task.Mode, task.AccountFilter?.Modes, out var mode))
-            {
-                return SubmitResultVO.Fail(ReturnCode.FAILURE, "无可用的账号实例");
-            }
-            if (!discordInstance.IsIdleQueue(mode))
-            {
-                return SubmitResultVO.Fail(ReturnCode.FAILURE, "提交失败，队列已满，请稍后重试");
-            }
-            task.Mode = mode;
+
+            // 获取 seed 不需要判断额度队列等
+
+            //if (!discordInstance.Account.IsValidateModeContinueDrawing(task.Mode, task.AccountFilter?.Modes, out var mode))
+            //{
+            //    return SubmitResultVO.Fail(ReturnCode.FAILURE, "无可用的账号实例");
+            //}
+            //if (!discordInstance.IsValidAvailableCount(mode))
+            //{
+            //    return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
+            //}
+            //if (!discordInstance.IsIdleQueue(mode))
+            //{
+            //    return SubmitResultVO.Fail(ReturnCode.FAILURE, "提交失败，队列已满，请稍后重试");
+            //}
+            //task.Mode = mode;
 
             // redis 模式
             if (setting.IsValidRedis)
@@ -3410,7 +3436,7 @@ namespace Midjourney.Infrastructure.Services
         /// 执行 info setting 操作
         /// </summary>
         /// <returns></returns>
-        public async Task InfoSetting(string id)
+        public async Task<bool> SyncInfoSetting(string id, bool isClearCache = false)
         {
             var model = DbHelper.Instance.AccountStore.Get(id);
             if (model == null)
@@ -3424,85 +3450,7 @@ namespace Midjourney.Infrastructure.Services
                 throw new LogicException("无可用的账号实例");
             }
 
-            if (model.IsYouChuan)
-            {
-                await discordInstance.YmTaskService.YouChuanSyncInfo(true);
-            }
-            else if (model.IsOfficial)
-            {
-                // 1小时最多调用 10 次，否则会触发封号
-                var countKey = $"info_setting_count:{discordInstance.ChannelId}_{DateTime.Now:yyyyMMddHH}";
-                var count = AdaptiveCache.Get<int?>(countKey);
-                if (count > 10)
-                {
-                    Log.Warning("官方同步信息调用过于频繁，已跳过执行，ChannelId={@0}", discordInstance.ChannelId);
-                    return;
-                }
-
-                await discordInstance.YmTaskService.OfficialSyncInfo(true);
-
-                // 记录调用次数
-                AdaptiveCache.AddOrUpdate(countKey, 1, (k, v) => ++v, TimeSpan.FromHours(1));
-            }
-            else
-            {
-                // 1小时最多调用 10 次，否则会触发封号
-                var countKey = $"info_setting_count:{discordInstance.ChannelId}_{DateTime.Now:yyyyMMddHH}";
-                var count = AdaptiveCache.Get<int?>(countKey);
-                if (count > 10)
-                {
-                    Log.Warning("Discord同步调用过于频繁，已跳过执行，ChannelId={@0}", discordInstance.ChannelId);
-                    return;
-                }
-
-                if (discordInstance.Account.EnableMj == true)
-                {
-                    var res3 = await discordInstance.SettingAsync(SnowFlake.NextId(), EBotType.MID_JOURNEY);
-                    if (res3.Code != ReturnCode.SUCCESS)
-                    {
-                        throw new LogicException(res3.Description);
-                    }
-                    Thread.Sleep(2500);
-
-                    var res0 = await discordInstance.InfoAsync(SnowFlake.NextId(), EBotType.MID_JOURNEY);
-                    if (res0.Code != ReturnCode.SUCCESS)
-                    {
-                        throw new LogicException(res0.Description);
-                    }
-                    Thread.Sleep(2500);
-                }
-
-                if (discordInstance.Account.EnableNiji == true)
-                {
-                    try
-                    {
-                        // 如果没有开启 NIJI 转 MJ
-                        if (GlobalConfiguration.Setting.EnableConvertNijiToMj == false)
-                        {
-                            var res2 = await discordInstance.SettingAsync(SnowFlake.NextId(), EBotType.NIJI_JOURNEY);
-                            if (res2.Code != ReturnCode.SUCCESS)
-                            {
-                                throw new LogicException(res2.Description);
-                            }
-                            Thread.Sleep(2500);
-
-                            var res = await discordInstance.InfoAsync(SnowFlake.NextId(), EBotType.NIJI_JOURNEY);
-                            if (res.Code != ReturnCode.SUCCESS)
-                            {
-                                throw new LogicException(res.Description);
-                            }
-                            Thread.Sleep(2500);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Log.Error(ex, "同步 Niji 信息异常");
-                    }
-                }
-
-                // 记录调用次数
-                AdaptiveCache.AddOrUpdate(countKey, 1, (k, v) => ++v, TimeSpan.FromHours(1));
-            }
+            return await discordInstance.SyncInfoSetting(isClearCache);
         }
 
         /// <summary>
@@ -3511,7 +3459,7 @@ namespace Midjourney.Infrastructure.Services
         /// <param name="id"></param>
         /// <param name="version"></param>
         /// <returns></returns>
-        public async Task AccountChangeVersion(string id, string version)
+        public async Task<bool> AccountChangeVersion(string id, string version)
         {
             var model = DbHelper.Instance.AccountStore.Get(id);
             if (model == null)
@@ -3535,9 +3483,9 @@ namespace Midjourney.Infrastructure.Services
                 throw new LogicException(res.Description);
             }
 
-            Thread.Sleep(2000);
+            Thread.Sleep(5000);
 
-            await InfoSetting(id);
+            return await SyncInfoSetting(id, true);
         }
 
         /// <summary>
@@ -3573,7 +3521,7 @@ namespace Midjourney.Infrastructure.Services
 
             Thread.Sleep(2000);
 
-            await InfoSetting(id);
+            await SyncInfoSetting(id);
         }
 
         /// <summary>

@@ -43,6 +43,11 @@
         /// 时间戳
         /// </summary>
         public DateTime Timestamp { get; set; } = DateTime.Now;
+
+        /// <summary>
+        /// 减少计数
+        /// </summary>
+        public int DecreaseCount { get; set; }
     }
 
     /// <summary>
@@ -78,6 +83,16 @@
         /// <summary>
         /// 获取 Seek 种子任务
         /// </summary>
-        SeedTaskInfo = 5
+        SeedTaskInfo = 5,
+
+        /// <summary>
+        /// 减少慢速计数
+        /// </summary>
+        DecreaseRelaxCount = 6,
+
+        /// <summary>
+        /// 减少快速计数
+        /// </summary>
+        DecreaseFastCount = 7
     }
 }

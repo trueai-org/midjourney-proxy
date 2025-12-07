@@ -921,10 +921,9 @@ namespace Midjourney.Infrastructure
                                         {
                                             task = _discordInstance.FindRunningTask(c => c.InteractionMetadataId == metaId).FirstOrDefault();
                                         }
-
                                         if (task != null)
                                         {
-                                            task.Fail("账号用量已经用完");
+                                            task.Fail("任务失败，请重试");
                                         }
 
                                         // 标记快速模式已经用完了
@@ -933,7 +932,7 @@ namespace Midjourney.Infrastructure
                                         // 自动设置慢速，如果快速用完
                                         if (Account.FastExhausted == true && Account.EnableAutoSetRelax == true)
                                         {
-                                            Account.AllowModes = new List<GenerationSpeedMode>() { GenerationSpeedMode.RELAX };
+                                            Account.AllowModes = [GenerationSpeedMode.RELAX];
 
                                             if (Account.CoreSize > 3)
                                             {
@@ -945,7 +944,7 @@ namespace Midjourney.Infrastructure
                                         Account.ClearCache();
 
                                         // 如果开启自动切换慢速模式
-                                        if (Account.EnableFastToRelax == true)
+                                        if (Account.EnableAutoSetRelax == true)
                                         {
                                             // 切换到慢速模式
                                             // 加锁切换到慢速模式
@@ -990,19 +989,9 @@ namespace Midjourney.Infrastructure
 
                                                     _discordInstance?.Dispose();
 
-                                                    Task.Run(async () =>
-                                                    {
-                                                        try
-                                                        {
-                                                            await EmailJob.Instance.EmailSend(_setting.Smtp,
-                                                                $"MJ账号禁用通知-{Account.ChannelId}",
-                                                                $"{Account.ChannelId}, {Account.DisabledReason}");
-                                                        }
-                                                        catch (Exception ex)
-                                                        {
-                                                            _logger.Error(ex, "邮件发送失败");
-                                                        }
-                                                    });
+                                                    _ = EmailJob.Instance.EmailSend(_setting.Smtp,
+                                                                   $"MJ账号禁用通知-{Account.ChannelId}",
+                                                                   $"{Account.ChannelId}, {Account.DisabledReason}");
                                                 }
                                                 catch (Exception ex)
                                                 {

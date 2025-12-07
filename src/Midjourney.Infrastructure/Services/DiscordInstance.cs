@@ -274,6 +274,78 @@ namespace Midjourney.Infrastructure.LoadBalancer
         public string ChannelId => Account.ChannelId;
 
         /// <summary>
+        /// 快速可用剩余次数
+        /// </summary>
+        public int FastAvailableCount { get; private set; } = 0;
+
+        /// <summary>
+        /// 悠船可用慢速剩余次数
+        /// </summary>
+        public int YouchuanRelaxAvailableCount { get; private set; } = -1;
+
+        /// <summary>
+        /// 计数器验证，通过确定速度模式判断
+        /// 判断是否快速/慢速次数是否足够
+        /// </summary>
+        /// <param name="confirmMode">这里是已确定的速度模式，因此不需要判断固定速度</param>
+        /// <returns></returns>
+        public bool IsValidAvailableCount(GenerationSpeedMode confirmMode)
+        {
+            // 如果是快速模式，判断快速是否足够次数
+            if (confirmMode == GenerationSpeedMode.FAST)
+            {
+                // 如果超过 6 次快速
+                return FastAvailableCount > 6;
+            }
+            else if (confirmMode == GenerationSpeedMode.TURBO)
+            {
+                // 如果超过 12 次快速
+                return FastAvailableCount > 12;
+            }
+            // 如果慢速模式，只有悠船才判断慢速次数
+            else if (confirmMode == GenerationSpeedMode.RELAX && Account.IsYouChuan)
+            {
+                return YouchuanRelaxAvailableCount > 0;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// 扣减快速
+        /// </summary>
+        /// <param name="value"></param>
+        public void DecreaseFastAvailableCount(int value)
+        {
+            if (value <= 0 || FastAvailableCount <= 0)
+            {
+                return;
+            }
+
+            var newValue = FastAvailableCount - value;
+            FastAvailableCount = Math.Max(0, newValue);
+
+            _logger.Information("账号 {@0} 扣减快速剩余次数 {@1}，预估当前剩余次数 {@2}", Account.ChannelId, value, FastAvailableCount);
+        }
+
+        /// <summary>
+        /// 扣减悠船慢速
+        /// </summary>
+        /// <param name="value"></param>
+        public void DecreaseYouchuanRelaxAvailableCount(int value)
+        {
+            if (!Account.IsYouChuan || YouchuanRelaxAvailableCount <= 0 || value <= 0)
+            {
+                return;
+            }
+
+            var newValue = YouchuanRelaxAvailableCount - value;
+            YouchuanRelaxAvailableCount = Math.Max(0, newValue);
+
+            _logger.Information("账号 {@0} 扣减悠船慢速剩余次数 {@1}，预估当前剩余次数 {@2}", Account.ChannelId, value, YouchuanRelaxAvailableCount);
+        }
+
+        /// <summary>
         /// 是否已初始化完成
         /// </summary>
         public bool IsInit { get; set; }
@@ -2193,6 +2265,74 @@ namespace Midjourney.Infrastructure.LoadBalancer
             }
             finally
             {
+                if (info.Status == TaskStatus.SUCCESS)
+                {
+                    // 记录今日 relax / fast 次数
+                    if (info.Action != TaskAction.UPSCALE)
+                    {
+                        if (info.Mode == GenerationSpeedMode.RELAX && info.Action != TaskAction.DESCRIBE)
+                        {
+                            // 记录慢速使用次数
+                            var relaxAccountTodayCountKey = $"relax_account_count:{DateTime.Now:yyyyMMdd}:{info.InstanceId}";
+                            var value = 1;
+                            if (info.Action == TaskAction.VIDEO || info.Action == TaskAction.VIDEO_EXTEND)
+                            {
+                                var bs = info.GetVideoBatchSize();
+                                value *= bs * 2;
+                            }
+                            var count = AdaptiveCache.Increment(relaxAccountTodayCountKey, value, TimeSpan.FromDays(1));
+
+                            Log.Information("任务完成，记录今日 relax 次数: TaskId={@0}, InstanceId={@1}, Count={@2}", info.Id, info.InstanceId, count);
+
+                            // 通知所有节点并扣减次数
+                            var notification = new RedisNotification
+                            {
+                                Type = ENotificationType.DecreaseRelaxCount,
+                                ChannelId = info.InstanceId,
+                                DecreaseCount = value
+                            };
+                            RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
+                        }
+                        else
+                        {
+                            // 图生文，算快速的消耗
+
+                            // 记录快速使用次数
+                            var fastAccountTodayCountKey = $"fast_account_count:{DateTime.Now:yyyyMMdd}:{info.InstanceId}";
+                            var value = 1;
+                            if (info.Mode == GenerationSpeedMode.TURBO)
+                            {
+                                value *= 2;
+                            }
+                            if (info.Action == TaskAction.VIDEO || info.Action == TaskAction.VIDEO_EXTEND)
+                            {
+                                var bs = info.GetVideoBatchSize();
+                                value *= bs * 2;
+                            }
+                            var count = AdaptiveCache.Increment(fastAccountTodayCountKey, value, TimeSpan.FromDays(1));
+
+                            Log.Information("任务完成，记录今日 fast 次数: TaskId={@0}, InstanceId={@1}, Count={@2}", info.Id, info.InstanceId, count);
+
+                            // 通知所有节点并扣减次数
+                            var notification = new RedisNotification
+                            {
+                                Type = ENotificationType.DecreaseFastCount,
+                                ChannelId = info.InstanceId,
+                                DecreaseCount = value
+                            };
+                            RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
+                        }
+
+                        // 如果是快速模式，且触发最低阈值，则立即同步一次 info
+                        if (info.Mode == GenerationSpeedMode.FAST && FastAvailableCount < 12)
+                        {
+                            await SyncInfoSetting(true);
+                        }
+
+                        // 如果是慢速绘图，由于是独立计数，因此不需要同步
+                    }
+                }
+
                 _runningTasks.TryRemove(info.Id, out _);
                 _taskFutureMap.TryRemove(info.Id, out _);
 
@@ -3726,124 +3866,330 @@ namespace Midjourney.Infrastructure.LoadBalancer
             return await PostJsonAndCheckStatusAsync(paramsStr);
         }
 
+        ///// <summary>
+        ///// 全局切换快速模式检查
+        ///// </summary>
+        ///// <returns></returns>
+        //public async Task RelaxToFastValidate()
+        //{
+        //    try
+        //    {
+        //        var acc = Account;
+
+        //        // 快速用完时
+        //        // 并且开启快速切换慢速模式时
+        //        if (acc != null && acc.FastExhausted && acc.EnableRelaxToFast == true)
+        //        {
+        //            // 每 6~12 小时，和启动时检查账号是否有快速时长
+        //            await RandomSyncInfo();
+
+        //            // 判断 info 检查时间是否在 5 分钟内
+        //            if (acc.InfoUpdated != null && acc.InfoUpdated.Value.AddMinutes(5) >= DateTime.Now)
+        //            {
+        //                _logger.Information("自动切换快速模式，验证 {@0}", acc.ChannelId);
+
+        //                // 提取 fastime
+        //                // 如果检查完之后，快速超过 1 小时，则标记为快速未用完
+        //                var fastTime = acc.FastTimeRemaining?.ToString()?.Split('/')?.FirstOrDefault()?.Trim();
+        //                if (!string.IsNullOrWhiteSpace(fastTime) && double.TryParse(fastTime, out var ftime) && ftime >= 1)
+        //                {
+        //                    _logger.Information("自动切换快速模式，开始 {@0}", acc.ChannelId);
+
+        //                    // 标记未用完快速
+        //                    acc.FastExhausted = false;
+        //                    DbHelper.Instance.AccountStore.Update("FastExhausted", acc);
+
+        //                    // 如果开启了自动切换到快速，则自动切换到快速
+        //                    try
+        //                    {
+        //                        if (acc.EnableRelaxToFast == true)
+        //                        {
+        //                            Thread.Sleep(2500);
+        //                            await FastAsync(SnowFlake.NextId(), EBotType.MID_JOURNEY);
+
+        //                            Thread.Sleep(2500);
+        //                            await FastAsync(SnowFlake.NextId(), EBotType.NIJI_JOURNEY);
+        //                        }
+        //                    }
+        //                    catch (Exception ex)
+        //                    {
+        //                        _logger.Error(ex, "自动切换快速模式，执行异常 {@0}", acc.ChannelId);
+        //                    }
+
+        //                    acc.ClearCache();
+
+        //                    _logger.Information("自动切换快速模式，执行完成 {@0}", acc.ChannelId);
+        //                }
+        //            }
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.Error(ex, "快速切换慢速模式，检查执行异常");
+        //    }
+        //}
+
+        ///// <summary>
+        ///// 悠船每 n 分钟同步一次账号信息
+        ///// </summary>
+        ///// <returns></returns>
+        //public async Task YouChuanSyncInfo()
+        //{
+        //    await _ymTaskService.YouChuanSyncInfo();
+        //}
+
+        ///// <summary>
+        ///// 官网每 n 分钟同步一次账号信息
+        ///// </summary>
+        ///// <returns></returns>
+        //public async Task OfficialSyncInfo()
+        //{
+        //    await _ymTaskService.OfficialSyncInfo();
+        //}
+
         /// <summary>
-        /// 全局切换快速模式检查
+        /// 自动同步 Info Setting
         /// </summary>
+        /// <param name="isClearCache"></param>
         /// <returns></returns>
-        public async Task RelaxToFastValidate()
+        /// <exception cref="LogicException"></exception>
+        public async Task<bool> SyncInfoSetting(bool isClearCache = false)
         {
             try
             {
                 var acc = Account;
 
-                // 快速用完时
-                // 并且开启快速切换慢速模式时
-                if (acc != null && acc.FastExhausted && acc.EnableRelaxToFast == true)
+                await using var lockHandle = await AdaptiveLock.LockAsync(acc.InfoLockKey, 30);
+                if (!lockHandle.IsAcquired)
                 {
-                    // 每 6~12 小时，和启动时检查账号是否有快速时长
-                    await RandomSyncInfo();
+                    return false;
+                }
 
-                    // 判断 info 检查时间是否在 5 分钟内
-                    if (acc.InfoUpdated != null && acc.InfoUpdated.Value.AddMinutes(5) >= DateTime.Now)
+                var success = false;
+
+                // 悠船立即同步，不缓存
+                if (acc.IsYouChuan)
+                {
+                    var sw = Stopwatch.StartNew();
+                    success = await YmTaskService.SyncYouchuanInfo();
+                    sw.Stop();
+                    if (success)
                     {
-                        _logger.Information("自动切换快速模式，验证 {@0}", acc.ChannelId);
+                        // 计算快速可用次数
+                        FastAvailableCount = (int)Math.Ceiling(Account.YouChuanFastRemaining / 60D);
 
-                        // 提取 fastime
-                        // 如果检查完之后，快速超过 1 小时，则标记为快速未用完
-                        var fastTime = acc.FastTimeRemaining?.ToString()?.Split('/')?.FirstOrDefault()?.Trim();
-                        if (!string.IsNullOrWhiteSpace(fastTime) && double.TryParse(fastTime, out var ftime) && ftime >= 1)
+                        // 计算慢速总数
+                        var relaxAccountTodayCountKey = $"relax_account_count:{DateTime.Now:yyyyMMdd}:{acc.ChannelId}";
+                        var count = (int)AdaptiveCache.GetCounter(relaxAccountTodayCountKey);
+                        YouchuanRelaxAvailableCount = Account.YouChuanRelaxedReset > DateTime.Now ? 0 : Math.Max(0, Account.YouChuanRelaxDailyLimit - count);
+
+                        _logger.Information("悠船同步信息完成，ChannelId={@0}, FastAvailableCount={@1}, YouchuanRelaxAvailableCount={@2}, 用时={@3}ms",
+                            ChannelId, FastAvailableCount, YouchuanRelaxAvailableCount, sw.ElapsedMilliseconds);
+                    }
+
+                    return success;
+                }
+
+                var cacheKey = $"info_setting_sync_cache:{acc.ChannelId}";
+                if (isClearCache)
+                {
+                    AdaptiveCache.Remove(cacheKey);
+
+                    // 只有强制同步时才需要添加限制规则
+                    // 最新规则：
+                    // 每 1 分钟最多同步 1 次
+                    // 每 5 分钟最多同步 2 次
+                    // 每 10 分钟最多同步 3 次
+                    // 每 30 分钟最多同步 4 次
+                    // 每 60 分钟最多同步 10 次
+
+                    var keyPrefix = $"syncinfo_limit_{DateTime.Now:yyyyMMdd}:";
+
+                    if (!RateLimiter.Check(keyPrefix, acc.ChannelId, 1, 1) ||
+                        !RateLimiter.Check(keyPrefix, acc.ChannelId, 5, 2) ||
+                        !RateLimiter.Check(keyPrefix, acc.ChannelId, 10, 3) ||
+                        !RateLimiter.Check(keyPrefix, acc.ChannelId, 30, 4) ||
+                        !RateLimiter.Check(keyPrefix, acc.ChannelId, 60, 10))
+                    {
+                        Log.Warning("同步调用过于频繁，ChannelId={0}", acc.ChannelId);
+                        return false;
+                    }
+                }
+
+                if (acc.IsOfficial)
+                {
+                    // 官方 60-180 分钟
+                    var cacheMinutes = Random.Shared.Next(60, 180);
+                    success = await AdaptiveCache.GetOrCreateAsync(cacheKey, async () =>
+                    {
+                        var sw = Stopwatch.StartNew();
+                        var ok = await YmTaskService.SyncOfficialInfo();
+                        sw.Stop();
+                        if (!ok)
                         {
-                            _logger.Information("自动切换快速模式，开始 {@0}", acc.ChannelId);
+                            throw new LogicException("同步官方信息失败");
+                        }
 
-                            // 标记未用完快速
-                            acc.FastExhausted = false;
-                            DbHelper.Instance.AccountStore.Update("FastExhausted", acc);
+                        // 计算快速可用次数
+                        FastAvailableCount = (int)Math.Ceiling(Account.OfficialFastRemaining / 60D);
 
-                            // 如果开启了自动切换到快速，则自动切换到快速
+                        _logger.Information("官方同步信息完成，ChannelId={@0}, FastAvailableCount={@1}, 用时={@2}ms",
+                            ChannelId, FastAvailableCount, sw.ElapsedMilliseconds);
+
+                        return ok;
+                    }, TimeSpan.FromMinutes(cacheMinutes));
+                }
+
+                if (acc.IsDiscord)
+                {
+                    // discord 60-360 分钟
+                    var cacheMinutes = Random.Shared.Next(60, 360);
+                    success = await AdaptiveCache.GetOrCreateAsync(cacheKey, async () =>
+                    {
+                        var sw = Stopwatch.StartNew();
+                        if (Account.EnableMj == true)
+                        {
                             try
                             {
-                                if (acc.EnableRelaxToFast == true)
+                                var settingRes = await SettingAsync(SnowFlake.NextId(), EBotType.MID_JOURNEY);
+                                if (settingRes.Code != ReturnCode.SUCCESS)
                                 {
-                                    Thread.Sleep(2500);
-                                    await FastAsync(SnowFlake.NextId(), EBotType.MID_JOURNEY);
+                                    throw new LogicException(settingRes.Description);
+                                }
+                                Thread.Sleep(2500);
 
+                                var infoRes = await InfoAsync(SnowFlake.NextId(), EBotType.MID_JOURNEY);
+                                if (infoRes.Code != ReturnCode.SUCCESS)
+                                {
+                                    throw new LogicException(infoRes.Description);
+                                }
+                                Thread.Sleep(2500);
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.Error(ex, "同步 MJ 信息异常，ChannelId={@0}", ChannelId);
+                                throw;
+                            }
+                        }
+
+                        if (Account.EnableNiji == true)
+                        {
+                            try
+                            {
+                                // 如果没有开启 NIJI 转 MJ
+                                if (GlobalConfiguration.Setting.EnableConvertNijiToMj == false)
+                                {
+                                    var settingRes = await SettingAsync(SnowFlake.NextId(), EBotType.NIJI_JOURNEY);
+                                    if (settingRes.Code != ReturnCode.SUCCESS)
+                                    {
+                                        throw new LogicException(settingRes.Description);
+                                    }
                                     Thread.Sleep(2500);
-                                    await FastAsync(SnowFlake.NextId(), EBotType.NIJI_JOURNEY);
+
+                                    var infoRes = await InfoAsync(SnowFlake.NextId(), EBotType.NIJI_JOURNEY);
+                                    if (infoRes.Code != ReturnCode.SUCCESS)
+                                    {
+                                        throw new LogicException(infoRes.Description);
+                                    }
+                                    Thread.Sleep(2500);
                                 }
                             }
                             catch (Exception ex)
                             {
-                                _logger.Error(ex, "自动切换快速模式，执行异常 {@0}", acc.ChannelId);
+                                _logger.Error(ex, "同步 Niji 信息异常，ChannelId={@0}", ChannelId);
+                                throw;
                             }
-
-                            acc.ClearCache();
-
-                            _logger.Information("自动切换快速模式，执行完成 {@0}", acc.ChannelId);
                         }
-                    }
+                        sw.Stop();
+
+                        // 快速时长校验
+                        // 如果 fastTime <= 0.2，则标记为快速用完
+                        var fastTime = Account.FastTimeRemaining?.ToString()?.Split('/')?.FirstOrDefault()?.Trim();
+
+                        // 0.2h = 12 分钟 = 12 次
+                        var ftime = 0.0;
+                        if (!string.IsNullOrWhiteSpace(fastTime) && double.TryParse(fastTime, out ftime) && ftime <= 0.2)
+                        {
+                            Account.FastExhausted = true;
+                        }
+                        else if (ftime > 0.5)
+                        {
+                            Account.FastExhausted = false;
+                        }
+
+                        // 自动设置慢速，如果快速用完
+                        if (Account.FastExhausted == true && Account.EnableAutoSetRelax == true)
+                        {
+                            Account.AllowModes = [GenerationSpeedMode.RELAX];
+                            if (Account.CoreSize > 3)
+                            {
+                                Account.CoreSize = 3;
+                            }
+                        }
+
+                        // 计算快速可用次数
+                        FastAvailableCount = (int)Math.Ceiling(ftime * 60);
+
+                        DbHelper.Instance.AccountStore.Update("FastExhausted,AllowModes,CoreSize", acc);
+
+                        acc.ClearCache();
+
+                        _logger.Information("Discord 同步信息完成，ChannelId={@0}, FastAvailableCount={@1}, 用时={@2}ms",
+                            ChannelId, FastAvailableCount, sw.ElapsedMilliseconds);
+
+                        return true;
+                    }, TimeSpan.FromMinutes(cacheMinutes));
                 }
+
+                return success;
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "快速切换慢速模式，检查执行异常");
+                _logger.Error(ex, "同步账号信息异常 {@0}", ChannelId);
             }
+
+            return false;
         }
+    }
 
+    /// <summary>
+    /// 速率限制器
+    /// </summary>
+    public static class RateLimiter
+    {
         /// <summary>
-        /// 随机 6-12 小时 同步一次账号信息
+        /// 检查速率限制是否通过（通过则自动+1）
         /// </summary>
-        /// <returns></returns>
-        public async Task RandomSyncInfo()
+        /// <param name="prefix">键前缀</param>
+        /// <param name="identifier">标识符（如 ChannelId）</param>
+        /// <param name="windowMinutes">时间窗口（分钟）</param>
+        /// <param name="maxCount">最大允许次数</param>
+        /// <returns>true=允许执行，false=已超限</returns>
+        public static bool Check(string prefix, string identifier, int windowMinutes, int maxCount)
         {
-            var acc = Account;
-
-            if (acc.InfoUpdated == null || acc.InfoUpdated.Value.AddMinutes(5) < DateTime.Now)
+            var key = $"{prefix}:{identifier}:{windowMinutes}m:{DateTime.Now.Ticks / TimeSpan.TicksPerMinute / windowMinutes}";
+            var count = AdaptiveCache.GetCounter(key);
+            if (count >= maxCount)
             {
-                var key = $"fast_exhausted_{acc.ChannelId}";
-
-                // 随机 1~6 小时
-                var random = new Random();
-                var minutes = random.Next(60, 360);
-                var span = TimeSpan.FromMinutes(minutes);
-
-                await AdaptiveCache.GetOrCreateAsync(key, async () =>
-                {
-                    try
-                    {
-                        _logger.Information("随机同步账号信息开始 {@0}", acc.ChannelId);
-
-                        await _taskService.InfoSetting(acc.Id);
-
-                        _logger.Information("随机同步账号信息完成 {@0}", acc.ChannelId);
-
-                        return true;
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.Error(ex, "随机同步账号信息异常 {@0}", acc.ChannelId);
-                    }
-
-                    return false;
-                }, span);
+                return false;
             }
+            AdaptiveCache.Increment(key, 1, TimeSpan.FromMinutes(windowMinutes + 1));
+            return true;
         }
 
         /// <summary>
-        /// 悠船每 n 分钟同步一次账号信息
+        /// 异步检查速率限制是否通过
         /// </summary>
-        /// <returns></returns>
-        public async Task YouChuanSyncInfo()
+        public static async Task<bool> CheckAsync(string prefix, string identifier, int windowMinutes, int maxCount)
         {
-            await _ymTaskService.YouChuanSyncInfo();
-        }
-
-        /// <summary>
-        /// 官网每 n 分钟同步一次账号信息
-        /// </summary>
-        /// <returns></returns>
-        public async Task OfficialSyncInfo()
-        {
-            await _ymTaskService.OfficialSyncInfo();
+            var key = $"{prefix}:{identifier}:{windowMinutes}m:{DateTime.Now.Ticks / TimeSpan.TicksPerMinute / windowMinutes}";
+            var count = await AdaptiveCache.GetCounterAsync(key);
+            if (count >= maxCount)
+            {
+                return false;
+            }
+            await AdaptiveCache.IncrementAsync(key, 1, TimeSpan.FromMinutes(windowMinutes + 1));
+            return true;
         }
     }
 

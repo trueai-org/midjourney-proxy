@@ -40,7 +40,6 @@ namespace Midjourney.API.Controllers
     [Route("mj-relax/mj/submit")]
     public class SubmitController : ControllerBase
     {
-        //private readonly ITranslateService _translateService;
         private readonly ITaskStoreService _taskStoreService;
 
         private readonly DiscordHelper _discordHelper;
@@ -64,7 +63,6 @@ namespace Midjourney.API.Controllers
         private readonly EStorageOption? _storageOption;
 
         public SubmitController(
-            //ITranslateService translateService,
             ITaskStoreService taskStoreService,
             ITaskService taskService,
             ILogger<SubmitController> logger,
@@ -75,7 +73,6 @@ namespace Midjourney.API.Controllers
             IMemoryCache memoryCache)
         {
             _memoryCache = memoryCache;
-            //_translateService = translateService;
             _taskStoreService = taskStoreService;
             _setting = GlobalConfiguration.Setting;
             _taskService = taskService;

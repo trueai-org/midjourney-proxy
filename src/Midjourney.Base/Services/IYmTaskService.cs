@@ -51,16 +51,16 @@ namespace Midjourney.Base.Services
         Task UpdateStatus(TaskInfo info, ITaskStoreService taskStoreService, DiscordAccount account);
 
         /// <summary>
-        /// 悠船每 n 分钟同步一次账号信息
+        /// 同步悠船账号信息
         /// </summary>
         /// <returns></returns>
-        Task YouChuanSyncInfo(bool isClearCache = false);
+        Task<bool> SyncYouchuanInfo();
 
         /// <summary>
-        /// 官方每 n 分钟同步一次账号信息
+        /// 同步官方账号信息
         /// </summary>
         /// <returns></returns>
-        Task OfficialSyncInfo(bool isClearCache = false);
+        Task<bool> SyncOfficialInfo();
 
         /// <summary>
         /// 获取种子
