@@ -33,6 +33,7 @@ using LiteDB;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
+using Midjourney.Base.Options;
 using Midjourney.Infrastructure.LoadBalancer;
 using Midjourney.Infrastructure.Services;
 using Midjourney.License;
@@ -2255,6 +2256,27 @@ namespace Midjourney.API.Controllers
             model.UpgradeInfo = _upgradeService.UpgradeInfo;
 
             return Result.Ok(model);
+        }
+
+        /// <summary>
+        /// 从 Consul 加载配置
+        /// </summary>
+        /// <returns></returns>
+        [HttpPost("load-consul-setting")]
+        public async Task<Result<Setting>> LoadConsulSetting([FromBody] ConsulOptions consulOptions)
+        {
+            if (_isAnonymous)
+            {
+                return Result.Fail<Setting>("演示模式，禁止操作");
+            }
+
+            var consulSetting = await SettingDb.LoadFromConsulAsync(consulOptions);
+            if (consulSetting == null)
+            {
+                return Result.Fail<Setting>("从 Consul 加载配置失败，请检查 Consul 地址/服务名称是否正确");
+            }
+
+            return Result.Ok(consulSetting);
         }
 
         /// <summary>

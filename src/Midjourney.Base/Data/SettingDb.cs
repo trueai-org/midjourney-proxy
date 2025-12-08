@@ -24,6 +24,7 @@
 
 using System.Text;
 using Consul;
+using Midjourney.Base.Options;
 using Serilog;
 
 namespace Midjourney.Base.Data
@@ -182,6 +183,80 @@ namespace Midjourney.Base.Data
             {
                 Log.Error(ex, "Unexpected error while loading settings.");
             }
+        }
+
+        /// <summary>
+        /// 从 Consul 远程加载配置
+        /// </summary>
+        /// <param name="consul"></param>
+        /// <param name="cancellation"></param>
+        /// <returns></returns>
+        public static async Task<Setting> LoadFromConsulAsync(ConsulOptions consul, CancellationToken cancellation = default)
+        {
+            try
+            {
+                if (consul == null || !consul.IsValid)
+                {
+                    return null;
+                }
+
+                var consulConfigAddress = consul.ConsulUrl;
+                var consulToken = consul.ConsulToken;
+                var consulKvKey = consul.ServiceName + "/setting";
+
+                var consulClient = new ConsulClient(cfg =>
+                {
+                    cfg.Address = new Uri(consulConfigAddress);
+                    if (!string.IsNullOrWhiteSpace(consulToken))
+                    {
+                        cfg.Token = consulToken;
+                    }
+                });
+
+                // 测试连接（获取 leader）
+                var status = await consulClient.Status.Leader(cancellation);
+                if (!string.IsNullOrWhiteSpace(status))
+                {
+                    Log.Information($"Connected to Consul at {consulConfigAddress}, leader: {status}.");
+
+                    // 3) 尝试从 KV 加载远程配置
+                    var kv = await consulClient.KV.Get(consulKvKey, cancellation);
+                    if (kv.Response != null && kv.Response.Value != null && kv.Response.Value.Length > 0)
+                    {
+                        var json = Encoding.UTF8.GetString(kv.Response.Value);
+                        try
+                        {
+                            var remoteSetting = json.ToObject<Setting>();
+                            if (remoteSetting != null)
+                            {
+                                return remoteSetting;
+                            }
+                            else
+                            {
+                                Log.Warning("Consul KV contains invalid json for Setting.");
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Log.Error(ex, "Deserialize remote setting failed.");
+                        }
+                    }
+                    else
+                    {
+                        Log.Information("No remote setting found in Consul KV.");
+                    }
+                }
+                else
+                {
+                    Log.Warning("Connected to Consul but returned empty leader; treat as not connected.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "Failed to connect to Consul using local consul configuration. Continue with local settings.");
+            }
+
+            return null;
         }
 
         /// <summary>
