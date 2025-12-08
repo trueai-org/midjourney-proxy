@@ -77,7 +77,12 @@ namespace Midjourney.Base.Data
             Instance = inst;
         }
 
-        private async Task LoadAsync(CancellationToken cancellation = default)
+        /// <summary>
+        /// 加载远程配置，如果失败则加载本地配置
+        /// </summary>
+        /// <param name="cancellation"></param>
+        /// <returns></returns>
+        public async Task LoadAsync(CancellationToken cancellation = default)
         {
             try
             {
@@ -103,7 +108,6 @@ namespace Midjourney.Base.Data
                     };
                     _liteDb.Save(setting);
                 }
-                Current = setting;
 
                 // 检查本地是否包含 Consul 连接配置
                 if (setting.ConsulOptions?.IsValid == true)
@@ -145,6 +149,8 @@ namespace Midjourney.Base.Data
                                         UpsertLocal(Current);
 
                                         Log.Information("Loaded setting from Consul KV and persisted to local LiteDB.");
+
+                                        return;
                                     }
                                     else
                                     {
@@ -178,6 +184,9 @@ namespace Midjourney.Base.Data
                 {
                     Log.Information("Local setting does not contain Consul connection info, skip consul load.");
                 }
+
+                // 如果没有从远程加载成功，则使用本地配置
+                Current = setting;
             }
             catch (Exception ex)
             {

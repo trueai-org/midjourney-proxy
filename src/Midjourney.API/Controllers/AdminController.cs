@@ -143,7 +143,7 @@ namespace Midjourney.API.Controllers
             // 每个IP每天只能注册一个账号
             var ip = _workContext.GetIp();
             var key = $"register:{ip}";
-            if (_memoryCache.TryGetValue(key, out _))
+            if (AdaptiveCache.Exists(key))
             {
                 throw new LogicException("注册太频繁");
             }
@@ -178,7 +178,7 @@ namespace Midjourney.API.Controllers
                    user.Email);
 
             // 设置缓存
-            _memoryCache.Set(key, true, TimeSpan.FromDays(1));
+            AdaptiveCache.Set(key, true, TimeSpan.FromDays(1));
 
             return Result.Ok();
         }
@@ -888,7 +888,7 @@ namespace Midjourney.API.Controllers
             var sponsorCount = 0;
             if (setting.EnableAccountSponsor && user.Role != EUserRole.ADMIN)
             {
-                if (_memoryCache.TryGetValue(limitKey, out sponsorCount) && sponsorCount > 10)
+                if (AdaptiveCache.TryGetValue(limitKey, out sponsorCount) && sponsorCount > 10)
                 {
                     Result.Fail("每天最多只能赞助 10 个账号");
                 }
@@ -943,7 +943,7 @@ namespace Midjourney.API.Controllers
             {
                 sponsorCount++;
 
-                _memoryCache.Set(limitKey, sponsorCount, TimeSpan.FromDays(1));
+                AdaptiveCache.Set(limitKey, sponsorCount, TimeSpan.FromDays(1));
             }
 
             return Result.Ok();
@@ -2400,6 +2400,16 @@ namespace Midjourney.API.Controllers
             // 首页缓存
             _memoryCache.Remove($"{DateTime.Now:yyyyMMdd}_home");
 
+            if (GlobalConfiguration.Setting.IsValidRedis)
+            {
+                // 通知所有节点
+                var notification = new RedisNotification
+                {
+                    Type = ENotificationType.SettingChanged,
+                };
+                RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
+            }
+
             return Result.Ok();
         }
 
@@ -2419,6 +2429,16 @@ namespace Midjourney.API.Controllers
             if (upgradeInfo.HasUpdate)
             {
                 await _upgradeService.StartDownloadAsync();
+            }
+
+            if (GlobalConfiguration.Setting.IsValidRedis)
+            {
+                // 通知所有节点
+                var notification = new RedisNotification
+                {
+                    Type = ENotificationType.CheckUpdate,
+                };
+                RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
             }
 
             return Result.Ok(upgradeInfo);
@@ -2533,6 +2553,16 @@ namespace Midjourney.API.Controllers
 
                 // 记录重启日志
                 Log.Information("系统重启请求，操作者IP: {IP}", _workContext.GetIp());
+
+                if (GlobalConfiguration.Setting.IsValidRedis)
+                {
+                    // 通知所有节点
+                    var notification = new RedisNotification
+                    {
+                        Type = ENotificationType.Restart,
+                    };
+                    RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
+                }
 
                 // 异步执行重启，避免阻塞当前请求
                 Task.Run(async () =>

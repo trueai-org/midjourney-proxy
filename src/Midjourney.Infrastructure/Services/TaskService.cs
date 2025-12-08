@@ -25,8 +25,6 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.Text.RegularExpressions;
-using Instances;
-using Microsoft.Extensions.Caching.Memory;
 using Midjourney.Infrastructure.LoadBalancer;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -40,16 +38,11 @@ namespace Midjourney.Infrastructure.Services
     /// </summary>
     public class TaskService : ITaskService
     {
-        private readonly IMemoryCache _memoryCache;
         private readonly ITaskStoreService _taskStoreService;
         private readonly DiscordLoadBalancer _discordLoadBalancer;
 
-        public TaskService(
-            ITaskStoreService taskStoreService,
-            DiscordLoadBalancer discordLoadBalancer,
-            IMemoryCache memoryCache)
+        public TaskService(ITaskStoreService taskStoreService, DiscordLoadBalancer discordLoadBalancer)
         {
-            _memoryCache = memoryCache;
             _taskStoreService = taskStoreService;
             _discordLoadBalancer = discordLoadBalancer;
         }
@@ -60,9 +53,8 @@ namespace Midjourney.Infrastructure.Services
         /// <returns></returns>
         public Dictionary<string, HashSet<string>> GetDomainCache()
         {
-            return _memoryCache.GetOrCreate("domains", c =>
+            return AdaptiveCache.GetOrCreate("domains", () =>
             {
-                c.SetAbsoluteExpiration(TimeSpan.FromMinutes(30));
                 var list = DbHelper.Instance.DomainStore.GetAll().Where(c => c.Enable);
 
                 var dict = new Dictionary<string, HashSet<string>>();
@@ -73,7 +65,7 @@ namespace Midjourney.Infrastructure.Services
                 }
 
                 return dict;
-            });
+            }, TimeSpan.FromMinutes(30));
         }
 
         /// <summary>
@@ -81,7 +73,7 @@ namespace Midjourney.Infrastructure.Services
         /// </summary>
         public void ClearDomainCache()
         {
-            _memoryCache.Remove("domains");
+            AdaptiveCache.Remove("domains");
         }
 
         /// <summary>
@@ -90,9 +82,8 @@ namespace Midjourney.Infrastructure.Services
         /// <returns></returns>
         public Dictionary<string, HashSet<string>> GetBannedWordsCache()
         {
-            return _memoryCache.GetOrCreate("bannedWords", c =>
+            return AdaptiveCache.GetOrCreate("bannedWords", () =>
             {
-                c.SetAbsoluteExpiration(TimeSpan.FromMinutes(30));
                 var list = DbHelper.Instance.BannedWordStore.GetAll().Where(c => c.Enable);
 
                 var dict = new Dictionary<string, HashSet<string>>();
@@ -103,7 +94,7 @@ namespace Midjourney.Infrastructure.Services
                 }
 
                 return dict;
-            });
+            }, TimeSpan.FromMinutes(30));
         }
 
         /// <summary>
@@ -111,7 +102,7 @@ namespace Midjourney.Infrastructure.Services
         /// </summary>
         public void ClearBannedWordsCache()
         {
-            _memoryCache.Remove("bannedWords");
+            AdaptiveCache.Remove("bannedWords");
         }
 
         /// <summary>

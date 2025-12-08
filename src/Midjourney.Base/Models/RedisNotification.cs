@@ -93,6 +93,21 @@
         /// <summary>
         /// 减少快速计数
         /// </summary>
-        DecreaseFastCount = 7
+        DecreaseFastCount = 7,
+
+        /// <summary>
+        /// 修改配置通知 - 用于 Consul 多节点
+        /// </summary>
+        SettingChanged = 8,
+
+        /// <summary>
+        /// 检查升级通知 - 用于 Consul 多节点
+        /// </summary>
+        CheckUpdate = 9,
+
+        /// <summary>
+        /// 重启通知 - 用于 Consul 多节点
+        /// </summary>
+        Restart = 10
     }
 }

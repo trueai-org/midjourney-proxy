@@ -1733,6 +1733,63 @@ namespace Midjourney.API
                         }
                         break;
 
+                    case ENotificationType.Restart:
+                        {
+                            // 判断是否自身发出的
+                            if (isSelf)
+                            {
+                                return;
+                            }
+
+                            Log.Information("收到重启应用程序通知，10秒后自动重启容器");
+
+                            // 异步执行重启，避免阻塞当前请求
+                            _ = Task.Run(async () =>
+                            {
+                                try
+                                {
+                                    // 等待一段时间让响应返回给客户端
+                                    await Task.Delay(1000 * 10);
+
+                                    // 执行重启逻辑
+                                    await RestartApplicationAsync();
+                                }
+                                catch (Exception ex)
+                                {
+                                    Log.Error(ex, "重启应用程序时发生错误");
+                                }
+                            });
+                        }
+                        break;
+
+                    case ENotificationType.CheckUpdate:
+                        {
+                            // 判断是否自身发出的
+                            if (isSelf)
+                            {
+                                return;
+                            }
+
+                            var upgradeInfo = await _upgradeService.CheckForUpdatesAsync();
+                            if (upgradeInfo.HasUpdate)
+                            {
+                                await _upgradeService.StartDownloadAsync();
+                            }
+                        }
+                        break;
+
+                    case ENotificationType.SettingChanged:
+                        {
+                            // 判断是否自身发出的
+                            if (isSelf)
+                            {
+                                return;
+                            }
+
+                            await SettingDb.Instance.LoadAsync();
+                        }
+                        break;
+
                     default:
                         break;
                 }
@@ -1741,6 +1798,58 @@ namespace Midjourney.API
             {
                 _logger.Error(ex, "处理 Redis 消息通知异常 {@0}", notification.ToJson());
             }
+        }
+
+        /// <summary>
+        /// 执行应用程序重启
+        /// </summary>
+        /// <returns></returns>
+        private async Task RestartApplicationAsync()
+        {
+            try
+            {
+                var isInContainer = IsDockerEnvironment();
+                if (isInContainer)
+                {
+                    // Docker 环境重启
+                    await RestartInDockerAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "重启应用程序失败");
+                throw;
+            }
+        }
+
+        private bool IsDockerEnvironment()
+        {
+            try
+            {
+                return System.IO.File.Exists("/.dockerenv") ||
+                Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true" ||
+                Environment.GetEnvironmentVariable("DOCKER_CONTAINER") != null;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Docker 环境重启
+        /// </summary>
+        /// <returns></returns>
+        private async Task RestartInDockerAsync()
+        {
+            Log.Information("检测到 Docker 环境，准备重启容器");
+
+            // 在 Docker 环境中，最安全的方式是退出应用程序
+            // 让容器的重启策略来处理重启
+            await Task.Delay(1000);
+
+            // 优雅关闭应用程序
+            Environment.Exit(0);
         }
     }
 }
