@@ -1203,10 +1203,10 @@ namespace Midjourney.API
                             await Task.Delay(1000 * 5);
 
                             // 启动后强制同步
-                            await disInstance.SyncInfoSetting(true);
+                            var success = await disInstance.SyncInfoSetting(true);
 
                             sw.Stop();
-                            info.AppendLine($"{account.Id}初始化中... 同步 info 耗时: {sw.ElapsedMilliseconds}ms");
+                            info.AppendLine($"{account.Id}初始化中... 同步 info {(success ? "成功" : "失败")} 耗时: {sw.ElapsedMilliseconds}ms");
                             sw.Restart();
                         }
                         catch (Exception ex)

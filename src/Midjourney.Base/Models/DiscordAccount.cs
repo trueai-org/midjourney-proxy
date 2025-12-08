@@ -85,6 +85,26 @@ namespace Midjourney.Base.Models
         public string CacheKey => $"account_cache:{Id}";
 
         /// <summary>
+        /// 快速可用计数缓存 key
+        /// </summary>
+        [LiteDB.BsonIgnore]
+        [MongoDB.Bson.Serialization.Attributes.BsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Column(IsIgnore = true)]
+        public string FastAvailableCountKey => $"account_fast_available_count:{Id}";
+
+        /// <summary>
+        /// 悠船慢速可用计数缓存 key
+        /// </summary>
+        [LiteDB.BsonIgnore]
+        [MongoDB.Bson.Serialization.Attributes.BsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Column(IsIgnore = true)]
+        public string YouchuanRelaxAvailableCountKey => $"account_youchuan_relax_available_count:{Id}";
+
+        /// <summary>
         /// 添加一个事件用于通知去清理缓存
         /// </summary>
         public event Action ClearCacheEvent;

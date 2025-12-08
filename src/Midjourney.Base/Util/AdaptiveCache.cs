@@ -595,6 +595,29 @@ namespace Midjourney.Base
             }
         }
 
+
+        /// <summary>
+        /// 重置计数器
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="value"></param>
+        /// <param name="expiry"></param>
+        /// <returns></returns>
+        public static bool SetCounter(string key, long value, TimeSpan expiry)
+        {
+            if (IsDistributed)
+            {
+                RedisHelper.Set(key, value, (int)expiry.TotalSeconds);
+                return true;
+            }
+            else
+            {
+                _counters[key] = value;
+                SetCounterExpiry(key, expiry);
+                return true;
+            }
+        }
+
         /// <summary>
         /// 设置计数器过期时间
         /// </summary>

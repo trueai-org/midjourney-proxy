@@ -276,12 +276,13 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <summary>
         /// 快速可用剩余次数
         /// </summary>
-        public int FastAvailableCount { get; private set; } = 0;
+        public int FastAvailableCount => (int)AdaptiveCache.GetCounter(_account.FastAvailableCountKey);
 
         /// <summary>
         /// 悠船可用慢速剩余次数
         /// </summary>
-        public int YouchuanRelaxAvailableCount { get; private set; } = -1;
+        public int YouchuanRelaxAvailableCount => _account.IsYouChuan
+            ? (int)AdaptiveCache.GetCounter(_account.YouchuanRelaxAvailableCountKey) : 0;
 
         /// <summary>
         /// 计数器验证，通过确定速度模式判断
@@ -317,15 +318,15 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <param name="value"></param>
         public void DecreaseFastAvailableCount(int value)
         {
-            if (value <= 0 || FastAvailableCount <= 0)
-            {
-                return;
-            }
+            //if (value <= 0 || FastAvailableCount <= 0)
+            //{
+            //    return;
+            //}
 
-            var newValue = FastAvailableCount - value;
-            FastAvailableCount = Math.Max(0, newValue);
+            //var newValue = FastAvailableCount - value;
+            //FastAvailableCount = Math.Max(0, newValue);
 
-            _logger.Information("账号 {@0} 扣减快速剩余次数 {@1}，预估当前剩余次数 {@2}", Account.ChannelId, value, FastAvailableCount);
+            //_logger.Information("账号 {@0} 扣减快速剩余次数 {@1}，预估当前剩余次数 {@2}", Account.ChannelId, value, FastAvailableCount);
         }
 
         /// <summary>
@@ -334,15 +335,16 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <param name="value"></param>
         public void DecreaseYouchuanRelaxAvailableCount(int value)
         {
-            if (!Account.IsYouChuan || YouchuanRelaxAvailableCount <= 0 || value <= 0)
-            {
-                return;
-            }
+            //if (!Account.IsYouChuan || YouchuanRelaxAvailableCount <= 0 || value <= 0)
+            //{
+            //    return;
+            //}
 
-            var newValue = YouchuanRelaxAvailableCount - value;
-            YouchuanRelaxAvailableCount = Math.Max(0, newValue);
+            //var newValue = YouchuanRelaxAvailableCount - value;
 
-            _logger.Information("账号 {@0} 扣减悠船慢速剩余次数 {@1}，预估当前剩余次数 {@2}", Account.ChannelId, value, YouchuanRelaxAvailableCount);
+            //YouchuanRelaxAvailableCount = Math.Max(0, newValue);
+
+            //_logger.Information("账号 {@0} 扣减悠船慢速剩余次数 {@1}，预估当前剩余次数 {@2}", Account.ChannelId, value, YouchuanRelaxAvailableCount);
         }
 
         /// <summary>
@@ -2265,72 +2267,91 @@ namespace Midjourney.Infrastructure.LoadBalancer
             }
             finally
             {
-                if (info.Status == TaskStatus.SUCCESS)
+                try
                 {
-                    // 记录今日 relax / fast 次数
-                    if (info.Action != TaskAction.UPSCALE)
+                    if (info.Status == TaskStatus.SUCCESS)
                     {
-                        if (info.Mode == GenerationSpeedMode.RELAX && info.Action != TaskAction.DESCRIBE)
+                        // 记录今日 relax / fast 次数
+                        if (info.Action != TaskAction.UPSCALE)
                         {
-                            // 记录慢速使用次数
-                            var relaxAccountTodayCountKey = $"relax_account_count:{DateTime.Now:yyyyMMdd}:{info.InstanceId}";
-                            var value = 1;
-                            if (info.Action == TaskAction.VIDEO || info.Action == TaskAction.VIDEO_EXTEND)
+                            if (info.Mode == GenerationSpeedMode.RELAX && info.Action != TaskAction.DESCRIBE)
                             {
-                                var bs = info.GetVideoBatchSize();
-                                value *= bs * 2;
+                                // 只有悠船慢速计数
+                                if (info.IsPartnerRelax)
+                                {
+                                    // 记录慢速使用次数
+                                    var relaxAccountTodayCountKey = $"relax_account_count:{DateTime.Now:yyyyMMdd}:{info.InstanceId}";
+                                    var value = 1;
+                                    if (info.Action == TaskAction.VIDEO || info.Action == TaskAction.VIDEO_EXTEND)
+                                    {
+                                        var bs = info.GetVideoBatchSize();
+                                        value *= bs * 2;
+                                    }
+
+                                    var count = AdaptiveCache.Increment(relaxAccountTodayCountKey, value, TimeSpan.FromDays(1));
+
+                                    var relaxAvailable = Math.Max(0, AdaptiveCache.Decrement(Account.YouchuanRelaxAvailableCountKey, value));
+
+                                    Log.Information("悠船慢速任务完成，扣减 relax 次数: TaskId={@0}, InstanceId={@1}, 扣除={@2}, 预估慢速剩余次数={@3}, 今日慢速次数={@4}",
+                                        info.Id, info.InstanceId, value, relaxAvailable, count);
+
+                                    //// 通知所有节点并扣减次数
+                                    //var notification = new RedisNotification
+                                    //{
+                                    //    Type = ENotificationType.DecreaseRelaxCount,
+                                    //    ChannelId = info.InstanceId,
+                                    //    DecreaseCount = value
+                                    //};
+                                    //RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
+
+                                    // 如果是慢速绘图，由于是独立计数，因此不需要同步
+                                }
                             }
-                            var count = AdaptiveCache.Increment(relaxAccountTodayCountKey, value, TimeSpan.FromDays(1));
-
-                            Log.Information("任务完成，记录今日 relax 次数: TaskId={@0}, InstanceId={@1}, Count={@2}", info.Id, info.InstanceId, count);
-
-                            // 通知所有节点并扣减次数
-                            var notification = new RedisNotification
+                            else
                             {
-                                Type = ENotificationType.DecreaseRelaxCount,
-                                ChannelId = info.InstanceId,
-                                DecreaseCount = value
-                            };
-                            RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
-                        }
-                        else
-                        {
-                            // 图生文，算快速的消耗
+                                // 慢速图生文，算快速的消耗
 
-                            // 记录快速使用次数
-                            var fastAccountTodayCountKey = $"fast_account_count:{DateTime.Now:yyyyMMdd}:{info.InstanceId}";
-                            var value = 1;
-                            if (info.Mode == GenerationSpeedMode.TURBO)
-                            {
-                                value *= 2;
+                                // 记录快速使用次数
+                                var fastAccountTodayCountKey = $"fast_account_count:{DateTime.Now:yyyyMMdd}:{info.InstanceId}";
+                                var value = 1;
+                                if (info.Mode == GenerationSpeedMode.TURBO)
+                                {
+                                    value *= 2;
+                                }
+                                if (info.Action == TaskAction.VIDEO || info.Action == TaskAction.VIDEO_EXTEND)
+                                {
+                                    var bs = info.GetVideoBatchSize();
+                                    value *= bs * 2;
+                                }
+                                var count = AdaptiveCache.Increment(fastAccountTodayCountKey, value, TimeSpan.FromDays(1));
+
+                                // 扣减快速
+                                var fastAvailable = Math.Max(0, AdaptiveCache.Decrement(Account.FastAvailableCountKey, value));
+
+                                Log.Information("任务完成，扣减 fast 次数: TaskId={@0}, InstanceId={@1}, 扣除={@2}, 预估快速剩余次数={@3}, 今日快速计数={@4}",
+                                    info.Id, info.InstanceId, value, fastAvailable, count);
+
+                                //// 通知所有节点并扣减次数
+                                //var notification = new RedisNotification
+                                //{
+                                //    Type = ENotificationType.DecreaseFastCount,
+                                //    ChannelId = info.InstanceId,
+                                //    DecreaseCount = value
+                                //};
+                                //RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
+
+                                // 如果是快速模式，且触发最低阈值，则立即同步一次 info
+                                if (fastAvailable < 12)
+                                {
+                                    await SyncInfoSetting(true);
+                                }
                             }
-                            if (info.Action == TaskAction.VIDEO || info.Action == TaskAction.VIDEO_EXTEND)
-                            {
-                                var bs = info.GetVideoBatchSize();
-                                value *= bs * 2;
-                            }
-                            var count = AdaptiveCache.Increment(fastAccountTodayCountKey, value, TimeSpan.FromDays(1));
-
-                            Log.Information("任务完成，记录今日 fast 次数: TaskId={@0}, InstanceId={@1}, Count={@2}", info.Id, info.InstanceId, count);
-
-                            // 通知所有节点并扣减次数
-                            var notification = new RedisNotification
-                            {
-                                Type = ENotificationType.DecreaseFastCount,
-                                ChannelId = info.InstanceId,
-                                DecreaseCount = value
-                            };
-                            RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
                         }
-
-                        // 如果是快速模式，且触发最低阈值，则立即同步一次 info
-                        if (info.Mode == GenerationSpeedMode.FAST && FastAvailableCount < 12)
-                        {
-                            await SyncInfoSetting(true);
-                        }
-
-                        // 如果是慢速绘图，由于是独立计数，因此不需要同步
                     }
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error(ex, "记录 relax/fast 次数异常 {@0} - {@1}", info.Id, info.InstanceId);
                 }
 
                 _runningTasks.TryRemove(info.Id, out _);
@@ -4004,15 +4025,19 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     if (success)
                     {
                         // 计算快速可用次数
-                        FastAvailableCount = (int)Math.Ceiling(Account.YouChuanFastRemaining / 60D);
+                        var fastAvailableCount = (int)Math.Ceiling(Account.YouChuanFastRemaining / 60D);
+
+                        AdaptiveCache.SetCounter(Account.FastAvailableCountKey, fastAvailableCount, TimeSpan.FromDays(1));
 
                         // 计算慢速总数
                         var relaxAccountTodayCountKey = $"relax_account_count:{DateTime.Now:yyyyMMdd}:{acc.ChannelId}";
                         var count = (int)AdaptiveCache.GetCounter(relaxAccountTodayCountKey);
-                        YouchuanRelaxAvailableCount = Account.YouChuanRelaxedReset > DateTime.Now ? 0 : Math.Max(0, Account.YouChuanRelaxDailyLimit - count);
+                        var youchuanRelaxAvailableCount = Account.YouChuanRelaxedReset > DateTime.Now ? 0 : Math.Max(0, Account.YouChuanRelaxDailyLimit - count);
 
-                        _logger.Information("悠船同步信息完成，ChannelId={@0}, FastAvailableCount={@1}, YouchuanRelaxAvailableCount={@2}, 用时={@3}ms",
-                            ChannelId, FastAvailableCount, YouchuanRelaxAvailableCount, sw.ElapsedMilliseconds);
+                        AdaptiveCache.SetCounter(Account.YouchuanRelaxAvailableCountKey, youchuanRelaxAvailableCount, TimeSpan.FromDays(1));
+
+                        _logger.Information("悠船同步信息完成，ChannelId={@0}, 预估快速剩余次数={@1}, 预估慢速剩余次数={@2}, 用时={@3}ms",
+                            ChannelId, fastAvailableCount, youchuanRelaxAvailableCount, sw.ElapsedMilliseconds);
                     }
 
                     return success;
@@ -4059,13 +4084,23 @@ namespace Midjourney.Infrastructure.LoadBalancer
                         }
 
                         // 计算快速可用次数
-                        FastAvailableCount = (int)Math.Ceiling(Account.OfficialFastRemaining / 60D);
+                        var fastAvailableCount = (int)Math.Ceiling(Account.OfficialFastRemaining / 60D);
+                        AdaptiveCache.SetCounter(Account.FastAvailableCountKey, fastAvailableCount, TimeSpan.FromDays(1));
 
-                        _logger.Information("官方同步信息完成，ChannelId={@0}, FastAvailableCount={@1}, 用时={@2}ms",
-                            ChannelId, FastAvailableCount, sw.ElapsedMilliseconds);
+                        _logger.Information("官方同步信息完成，ChannelId={@0}, 预估快速剩余次数={@1}, 用时={@2}ms",
+                            ChannelId, fastAvailableCount, sw.ElapsedMilliseconds);
 
                         return ok;
                     }, TimeSpan.FromMinutes(cacheMinutes));
+
+                    //// 如果缓存获取成功了，但是可用数 0，则重更新计算可用数
+                    //if (success && FastAvailableCount <= 0 && Account.OfficialFastRemaining > 60)
+                    //{
+                    //    FastAvailableCount = (int)Math.Ceiling(Account.OfficialFastRemaining / 60D);
+
+                    //    _logger.Information("通过官方缓存信息重新计算可用数，ChannelId={@0}, FastAvailableCount={@1}",
+                    //        ChannelId, FastAvailableCount);
+                    //}
                 }
 
                 if (acc.IsDiscord)
@@ -4156,17 +4191,32 @@ namespace Midjourney.Infrastructure.LoadBalancer
                         }
 
                         // 计算快速可用次数
-                        FastAvailableCount = (int)Math.Ceiling(ftime * 60);
+                        var fastAvailableCount = (int)Math.Ceiling(ftime * 60);
+
+                        AdaptiveCache.SetCounter(Account.FastAvailableCountKey, fastAvailableCount, TimeSpan.FromDays(1));
 
                         DbHelper.Instance.AccountStore.Update("FastExhausted,AllowModes,CoreSize", acc);
 
                         acc.ClearCache();
 
-                        _logger.Information("Discord 同步信息完成，ChannelId={@0}, FastAvailableCount={@1}, 用时={@2}ms",
-                            ChannelId, FastAvailableCount, sw.ElapsedMilliseconds);
+                        _logger.Information("Discord 同步信息完成，ChannelId={@0}, 预估快速剩余次数={@1}, 用时={@2}ms",
+                            ChannelId, fastAvailableCount, sw.ElapsedMilliseconds);
 
                         return true;
                     }, TimeSpan.FromMinutes(cacheMinutes));
+
+                    //// 如果缓存获取成功了，但是可用数 0，则重更新计算可用数
+                    //if (success && FastAvailableCount <= 0)
+                    //{
+                    //    var fastTime = Account.FastTimeRemaining?.ToString()?.Split('/')?.FirstOrDefault()?.Trim();
+                    //    if (!string.IsNullOrWhiteSpace(fastTime) && double.TryParse(fastTime, out var ftime) && ftime > 0.2)
+                    //    {
+                    //        FastAvailableCount = (int)Math.Ceiling(ftime * 60);
+
+                    //        _logger.Information("通过 Discord 缓存信息重新计算可用数，ChannelId={@0}, FastAvailableCount={@1}",
+                    //            ChannelId, FastAvailableCount);
+                    //    }
+                    //}
                 }
 
                 return success;
