@@ -3216,6 +3216,33 @@ namespace Midjourney.Infrastructure.LoadBalancer
             {
                 prompt = prompt.AppendSpeedMode(acc.Mode);
             }
+            else
+            {
+                // 如果悠船账号, 开启慢速优先模式
+                if (Account.IsYouChuan && Account.YouChuanEnablePreferRelax
+                    && info.Mode != GenerationSpeedMode.RELAX
+                    && info.Action != TaskAction.UPSCALE
+                    && info.Action != TaskAction.VIDEO
+                    && info.Action != TaskAction.VIDEO_EXTEND
+                    && info.Action != TaskAction.DESCRIBE)
+                {
+                    if (YouchuanRelaxAvailableCount > 0)
+                    {
+                        // 如果有慢速和快速，且前台允许快速和慢速
+                        if (acc.AllowModes == null || (acc.AllowModes.Contains(GenerationSpeedMode.FAST) && acc.AllowModes.Contains(GenerationSpeedMode.RELAX)))
+                        {
+                            prompt = prompt.AppendSpeedMode(GenerationSpeedMode.RELAX);
+                        }
+                    }
+                }
+
+                // 未指定速度
+                // 如果用户开启了清除提示词，且前台没有请求速度，则清除速度
+                if (GlobalConfiguration.Setting.PrivateRemoveRequestSpeedMode && info.RequestMode == null)
+                {
+                    prompt = prompt.RemoveSpeedMode();
+                }
+            }
 
             //// 处理转义字符引号等
             //return prompt.Replace("\\\"", "\"").Replace("\\'", "'").Replace("\\\\", "\\");
