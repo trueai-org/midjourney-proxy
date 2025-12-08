@@ -3236,9 +3236,10 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     }
                 }
 
+                // 仅适用于官方账号
                 // 未指定速度
                 // 如果用户开启了清除提示词，且前台没有请求速度，则清除速度
-                if (GlobalConfiguration.Setting.PrivateRemoveRequestSpeedMode && info.RequestMode == null)
+                if (Account.IsOfficial && GlobalConfiguration.Setting.PrivateRemoveRequestSpeedMode && info.RequestMode == null)
                 {
                     prompt = prompt.RemoveSpeedMode();
                 }
