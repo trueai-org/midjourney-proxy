@@ -2542,7 +2542,7 @@ namespace Midjourney.API.Controllers
         /// </summary>
         /// <returns></returns>
         [HttpPost("restart")]
-        public Result Restart()
+        public Result Restart([FromQuery] bool all = false)
         {
             try
             {
@@ -2554,14 +2554,18 @@ namespace Midjourney.API.Controllers
                 // 记录重启日志
                 Log.Information("系统重启请求，操作者IP: {IP}", _workContext.GetIp());
 
-                if (GlobalConfiguration.Setting.IsValidRedis)
+                // 重启所有节点
+                if (all)
                 {
-                    // 通知所有节点
-                    var notification = new RedisNotification
+                    if (GlobalConfiguration.Setting.IsValidRedis)
                     {
-                        Type = ENotificationType.Restart,
-                    };
-                    RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
+                        // 通知所有节点
+                        var notification = new RedisNotification
+                        {
+                            Type = ENotificationType.Restart,
+                        };
+                        RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
+                    }
                 }
 
                 // 异步执行重启，避免阻塞当前请求
