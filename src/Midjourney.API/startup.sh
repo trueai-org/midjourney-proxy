@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# 删除 appsettings.json 文件，如果存在
+rm -f /app/Upgrade/Extract/appsettings.json 2>/dev/null || true
+
 # 复制升级文件（如果存在）
 cp -rf /app/Upgrade/Extract/* /app/ 2>/dev/null || true
 

@@ -1520,6 +1520,7 @@ namespace Midjourney.API
             model.IsHdVideo = param.IsHdVideo;
             model.IsRelaxVideo = param.IsRelaxVideo;
             model.OfficialEnablePersonalize = param.OfficialEnablePersonalize;
+            model.YouChuanEnablePreferRelax = param.YouChuanEnablePreferRelax;
 
             DbHelper.Instance.AccountStore.Update(model);
 

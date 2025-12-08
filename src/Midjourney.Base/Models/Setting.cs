@@ -144,6 +144,12 @@ namespace Midjourney.Base.Models
         public List<string> PrivateFeatures { get; set; } = [];
 
         /// <summary>
+        /// 移除请求速度参数
+        /// 所有操作提交前添加一个拦截和移除速度参数，当用户没有指定、没有提交、没有路径等包含速度模式时，移除最终提交任务的速度参数
+        /// </summary>
+        public bool PrivateRemoveRequestSpeedMode { get; set; } = false;
+
+        /// <summary>
         /// 悠船开启自定义链接转换 - 私人定制业务
         /// 请求头 x-storage-options: 1 | 2, 1: 返回官方链接, 2: 返回合作商链接
         /// </summary>
@@ -431,10 +437,10 @@ namespace Midjourney.Base.Models
         /// </summary>
         public bool EnableAutoVerifyAccount { get; set; }
 
-        ///// <summary>
-        ///// 启用自动同步信息和设置（废弃）
-        ///// </summary>
-        //public bool EnableAutoSyncInfoSetting { get; set; }
+        /// <summary>
+        /// 启用自动同步信息和设置（废弃）
+        /// </summary>
+        public bool EnableAutoSyncInfoSetting { get; set; }
 
         /// <summary>
         /// 启用 token 自动延期
@@ -1023,6 +1029,14 @@ namespace Midjourney.Base.Models
         /// 是否为悠船账号
         /// </summary>
         public bool IsYouChuan { get; set; }
+
+        /// <summary>
+        /// 悠船开启优先慢速功能
+        /// 当有 relax 时，所有 任务（非视频/图生文）强制 relax
+        /// relax 用完后，使用快速。
+        /// 非固定模式，优先慢速的话，即，有慢速则使用慢速，有快速则使用快速。
+        /// </summary>
+        public bool YouChuanEnablePreferRelax { get; set; }
 
         /// <summary>
         /// 是否为官方账号

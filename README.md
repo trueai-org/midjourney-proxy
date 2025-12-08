@@ -434,6 +434,9 @@ docker run -d \
   }
 }
 ```
+## 开发调试
+
+- 由于 v8 采用授权策略，在 Windows 上开发调试时如无法调试请移除项目的 `Midjourney.License.dll` 引用，Linux 平台不受影响。
 
 ## CloudFlare 人机验证
 

@@ -171,15 +171,15 @@ namespace Midjourney.Base.Models
         /// </summary>
         public bool? EnableNiji { get; set; }
 
-        ///// <summary>
-        ///// 启用快速模式用完自动切换到慢速模式（仅用于 discord 账号切换到慢速模式）
-        ///// </summary>
-        //public bool? EnableFastToRelax { get; set; }
+        /// <summary>
+        /// 启用快速模式用完自动切换到慢速模式（仅用于 discord 账号切换到慢速模式）（废弃，请使用自动设置慢速）
+        /// </summary>
+        public bool? EnableFastToRelax { get; set; }
 
-        ///// <summary>
-        ///// 启用时，当有快速时长时，自动切换到快速模式（废弃）
-        ///// </summary>
-        //public bool? EnableRelaxToFast { get; set; }
+        /// <summary>
+        /// 启用时，当有快速时长时，自动切换到快速模式（废弃）
+        /// </summary>
+        public bool? EnableRelaxToFast { get; set; }
 
         /// <summary>
         /// 表示快速模式是否已经用完了
@@ -545,10 +545,10 @@ namespace Midjourney.Base.Models
         /// </summary>
         public int DayRelaxDrawLimit { get; set; } = -1;
 
-        ///// <summary>
-        ///// 当日已绘图次数（废弃）
-        ///// </summary>
-        //public int DayDrawCount { get; set; } = 0;
+        /// <summary>
+        /// 当日已绘图次数（废弃）
+        /// </summary>
+        public int DayDrawCount { get; set; } = 0;
 
         /// <summary>
         /// 今日慢速绘图总数（包含失败，不包含放大）
@@ -634,6 +634,14 @@ namespace Midjourney.Base.Models
         /// 是否为悠船账号
         /// </summary>
         public bool IsYouChuan { get; set; }
+
+        /// <summary>
+        /// 悠船开启优先慢速功能
+        /// 当有 relax 时，所有 任务（非视频/图生文）强制 relax
+        /// relax 用完后，使用快速。
+        /// 非固定模式，优先慢速的话，即，有慢速则使用慢速，有快速则使用快速。
+        /// </summary>
+        public bool YouChuanEnablePreferRelax { get; set; }
 
         /// <summary>
         /// 悠船快速时长剩余，单位：秒（total - used）
@@ -1418,6 +1426,7 @@ namespace Midjourney.Base.Models
                 LoginAccount = configAccount.LoginAccount,
                 LoginPassword = configAccount.LoginPassword,
                 Login2fa = configAccount.Login2fa,
+                YouChuanEnablePreferRelax = configAccount.YouChuanEnablePreferRelax,
                 IsYouChuan = configAccount.IsYouChuan,
                 IsOfficial = configAccount.IsOfficial,
                 OfficialEnablePersonalize = configAccount.OfficialEnablePersonalize,
