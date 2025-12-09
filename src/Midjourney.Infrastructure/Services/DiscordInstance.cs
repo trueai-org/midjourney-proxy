@@ -295,13 +295,13 @@ namespace Midjourney.Infrastructure.LoadBalancer
             // 如果是快速模式，判断快速是否足够次数
             if (confirmMode == GenerationSpeedMode.FAST)
             {
-                // 如果超过 6 次快速
-                return FastAvailableCount > 6;
+                // 如果超过 3 次快速
+                return FastAvailableCount > 3;
             }
             else if (confirmMode == GenerationSpeedMode.TURBO)
             {
-                // 如果超过 12 次快速
-                return FastAvailableCount > 12;
+                // 如果超过 6 次快速
+                return FastAvailableCount > 6;
             }
             // 如果慢速模式，只有悠船才判断慢速次数
             else if (confirmMode == GenerationSpeedMode.RELAX && Account.IsYouChuan)
@@ -4092,15 +4092,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                         return ok;
                     }, TimeSpan.FromMinutes(cacheMinutes));
-
-                    //// 如果缓存获取成功了，但是可用数 0，则重更新计算可用数
-                    //if (success && FastAvailableCount <= 0 && Account.OfficialFastRemaining > 60)
-                    //{
-                    //    FastAvailableCount = (int)Math.Ceiling(Account.OfficialFastRemaining / 60D);
-
-                    //    _logger.Information("通过官方缓存信息重新计算可用数，ChannelId={@0}, FastAvailableCount={@1}",
-                    //        ChannelId, FastAvailableCount);
-                    //}
                 }
 
                 if (acc.IsDiscord)
@@ -4204,19 +4195,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                         return true;
                     }, TimeSpan.FromMinutes(cacheMinutes));
-
-                    //// 如果缓存获取成功了，但是可用数 0，则重更新计算可用数
-                    //if (success && FastAvailableCount <= 0)
-                    //{
-                    //    var fastTime = Account.FastTimeRemaining?.ToString()?.Split('/')?.FirstOrDefault()?.Trim();
-                    //    if (!string.IsNullOrWhiteSpace(fastTime) && double.TryParse(fastTime, out var ftime) && ftime > 0.2)
-                    //    {
-                    //        FastAvailableCount = (int)Math.Ceiling(ftime * 60);
-
-                    //        _logger.Information("通过 Discord 缓存信息重新计算可用数，ChannelId={@0}, FastAvailableCount={@1}",
-                    //            ChannelId, FastAvailableCount);
-                    //    }
-                    //}
                 }
 
                 return success;

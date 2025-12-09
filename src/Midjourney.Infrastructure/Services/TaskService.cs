@@ -1091,9 +1091,6 @@ namespace Midjourney.Infrastructure.Services
                 }
                 else
                 {
-                    //return Message.Failure("当前账号不支持视频任务。");
-                    //return SubmitResultVO.Fail(ReturnCode.FAILURE, "当前账号不支持视频任务。");
-
                     // 开始图片
                     if (startUrl?.Url?.StartsWith("http", StringComparison.OrdinalIgnoreCase) == true)
                     {
