@@ -689,6 +689,13 @@ namespace Midjourney.Base.Models
         public DateTime? YouChuanRelaxedReset { get; set; }
 
         /// <summary>
+        /// 悠船 picread 每日 200 上限，重置时间点（yyyy-MM-dd），当当天触发 picread 限制时，重置为第二天
+        /// 当时间为 null 或小于等于当天时间时，表示允许 picread
+        /// picread 不消耗 GPU
+        /// </summary>
+        public DateTime? YouChuanPicreadReset { get; set; }
+
+        /// <summary>
         /// 验证速度模式，是否允许继续绘图，并确定速度模式
         /// </summary>
         /// <param name="speed">前台指定唯一速度</param>

@@ -1105,14 +1105,20 @@ namespace Midjourney.Infrastructure.Services
                             return SubmitResultVO.Fail(ReturnCode.FAILURE, uploadResult.Description);
                         }
 
-                        var finalFileName = uploadResult.Description;
-                        var sendImageResult = await instance.SendImageMessageAsync(("upload image: " + finalFileName), finalFileName);
-                        if (sendImageResult.Code != ReturnCode.SUCCESS)
+                        if (GlobalConfiguration.Setting.EnableSaveUserUploadBase64)
                         {
-                            return SubmitResultVO.Fail(ReturnCode.FAILURE, sendImageResult.Description);
+                            startImageUrl = uploadResult.Description;
                         }
-
-                        startImageUrl = sendImageResult.Description;
+                        else
+                        {
+                            var finalFileName = uploadResult.Description;
+                            var sendImageResult = await instance.SendImageMessageAsync(("upload image: " + finalFileName), finalFileName);
+                            if (sendImageResult.Code != ReturnCode.SUCCESS)
+                            {
+                                return SubmitResultVO.Fail(sendImageResult.Code, sendImageResult.Description);
+                            }
+                            startImageUrl = sendImageResult.Description;
+                        }
                     }
 
                     // 结束图片
@@ -1128,13 +1134,20 @@ namespace Midjourney.Infrastructure.Services
                         {
                             return SubmitResultVO.Fail(ReturnCode.FAILURE, uploadResult.Description);
                         }
-                        var finalFileName = uploadResult.Description;
-                        var sendImageResult = await instance.SendImageMessageAsync(("upload image: " + finalFileName), finalFileName);
-                        if (sendImageResult.Code != ReturnCode.SUCCESS)
+                        if (GlobalConfiguration.Setting.EnableSaveUserUploadBase64)
                         {
-                            return SubmitResultVO.Fail(ReturnCode.FAILURE, sendImageResult.Description);
+                            endImageUrl = uploadResult.Description;
                         }
-                        endImageUrl = sendImageResult.Description;
+                        else
+                        {
+                            var finalFileName = uploadResult.Description;
+                            var sendImageResult = await instance.SendImageMessageAsync(("upload image: " + finalFileName), finalFileName);
+                            if (sendImageResult.Code != ReturnCode.SUCCESS)
+                            {
+                                return SubmitResultVO.Fail(sendImageResult.Code, sendImageResult.Description);
+                            }
+                            endImageUrl = sendImageResult.Description;
+                        }
                     }
 
                     if (!string.IsNullOrWhiteSpace(startImageUrl))
@@ -1436,14 +1449,20 @@ namespace Midjourney.Infrastructure.Services
                             return Message.Of(uploadResult.Code, uploadResult.Description);
                         }
 
-                        var finalFileName = uploadResult.Description;
-                        var sendImageResult = await instance.SendImageMessageAsync(("upload image: " + finalFileName), finalFileName);
-                        if (sendImageResult.Code != ReturnCode.SUCCESS)
+                        if (GlobalConfiguration.Setting.EnableSaveUserUploadBase64)
                         {
-                            return Message.Of(sendImageResult.Code, sendImageResult.Description);
+                            startImageUrl = uploadResult.Description;
                         }
-
-                        startImageUrl = sendImageResult.Description;
+                        else
+                        {
+                            var finalFileName = uploadResult.Description;
+                            var sendImageResult = await instance.SendImageMessageAsync(("upload image: " + finalFileName), finalFileName);
+                            if (sendImageResult.Code != ReturnCode.SUCCESS)
+                            {
+                                return Message.Of(sendImageResult.Code, sendImageResult.Description);
+                            }
+                            startImageUrl = sendImageResult.Description;
+                        }
                     }
 
                     // 结束图片
@@ -1459,13 +1478,21 @@ namespace Midjourney.Infrastructure.Services
                         {
                             return Message.Of(uploadResult.Code, uploadResult.Description);
                         }
-                        var finalFileName = uploadResult.Description;
-                        var sendImageResult = await instance.SendImageMessageAsync(("upload image: " + finalFileName), finalFileName);
-                        if (sendImageResult.Code != ReturnCode.SUCCESS)
+
+                        if (GlobalConfiguration.Setting.EnableSaveUserUploadBase64)
                         {
-                            return Message.Of(sendImageResult.Code, sendImageResult.Description);
+                            endImageUrl = uploadResult.Description;
                         }
-                        endImageUrl = sendImageResult.Description;
+                        else
+                        {
+                            var finalFileName = uploadResult.Description;
+                            var sendImageResult = await instance.SendImageMessageAsync(("upload image: " + finalFileName), finalFileName);
+                            if (sendImageResult.Code != ReturnCode.SUCCESS)
+                            {
+                                return Message.Of(sendImageResult.Code, sendImageResult.Description);
+                            }
+                            endImageUrl = sendImageResult.Description;
+                        }
                     }
                 }
 
@@ -1722,11 +1749,13 @@ namespace Midjourney.Infrastructure.Services
         public async Task<SubmitResultVO> SubmitDescribe(TaskInfo task, DataUrl dataUrl)
         {
             var setting = GlobalConfiguration.Setting;
+
             var discordInstance = _discordLoadBalancer.ChooseInstance(task.AccountFilter,
                 isNewTask: true,
                 botType: task.RealBotType ?? task.BotType,
                 describe: true,
-                preferredSpeedMode: task.Mode);
+                preferredSpeedMode: task.Mode,
+                taskAction: TaskAction.DESCRIBE);
 
             if (discordInstance == null || discordInstance?.Account?.IsDailyLimitContinueDrawing(task.Mode) != true)
             {

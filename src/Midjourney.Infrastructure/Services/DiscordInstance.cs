@@ -2221,14 +2221,14 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                         SaveAndNotify(info);
 
-                        await Task.Delay(2000);
-
                         if ((DateTime.Now - startTime).TotalMinutes > timeoutMin)
                         {
                             info.Fail($"执行超时 {timeoutMin} 分钟");
                             SaveAndNotify(info);
                             return;
                         }
+
+                        await Task.Delay(3000);
                     }
 
                     // 任务完成后，自动读消息
@@ -2282,7 +2282,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                     // 记录慢速使用次数
                                     var relaxAccountTodayCountKey = $"relax_account_count:{DateTime.Now:yyyyMMdd}:{info.InstanceId}";
                                     var value = 1;
-                                    if (info.Action == TaskAction.VIDEO || info.Action == TaskAction.VIDEO_EXTEND)
+                                    if (info.Action == TaskAction.VIDEO)
                                     {
                                         var bs = info.GetVideoBatchSize();
                                         value *= bs * 2;
@@ -2318,7 +2318,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                 {
                                     value *= 2;
                                 }
-                                if (info.Action == TaskAction.VIDEO || info.Action == TaskAction.VIDEO_EXTEND)
+                                if (info.Action == TaskAction.VIDEO)
                                 {
                                     var bs = info.GetVideoBatchSize();
                                     value *= bs * 2;
@@ -2539,17 +2539,13 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                 while (info.Status == TaskStatus.SUBMITTED || info.Status == TaskStatus.IN_PROGRESS)
                 {
-                    // 如果是悠船任务，则每 2s 获取一次
+                    // 如果是悠船任务
                     if (info.IsPartner || info.IsOfficial)
                     {
                         await _ymTaskService.UpdateStatus(info, _taskStoreService, Account);
-
-                        await Task.Delay(1000);
                     }
 
                     SaveAndNotify(info);
-
-                    await Task.Delay(1000);
 
                     if ((DateTime.Now - startTime).TotalMinutes > timeoutMin)
                     {
@@ -2557,6 +2553,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
                         SaveAndNotify(info);
                         return;
                     }
+
+                    await Task.Delay(3000);
                 }
 
                 // 任务完成后，自动读消息
@@ -3243,9 +3241,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 if (Account.IsYouChuan && Account.YouChuanEnablePreferRelax
                     && info.Mode != GenerationSpeedMode.RELAX
                     && info.Action != TaskAction.UPSCALE
-                    && info.Action != TaskAction.VIDEO
-                    && info.Action != TaskAction.VIDEO_EXTEND
-                    && info.Action != TaskAction.DESCRIBE)
+                    && info.Action != TaskAction.VIDEO)
                 {
                     if (YouchuanRelaxAvailableCount > 0)
                     {

@@ -758,7 +758,7 @@ namespace Midjourney.Base.Models
             }
 
             // 为VIDEO和VIDEO_EXTEND类型任务生成视频URL数组
-            if ((VideoUrls == null || VideoUrls.Count <= 0) && (Action == TaskAction.VIDEO || Action == TaskAction.VIDEO_EXTEND) && !string.IsNullOrWhiteSpace(JobId))
+            if ((VideoUrls == null || VideoUrls.Count <= 0) && Action == TaskAction.VIDEO && !string.IsNullOrWhiteSpace(JobId))
             {
                 // VideoUrl直接使用现有的ImageUrl（ImageUrl本身就是视频链接）
                 VideoUrl = ImageUrl;

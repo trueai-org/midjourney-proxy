@@ -84,7 +84,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
             bool? isVideo = null,
             bool? isHdVideo = null,
             bool? isYouChuan = null,
-            bool? isRedisUpscale = null)
+            bool? isRedisUpscale = null,
+            TaskAction? taskAction = null)
         {
             var list = GetAliveInstances()
 

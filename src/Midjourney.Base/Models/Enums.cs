@@ -317,7 +317,7 @@ namespace Midjourney.Base
         RETEXTURE,
 
         /// <summary>
-        /// 图生文 - 文生图
+        /// 图生文 - 文生图（废弃）
         /// </summary>
         PIC_READER
     }
