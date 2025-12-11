@@ -30,7 +30,6 @@ global using Midjourney.Base.Dto;
 global using Midjourney.Base.Models;
 global using Midjourney.Base.Services;
 global using Midjourney.Base.StandardTable;
-global using Midjourney.Base.Storage;
 global using Midjourney.Base.Util;
 global using Midjourney.Infrastructure;
 
@@ -48,7 +47,6 @@ using Midjourney.License;
 using Midjourney.License.YouChuan;
 using MongoDB.Driver;
 using Serilog;
-using Serilog.Core;
 using Serilog.Debugging;
 using Serilog.Events;
 
@@ -56,9 +54,6 @@ namespace Midjourney.API
 {
     public static class Program
     {
-        // 创建一个全局可控的日志级别开关
-        public static LoggingLevelSwitch LogLevelSwitch { get; private set; } = new LoggingLevelSwitch();
-
         public static async Task Main(string[] args)
         {
             try
@@ -78,9 +73,9 @@ namespace Midjourney.API
                 // --- 服务注册与初始化 ---
 
                 // 初始化全局配置项（可能需要访问磁盘或 DB），必须在添加依赖前执行以确保 Setting 可用
-                await SettingDb.InitializeAsync();
+                await SettingHelper.InitializeAsync();
 
-                var setting = SettingDb.Instance.Current;
+                var setting = SettingHelper.Instance.Current;
 
                 // 是否需要重新保存配置
                 var isSaveSetting = false;
@@ -103,15 +98,13 @@ namespace Midjourney.API
                 Log.Information("数据库类型：{0}", setting.DatabaseType);
 
                 // 初始化 Redis 验证是否可连接
-                CSRedisClient csredis = null;
                 if (setting.IsValidRedis)
                 {
                     try
                     {
-                        csredis = new CSRedis.CSRedisClient(setting.RedisConnectionString);
+                        var csredis = new CSRedisClient(setting.RedisConnectionString);
                         if (!csredis.Ping())
                         {
-                            csredis = null;
                             setting.EnableRedis = false;
                             isSaveSetting = true;
                             Log.Error("Redis 连接失败，已自动禁用 Redis 功能");
@@ -119,24 +112,20 @@ namespace Midjourney.API
                     }
                     catch (Exception ex)
                     {
-                        csredis = null;
                         setting.EnableRedis = false;
                         isSaveSetting = true;
                         Log.Error(ex, "Redis 连接异常，已自动禁用 Redis 功能");
                     }
                 }
 
-                AdaptiveLock.Initialization(csredis);
-                AdaptiveCache.Initialization(csredis);
-
                 // 需要重新保存配置，注意：如果版本过旧，重新保存配置可能会覆盖新的业务，需谨慎处理
                 if (isSaveSetting)
                 {
-                    await SettingDb.Instance.SaveAsync(setting);
+                    await SettingHelper.Instance.SaveAsync(setting);
                 }
 
-                // 修改日志级别
-                SetLogLevel(setting.LogEventLevel);
+                // 应用配置项
+                SettingHelper.Instance.ApplySettings();
 
                 // 机器标识
                 LicenseKeyHelper.Startup();
@@ -354,7 +343,7 @@ namespace Midjourney.API
         private static void ConfigureInitialLogger(IConfiguration configuration, bool isDevelopment)
         {
             // 设置初始日志级别
-            LogLevelSwitch.MinimumLevel = isDevelopment ? LogEventLevel.Debug : LogEventLevel.Information;
+            SettingHelper.LogLevelSwitch.MinimumLevel = isDevelopment ? LogEventLevel.Debug : LogEventLevel.Information;
 
             // 基本日志配置
             //var loggerConfiguration = new LoggerConfiguration()
@@ -366,7 +355,7 @@ namespace Midjourney.API
             var fileSizeLimitBytes = 10 * 1024 * 1024;
             var loggerConfiguration = new LoggerConfiguration()
                 //.MinimumLevel.Information()
-                .MinimumLevel.ControlledBy(LogLevelSwitch) // 使用 LoggingLevelSwitch 控制日志级别
+                .MinimumLevel.ControlledBy(SettingHelper.LogLevelSwitch) // 使用 LoggingLevelSwitch 控制日志级别
                 .MinimumLevel.Override("Default", LogEventLevel.Warning)
                 .MinimumLevel.Override("System", LogEventLevel.Warning)
                 .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
@@ -411,17 +400,6 @@ namespace Midjourney.API
                     retainedFileCountLimit: 31));
 
             Log.Logger = loggerConfiguration.CreateLogger();
-        }
-
-        /// <summary>
-        /// 设置日志级别
-        /// </summary>
-        /// <param name="level"></param>
-        public static void SetLogLevel(LogEventLevel level)
-        {
-            LogLevelSwitch.MinimumLevel = level;
-
-            Log.Write(level, "日志级别已设置为: {Level}", level);
         }
     }
 }

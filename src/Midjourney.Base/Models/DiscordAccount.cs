@@ -105,6 +105,16 @@ namespace Midjourney.Base.Models
         public string YouchuanRelaxAvailableCountKey => $"account_youchuan_relax_available_count:{DateTime.Now:yyyyMMdd}:{Id}";
 
         /// <summary>
+        /// 悠船图生文 key - 每日计数
+        /// </summary>
+        [LiteDB.BsonIgnore]
+        [MongoDB.Bson.Serialization.Attributes.BsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Column(IsIgnore = true)]
+        public string YouchuanDescribeCountKey => $"account_youchuan_describe_count:{DateTime.Now:yyyyMMdd}:{Id}";
+
+        /// <summary>
         /// 添加一个事件用于通知去清理缓存
         /// </summary>
         public event Action ClearCacheEvent;

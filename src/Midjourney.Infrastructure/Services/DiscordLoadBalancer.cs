@@ -22,19 +22,19 @@
 // invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
-using System.Threading.Tasks;
+using Midjourney.Infrastructure.Services;
 
 namespace Midjourney.Infrastructure.LoadBalancer
 {
     /// <summary>
-    /// Discord 负载均衡器。
+    /// Discord 实例选择器
     /// </summary>
     public class DiscordLoadBalancer
     {
-        private readonly IRule _rule;
+        private readonly IDiscordInstanceRule _rule;
         private readonly HashSet<DiscordInstance> _instances = [];
 
-        public DiscordLoadBalancer(IRule rule)
+        public DiscordLoadBalancer(IDiscordInstanceRule rule)
         {
             _rule = rule;
         }
@@ -49,8 +49,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// 获取存活的实例。
         /// </summary>
         /// <returns>存活的实例列表。</returns>
-        public List<DiscordInstance> GetAliveInstances() =>
-            _instances.Where(c => c != null && c.IsAlive == true).Where(c => c != null).ToList() ?? [];
+        public List<DiscordInstance> GetAliveInstances() => _instances.Where(c => c != null && c.IsAlive == true).Where(c => c != null).ToList() ?? [];
 
         /// <summary>
         /// 选择一个实例。
@@ -84,8 +83,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
             bool? isVideo = null,
             bool? isHdVideo = null,
             bool? isYouChuan = null,
-            bool? isRedisUpscale = null,
-            TaskAction? taskAction = null)
+            bool? isRedisUpscale = null)
         {
             var list = GetAliveInstances()
 
@@ -93,7 +91,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 .WhereIf(isRedisUpscale != true, c => c.IsIdleQueue(preferredSpeedMode))
 
                 // 允许继续绘图
-                .Where(c => c.Account.IsDailyLimitContinueDrawing(preferredSpeedMode) && c.Account.Enable == true)
+                .Where(c => c.Account.Enable == true && c.Account.IsDailyLimitContinueDrawing(preferredSpeedMode))
 
                 // 首选速度绘图判断 + 计数器验证
                 .Where(c => c.Account.IsValidateModeContinueDrawing(preferredSpeedMode, accountFilter?.Modes, out var confirmMode)
@@ -139,7 +137,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 .WhereIf(botType == EBotType.MID_JOURNEY, c => c.Account.EnableMj == true)
 
                 // 过滤开启功能的账号
-                .WhereIf(blend == true, c => c.Account.IsBlend)
+                .WhereIf(blend == true, c => c.IsAllowDescribe())
                 .WhereIf(describe == true, c => c.Account.IsDescribe)
                 .WhereIf(shorten == true, c => c.Account.IsShorten)
 
@@ -152,6 +150,36 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 .ToList();
 
             return _rule.Choose(list);
+        }
+
+        /// <summary>
+        /// 选择一个图生文可用实例 - 不判断速度 - 随机获取实例
+        /// </summary>
+        /// <param name="preferredSpeedMode"></param>
+        /// <returns></returns>
+        public DiscordInstance GetDescribeInstance(GenerationSpeedMode? preferredSpeedMode = null, string instanceId = null)
+        {
+            var list = GetAliveInstances()
+                .WhereIf(!string.IsNullOrWhiteSpace(instanceId), c => c.ChannelId == instanceId)
+                .Where(c => c.Account.Enable == true && c.IsAlive && c.Account.IsDescribe && c.Account.IsAcceptNewTask(preferredSpeedMode))
+                .OrderBy(c => Guid.NewGuid())
+                .Take(10)
+                .ToList();
+
+            // 为了减少压力，这里随机取 10 个实例进行二次筛选符合的只有筛选不到才全部筛选
+            var di = list.Where(c => c.IsAllowDescribe()).OrderBy(c => Guid.NewGuid()).FirstOrDefault();
+            if (di != null)
+            {
+                return di;
+            }
+
+            // 实在找不到就全部筛选
+            return GetAliveInstances()
+                .WhereIf(!string.IsNullOrWhiteSpace(instanceId), c => c.ChannelId == instanceId)
+                .Where(c => c.Account.Enable == true && c.IsAlive && c.Account.IsDescribe && c.Account.IsAcceptNewTask(preferredSpeedMode))
+                .Where(c => c.IsAllowDescribe())
+                .OrderBy(c => Guid.NewGuid())
+                .FirstOrDefault();
         }
 
         /// <summary>
@@ -183,23 +211,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
             return _instances.FirstOrDefault(c => c.ChannelId == channelId && c.IsAlive);
         }
-
-        ///// <summary>
-        ///// 获取排队任务的ID集合。
-        ///// </summary>
-        ///// <returns>排队任务的ID集合。</returns>
-        //public HashSet<string> GetQueueTaskIds()
-        //{
-        //    var taskIds = new HashSet<string>();
-        //    foreach (var instance in GetAliveInstances())
-        //    {
-        //        foreach (var taskId in instance.GetRunningFutures().Keys)
-        //        {
-        //            taskIds.Add(taskId);
-        //        }
-        //    }
-        //    return taskIds;
-        //}
 
         /// <summary>
         /// 获取排队任务列表。
@@ -266,6 +277,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         public DiscordInstance GetAliveOfficialPersonalizeInstance()
         {
             var list = GetAliveInstances().Where(c => c.Account.OfficialEnablePersonalize).ToList();
+
             return _rule.Choose(list);
         }
     }

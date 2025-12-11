@@ -24,10 +24,13 @@
 
 using System.Text;
 using Consul;
-using Midjourney.Base.Options;
+using CSRedis;
+using Midjourney.Infrastructure.LoadBalancer;
+using Midjourney.Infrastructure.Services;
 using Serilog;
+using static Org.BouncyCastle.Math.EC.ECCurve;
 
-namespace Midjourney.Base.Data
+namespace Midjourney.Infrastructure
 {
     /// <summary>
     /// 系统配置存储（单例）。
@@ -35,8 +38,13 @@ namespace Midjourney.Base.Data
     /// 如果能连接，则从 Consul 的 KV 中加载远程配置并覆盖本地配置。
     /// 保存时：同时写到本地 LiteDB 与远程 Consul KV。
     /// </summary>
-    public class SettingDb : IDisposable
+    public class SettingHelper : IDisposable
     {
+        /// <summary>
+        /// 创建一个全局可控的日志级别开关
+        /// </summary>
+        public static Serilog.Core.LoggingLevelSwitch LogLevelSwitch { get; private set; } = new Serilog.Core.LoggingLevelSwitch();
+
         private readonly LiteDBRepository<Setting> _liteDb;
 
         private ConsulClient _consulClient;
@@ -44,14 +52,14 @@ namespace Midjourney.Base.Data
         /// <summary>
         /// 单例实例（要先调用 InitializeAsync）
         /// </summary>
-        public static SettingDb Instance { get; private set; }
+        public static SettingHelper Instance { get; private set; }
 
         /// <summary>
         /// 当前生效配置缓存
         /// </summary>
         public Setting Current { get; private set; }
 
-        private SettingDb()
+        private SettingHelper()
         {
             _liteDb = new LiteDBRepository<Setting>("data/mj.db");
         }
@@ -70,11 +78,55 @@ namespace Midjourney.Base.Data
             if (Instance != null)
                 return;
 
-            var inst = new SettingDb();
+            var inst = new SettingHelper();
 
             await inst.LoadAsync();
 
             Instance = inst;
+        }
+
+        /// <summary>
+        /// 根据配置项初始化其他相关服务，例如日志等级、翻译服务、锁等
+        /// </summary>
+        public void ApplySettings()
+        {
+            GlobalConfiguration.Setting = Current;
+
+            var setting = Current;
+
+            // 日志级别
+            LogLevelSwitch.MinimumLevel = setting.LogEventLevel;
+            Log.Write(setting.LogEventLevel, "日志级别已设置为: {Level}", setting.LogEventLevel);
+
+            // 存储服务
+            StorageHelper.Configure();
+
+            // 翻译服务
+            if (setting.TranslateWay == TranslateWay.GPT && !string.IsNullOrWhiteSpace(setting.Openai?.GptApiKey))
+            {
+                TranslateHelper.Initialize(new GPTTranslateService());
+            }
+            else if (setting.TranslateWay == TranslateWay.BAIDU && !string.IsNullOrWhiteSpace(setting.BaiduTranslate?.AppSecret))
+            {
+                TranslateHelper.Initialize(new BaiduTranslateService());
+            }
+            else
+            {
+                TranslateHelper.Initialize(null);
+            }
+
+            // 缓存 / Redis / Reids 锁
+            if (setting.IsValidRedis)
+            {
+                var csredis = new CSRedisClient(setting.RedisConnectionString);
+                AdaptiveLock.Initialization(csredis);
+                AdaptiveCache.Initialization(csredis);
+            }
+            else
+            {
+                AdaptiveLock.Initialization(null);
+                AdaptiveCache.Initialization(null);
+            }
         }
 
         /// <summary>
@@ -148,6 +200,8 @@ namespace Midjourney.Base.Data
 
                                         UpsertLocal(Current);
 
+                                        GlobalConfiguration.Setting = Current;
+
                                         Log.Information("Loaded setting from Consul KV and persisted to local LiteDB.");
 
                                         return;
@@ -187,6 +241,8 @@ namespace Midjourney.Base.Data
 
                 // 如果没有从远程加载成功，则使用本地配置
                 Current = setting;
+
+                GlobalConfiguration.Setting = Current;
             }
             catch (Exception ex)
             {

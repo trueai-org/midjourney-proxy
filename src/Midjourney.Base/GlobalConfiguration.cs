@@ -25,7 +25,6 @@
 using System.Reflection;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Caching.Memory;
-using Midjourney.Base.Data;
 using Midjourney.Base.Util;
 
 namespace Midjourney.Base
@@ -53,7 +52,7 @@ namespace Midjourney.Base
         /// <summary>
         /// 全局配置项
         /// </summary>
-        public static Setting Setting => SettingDb.Instance.Current;
+        public static Setting Setting { get; set; }
 
         /// <summary>
         /// 网站配置为演示模式

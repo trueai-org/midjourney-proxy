@@ -15,63 +15,24 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Additional Terms:
-// This software shall not be used for any illegal activities. 
+// This software shall not be used for any illegal activities.
 // Users must comply with all applicable laws and regulations,
-// particularly those related to image and video processing. 
+// particularly those related to image and video processing.
 // The use of this software for any form of illegal face swapping,
-// invasion of privacy, or any other unlawful purposes is strictly prohibited. 
+// invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
-namespace Midjourney.Infrastructure.LoadBalancer
+using Midjourney.Infrastructure.LoadBalancer;
+
+namespace Midjourney.Infrastructure.Services
 {
     /// <summary>
     /// 最少等待空闲选择规则
     /// 单例场景，不需要包装 Random 实例
     /// </summary>
-    public class BestWaitIdleRule : IRule
+    public class BestWaitIdleRule : IDiscordInstanceRule
     {
         private static readonly Random random = new Random();
-
-        ///// <summary>
-        ///// 根据最少等待空闲规则选择一个 Discord 实例
-        ///// </summary>
-        ///// <param name="instances">可用的 Discord 实例列表。</param>
-        ///// <returns>选择的 Discord 实例。</returns>
-        //public DiscordInstance Choose(List<DiscordInstance> instances)
-        //{
-        //    if (instances.Count == 0)
-        //    {
-        //        return null;
-        //    }
-
-        //    // FIX：此算法存在问题：因为可能没有执行中的任务，由于间隔较大时，那么会一直选择到同一个实例
-        //    //// 优先选择空闲的实例
-        //    //var idleCandidates = instances
-        //    //    .Where(c => c.Account.CoreSize - c.GetRunningFutures().Count > 0)
-        //    //    .GroupBy(c => c.Account.CoreSize - c.GetRunningFutures().Count)
-        //    //    .OrderByDescending(g => g.Key)
-        //    //    .FirstOrDefault();
-
-        //    //if (idleCandidates != null)
-        //    //{
-        //    //    // 随机选择一个空闲实例
-        //    //    return idleCandidates.ElementAt(random.Next(idleCandidates.Count()));
-        //    //}
-
-        //    // 如果没有空闲的实例，则选择 -> (当前队列数 + 执行中的数量) / 核心数, 最小的实例
-        //    var busyCandidates = instances
-        //        .GroupBy(c => (double)(c.GetRunningFutures().Count + c.GetQueueTasks().Count) / c.Account.CoreSize)
-        //        .OrderBy(g => g.Key)
-        //        .FirstOrDefault();
-
-        //    if (busyCandidates != null)
-        //    {
-        //        // 随机选择一个实例
-        //        return busyCandidates.ElementAt(random.Next(busyCandidates.Count()));
-        //    }
-
-        //    return null;
-        //}
 
         /// <summary>
         /// 根据队列利用率选择一个Discord实例
@@ -127,7 +88,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
     /// <summary>
     /// 轮询选择规则。
     /// </summary>
-    public class RoundRobinRule : IRule
+    public class RoundRobinRule : IDiscordInstanceRule
     {
         private int _position = -1;
 
@@ -151,7 +112,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
     /// <summary>
     /// 随机规则
     /// </summary>
-    public class RandomRule : IRule
+    public class RandomRule : IDiscordInstanceRule
     {
         private static readonly Random _random = new Random();
 
@@ -170,7 +131,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
     /// <summary>
     /// 权重规则
     /// </summary>
-    public class WeightRule : IRule
+    public class WeightRule : IDiscordInstanceRule
     {
         public DiscordInstance Choose(List<DiscordInstance> instances)
         {
@@ -192,8 +153,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 }
             }
 
-            return instances.Last();  // Fallback, should never reach here
+            return instances.Last();
         }
     }
-
 }

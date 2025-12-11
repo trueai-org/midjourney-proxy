@@ -15,11 +15,11 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Additional Terms:
-// This software shall not be used for any illegal activities. 
+// This software shall not be used for any illegal activities.
 // Users must comply with all applicable laws and regulations,
-// particularly those related to image and video processing. 
+// particularly those related to image and video processing.
 // The use of this software for any form of illegal face swapping,
-// invasion of privacy, or any other unlawful purposes is strictly prohibited. 
+// invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
 using System.Reflection;
@@ -33,7 +33,6 @@ namespace Midjourney.API
     {
         public static void AddMidjourneyServices(this IServiceCollection services, Setting config)
         {
-
             // 注册所有的处理程序
 
             // 机器人消息处理程序
@@ -59,9 +58,7 @@ namespace Midjourney.API
             services.AddTransient<UserMessageHandler, UserVariationSuccessHandler>();
             services.AddTransient<UserMessageHandler, UserStartAndProgressHandler>();
             services.AddTransient<UserMessageHandler, UserRerollSuccessHandler>();
-
             services.AddTransient<UserMessageHandler, UserShortenSuccessHandler>();
-
 
             // 换脸服务
             services.AddSingleton<FaceSwapInstance>();
@@ -70,27 +67,6 @@ namespace Midjourney.API
             // 通知服务
             services.AddSingleton<INotifyService, NotifyServiceImpl>();
 
-            // 翻译服务
-            if (config.TranslateWay == TranslateWay.GPT
-                && !string.IsNullOrWhiteSpace(config.Openai?.GptApiKey))
-            {
-                var gptTranslate = new GPTTranslateService();
-                TranslateHelper.Initialize(gptTranslate);
-            }
-            else if (config.TranslateWay == TranslateWay.BAIDU
-                && !string.IsNullOrWhiteSpace(config.BaiduTranslate?.AppSecret))
-            {
-                var baiduTranslate = new BaiduTranslateService();
-                TranslateHelper.Initialize(baiduTranslate);
-            }
-            else
-            {
-                TranslateHelper.Initialize(null);
-            }
-
-            // 存储服务
-            StorageHelper.Configure();
-
             // 任务服务
             services.AddSingleton<ITaskStoreService, TaskRepository>();
 
@@ -98,19 +74,23 @@ namespace Midjourney.API
             switch (config.AccountChooseRule)
             {
                 case AccountChooseRule.BestWaitIdle:
-                    services.AddSingleton<IRule, BestWaitIdleRule>();
+                    services.AddSingleton<IDiscordInstanceRule, BestWaitIdleRule>();
                     break;
+
                 case AccountChooseRule.Random:
-                    services.AddSingleton<IRule, RandomRule>();
+                    services.AddSingleton<IDiscordInstanceRule, RandomRule>();
                     break;
+
                 case AccountChooseRule.Weight:
-                    services.AddSingleton<IRule, WeightRule>();
+                    services.AddSingleton<IDiscordInstanceRule, WeightRule>();
                     break;
+
                 case AccountChooseRule.Polling:
-                    services.AddSingleton<IRule, RoundRobinRule>();
+                    services.AddSingleton<IDiscordInstanceRule, RoundRobinRule>();
                     break;
+
                 default:
-                    services.AddSingleton<IRule, BestWaitIdleRule>();
+                    services.AddSingleton<IDiscordInstanceRule, BestWaitIdleRule>();
                     break;
             }
 

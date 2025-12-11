@@ -1750,168 +1750,72 @@ namespace Midjourney.Infrastructure.Services
         {
             var setting = GlobalConfiguration.Setting;
 
-            var discordInstance = _discordLoadBalancer.ChooseInstance(task.AccountFilter,
-                isNewTask: true,
-                botType: task.RealBotType ?? task.BotType,
-                describe: true,
-                preferredSpeedMode: task.Mode,
-                taskAction: TaskAction.DESCRIBE);
+            // 必须配置 redis
+            if (!setting.IsValidRedis)
+            {
+                Log.Error("系统配置错误，无法使用Describe功能，请检查Redis配置");
 
-            if (discordInstance == null || discordInstance?.Account?.IsDailyLimitContinueDrawing(task.Mode) != true)
+                return SubmitResultVO.Fail(ReturnCode.FAILURE, "系统配置错误，无法使用该功能");
+            }
+
+            var discordInstance = _discordLoadBalancer.GetDescribeInstance(task.Mode ?? task.RequestMode
+                ?? task.AccountFilter?.Modes?.FirstOrDefault(), task.AccountFilter?.InstanceId);
+            if (discordInstance == null)
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
-
-            if (!discordInstance.Account.IsValidateModeContinueDrawing(task.Mode, task.AccountFilter?.Modes, out var mode))
-            {
-                return SubmitResultVO.Fail(ReturnCode.FAILURE, "无可用的账号实例");
-            }
-            if (!discordInstance.IsIdleQueue(mode))
-            {
-                return SubmitResultVO.Fail(ReturnCode.FAILURE, "提交失败，队列已满，请稍后重试");
-            }
-
-            task.Mode = mode;
 
             task.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, discordInstance.ChannelId);
             task.InstanceId = discordInstance.ChannelId;
             task.IsPartner = discordInstance.Account.IsYouChuan;
             task.IsOfficial = discordInstance.Account.IsOfficial;
 
-            // redis
-            if (discordInstance.IsValidRedis)
-            {
-                var link = "";
+            var link = "";
 
-                if (task.IsPartner || task.IsOfficial)
+            if (task.IsPartner || task.IsOfficial)
+            {
+                if (task.IsPartner)
                 {
-                    if (task.IsPartner)
+                    // 悠船
+                    if (dataUrl.Url?.StartsWith("http", StringComparison.OrdinalIgnoreCase) == true)
                     {
-                        // 悠船
-                        if (dataUrl.Url?.StartsWith("http", StringComparison.OrdinalIgnoreCase) == true)
-                        {
-                            link = dataUrl.Url;
-                        }
-                        else
-                        {
-                            var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
-                            link = await discordInstance.YmTaskService.UploadFile(task, dataUrl.Data, taskFileName);
-                        }
+                        link = dataUrl.Url;
                     }
                     else
                     {
-                        // 官方
-                        if (dataUrl.Url?.StartsWith("http", StringComparison.OrdinalIgnoreCase) == true)
-                        {
-                            link = dataUrl.Url;
-                        }
-                        else
-                        {
-                            var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
-                            var uploadResult = await discordInstance.UploadAsync(taskFileName, dataUrl);
-                            if (uploadResult.Code != ReturnCode.SUCCESS)
-                            {
-                                return SubmitResultVO.Fail(ReturnCode.FAILURE, uploadResult.Description);
-                            }
-
-                            if (uploadResult.Description.StartsWith("http"))
-                            {
-                                link = uploadResult.Description;
-                            }
-                            else
-                            {
-                                return SubmitResultVO.Fail(ReturnCode.FAILURE, "上传失败，未返回有效链接");
-                            }
-                        }
-                    }
-
-                    task.ImageUrl = link;
-                    task.Status = TaskStatus.NOT_START;
-
-                    // 入队前不保存
-                    //_taskStoreService.Save(task);
-
-                    return await discordInstance.RedisEnqueue(new TaskInfoQueue()
-                    {
-                        Info = task,
-                        Function = TaskInfoQueueFunction.DESCRIBE
-                    });
-
-                    //await discordInstance.YmTaskService.Describe(task);
-
-                    //if (task.Buttons.Count > 0)
-                    //{
-                    //    await task.SuccessAsync();
-                    //}
-                    //else
-                    //{
-                    //    task.Fail("操作失败");
-                    //}
-
-                    //_taskStoreService.Save(task);
-
-                    //return Message.Success();
-                }
-
-                //var taskFileName = $"{task.Id}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
-                //var uploadResult = await discordInstance.UploadAsync(taskFileName, dataUrl);
-                //if (uploadResult.Code != ReturnCode.SUCCESS)
-                //{
-                //    return Message.Of(uploadResult.Code, uploadResult.Description);
-                //}
-                //var finalFileName = uploadResult.Description;
-                //return await discordInstance.DescribeAsync(finalFileName, task.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default),
-                //  task.RealBotType ?? task.BotType);
-
-                if (dataUrl.Url?.StartsWith("http", StringComparison.OrdinalIgnoreCase) == true)
-                {
-                    // 是否转换链接
-                    link = dataUrl.Url;
-
-                    // 如果转换用户链接到文件存储
-                    if (GlobalConfiguration.Setting.EnableSaveUserUploadLink)
-                    {
-                        var ff = new FileFetchHelper();
-                        var url = await ff.FetchFileToStorageAsync(link);
-                        if (!string.IsNullOrWhiteSpace(url))
-                        {
-                            link = url;
-                        }
+                        var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
+                        link = await discordInstance.YmTaskService.UploadFile(task, dataUrl.Data, taskFileName);
                     }
                 }
                 else
                 {
-                    var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
-                    var uploadResult = await discordInstance.UploadAsync(taskFileName, dataUrl);
-                    if (uploadResult.Code != ReturnCode.SUCCESS)
+                    // 官方
+                    if (dataUrl.Url?.StartsWith("http", StringComparison.OrdinalIgnoreCase) == true)
                     {
-                        return SubmitResultVO.Fail(ReturnCode.FAILURE, uploadResult.Description);
-                    }
-
-                    if (uploadResult.Description.StartsWith("http"))
-                    {
-                        link = uploadResult.Description;
+                        link = dataUrl.Url;
                     }
                     else
                     {
-                        var finalFileName = uploadResult.Description;
-                        var sendImageResult = await discordInstance.SendImageMessageAsync("upload image: " + finalFileName, finalFileName);
-                        if (sendImageResult.Code != ReturnCode.SUCCESS)
+                        var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
+                        var uploadResult = await discordInstance.UploadAsync(taskFileName, dataUrl);
+                        if (uploadResult.Code != ReturnCode.SUCCESS)
                         {
-                            return SubmitResultVO.Fail(ReturnCode.FAILURE, sendImageResult.Description);
+                            return SubmitResultVO.Fail(ReturnCode.FAILURE, uploadResult.Description);
                         }
-                        link = sendImageResult.Description;
+
+                        if (uploadResult.Description.StartsWith("http"))
+                        {
+                            link = uploadResult.Description;
+                        }
+                        else
+                        {
+                            return SubmitResultVO.Fail(ReturnCode.FAILURE, "上传失败，未返回有效链接");
+                        }
                     }
                 }
 
                 task.ImageUrl = link;
                 task.Status = TaskStatus.NOT_START;
-
-                // 入队前不保存
-                //_taskStoreService.Save(task);
-
-                //             return await discordInstance.DescribeByLinkAsync(link, task.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default),
-                //task.RealBotType ?? task.BotType);
 
                 return await discordInstance.RedisEnqueue(new TaskInfoQueue()
                 {
@@ -1920,126 +1824,54 @@ namespace Midjourney.Infrastructure.Services
                 });
             }
 
-            return discordInstance.SubmitTaskAsync(task, async () =>
+            if (dataUrl.Url?.StartsWith("http", StringComparison.OrdinalIgnoreCase) == true)
             {
-                var link = "";
+                // 是否转换链接
+                link = dataUrl.Url;
 
-                if (task.IsPartner || task.IsOfficial)
+                // 如果转换用户链接到文件存储
+                if (GlobalConfiguration.Setting.EnableSaveUserUploadLink)
                 {
-                    if (task.IsPartner)
+                    var ff = new FileFetchHelper();
+                    var url = await ff.FetchFileToStorageAsync(link);
+                    if (!string.IsNullOrWhiteSpace(url))
                     {
-                        // 悠船
-                        if (dataUrl.Url?.StartsWith("http", StringComparison.OrdinalIgnoreCase) == true)
-                        {
-                            link = dataUrl.Url;
-                        }
-                        else
-                        {
-                            var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
-                            link = await discordInstance.YmTaskService.UploadFile(task, dataUrl.Data, taskFileName);
-                        }
+                        link = url;
                     }
-                    else
-                    {
-                        // 官方
-                        if (dataUrl.Url?.StartsWith("http", StringComparison.OrdinalIgnoreCase) == true)
-                        {
-                            link = dataUrl.Url;
-                        }
-                        else
-                        {
-                            var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
-                            var uploadResult = await discordInstance.UploadAsync(taskFileName, dataUrl);
-                            if (uploadResult.Code != ReturnCode.SUCCESS)
-                            {
-                                return Message.Of(uploadResult.Code, uploadResult.Description);
-                            }
-
-                            if (uploadResult.Description.StartsWith("http"))
-                            {
-                                link = uploadResult.Description;
-                            }
-                            else
-                            {
-                                return Message.Of(ReturnCode.FAILURE, "上传失败，未返回有效链接");
-                            }
-                        }
-                    }
-
-                    task.ImageUrl = link;
-                    task.Status = TaskStatus.IN_PROGRESS;
-
-                    _taskStoreService.Save(task);
-
-                    await discordInstance.YmTaskService.Describe(task);
-
-                    if (task.Buttons.Count > 0)
-                    {
-                        await task.SuccessAsync();
-                    }
-                    else
-                    {
-                        task.Fail("操作失败");
-                    }
-
-                    _taskStoreService.Save(task);
-
-                    return Message.Success();
+                }
+            }
+            else
+            {
+                var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
+                var uploadResult = await discordInstance.UploadAsync(taskFileName, dataUrl);
+                if (uploadResult.Code != ReturnCode.SUCCESS)
+                {
+                    return SubmitResultVO.Fail(ReturnCode.FAILURE, uploadResult.Description);
                 }
 
-                //var taskFileName = $"{task.Id}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
-                //var uploadResult = await discordInstance.UploadAsync(taskFileName, dataUrl);
-                //if (uploadResult.Code != ReturnCode.SUCCESS)
-                //{
-                //    return Message.Of(uploadResult.Code, uploadResult.Description);
-                //}
-                //var finalFileName = uploadResult.Description;
-                //return await discordInstance.DescribeAsync(finalFileName, task.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default),
-                //  task.RealBotType ?? task.BotType);
-
-                if (dataUrl.Url?.StartsWith("http", StringComparison.OrdinalIgnoreCase) == true)
+                if (uploadResult.Description.StartsWith("http"))
                 {
-                    // 是否转换链接
-                    link = dataUrl.Url;
-
-                    // 如果转换用户链接到文件存储
-                    if (GlobalConfiguration.Setting.EnableSaveUserUploadLink)
-                    {
-                        var ff = new FileFetchHelper();
-                        var url = await ff.FetchFileToStorageAsync(link);
-                        if (!string.IsNullOrWhiteSpace(url))
-                        {
-                            link = url;
-                        }
-                    }
+                    link = uploadResult.Description;
                 }
                 else
                 {
-                    var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
-                    var uploadResult = await discordInstance.UploadAsync(taskFileName, dataUrl);
-                    if (uploadResult.Code != ReturnCode.SUCCESS)
+                    var finalFileName = uploadResult.Description;
+                    var sendImageResult = await discordInstance.SendImageMessageAsync("upload image: " + finalFileName, finalFileName);
+                    if (sendImageResult.Code != ReturnCode.SUCCESS)
                     {
-                        return Message.Of(uploadResult.Code, uploadResult.Description);
+                        return SubmitResultVO.Fail(ReturnCode.FAILURE, sendImageResult.Description);
                     }
-
-                    if (uploadResult.Description.StartsWith("http"))
-                    {
-                        link = uploadResult.Description;
-                    }
-                    else
-                    {
-                        var finalFileName = uploadResult.Description;
-                        var sendImageResult = await discordInstance.SendImageMessageAsync("upload image: " + finalFileName, finalFileName);
-                        if (sendImageResult.Code != ReturnCode.SUCCESS)
-                        {
-                            return Message.Of(sendImageResult.Code, sendImageResult.Description);
-                        }
-                        link = sendImageResult.Description;
-                    }
+                    link = sendImageResult.Description;
                 }
+            }
 
-                return await discordInstance.DescribeByLinkAsync(link, task.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default),
-                   task.RealBotType ?? task.BotType);
+            task.ImageUrl = link;
+            task.Status = TaskStatus.NOT_START;
+
+            return await discordInstance.RedisEnqueue(new TaskInfoQueue()
+            {
+                Info = task,
+                Function = TaskInfoQueueFunction.DESCRIBE
             });
         }
 

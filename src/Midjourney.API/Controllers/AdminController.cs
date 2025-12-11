@@ -1153,8 +1153,9 @@ namespace Midjourney.API.Controllers
             {
                 var inc = _loadBalancer.GetDiscordInstance(item.ChannelId);
 
-                item.RunningCount = inc?.GetRunningTaskCount ?? 0;
-                item.QueueCount = inc?.GetQueueTaskCount ?? 0;
+                //item.RunningCount = inc?.GetRunningTaskCount ?? 0;
+                //item.QueueCount = inc?.GetQueueTaskCount ?? 0;
+
                 item.Running = inc?.IsAlive ?? false;
 
                 if (user == null || (user.Role != EUserRole.ADMIN && user.Id != item.SponsorUserId))
@@ -2270,7 +2271,7 @@ namespace Midjourney.API.Controllers
                 return Result.Fail<Setting>("演示模式，禁止操作");
             }
 
-            var consulSetting = await SettingDb.LoadFromConsulAsync(consulOptions);
+            var consulSetting = await SettingHelper.LoadFromConsulAsync(consulOptions);
             if (consulSetting == null)
             {
                 return Result.Fail<Setting>("从 Consul 加载配置失败，请检查 Consul 地址/服务名称是否正确");
@@ -2314,13 +2315,11 @@ namespace Midjourney.API.Controllers
                 {
                     return Result.Fail("授权验证失败，请检查授权码是否正确，如果没有授权码，请输入默认授权码：trueai.org");
                 }
-
                 setting.PrivateFeatures = res.Features ?? [];
             }
             catch (Exception ex)
             {
                 Log.Error(ex, "授权验证失败");
-
                 return Result.Fail("授权验证失败，请检查授权码是否正确，如果没有授权码，请输入默认授权码：trueai.org");
             }
 
@@ -2331,8 +2330,7 @@ namespace Midjourney.API.Controllers
                 {
                     return Result.Fail("购买授权后，才允许使用 Consul 功能");
                 }
-
-                var success = await SettingDb.Instance.IsConsulAvailableAsync(setting);
+                var success = await SettingHelper.Instance.IsConsulAvailableAsync(setting);
                 if (!success)
                 {
                     return Result.Fail("Consul 连接失败，请检查 Consul 地址/服务名称是否正确");
@@ -2340,12 +2338,11 @@ namespace Midjourney.API.Controllers
             }
 
             // 如果启用了 redis 则验证
-            CSRedisClient csredis = null;
             if (setting.IsValidRedis)
             {
                 try
                 {
-                    csredis = new CSRedisClient(setting.RedisConnectionString);
+                    var csredis = new CSRedisClient(setting.RedisConnectionString);
                     if (!csredis.Ping())
                     {
                         return Result.Fail("Redis 连接失败，请检查连接字符串是否正确");
@@ -2357,8 +2354,6 @@ namespace Midjourney.API.Controllers
                     return Result.Fail("Redis 连接失败，请检查连接字符串是否正确");
                 }
             }
-            AdaptiveLock.Initialization(csredis);
-            AdaptiveCache.Initialization(csredis);
 
             // 如果启用了风控验证
             if (setting.EnableRiskControlAutoCaptcha)
@@ -2369,33 +2364,12 @@ namespace Midjourney.API.Controllers
                 }
             }
 
-            // 翻译服务
-            if (setting.TranslateWay == TranslateWay.GPT
-                && !string.IsNullOrWhiteSpace(setting.Openai?.GptApiKey))
-            {
-                var gptTranslate = new GPTTranslateService();
-                TranslateHelper.Initialize(gptTranslate);
-            }
-            else if (setting.TranslateWay == TranslateWay.BAIDU
-                && !string.IsNullOrWhiteSpace(setting.BaiduTranslate?.AppSecret))
-            {
-                var baiduTranslate = new BaiduTranslateService();
-                TranslateHelper.Initialize(baiduTranslate);
-            }
-            else
-            {
-                TranslateHelper.Initialize(null);
-            }
-
             setting.Id = Constants.DEFAULT_SETTING_ID;
 
-            await SettingDb.Instance.SaveAsync(setting);
+            await SettingHelper.Instance.SaveAsync(setting);
 
-            // 日志级别
-            Program.SetLogLevel(setting.LogEventLevel);
-
-            // 存储服务
-            StorageHelper.Configure();
+            // 应用新配置
+            SettingHelper.Instance.ApplySettings();
 
             // 首页缓存
             _memoryCache.Remove($"{DateTime.Now:yyyyMMdd}_home");
