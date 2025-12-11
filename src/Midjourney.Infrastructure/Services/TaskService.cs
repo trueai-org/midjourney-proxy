@@ -3461,7 +3461,7 @@ namespace Midjourney.Infrastructure.Services
                 throw new LogicException("未找到账号实例");
             }
 
-            var discordInstance = _discordLoadBalancer.GetDiscordInstanceIsAlive(model.ChannelId);
+            var discordInstance = _discordLoadBalancer.GetDiscordInstance(model.ChannelId);
             if (discordInstance == null)
             {
                 throw new LogicException("无可用的账号实例");
