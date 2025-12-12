@@ -3139,10 +3139,10 @@ namespace Midjourney.Infrastructure.LoadBalancer
         {
             try
             {
-                if (!JwtTokenValidate(Account.UserToken))
-                {
-                    return Message.Of(ReturnCode.VALIDATION_ERROR, "令牌错误");
-                }
+                //if (!JwtTokenValidate(Account.UserToken))
+                //{
+                //    return Message.Of(ReturnCode.VALIDATION_ERROR, "令牌错误");
+                //}
 
                 // 解码
                 url = System.Web.HttpUtility.UrlDecode(url);
@@ -3921,10 +3921,10 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
         private async Task<HttpResponseMessage> PostJsonAsync(string url, string paramsStr)
         {
-            if (!JwtTokenValidate(Account.UserToken))
-            {
-                throw new LogicException(ReturnCode.VALIDATION_ERROR, "令牌错误");
-            }
+            //if (!JwtTokenValidate(Account.UserToken))
+            //{
+            //    throw new LogicException(ReturnCode.VALIDATION_ERROR, "令牌错误");
+            //}
 
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, url)
             {
