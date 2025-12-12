@@ -294,7 +294,7 @@ namespace Midjourney.Infrastructure.Services
                         }
                         else
                         {
-                            var taskFileName = $"{info.Id}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
+                            var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
                             var uploadResult = await instance.UploadAsync(taskFileName, dataUrl);
                             if (uploadResult.Code != ReturnCode.SUCCESS)
                             {
@@ -580,7 +580,7 @@ namespace Midjourney.Infrastructure.Services
                     }
                     else
                     {
-                        var taskFileName = $"{info.Id}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
+                        var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
                         var uploadResult = await instance.UploadAsync(taskFileName, dataUrl);
                         if (uploadResult.Code != ReturnCode.SUCCESS)
                         {
@@ -662,7 +662,7 @@ namespace Midjourney.Infrastructure.Services
                     }
                     else
                     {
-                        var taskFileName = $"{info.Id}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
+                        var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
                         var uploadResult = await instance.UploadAsync(taskFileName, dataUrl);
                         if (uploadResult.Code != ReturnCode.SUCCESS)
                         {
@@ -782,7 +782,7 @@ namespace Midjourney.Infrastructure.Services
                     }
                     else
                     {
-                        var taskFileName = $"{info.Id}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
+                        var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
                         var uploadResult = await instance.UploadAsync(taskFileName, dataUrl);
                         if (uploadResult.Code != ReturnCode.SUCCESS)
                         {
@@ -863,7 +863,7 @@ namespace Midjourney.Infrastructure.Services
                     }
                     else
                     {
-                        var taskFileName = $"{info.Id}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
+                        var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
                         var uploadResult = await instance.UploadAsync(taskFileName, dataUrl);
                         if (uploadResult.Code != ReturnCode.SUCCESS)
                         {
@@ -1050,7 +1050,7 @@ namespace Midjourney.Infrastructure.Services
                     }
                     else if (startUrl?.Data != null && startUrl.Data.Length > 0)
                     {
-                        var taskFileName = $"{info.Id}.{MimeTypeUtils.GuessFileSuffix(startUrl.MimeType)}";
+                        var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(startUrl.MimeType)}";
                         var uploadResult = await instance.UploadAsync(taskFileName, startUrl);
                         if (uploadResult.Code != ReturnCode.SUCCESS)
                         {
@@ -1074,7 +1074,7 @@ namespace Midjourney.Infrastructure.Services
                     }
                     else if (endUrl?.Data != null && endUrl.Data.Length > 0)
                     {
-                        var taskFileName = $"{info.Id}.{MimeTypeUtils.GuessFileSuffix(endUrl.MimeType)}";
+                        var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(endUrl.MimeType)}";
                         var uploadResult = await instance.UploadAsync(taskFileName, endUrl);
                         if (uploadResult.Code != ReturnCode.SUCCESS)
                         {
@@ -1098,7 +1098,7 @@ namespace Midjourney.Infrastructure.Services
                     }
                     else if (startUrl?.Data != null && startUrl.Data.Length > 0)
                     {
-                        var taskFileName = $"{info.Id}.{MimeTypeUtils.GuessFileSuffix(startUrl.MimeType)}";
+                        var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(startUrl.MimeType)}";
                         var uploadResult = await instance.UploadAsync(taskFileName, startUrl);
                         if (uploadResult.Code != ReturnCode.SUCCESS)
                         {
@@ -1128,7 +1128,7 @@ namespace Midjourney.Infrastructure.Services
                     }
                     else if (endUrl?.Data != null && endUrl.Data.Length > 0)
                     {
-                        var taskFileName = $"{info.Id}.{MimeTypeUtils.GuessFileSuffix(endUrl.MimeType)}";
+                        var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(endUrl.MimeType)}";
                         var uploadResult = await instance.UploadAsync(taskFileName, endUrl);
                         if (uploadResult.Code != ReturnCode.SUCCESS)
                         {
@@ -1394,7 +1394,7 @@ namespace Midjourney.Infrastructure.Services
                     }
                     else if (startUrl?.Data != null && startUrl.Data.Length > 0)
                     {
-                        var taskFileName = $"{info.Id}.{MimeTypeUtils.GuessFileSuffix(startUrl.MimeType)}";
+                        var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(startUrl.MimeType)}";
                         var uploadResult = await instance.UploadAsync(taskFileName, startUrl);
                         if (uploadResult.Code != ReturnCode.SUCCESS)
                         {
@@ -1418,7 +1418,7 @@ namespace Midjourney.Infrastructure.Services
                     }
                     else if (endUrl?.Data != null && endUrl.Data.Length > 0)
                     {
-                        var taskFileName = $"{info.Id}.{MimeTypeUtils.GuessFileSuffix(endUrl.MimeType)}";
+                        var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(endUrl.MimeType)}";
                         var uploadResult = await instance.UploadAsync(taskFileName, endUrl);
                         if (uploadResult.Code != ReturnCode.SUCCESS)
                         {
@@ -1442,7 +1442,7 @@ namespace Midjourney.Infrastructure.Services
                     }
                     else if (startUrl?.Data != null && startUrl.Data.Length > 0)
                     {
-                        var taskFileName = $"{info.Id}.{MimeTypeUtils.GuessFileSuffix(startUrl.MimeType)}";
+                        var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(startUrl.MimeType)}";
                         var uploadResult = await instance.UploadAsync(taskFileName, startUrl);
                         if (uploadResult.Code != ReturnCode.SUCCESS)
                         {
@@ -1472,7 +1472,7 @@ namespace Midjourney.Infrastructure.Services
                     }
                     else if (endUrl?.Data != null && endUrl.Data.Length > 0)
                     {
-                        var taskFileName = $"{info.Id}.{MimeTypeUtils.GuessFileSuffix(endUrl.MimeType)}";
+                        var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(endUrl.MimeType)}";
                         var uploadResult = await instance.UploadAsync(taskFileName, endUrl);
                         if (uploadResult.Code != ReturnCode.SUCCESS)
                         {
