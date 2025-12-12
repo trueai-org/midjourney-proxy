@@ -336,7 +336,7 @@ namespace Midjourney.Infrastructure.Services
                     var imageUrls = new List<string>();
                     foreach (var dataUrl in dataUrls)
                     {
-                        var taskFileName = $"{info.Id}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
+                        var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
                         var uploadResult = await instance.UploadAsync(taskFileName, dataUrl);
                         if (uploadResult.Code != ReturnCode.SUCCESS)
                         {
@@ -415,7 +415,7 @@ namespace Midjourney.Infrastructure.Services
                         }
                         else
                         {
-                            var taskFileName = $"{info.Id}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
+                            var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
                             var uploadResult = await instance.UploadAsync(taskFileName, dataUrl);
                             if (uploadResult.Code != ReturnCode.SUCCESS)
                             {
@@ -454,7 +454,7 @@ namespace Midjourney.Infrastructure.Services
                     var imageUrls = new List<string>();
                     foreach (var dataUrl in dataUrls)
                     {
-                        var taskFileName = $"{info.Id}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
+                        var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
                         var uploadResult = await instance.UploadAsync(taskFileName, dataUrl);
                         if (uploadResult.Code != ReturnCode.SUCCESS)
                         {
