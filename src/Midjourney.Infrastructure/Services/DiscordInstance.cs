@@ -302,10 +302,44 @@ namespace Midjourney.Infrastructure.LoadBalancer
         public int FastAvailableCount => (int)AdaptiveCache.GetCounter(_account.FastAvailableCountKey);
 
         /// <summary>
-        /// 悠船可用慢速剩余次数
+        /// 判断悠船是否允许慢速
         /// </summary>
-        public int YouchuanRelaxAvailableCount => _account.IsYouChuan
-            ? (int)AdaptiveCache.GetCounter(_account.YouchuanRelaxAvailableCountKey) : 0;
+        /// <returns></returns>
+        public bool IsYouChuanAllowRelax()
+        {
+            var acc = Account;
+            if (acc.IsYouChuan)
+            {
+                if (acc.YouChuanRelaxedReset > DateTime.Now.Date)
+                {
+                    // 已上限
+                    return false;
+                }
+
+                // 悠船每日限制慢速
+                var relaxCount = (int)AdaptiveCache.GetCounter(acc.YouchuanRelaxCountKey);
+                var limit = acc.YouChuanRelaxDailyLimit;
+                if (relaxCount < limit - acc.RelaxCoreSize - acc.RelaxQueueSize)
+                {
+                    return true;
+                }
+                else if (relaxCount >= limit)
+                {
+                    return false;
+                }
+                else
+                {
+                    // 精确计算剩余次数
+                    var currentCore = _relaxConcurrent.GetConcurrency(acc.RelaxCoreSize);
+                    var currentQueue = _relaxQueue.Count();
+                    if (relaxCount + currentCore + currentQueue < limit)
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
 
         /// <summary>
         /// 计数器验证，通过确定速度模式判断
@@ -329,7 +363,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
             // 如果慢速模式，只有悠船才判断慢速次数
             else if (confirmMode == GenerationSpeedMode.RELAX && Account.IsYouChuan)
             {
-                return YouchuanRelaxAvailableCount > 0;
+                return IsYouChuanAllowRelax();
             }
 
             return true;
@@ -351,20 +385,21 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 }
 
                 // 悠船每日 200 限制
+                var limit = 200;
                 if (acc.IsYouChuan)
                 {
-                    // 未上限
                     if (acc.YouChuanPicreadReset > DateTime.Now.Date)
                     {
+                        // 已上限
                         return false;
                     }
 
                     var describeCount = (int)AdaptiveCache.GetCounter(acc.YouchuanDescribeCountKey);
-                    if (describeCount < 200 - acc.CoreSize - acc.QueueSize)
+                    if (describeCount < limit - acc.CoreSize - acc.QueueSize)
                     {
                         return true;
                     }
-                    else if (describeCount >= 200)
+                    else if (describeCount >= limit)
                     {
                         return false;
                     }
@@ -373,7 +408,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                         // 精确计算剩余次数
                         var currentCore = _describeConcurrent.GetConcurrency(acc.CoreSize);
                         var currentQueue = _describeQueue.Count();
-                        if (describeCount + currentCore + currentQueue < 200)
+                        if (describeCount + currentCore + currentQueue < limit)
                         {
                             return true;
                         }
@@ -2474,31 +2509,16 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                 if (info.IsPartnerRelax)
                                 {
                                     // 记录慢速使用次数
-                                    var relaxAccountTodayCountKey = $"relax_account_count:{DateTime.Now:yyyyMMdd}:{info.InstanceId}";
                                     var value = 1;
                                     if (info.Action == TaskAction.VIDEO)
                                     {
                                         var bs = info.GetVideoBatchSize();
                                         value *= bs * 2;
                                     }
-
-                                    var count = AdaptiveCache.Increment(relaxAccountTodayCountKey, value, TimeSpan.FromDays(1));
-
-                                    var relaxAvailable = Math.Max(0, AdaptiveCache.Decrement(Account.YouchuanRelaxAvailableCountKey, value));
-
-                                    Log.Information("悠船慢速任务完成，扣减 relax 次数: TaskId={@0}, InstanceId={@1}, 扣除={@2}, 预估慢速剩余次数={@3}, 今日慢速次数={@4}",
+                                    var count = AdaptiveCache.Increment(Account.YouchuanRelaxCountKey, value, TimeSpan.FromDays(1));
+                                    var relaxAvailable = Math.Max(0, Account.YouChuanRelaxDailyLimit - count);
+                                    Log.Information("悠船慢速任务完成，扣减 relax 次数: TaskId={@0}, InstanceId={@1}, 扣除={@2}, 预估慢速剩余次数={@3}, 今日慢速计数={@4}",
                                         info.Id, info.InstanceId, value, relaxAvailable, count);
-
-                                    //// 通知所有节点并扣减次数
-                                    //var notification = new RedisNotification
-                                    //{
-                                    //    Type = ENotificationType.DecreaseRelaxCount,
-                                    //    ChannelId = info.InstanceId,
-                                    //    DecreaseCount = value
-                                    //};
-                                    //RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
-
-                                    // 如果是慢速绘图，由于是独立计数，因此不需要同步
                                 }
                             }
                             else
@@ -3435,9 +3455,10 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 if (Account.IsYouChuan && Account.YouChuanEnablePreferRelax
                     && info.Mode != GenerationSpeedMode.RELAX
                     && info.Action != TaskAction.UPSCALE
+                    && info.Action != TaskAction.DESCRIBE
                     && info.Action != TaskAction.VIDEO)
                 {
-                    if (YouchuanRelaxAvailableCount > 0)
+                    if (IsYouChuanAllowRelax())
                     {
                         // 如果有慢速和快速，且前台允许快速和慢速
                         if (acc.AllowModes == null || (acc.AllowModes.Contains(GenerationSpeedMode.FAST) && acc.AllowModes.Contains(GenerationSpeedMode.RELAX)))
@@ -4220,11 +4241,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
                         AdaptiveCache.SetCounter(Account.FastAvailableCountKey, fastAvailableCount, TimeSpan.FromDays(1));
 
                         // 计算慢速总数
-                        var relaxAccountTodayCountKey = $"relax_account_count:{DateTime.Now:yyyyMMdd}:{acc.ChannelId}";
-                        var count = (int)AdaptiveCache.GetCounter(relaxAccountTodayCountKey);
+                        var count = (int?)AdaptiveCache.GetCounter(acc.YouchuanRelaxCountKey) ?? 0;
                         var youchuanRelaxAvailableCount = Account.YouChuanRelaxedReset > DateTime.Now ? 0 : Math.Max(0, Account.YouChuanRelaxDailyLimit - count);
-
-                        AdaptiveCache.SetCounter(Account.YouchuanRelaxAvailableCountKey, youchuanRelaxAvailableCount, TimeSpan.FromDays(1));
 
                         _logger.Information("悠船同步信息完成，ChannelId={@0}, 预估快速剩余次数={@1}, 预估慢速剩余次数={@2}, 用时={@3}ms",
                             ChannelId, fastAvailableCount, youchuanRelaxAvailableCount, sw.ElapsedMilliseconds);

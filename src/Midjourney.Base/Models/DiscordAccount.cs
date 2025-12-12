@@ -95,17 +95,17 @@ namespace Midjourney.Base.Models
         public string FastAvailableCountKey => $"account_fast_available_count:{Id}";
 
         /// <summary>
-        /// 悠船慢速可用计数缓存 key - 每日
+        /// 悠船慢速今日计数 key
         /// </summary>
         [LiteDB.BsonIgnore]
         [MongoDB.Bson.Serialization.Attributes.BsonIgnore]
         [Newtonsoft.Json.JsonIgnore]
         [System.Text.Json.Serialization.JsonIgnore]
         [Column(IsIgnore = true)]
-        public string YouchuanRelaxAvailableCountKey => $"account_youchuan_relax_available_count:{DateTime.Now:yyyyMMdd}:{Id}";
+        public string YouchuanRelaxCountKey => $"account_youchuan_relax_count:{DateTime.Now:yyyyMMdd}:{Id}";
 
         /// <summary>
-        /// 悠船图生文 key - 每日计数
+        /// 悠船图生文今日计数 key 
         /// </summary>
         [LiteDB.BsonIgnore]
         [MongoDB.Bson.Serialization.Attributes.BsonIgnore]
