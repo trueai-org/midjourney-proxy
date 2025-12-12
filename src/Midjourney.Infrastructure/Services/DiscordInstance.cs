@@ -1211,6 +1211,12 @@ namespace Midjourney.Infrastructure.LoadBalancer
             {
                 try
                 {
+                    // 判断当前实例是否可用，实例不可用时，不消费作业
+                    while (!IsAlive)
+                    {
+                        await Task.Delay(1000 * 10, token);
+                    }
+
                     // 是否立即执行下一个任务
                     var isContinueNext = false;
 
