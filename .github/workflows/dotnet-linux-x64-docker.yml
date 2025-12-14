@@ -86,7 +86,6 @@ jobs:
       - name: 安装 ossutil 2.0
         run: |
           curl -o ossutil-2.2.0-linux-amd64.zip https://gosspublic.alicdn.com/ossutil/v2/2.2.0/ossutil-2.2.0-linux-amd64.zip
-          sudo apt install -y unzip
           unzip ossutil-2.2.0-linux-amd64.zip
           chmod 755 ossutil-2.2.0-linux-amd64/ossutil
           sudo mv ossutil-2.2.0-linux-amd64/ossutil /usr/local/bin/ossutil
@@ -110,4 +109,5 @@ jobs:
             --bucket mjcn-midjourney \
             --key releases/${FILE_NAME} \
             --body file://${FILE_NAME} \
+            --region cn-guangzhou \
             --tagging "Version=${{ github.event.release.tag_name }}&Release=auto"
