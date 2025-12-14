@@ -729,61 +729,65 @@ namespace Midjourney.Base.Models
             Status = TaskStatus.SUCCESS;
             Progress = "100%";
 
-            // 为IMAGINE类型任务或包含upsample按钮的任务生成图片URL数组
-            bool shouldGenerateImageUrls = false;
-            int batchSize = GetVideoBatchSize();
+            // 填充官方 CDN 图片和视频链接
+            if (setting.EnableFillOfficialCdn)
+            {
+                // 为IMAGINE类型任务或包含upsample按钮的任务生成图片URL数组
+                bool shouldGenerateImageUrls = false;
+                int batchSize = GetVideoBatchSize();
 
-            // 检查是否为IMAGINE类型任务
-            if (Action == TaskAction.IMAGINE && !string.IsNullOrWhiteSpace(JobId))
-            {
-                shouldGenerateImageUrls = true;
-            }
-            // 检查buttons中是否包含upsample相关的customId
-            else if (!string.IsNullOrWhiteSpace(JobId) && Buttons?.Any(x => x.CustomId?.Contains("MJ::JOB::upsample::") == true) == true)
-            {
-                shouldGenerateImageUrls = true;
-            }
-
-            if (shouldGenerateImageUrls && (ImageUrls == null || ImageUrls.Count <= 0))
-            {
-                ImageUrls = new List<TaskInfoImageUrl>();
-                for (int i = 0; i < batchSize; i++)
+                // 检查是否为IMAGINE类型任务
+                if (Action == TaskAction.IMAGINE && !string.IsNullOrWhiteSpace(JobId))
                 {
-                    ImageUrls.Add(new TaskInfoImageUrl
-                    {
-                        Url = $"https://cdn.midjourney.com/{JobId}/0_{i}.png",
-                        Thumbnail = $"https://cdn.midjourney.com/{JobId}/0_{i}_640_N.webp",
-                    });
+                    shouldGenerateImageUrls = true;
                 }
-            }
-
-            // 为VIDEO和VIDEO_EXTEND类型任务生成视频URL数组
-            if ((VideoUrls == null || VideoUrls.Count <= 0) && Action == TaskAction.VIDEO && !string.IsNullOrWhiteSpace(JobId))
-            {
-                // VideoUrl直接使用现有的ImageUrl（ImageUrl本身就是视频链接）
-                VideoUrl = ImageUrl;
-
-                VideoUrls = new List<TaskInfoVideoUrl>();
-                ImageUrls = new List<TaskInfoImageUrl>(); // 同时同步到imageUrls
-
-                for (int i = 0; i < batchSize; i++)
+                // 检查buttons中是否包含upsample相关的customId
+                else if (!string.IsNullOrWhiteSpace(JobId) && Buttons?.Any(x => x.CustomId?.Contains("MJ::JOB::upsample::") == true) == true)
                 {
-                    var videoUrl = $"https://cdn.midjourney.com/video/{JobId}/0_{i}.mp4";
-                    //var webpUrl = $"https://cdn.midjourney.com/{JobId}/0_{i}.webp";
-                    var thumbnailUrl = $"https://cdn.midjourney.com/{JobId}/0_{i}_640_N.webp";
+                    shouldGenerateImageUrls = true;
+                }
 
-                    // VideoUrls和ImageUrls都存储相同的视频URL，通过相同索引对应
-                    VideoUrls.Add(new TaskInfoVideoUrl
+                if (shouldGenerateImageUrls && (ImageUrls == null || ImageUrls.Count <= 0))
+                {
+                    ImageUrls = new List<TaskInfoImageUrl>();
+                    for (int i = 0; i < batchSize; i++)
                     {
-                        Url = videoUrl,
-                        Thumbnail = thumbnailUrl,
-                    });
+                        ImageUrls.Add(new TaskInfoImageUrl
+                        {
+                            Url = $"https://cdn.midjourney.com/{JobId}/0_{i}.png",
+                            Thumbnail = $"https://cdn.midjourney.com/{JobId}/0_{i}_640_N.webp",
+                        });
+                    }
+                }
 
-                    ImageUrls.Add(new TaskInfoImageUrl
+                // 为VIDEO和VIDEO_EXTEND类型任务生成视频URL数组
+                if ((VideoUrls == null || VideoUrls.Count <= 0) && Action == TaskAction.VIDEO && !string.IsNullOrWhiteSpace(JobId))
+                {
+                    // VideoUrl直接使用现有的ImageUrl（ImageUrl本身就是视频链接）
+                    VideoUrl = ImageUrl;
+
+                    VideoUrls = new List<TaskInfoVideoUrl>();
+                    ImageUrls = new List<TaskInfoImageUrl>(); // 同时同步到imageUrls
+
+                    for (int i = 0; i < batchSize; i++)
                     {
-                        Url = videoUrl,
-                        Thumbnail = thumbnailUrl,
-                    });
+                        var videoUrl = $"https://cdn.midjourney.com/video/{JobId}/0_{i}.mp4";
+                        //var webpUrl = $"https://cdn.midjourney.com/{JobId}/0_{i}.webp";
+                        var thumbnailUrl = $"https://cdn.midjourney.com/{JobId}/0_{i}_640_N.webp";
+
+                        // VideoUrls和ImageUrls都存储相同的视频URL，通过相同索引对应
+                        VideoUrls.Add(new TaskInfoVideoUrl
+                        {
+                            Url = videoUrl,
+                            Thumbnail = thumbnailUrl,
+                        });
+
+                        ImageUrls.Add(new TaskInfoImageUrl
+                        {
+                            Url = videoUrl,
+                            Thumbnail = thumbnailUrl,
+                        });
+                    }
                 }
             }
 
