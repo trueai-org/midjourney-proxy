@@ -81,3 +81,33 @@ jobs:
           asset_path: "midjourney-proxy-linux-x64-${{ github.event.release.tag_name }}-docker.tar.gz"
           asset_name: "midjourney-proxy-linux-x64-${{ github.event.release.tag_name }}-docker.tar.gz"
           asset_content_type: application/gzip
+
+      # ================== 新增：阿里云 OSS 上传步骤 ==================
+      - name: 安装 ossutil 2.0
+        run: |
+          curl -o ossutil-2.2.0-linux-amd64.zip https://gosspublic.alicdn.com/ossutil/v2/2.2.0/ossutil-2.2.0-linux-amd64.zip
+          sudo apt install -y unzip
+          unzip ossutil-2.2.0-linux-amd64.zip
+          chmod 755 ossutil-2.2.0-linux-amd64/ossutil
+          sudo mv ossutil-2.2.0-linux-amd64/ossutil /usr/local/bin/ossutil
+          ossutil version
+
+      - name: 配置 ossutil
+        run: |
+          # 使用 GitHub Secrets 中的阿里云 AccessKey 信息
+          echo "${{ secrets.OSS_CONFIG }}" > ~/.ossutilconfig
+          # 示例 OSS_CONFIG 内容格式：
+          # [Credentials]
+          # language=en
+          # accessKeyId=YOUR_ACCESS_KEY_ID
+          # accessKeySecret=YOUR_ACCESS_KEY_SECRET
+          # endpoint=https://oss-cn-hangzhou.aliyuncs.com
+
+      - name: 上传到阿里云 OSS
+        run: |
+          FILE_NAME="midjourney-proxy-linux-x64-${{ github.event.release.tag_name }}-docker.tar.gz"
+          ossutil api put-object \
+            --bucket mjcn-midjourney \
+            --key releases/${FILE_NAME} \
+            --body file://${FILE_NAME} \
+            --tagging "Version=${{ github.event.release.tag_name }}&Release=auto"
