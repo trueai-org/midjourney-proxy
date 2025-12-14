@@ -384,9 +384,22 @@ namespace Midjourney.Infrastructure.Services
                 var targetPath = Path.Combine(_upgradePath, asset.Name);
                 var tmpPath = targetPath + ".tmp";
 
-                Log.Information("开始下载升级包: {Url} -> {Path}", asset.BrowserDownloadUrl, tmpPath);
+                // GITHUB
+                // https://github.com/trueai-org/midjourney-proxy/releases/download/v9.4.5/midjourney-captcha-win-arm64-v9.4.5.zip
 
-                using var response = await _httpClient.GetAsync(asset.BrowserDownloadUrl, HttpCompletionOption.ResponseHeadersRead, _downloadCancellation!.Token);
+                // 阿里云
+                // https://mjcn-midjourney.googlec.cc/releases/midjourney-proxy-linux-x64-v9.4.7-docker.tar.gz
+
+                var settting = GlobalConfiguration.Setting;
+                var downloadUrl = asset.BrowserDownloadUrl;
+                if (settting.UpgradePackageSource == UpgradePackageSource.ALIYUN)
+                {
+                    downloadUrl = $"https://mjcn-midjourney.googlec.cc/releases/{asset.Name}";
+                }
+
+                Log.Information("开始下载升级包: {@0} -> {@1}", downloadUrl, tmpPath);
+
+                using var response = await _httpClient.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead, _downloadCancellation!.Token);
                 response.EnsureSuccessStatusCode();
 
                 var totalSize = response.Content.Headers.ContentLength ?? asset.Size;
@@ -599,8 +612,6 @@ namespace Midjourney.Infrastructure.Services
             }
         }
 
-
-
         private async Task CopyDirectoryAsync(string sourcePath, string targetPath, bool overwrite = false)
         {
             Directory.CreateDirectory(targetPath);
@@ -631,7 +642,6 @@ namespace Midjourney.Infrastructure.Services
 
             await Task.CompletedTask;
         }
-
 
         private async Task ExecuteUpgradeScript(string extractPath)
         {
@@ -731,5 +741,4 @@ namespace Midjourney.Infrastructure.Services
             }
         }
     }
-
 }

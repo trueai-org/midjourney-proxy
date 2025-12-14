@@ -208,6 +208,11 @@ namespace Midjourney.Base.Models
         public bool EnableUpdateCheck { get; set; } = true;
 
         /// <summary>
+        /// 升级包来源
+        /// </summary>
+        public UpgradePackageSource UpgradePackageSource { get; set; } = UpgradePackageSource.GITHUB;
+
+        /// <summary>
         /// 检查升级信息
         /// </summary>
         [LiteDB.BsonIgnore]

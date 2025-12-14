@@ -15,14 +15,31 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Additional Terms:
-// This software shall not be used for any illegal activities. 
+// This software shall not be used for any illegal activities.
 // Users must comply with all applicable laws and regulations,
-// particularly those related to image and video processing. 
+// particularly those related to image and video processing.
 // The use of this software for any form of illegal face swapping,
-// invasion of privacy, or any other unlawful purposes is strictly prohibited. 
+// invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
+
 namespace Midjourney.Base
 {
+    /// <summary>
+    /// 更新包下载来源
+    /// </summary>
+    public enum UpgradePackageSource
+    {
+        /// <summary>
+        /// GitHub
+        /// </summary>
+        GITHUB = 0,
+
+        /// <summary>
+        /// 阿里云
+        /// </summary>
+        ALIYUN = 1
+    }
+
     /// <summary>
     /// 用户状态
     /// </summary>
