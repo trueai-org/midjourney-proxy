@@ -809,6 +809,12 @@ namespace Midjourney.Base.Models
     public class DiscordAccountConfig
     {
         /// <summary>
+        /// 开启草稿模式
+        /// 开启后当前账号所有绘图含提示词指令的操作都将自动添加--draft参数
+        /// </summary>
+        public bool IsDraft { get; set; }
+
+        /// <summary>
         /// 服务器ID
         /// </summary>
         public string GuildId { get; set; }

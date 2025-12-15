@@ -3477,6 +3477,12 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 }
             }
 
+            // 草稿处理
+            if (Account.IsDraft && !prompt.Contains("--draft", StringComparison.OrdinalIgnoreCase))
+            {
+                prompt += " --draft";
+            }
+
             //// 处理转义字符引号等
             //return prompt.Replace("\\\"", "\"").Replace("\\'", "'").Replace("\\\\", "\\");
 

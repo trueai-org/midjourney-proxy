@@ -949,95 +949,95 @@ namespace Midjourney.API.Controllers
             return Result.Ok();
         }
 
-        /// <summary>
-        /// 编辑账号
-        /// </summary>
-        /// <param name="param"></param>
-        /// <returns></returns>
-        [HttpPut("account/{id}")]
-        public async Task<Result> AccountEdit([FromBody] DiscordAccount param)
-        {
-            var setting = GlobalConfiguration.Setting;
-            var user = _workContext.GetUser();
+        ///// <summary>
+        ///// 编辑账号（废弃）
+        ///// </summary>
+        ///// <param name="param"></param>
+        ///// <returns></returns>
+        //[HttpPut("account/{id}")]
+        //public async Task<Result> AccountEdit([FromBody] DiscordAccount param)
+        //{
+        //    var setting = GlobalConfiguration.Setting;
+        //    var user = _workContext.GetUser();
 
-            if (user == null)
-            {
-                return Result.Fail("演示模式，禁止操作");
-            }
+        //    if (user == null)
+        //    {
+        //        return Result.Fail("演示模式，禁止操作");
+        //    }
 
-            if (!setting.EnableAccountSponsor && user.Role != EUserRole.ADMIN)
-            {
-                return Result.Fail("未开启赞助功能，禁止操作");
-            }
+        //    if (!setting.EnableAccountSponsor && user.Role != EUserRole.ADMIN)
+        //    {
+        //        return Result.Fail("未开启赞助功能，禁止操作");
+        //    }
 
-            var model = DbHelper.Instance.AccountStore.Get(param.Id);
-            if (model == null)
-            {
-                throw new LogicException("账号不存在");
-            }
+        //    var model = DbHelper.Instance.AccountStore.Get(param.Id);
+        //    if (model == null)
+        //    {
+        //        throw new LogicException("账号不存在");
+        //    }
 
-            if (user.Role != EUserRole.ADMIN && model.SponsorUserId != user.Id)
-            {
-                return Result.Fail("无权限操作");
-            }
+        //    if (user.Role != EUserRole.ADMIN && model.SponsorUserId != user.Id)
+        //    {
+        //        return Result.Fail("无权限操作");
+        //    }
 
-            // 赞助者禁止配置的选项
-            if (user.Role != EUserRole.ADMIN)
-            {
-                param.Sort = model.Sort;
-                param.SubChannels = model.SubChannels;
-                param.WorkTime = model.WorkTime;
-                param.FishingTime = model.WorkTime;
+        //    // 赞助者禁止配置的选项
+        //    if (user.Role != EUserRole.ADMIN)
+        //    {
+        //        param.Sort = model.Sort;
+        //        param.SubChannels = model.SubChannels;
+        //        param.WorkTime = model.WorkTime;
+        //        param.FishingTime = model.WorkTime;
 
-                // 赞助者参数校验
-                param.SponsorValidate();
-            }
+        //        // 赞助者参数校验
+        //        param.SponsorValidate();
+        //    }
 
-            model.LoginAccount = param.LoginAccount?.Trim();
-            model.LoginPassword = param.LoginPassword?.Trim();
-            model.Login2fa = param.Login2fa?.Trim();
-            model.IsAutoLogining = false; // 重置自动登录状态
-            model.LoginStart = null;
-            model.LoginEnd = null;
-            model.LoginMessage = null;
+        //    model.LoginAccount = param.LoginAccount?.Trim();
+        //    model.LoginPassword = param.LoginPassword?.Trim();
+        //    model.Login2fa = param.Login2fa?.Trim();
+        //    model.IsAutoLogining = false; // 重置自动登录状态
+        //    model.LoginStart = null;
+        //    model.LoginEnd = null;
+        //    model.LoginMessage = null;
 
-            model.NijiBotChannelId = param.NijiBotChannelId;
-            model.PrivateChannelId = param.PrivateChannelId;
-            model.RemixAutoSubmit = param.RemixAutoSubmit;
-            model.TimeoutMinutes = param.TimeoutMinutes;
-            model.Weight = param.Weight;
-            model.Remark = param.Remark;
-            model.Sponsor = param.Sponsor;
-            model.Sort = param.Sort;
-            model.PermanentInvitationLink = param.PermanentInvitationLink;
-            model.IsVerticalDomain = param.IsVerticalDomain;
-            model.VerticalDomainIds = param.VerticalDomainIds;
-            model.SubChannels = param.SubChannels;
-            model.IsBlend = param.IsBlend;
-            model.EnableMj = param.EnableMj;
-            model.EnableNiji = param.EnableNiji;
-            model.IsDescribe = param.IsDescribe;
-            model.IsShorten = param.IsShorten;
-            model.DayDrawLimit = param.DayDrawLimit;
-            model.DayRelaxDrawLimit = param.DayRelaxDrawLimit;
-            model.IsRelaxVideo = param.IsRelaxVideo;
-            model.IsHdVideo = param.IsHdVideo;
-            model.OfficialEnablePersonalize = param.OfficialEnablePersonalize;
+        //    model.NijiBotChannelId = param.NijiBotChannelId;
+        //    model.PrivateChannelId = param.PrivateChannelId;
+        //    model.RemixAutoSubmit = param.RemixAutoSubmit;
+        //    model.TimeoutMinutes = param.TimeoutMinutes;
+        //    model.Weight = param.Weight;
+        //    model.Remark = param.Remark;
+        //    model.Sponsor = param.Sponsor;
+        //    model.Sort = param.Sort;
+        //    model.PermanentInvitationLink = param.PermanentInvitationLink;
+        //    model.IsVerticalDomain = param.IsVerticalDomain;
+        //    model.VerticalDomainIds = param.VerticalDomainIds;
+        //    model.SubChannels = param.SubChannels;
+        //    model.IsBlend = param.IsBlend;
+        //    model.EnableMj = param.EnableMj;
+        //    model.EnableNiji = param.EnableNiji;
+        //    model.IsDescribe = param.IsDescribe;
+        //    model.IsShorten = param.IsShorten;
+        //    model.DayDrawLimit = param.DayDrawLimit;
+        //    model.DayRelaxDrawLimit = param.DayRelaxDrawLimit;
+        //    model.IsRelaxVideo = param.IsRelaxVideo;
+        //    model.IsHdVideo = param.IsHdVideo;
+        //    model.OfficialEnablePersonalize = param.OfficialEnablePersonalize;
 
-            // 如果是悠船、官方
-            // 清除禁用原因
-            if (model.IsYouChuan || model.IsOfficial)
-            {
-                model.DisabledReason = null;
-            }
+        //    // 如果是悠船、官方
+        //    // 清除禁用原因
+        //    if (model.IsYouChuan || model.IsOfficial)
+        //    {
+        //        model.DisabledReason = null;
+        //    }
 
-            // 初始化子频道
-            model.InitSubChannels();
+        //    // 初始化子频道
+        //    model.InitSubChannels();
 
-            await _discordAccountInitializer.UpdateAccount(model);
+        //    await _discordAccountInitializer.UpdateAccount(model);
 
-            return Result.Ok();
-        }
+        //    return Result.Ok();
+        //}
 
         /// <summary>
         /// 更新账号并重新连接

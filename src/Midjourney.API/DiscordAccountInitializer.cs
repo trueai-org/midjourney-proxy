@@ -1460,6 +1460,7 @@ namespace Midjourney.API
                 }
             }
 
+            model.IsDraft = param.IsDraft;
             model.LoginAccount = param.LoginAccount?.Trim();
             model.LoginPassword = param.LoginPassword?.Trim();
             model.Login2fa = param.Login2fa?.Trim();
@@ -1469,8 +1470,6 @@ namespace Midjourney.API
             model.LoginMessage = null;
 
             model.EnableAutoSetRelax = param.EnableAutoSetRelax;
-            //model.EnableRelaxToFast = param.EnableRelaxToFast;
-            //model.EnableFastToRelax = param.EnableFastToRelax;
             model.IsBlend = param.IsBlend;
             model.IsDescribe = param.IsDescribe;
             model.IsShorten = param.IsShorten;

@@ -392,6 +392,12 @@ namespace Midjourney.Base.Models
         public bool IsRelaxVideo { get; set; } = false;
 
         /// <summary>
+        /// 开启草稿模式
+        /// 开启后当前账号所有绘图含提示词指令的操作都将自动添加--draft参数
+        /// </summary>
+        public bool IsDraft { get; set; }
+
+        /// <summary>
         /// 今日绘图计数
         /// </summary>
         [LiteDB.BsonIgnore]
@@ -1417,6 +1423,7 @@ namespace Midjourney.Base.Models
                 Id = Guid.NewGuid().ToString(),
                 ChannelId = configAccount.ChannelId,
 
+                IsDraft = configAccount.IsDraft,
                 UserAgent = string.IsNullOrEmpty(configAccount.UserAgent) ? Constants.DEFAULT_DISCORD_USER_AGENT : configAccount.UserAgent,
                 GuildId = configAccount.GuildId,
                 UserToken = configAccount.UserToken,
@@ -1456,8 +1463,6 @@ namespace Midjourney.Base.Models
 
                 EnableMj = configAccount.EnableMj,
                 EnableNiji = configAccount.EnableNiji,
-                //EnableFastToRelax = configAccount.EnableFastToRelax,
-                //EnableRelaxToFast = configAccount.EnableRelaxToFast,
                 EnableAutoSetRelax = configAccount.EnableAutoSetRelax,
 
                 LoginAccount = configAccount.LoginAccount,
