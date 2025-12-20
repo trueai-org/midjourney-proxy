@@ -933,6 +933,11 @@ namespace Midjourney.API.Controllers
         /// <returns></returns>
         private TaskInfo NewTask(BaseSubmitDTO baseDTO)
         {
+            if (!GlobalConfiguration.Setting.IsValidRedis)
+            {
+                throw new LogicException("服务暂不可用，请联系管理员");
+            }
+
             var user = _workContext.GetUser();
 
             var task = new TaskInfo
@@ -1203,14 +1208,17 @@ namespace Midjourney.API.Controllers
             // 无需处理
 
             // 最后去重
-            accountFilter.Modes = modes.Distinct().ToList();
+            accountFilter.Modes = modes.Distinct().ToList() ?? [];
+
 
             task.AccountFilter = accountFilter;
             task.StorageOption = _storageOption;
             task.SetProperty(Constants.TASK_PROPERTY_BOT_TYPE, task.BotType.GetDescription());
 
-            task.Mode = accountFilter.Modes.FirstOrDefault();
-            task.RequestMode = accountFilter.Modes.FirstOrDefault();
+            var firstMode = accountFilter.Modes.Count > 0 ? accountFilter.Modes[0] : (GenerationSpeedMode?)null;
+
+            task.Mode = firstMode;
+            task.RequestMode = firstMode;
         }
 
         /// <summary>

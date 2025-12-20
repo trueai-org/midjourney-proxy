@@ -89,10 +89,10 @@ namespace Midjourney.Infrastructure.LoadBalancer
             accountFilter ??= new AccountFilter();
             accountFilter.Modes ??= [];
 
-            // 如果没有速度模式，则添加一个 NULL 速度模式
             var modes = new List<GenerationSpeedMode>(accountFilter.Modes.Distinct());
             if (modes.Count == 0)
             {
+                // 如果没有速度模式，则添加默认的速度模式
                 modes = [GenerationSpeedMode.FAST, GenerationSpeedMode.TURBO, GenerationSpeedMode.RELAX];
             }
 

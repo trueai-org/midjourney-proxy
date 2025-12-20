@@ -181,9 +181,11 @@ namespace Midjourney.Infrastructure.Services
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
 
+            info.RequestMode = mode;
+            info.Mode = mode;
+
             info.IsPartner = instance.Account.IsYouChuan;
             info.IsOfficial = instance.Account.IsOfficial;
-            info.Mode = mode;
             info.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, instance.ChannelId);
             info.InstanceId = instance.ChannelId;
 
