@@ -41,19 +41,16 @@ namespace Midjourney.API.Controllers
     public class SubmitController : ControllerBase
     {
         private readonly ITaskStoreService _taskStoreService;
-
-        private readonly DiscordHelper _discordHelper;
-        private readonly Setting _setting;
         private readonly ITaskService _taskService;
         private readonly ILogger<SubmitController> _logger;
+        private readonly IMemoryCache _memoryCache;
+        private readonly WorkContext _workContext;
+        private readonly Setting _setting;
+        private readonly DiscordLoadBalancer _discordLoadBalancer;
         private readonly string _ip;
 
-        private readonly DiscordLoadBalancer _discordLoadBalancer;
-        private readonly WorkContext _workContext;
-        private readonly IMemoryCache _memoryCache;
-
         /// <summary>
-        /// 指定绘图速度模式（优先级最高，如果找不到账号则直接返回错误）
+        /// 指定绘图速度模式（路径前缀优先级最高）
         /// </summary>
         private readonly GenerationSpeedMode? _mode;
 
@@ -66,26 +63,24 @@ namespace Midjourney.API.Controllers
             ITaskStoreService taskStoreService,
             ITaskService taskService,
             ILogger<SubmitController> logger,
-            DiscordHelper discordHelper,
             IHttpContextAccessor httpContextAccessor,
             WorkContext workContext,
             DiscordLoadBalancer discordLoadBalancer,
             IMemoryCache memoryCache)
         {
+            _setting = GlobalConfiguration.Setting;
+
             _memoryCache = memoryCache;
             _taskStoreService = taskStoreService;
-            _setting = GlobalConfiguration.Setting;
             _taskService = taskService;
             _logger = logger;
-            _discordHelper = discordHelper;
             _workContext = workContext;
             _discordLoadBalancer = discordLoadBalancer;
 
             var user = _workContext.GetUser();
 
             // 如果非演示模式、未开启访客，如果没有登录，直接返回 403 错误
-            if (GlobalConfiguration.IsDemoMode != true
-                && GlobalConfiguration.Setting.EnableGuest != true)
+            if (GlobalConfiguration.IsDemoMode != true && GlobalConfiguration.Setting.EnableGuest != true)
             {
                 if (user == null)
                 {
@@ -245,7 +240,7 @@ namespace Midjourney.API.Controllers
                 return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "base64格式错误"));
             }
 
-            var instance = _discordLoadBalancer.ChooseInstance(imagineDTO.AccountFilter);
+            var (instance, mode) = _discordLoadBalancer.ChooseInstance(imagineDTO.AccountFilter);
             if (instance == null)
             {
                 return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "实例不存在或不可用"));
@@ -279,159 +274,6 @@ namespace Midjourney.API.Controllers
 
             var info = SubmitResultVO.Of(ReturnCode.SUCCESS, "提交成功", imageUrls);
             return Ok(info);
-        }
-
-        /// <summary>
-        /// 提交 show 任务
-        /// </summary>
-        /// <param name="imagineDTO"></param>
-        /// <returns></returns>
-        [HttpPost("show")]
-        public ActionResult<SubmitResultVO> Show([FromBody] SubmitShowDTO imagineDTO)
-        {
-            string jobId = imagineDTO.JobId;
-            if (string.IsNullOrWhiteSpace(jobId))
-            {
-                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "请填写 job id 或 url"));
-            }
-            jobId = jobId.Trim();
-
-            if (jobId.Length != 36)
-            {
-                jobId = _discordHelper.GetMessageHash(jobId);
-            }
-
-            if (string.IsNullOrWhiteSpace(jobId))
-            {
-                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "job id 格式错误"));
-            }
-
-            var model = DbHelper.Instance.TaskStore.Where(c => c.JobId == jobId && c.Status == TaskStatus.SUCCESS).FirstOrDefault();
-            if (model != null)
-            {
-                var info = SubmitResultVO.Of(ReturnCode.SUCCESS, "提交成功", model.Id)
-                    .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, model.InstanceId);
-                return Ok(info);
-            }
-
-            if (string.IsNullOrWhiteSpace(imagineDTO.AccountFilter?.InstanceId))
-            {
-                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "show 命令必须指定实例"));
-            }
-
-            var task = NewTask(imagineDTO);
-
-            task.Action = TaskAction.SHOW;
-            task.BotType = GetBotType(imagineDTO.BotType);
-            task.Description = $"/show {jobId}";
-            task.JobId = jobId;
-
-            NewTaskDoFilter(task, imagineDTO.AccountFilter);
-
-            var data = _taskService.ShowImagine(task);
-            return Ok(data);
-        }
-
-        /// <summary>
-        /// 简单变化
-        /// </summary>
-        /// <param name="simpleChangeDTO">提交简单变化任务的DTO</param>
-        /// <returns>提交结果</returns>
-        [HttpPost("simple-change")]
-        public ActionResult<SubmitResultVO> SimpleChange([FromBody] SubmitSimpleChangeDTO simpleChangeDTO)
-        {
-            var changeParams = ConvertUtils.ConvertChangeParams(simpleChangeDTO.Content);
-            if (changeParams == null)
-            {
-                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "content 参数错误"));
-            }
-            var changeDTO = new SubmitChangeDTO
-            {
-                Action = changeParams.Action,
-                TaskId = changeParams.Id,
-                Index = changeParams.Index,
-                State = simpleChangeDTO.State,
-                NotifyHook = simpleChangeDTO.NotifyHook
-            };
-            return Change(changeDTO);
-        }
-
-        /// <summary>
-        /// 任务变化（简单操作） - 仅用于 Discord 交互（即将废弃，请使用 action 接口）
-        /// </summary>
-        /// <param name="changeDTO">提交变化任务的DTO</param>
-        /// <returns>提交结果</returns>
-        [HttpPost("change")]
-        public ActionResult<SubmitResultVO> Change([FromBody] SubmitChangeDTO changeDTO)
-        {
-            if (string.IsNullOrWhiteSpace(changeDTO.TaskId))
-            {
-                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "taskId不能为空"));
-            }
-            if (!new[] { TaskAction.UPSCALE, TaskAction.VARIATION, TaskAction.REROLL }.Contains(changeDTO.Action))
-            {
-                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "action参数错误"));
-            }
-            string description = $"/up {changeDTO.TaskId}";
-            if (changeDTO.Action == TaskAction.REROLL)
-            {
-                description += " R";
-            }
-            else
-            {
-                description += $" {changeDTO.Action.ToString()[0]}{changeDTO.Index}";
-            }
-            var targetTask = _taskStoreService.Get(changeDTO.TaskId);
-            if (targetTask == null)
-            {
-                return NotFound(SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "关联任务不存在或已失效"));
-            }
-            if (targetTask.Status != TaskStatus.SUCCESS)
-            {
-                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "关联任务状态错误"));
-            }
-            if (!new[] { TaskAction.IMAGINE, TaskAction.VARIATION, TaskAction.REROLL, TaskAction.BLEND }.Contains(targetTask.Action.Value))
-            {
-                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "关联任务不允许执行变化"));
-            }
-            var task = NewTask(changeDTO);
-
-            task.Action = changeDTO.Action;
-            task.BotType = targetTask.BotType;
-            task.RealBotType = targetTask.RealBotType;
-            task.ParentId = targetTask.Id;
-            task.Prompt = targetTask.Prompt;
-            task.PromptEn = targetTask.PromptEn;
-
-            task.SetProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, targetTask.GetProperty<string>(Constants.TASK_PROPERTY_FINAL_PROMPT, default));
-            task.SetProperty(Constants.TASK_PROPERTY_PROGRESS_MESSAGE_ID, targetTask.GetProperty<string>(Constants.TASK_PROPERTY_MESSAGE_ID, default));
-            task.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, targetTask.GetProperty<string>(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, default));
-
-            task.InstanceId = targetTask.InstanceId;
-            task.Description = description;
-
-            // 如果 mode = null, 则使用目标任务的 mode
-            if (task.Mode == null)
-            {
-                task.Mode = targetTask.Mode;
-            }
-
-            var messageFlags = targetTask.GetProperty<string>(Constants.TASK_PROPERTY_FLAGS, default)?.ToInt() ?? 0;
-            var messageId = targetTask.GetProperty<string>(Constants.TASK_PROPERTY_MESSAGE_ID, default);
-            var messageHash = targetTask.GetProperty<string>(Constants.TASK_PROPERTY_MESSAGE_HASH, default);
-            task.SetProperty(Constants.TASK_PROPERTY_REFERENCED_MESSAGE_ID, messageId);
-            if (changeDTO.Action == TaskAction.UPSCALE)
-            {
-                return Ok(_taskService.SubmitUpscale(task, messageId, messageHash, changeDTO.Index ?? 1, messageFlags));
-            }
-            else if (changeDTO.Action == TaskAction.VARIATION)
-            {
-                return Ok(_taskService.SubmitVariation(task, messageId, messageHash, changeDTO.Index ?? 1, messageFlags));
-            }
-            else
-            {
-                return Ok(_taskService.SubmitReroll(task, messageId, messageHash, messageFlags));
-            }
         }
 
         /// <summary>
@@ -1327,37 +1169,48 @@ namespace Midjourney.API.Controllers
         /// <param name="accountFilter"></param>
         private void NewTaskDoFilter(TaskInfo task, AccountFilter accountFilter)
         {
-            task.StorageOption = _storageOption;
-            task.AccountFilter = accountFilter;
-            task.SetProperty(Constants.TASK_PROPERTY_BOT_TYPE, task.BotType.GetDescription());
+            accountFilter ??= new();
+            var modes = accountFilter.Modes ?? [];
 
-            if (task.AccountFilter == null)
+            // 第一优先级 - 路径参数
+            if (_mode != null)
             {
-                task.AccountFilter = new AccountFilter();
+                modes.Insert(0, _mode.Value);
             }
 
-            // 如果没有路径速度，并且没有过滤速度，解析提示词，生成指定模式过滤
-            if (task.Mode == null && task.AccountFilter.Modes.Count == 0)
-            {
-                // 解析提示词
-                var prompt = task.Prompt?.ToLower() ?? "";
+            // 第二优先级 - 账号过滤参数
+            // 无需处理
 
-                // 解析速度模式
-                if (prompt.Contains("--fast"))
+            // 第三优先级 - 提示词参数
+            if (!string.IsNullOrWhiteSpace(task.Prompt))
+            {
+                var prompt = task.Prompt;
+                if (prompt.Contains("--fast", StringComparison.OrdinalIgnoreCase))
                 {
-                    task.Mode = GenerationSpeedMode.FAST;
+                    modes.Add(GenerationSpeedMode.FAST);
                 }
                 else if (prompt.Contains("--relax"))
                 {
-                    task.Mode = GenerationSpeedMode.RELAX;
+                    modes.Add(GenerationSpeedMode.RELAX);
                 }
                 else if (prompt.Contains("--turbo"))
                 {
-                    task.Mode = GenerationSpeedMode.TURBO;
+                    modes.Add(GenerationSpeedMode.TURBO);
                 }
-
-                task.RequestMode = task.Mode;
             }
+
+            // 第四优先级 - NULL
+            // 无需处理
+
+            // 最后去重
+            accountFilter.Modes = modes.Distinct().ToList();
+
+            task.AccountFilter = accountFilter;
+            task.StorageOption = _storageOption;
+            task.SetProperty(Constants.TASK_PROPERTY_BOT_TYPE, task.BotType.GetDescription());
+
+            task.Mode = accountFilter.Modes.FirstOrDefault();
+            task.RequestMode = accountFilter.Modes.FirstOrDefault();
         }
 
         /// <summary>

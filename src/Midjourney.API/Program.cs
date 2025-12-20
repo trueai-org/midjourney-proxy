@@ -79,9 +79,9 @@ namespace Midjourney.API
 
                 // 是否需要重新保存配置
                 var isSaveSetting = false;
-                if (setting.DatabaseType == DatabaseType.NONE)
+                if (setting.DatabaseType == DatabaseType.NONE || setting.DatabaseType == DatabaseType.LiteDB)
                 {
-                    setting.DatabaseType = DatabaseType.LiteDB;
+                    setting.DatabaseType = DatabaseType.SQLite;
                     isSaveSetting = true;
                 }
 
@@ -89,10 +89,17 @@ namespace Midjourney.API
                 if (!DbHelper.VerifyConfigure())
                 {
                     // 切换为本地数据库
-                    setting.DatabaseType = DatabaseType.LiteDB;
+                    setting.DatabaseType = DatabaseType.SQLite;
                     isSaveSetting = true;
 
-                    Log.Error("数据库连接失败，自动切换为 LiteDB 数据库");
+                    // 切换为 SQLite
+                    var freeSql = FreeSqlHelper.Init(setting.DatabaseType, setting.DatabaseConnectionString, true);
+                    if (freeSql != null)
+                    {
+                        FreeSqlHelper.Configure(freeSql);
+                    }
+
+                    Log.Error("数据库连接失败，自动切换为 SQLite 数据库");
                 }
 
                 Log.Information("数据库类型：{0}", setting.DatabaseType);

@@ -373,3 +373,4 @@ temps
 /src/Midjourney.API/.config/dotnet-tools.json
 /src/Midjourney.API/ffmpeg.exe
 /src/Midjourney.API/ffprobe.exe
+/src/Midjourney.API/data/mj.json

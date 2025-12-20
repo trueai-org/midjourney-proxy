@@ -67,8 +67,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <param name="preferredSpeedMode">首选速度模式，优先使用此模式过滤</param>
         /// <param name="isYm">悠船/官方账号</param>
         /// <param name="isHdVideo"></param>
-        /// <param name="isRedisUpscale">是否为 redis 模式下的放大任务，如果 redis 放大任务，则不验证队列长度</param>
-        public DiscordInstance ChooseInstance(
+        /// <param name="isUpscale">是否为 redis 模式下的放大任务，如果 redis 放大任务，则不验证队列长度</param>
+        public (DiscordInstance instance, GenerationSpeedMode? confirmMode) ChooseInstance(
             AccountFilter accountFilter = null,
             bool? isNewTask = null,
             EBotType? botType = null,
@@ -78,78 +78,91 @@ namespace Midjourney.Infrastructure.LoadBalancer
             List<string> domainIds = null,
             List<string> ids = null,
             bool? shorten = null,
-            GenerationSpeedMode? preferredSpeedMode = null,
             bool? isYm = null,
             bool? isVideo = null,
             bool? isHdVideo = null,
             bool? isYouChuan = null,
-            bool? isRedisUpscale = null)
+            bool? isUpscale = null)
         {
-            var list = GetAliveInstances()
+            DiscordInstance inc = null;
 
-                // 过滤有空闲队列的实例
-                .WhereIf(isRedisUpscale != true, c => c.IsIdleQueue(preferredSpeedMode))
+            accountFilter ??= new AccountFilter();
+            accountFilter.Modes ??= [];
 
-                // 允许继续绘图
-                .Where(c => c.Account.Enable == true && c.Account.IsDailyLimitContinueDrawing(preferredSpeedMode))
+            // 如果没有速度模式，则添加一个 NULL 速度模式
+            var modes = new List<GenerationSpeedMode>(accountFilter.Modes.Distinct());
+            if (modes.Count == 0)
+            {
+                modes = [GenerationSpeedMode.FAST, GenerationSpeedMode.TURBO, GenerationSpeedMode.RELAX];
+            }
 
-                // 首选速度绘图判断 + 计数器验证
-                .Where(c => c.Account.IsValidateModeContinueDrawing(preferredSpeedMode, accountFilter?.Modes, out var confirmMode)
-                && c.IsValidAvailableCount(confirmMode))
+            // 根据顺序获取速度模式进行过滤，直到获取到可用实例为止
+            // 如果所有速度模式都没有可用实例，则返回 null
+            foreach (var mode in modes)
+            {
+                var list = GetAliveInstances()
 
-                // 判断悠船或官方账号
-                .WhereIf(isYm == true, c => c.Account.IsYouChuan || c.Account.IsOfficial)
+                   // 指定 ID 的实例
+                   .WhereIf(!string.IsNullOrWhiteSpace(accountFilter?.InstanceId), c => c.ChannelId == accountFilter.InstanceId)
 
-                // 判断悠船
-                .WhereIf(isYouChuan == true, c => c.Account.IsYouChuan)
+                   // 允许继续绘图
+                   .Where(c => c.Account.Enable == true && isUpscale != true && c.IsAllowContinue(mode))
 
-                // 判断是否允许视频操作
-                .WhereIf(isVideo == true, c => c.Account.IsAllowGenerateVideo(isVideo))
+                   // 判断悠船或官方账号
+                   .WhereIf(isYm == true, c => c.Account.IsYouChuan || c.Account.IsOfficial)
 
-                // 高清视频支持
-                .WhereIf(isHdVideo == true, c => c.Account.IsHdVideo)
+                   // 判断悠船
+                   .WhereIf(isYouChuan == true, c => c.Account.IsYouChuan)
 
-                // Discord 绘图判断
-                .WhereIf(accountFilter?.Modes.Count > 0, c => c.Account.IsDiscordContinueDrawing(accountFilter.Modes.ToArray()))
+                   // 判断是否允许视频操作
+                   .WhereIf(isVideo == true, c => c.Account.IsAllowGenerateVideo())
 
-                // 指定 ID 的实例
-                .WhereIf(!string.IsNullOrWhiteSpace(accountFilter?.InstanceId), c => c.ChannelId == accountFilter.InstanceId)
+                   // 高清视频支持
+                   .WhereIf(isHdVideo == true, c => c.Account.IsHdVideo)
 
-                // Midjourney Remix 过滤
-                .WhereIf(accountFilter?.Remix == true, c => c.Account.MjRemixOn == accountFilter.Remix || !c.Account.RemixAutoSubmit)
-                .WhereIf(accountFilter?.Remix == false, c => c.Account.MjRemixOn == accountFilter.Remix)
+                   // Midjourney Remix 过滤
+                   .WhereIf(accountFilter?.Remix == true, c => c.Account.MjRemixOn == accountFilter.Remix || !c.Account.RemixAutoSubmit)
+                   .WhereIf(accountFilter?.Remix == false, c => c.Account.MjRemixOn == accountFilter.Remix)
 
-                // Niji Remix 过滤
-                .WhereIf(accountFilter?.NijiRemix == true, c => c.Account.NijiRemixOn == accountFilter.NijiRemix || !c.Account.RemixAutoSubmit)
-                .WhereIf(accountFilter?.NijiRemix == false, c => c.Account.NijiRemixOn == accountFilter.NijiRemix)
+                   // Niji Remix 过滤
+                   .WhereIf(accountFilter?.NijiRemix == true, c => c.Account.NijiRemixOn == accountFilter.NijiRemix || !c.Account.RemixAutoSubmit)
+                   .WhereIf(accountFilter?.NijiRemix == false, c => c.Account.NijiRemixOn == accountFilter.NijiRemix)
 
-                // Remix 自动提交过滤
-                .WhereIf(accountFilter?.RemixAutoConsidered.HasValue == true, c => c.Account.RemixAutoSubmit == accountFilter.RemixAutoConsidered)
+                   // Remix 自动提交过滤
+                   .WhereIf(accountFilter?.RemixAutoConsidered.HasValue == true, c => c.Account.RemixAutoSubmit == accountFilter.RemixAutoConsidered)
 
-                // 通过备注过滤账号
-                .WhereIf(!string.IsNullOrWhiteSpace(accountFilter?.Remark), c => c.Account.Remark != null && c.Account.Remark.Contains(accountFilter.Remark))
+                   // 通过备注过滤账号
+                   .WhereIf(!string.IsNullOrWhiteSpace(accountFilter?.Remark), c => c.Account.Remark != null && c.Account.Remark.Contains(accountFilter.Remark))
 
-                // 过滤只接收新任务的实例
-                .WhereIf(isNewTask == true, c => c.Account.IsAcceptNewTask(preferredSpeedMode))
+                   // 过滤只接收新任务的实例
+                   .WhereIf(isNewTask == true, c => c.Account.IsAcceptNewTask())
 
-                // 过滤开启 niji mj 的账号
-                .WhereIf(botType == EBotType.NIJI_JOURNEY, c => c.Account.EnableNiji == true)
-                .WhereIf(botType == EBotType.MID_JOURNEY, c => c.Account.EnableMj == true)
+                   // 过滤开启 niji mj 的账号
+                   .WhereIf(botType == EBotType.NIJI_JOURNEY, c => c.Account.EnableNiji == true)
+                   .WhereIf(botType == EBotType.MID_JOURNEY, c => c.Account.EnableMj == true)
 
-                // 过滤开启功能的账号
-                .WhereIf(blend == true, c => c.IsAllowDescribe())
-                .WhereIf(describe == true, c => c.Account.IsDescribe)
-                .WhereIf(shorten == true, c => c.Account.IsShorten)
+                   // 过滤开启功能的账号
+                   .WhereIf(blend == true, c => c.IsAllowDescribe())
+                   .WhereIf(describe == true, c => c.Account.IsDescribe)
+                   .WhereIf(shorten == true, c => c.Account.IsShorten)
 
-                // 领域过滤
-                .WhereIf(isDomain == true && domainIds?.Count > 0, c => c.Account.IsVerticalDomain && c.Account.VerticalDomainIds.Any(x => domainIds.Contains(x)))
-                .WhereIf(isDomain == false, c => c.Account.IsVerticalDomain != true)
+                   // 领域过滤
+                   .WhereIf(isDomain == true && domainIds?.Count > 0, c => c.Account.IsVerticalDomain && c.Account.VerticalDomainIds.Any(x => domainIds.Contains(x)))
+                   .WhereIf(isDomain == false, c => c.Account.IsVerticalDomain != true)
 
-                // 过滤指定账号
-                .WhereIf(ids?.Count > 0, c => ids.Contains(c.Account.ChannelId))
-                .ToList();
+                   // 过滤指定账号
+                   .WhereIf(ids?.Count > 0, c => ids.Contains(c.Account.ChannelId))
+                   .ToList();
 
-            return _rule.Choose(list);
+                inc = _rule.Choose(list);
+
+                if (inc != null)
+                {
+                    return (inc, mode);
+                }
+            }
+
+            return (inc, null);
         }
 
         /// <summary>
@@ -157,11 +170,11 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// </summary>
         /// <param name="preferredSpeedMode"></param>
         /// <returns></returns>
-        public DiscordInstance GetDescribeInstance(GenerationSpeedMode? preferredSpeedMode = null, string instanceId = null)
+        public DiscordInstance GetDescribeInstance(string instanceId = null)
         {
             var list = GetAliveInstances()
                 .WhereIf(!string.IsNullOrWhiteSpace(instanceId), c => c.ChannelId == instanceId)
-                .Where(c => c.Account.Enable == true && c.IsAlive && c.Account.IsDescribe && c.Account.IsAcceptNewTask(preferredSpeedMode))
+                .Where(c => c.Account.Enable == true && c.IsAlive && c.Account.IsDescribe && c.Account.IsAcceptNewTask())
                 .OrderBy(c => Guid.NewGuid())
                 .Take(10)
                 .ToList();
@@ -176,7 +189,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
             // 实在找不到就全部筛选
             return GetAliveInstances()
                 .WhereIf(!string.IsNullOrWhiteSpace(instanceId), c => c.ChannelId == instanceId)
-                .Where(c => c.Account.Enable == true && c.IsAlive && c.Account.IsDescribe && c.Account.IsAcceptNewTask(preferredSpeedMode))
+                .Where(c => c.Account.Enable == true && c.IsAlive && c.Account.IsDescribe && c.Account.IsAcceptNewTask())
                 .Where(c => c.IsAllowDescribe())
                 .OrderBy(c => Guid.NewGuid())
                 .FirstOrDefault();

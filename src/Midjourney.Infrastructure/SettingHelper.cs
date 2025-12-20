@@ -25,10 +25,8 @@
 using System.Text;
 using Consul;
 using CSRedis;
-using Midjourney.Infrastructure.LoadBalancer;
 using Midjourney.Infrastructure.Services;
 using Serilog;
-using static Org.BouncyCastle.Math.EC.ECCurve;
 
 namespace Midjourney.Infrastructure
 {
@@ -45,7 +43,7 @@ namespace Midjourney.Infrastructure
         /// </summary>
         public static Serilog.Core.LoggingLevelSwitch LogLevelSwitch { get; private set; } = new Serilog.Core.LoggingLevelSwitch();
 
-        private readonly LiteDBRepository<Setting> _liteDb;
+        private readonly string _configPath;
 
         private ConsulClient _consulClient;
 
@@ -61,13 +59,17 @@ namespace Midjourney.Infrastructure
 
         private SettingHelper()
         {
-            _liteDb = new LiteDBRepository<Setting>("data/mj.db");
+            _configPath = Path.Combine(Directory.GetCurrentDirectory(), Path.Combine("data", "mj.json"));
+
+            // 确保目录存在
+            var dir = Path.GetDirectoryName(_configPath);
+            Directory.CreateDirectory(dir);
         }
 
         /// <summary>
         /// 启动初始化（程序启动时调用一次）。
         /// 该方法会：
-        /// 1) 从本地 LiteDB 读取配置；
+        /// 1) 从本地 SQLite / LiteDB 读取配置；
         /// 2) 如果本地配置包含 Consul 连接信息，尝试连接 Consul；
         /// 3) 如果 Consul 可用，尝试从远程 KV 加载设置并覆盖本地（然后保存到本地以保持同步）。
         /// </summary>
@@ -116,17 +118,9 @@ namespace Midjourney.Infrastructure
             }
 
             // 缓存 / Redis / Reids 锁
-            if (setting.IsValidRedis)
-            {
-                var csredis = new CSRedisClient(setting.RedisConnectionString);
-                AdaptiveLock.Initialization(csredis);
-                AdaptiveCache.Initialization(csredis);
-            }
-            else
-            {
-                AdaptiveLock.Initialization(null);
-                AdaptiveCache.Initialization(null);
-            }
+            var csredis = new CSRedisClient(setting.RedisConnectionString);
+            AdaptiveLock.Initialization(csredis);
+            AdaptiveCache.Initialization(csredis);
         }
 
         /// <summary>
@@ -138,8 +132,38 @@ namespace Midjourney.Infrastructure
         {
             try
             {
-                // 初始化全局配置项
-                var setting = _liteDb.Get(Constants.DEFAULT_SETTING_ID);
+                Setting setting = null;
+                var localJson = File.Exists(_configPath) ? await File.ReadAllTextAsync(_configPath, cancellation) : null;
+                if (!string.IsNullOrWhiteSpace(localJson))
+                {
+                    try
+                    {
+                        setting = localJson.ToObject<Setting>();
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Warning(ex, "Failed to deserialize local setting json file.");
+                    }
+                }
+
+                // 如果本地中没有配置，则从 litedb 中加载
+                if (setting == null)
+                {
+                    var liteDb = new LiteDBRepository<Setting>("data/mj.db");
+
+                    setting = liteDb.Get(Constants.DEFAULT_SETTING_ID);
+
+                    // 写入本地
+                    if (setting != null)
+                    {
+                        await File.WriteAllTextAsync(_configPath, setting.ToJson(new Newtonsoft.Json.JsonSerializerSettings()
+                        {
+                            NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore,
+                            Formatting = Newtonsoft.Json.Formatting.Indented
+                        }), cancellation);
+                    }
+                }
+
                 if (setting == null)
                 {
                     setting = new Setting
@@ -158,7 +182,11 @@ namespace Midjourney.Infrastructure
                         GuestDefaultCoreSize = -1,
                         GuestDefaultQueueSize = -1,
                     };
-                    _liteDb.Save(setting);
+                    await File.WriteAllTextAsync(_configPath, setting.ToJson(new Newtonsoft.Json.JsonSerializerSettings()
+                    {
+                        NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore,
+                        Formatting = Newtonsoft.Json.Formatting.Indented
+                    }), cancellation);
                 }
 
                 // 检查本地是否包含 Consul 连接配置
@@ -441,7 +469,12 @@ namespace Midjourney.Infrastructure
         /// </summary>
         private void UpsertLocal(Setting setting)
         {
-            _liteDb.Update(setting);
+            // 写入本地 json 文件
+            File.WriteAllText(_configPath, setting.ToJson(new Newtonsoft.Json.JsonSerializerSettings()
+            {
+                NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore,
+                Formatting = Newtonsoft.Json.Formatting.Indented
+            }));
         }
 
         public void Dispose()

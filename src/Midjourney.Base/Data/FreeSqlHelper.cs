@@ -51,21 +51,22 @@ namespace Midjourney.Base.Data
         /// </summary>
         public static IFreeSql Init(DatabaseType databaseType, string databaseConnectionString = null, bool autoSyncStructure = false)
         {
-            if (databaseType == DatabaseType.NONE 
-                || databaseType == DatabaseType.LiteDB
-                || databaseType == DatabaseType.MongoDB)
+            if (databaseType == DatabaseType.NONE || databaseType == DatabaseType.MongoDB)
             {
                 return null;
             }
 
-            if (string.IsNullOrWhiteSpace(databaseConnectionString))
+            if (databaseType != DatabaseType.SQLite)
             {
-                databaseConnectionString = GlobalConfiguration.Setting.DatabaseConnectionString;
-            }
+                if (string.IsNullOrWhiteSpace(databaseConnectionString))
+                {
+                    databaseConnectionString = GlobalConfiguration.Setting?.DatabaseConnectionString;
+                }
 
-            if (string.IsNullOrWhiteSpace(databaseConnectionString))
-            {
-                return null;
+                if (string.IsNullOrWhiteSpace(databaseConnectionString))
+                {
+                    return null;
+                }
             }
 
             var fsqlBuilder = new FreeSqlBuilder()
@@ -96,7 +97,7 @@ namespace Midjourney.Base.Data
 
             switch (databaseType)
             {
-                case DatabaseType.LiteDB:
+                //case DatabaseType.LiteDB:
                 case DatabaseType.MongoDB:
                     {
                         return null;

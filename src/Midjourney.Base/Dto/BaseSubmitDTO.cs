@@ -51,6 +51,7 @@ namespace Midjourney.Base.Dto
 
         /// <summary>
         /// 过滤账号模式 RELAX | FAST | TURBO
+        /// 优先级策略：优先配置第一个速度模式，其次为第二个，依此类推
         /// </summary>
         public List<GenerationSpeedMode> Modes { get; set; } = [];
 

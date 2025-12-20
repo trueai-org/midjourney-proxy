@@ -83,16 +83,16 @@ namespace Midjourney.Base.Data
             var setting = GlobalConfiguration.Setting;
             switch (setting.DatabaseType)
             {
-                case DatabaseType.LiteDB:
-                    {
-                        _taskStore = LiteDBHelper.TaskStore;
-                        _accountStore = LiteDBHelper.AccountStore;
-                        _userStore = LiteDBHelper.UserStore;
-                        _domainStore = LiteDBHelper.DomainStore;
-                        _bannedWordStore = LiteDBHelper.BannedWordStore;
-                        _personalizeTagWordStore = LiteDBHelper.PersonalizeTagStore;
-                    }
-                    break;
+                //case DatabaseType.LiteDB:
+                //    {
+                //        _taskStore = LiteDBHelper.TaskStore;
+                //        _accountStore = LiteDBHelper.AccountStore;
+                //        _userStore = LiteDBHelper.UserStore;
+                //        _domainStore = LiteDBHelper.DomainStore;
+                //        _bannedWordStore = LiteDBHelper.BannedWordStore;
+                //        _personalizeTagWordStore = LiteDBHelper.PersonalizeTagStore;
+                //    }
+                //    break;
 
                 case DatabaseType.MongoDB:
                     {
@@ -136,41 +136,41 @@ namespace Midjourney.Base.Data
                     var setting = GlobalConfiguration.Setting;
                     switch (setting.DatabaseType)
                     {
-                        case DatabaseType.NONE:
-                            break;
+                        //case DatabaseType.NONE:
+                        //    break;
 
-                        case DatabaseType.LiteDB:
-                            {
-                                // LiteDB 索引
-                                var coll = LiteDBHelper.TaskStore.GetCollection();
-                                coll.EnsureIndex(c => c.SubmitTime);
-                                coll.EnsureIndex(c => c.Status);
-                                coll.EnsureIndex(c => c.Action);
-                                coll.EnsureIndex(c => c.UserId);
-                                coll.EnsureIndex(c => c.ClientIp);
-                                coll.EnsureIndex(c => c.InstanceId);
-                                coll.EnsureIndex(c => c.State);
-                                coll.EnsureIndex(c => c.IsPartner);
-                                coll.EnsureIndex(c => c.IsOfficial);
-                                coll.EnsureIndex(c => c.PartnerTaskId);
-                                coll.EnsureIndex(c => c.OfficialTaskId);
+                        //case DatabaseType.LiteDB:
+                        //    {
+                        //        // LiteDB 索引
+                        //        var coll = LiteDBHelper.TaskStore.GetCollection();
+                        //        coll.EnsureIndex(c => c.SubmitTime);
+                        //        coll.EnsureIndex(c => c.Status);
+                        //        coll.EnsureIndex(c => c.Action);
+                        //        coll.EnsureIndex(c => c.UserId);
+                        //        coll.EnsureIndex(c => c.ClientIp);
+                        //        coll.EnsureIndex(c => c.InstanceId);
+                        //        coll.EnsureIndex(c => c.State);
+                        //        coll.EnsureIndex(c => c.IsPartner);
+                        //        coll.EnsureIndex(c => c.IsOfficial);
+                        //        coll.EnsureIndex(c => c.PartnerTaskId);
+                        //        coll.EnsureIndex(c => c.OfficialTaskId);
 
-                                //coll.EnsureIndex(c => c.PromptEn);
-                                //coll.EnsureIndex(c => c.Prompt);
-                                //coll.EnsureIndex(c => c.Description);
-                                //coll.EnsureIndex(c => c.ImageUrl);
+                        //        //coll.EnsureIndex(c => c.PromptEn);
+                        //        //coll.EnsureIndex(c => c.Prompt);
+                        //        //coll.EnsureIndex(c => c.Description);
+                        //        //coll.EnsureIndex(c => c.ImageUrl);
 
-                                //coll.DropIndex("PromptEn");
-                                //coll.DropIndex("Prompt");
-                                //coll.DropIndex("Description");
-                                //coll.DropIndex("ImageUrl");
+                        //        //coll.DropIndex("PromptEn");
+                        //        //coll.DropIndex("Prompt");
+                        //        //coll.DropIndex("Description");
+                        //        //coll.DropIndex("ImageUrl");
 
-                                //coll.EnsureIndex("PromptEn", "PromptEn");
-                                //coll.EnsureIndex("Prompt", "Prompt");
-                                //coll.EnsureIndex("Description", "Description");
-                                //coll.EnsureIndex("ImageUrl", "ImageUrl");
-                            }
-                            break;
+                        //        //coll.EnsureIndex("PromptEn", "PromptEn");
+                        //        //coll.EnsureIndex("Prompt", "Prompt");
+                        //        //coll.EnsureIndex("Description", "Description");
+                        //        //coll.EnsureIndex("ImageUrl", "ImageUrl");
+                        //    }
+                        //    break;
 
                         case DatabaseType.MongoDB:
                             {
@@ -256,12 +256,6 @@ namespace Midjourney.Base.Data
         public static bool VerifyConfigure()
         {
             var setting = GlobalConfiguration.Setting;
-
-            if (setting.DatabaseType == DatabaseType.LiteDB)
-            {
-                return true;
-            }
-
             var isSuccess = Verify(setting.DatabaseType, setting.DatabaseConnectionString, setting.DatabaseName);
             if (isSuccess)
             {
@@ -288,11 +282,6 @@ namespace Midjourney.Base.Data
         {
             try
             {
-                if (databaseType == DatabaseType.LiteDB)
-                {
-                    return true;
-                }
-
                 if (!string.IsNullOrWhiteSpace(databaseConnectionString))
                 {
                     switch (databaseType)
@@ -333,12 +322,11 @@ namespace Midjourney.Base.Data
                                         // 第三批
                                         freeSql.CodeFirst.SyncStructure(typeof(TaskInfo));
 
+                                        // 第四批
                                         freeSql.CodeFirst.SyncStructure(typeof(PersonalizeTag));
-
-                                        return succees;
                                     }
+                                    return succees;
                                 }
-
                                 return false;
                             }
                         default:

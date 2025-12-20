@@ -406,7 +406,7 @@ namespace Midjourney.Base.Models
         public GenerationSpeedMode? Mode { get; set; }
 
         /// <summary>
-        /// 客户请求的速度模式。
+        /// 客户请求的速度模式 - 第一优先级速度
         /// </summary>
         public GenerationSpeedMode? RequestMode { get; set; }
 
@@ -912,7 +912,7 @@ namespace Midjourney.Base.Models
         {
             try
             {
-                DrawCounter.Complete(this, success);
+                CounterHelper.TaskCompleteIncrement(this, success);
             }
             catch (Exception ex)
             {

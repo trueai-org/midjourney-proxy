@@ -24,7 +24,6 @@
 
 using System.Net;
 using System.Text.Json;
-using Microsoft.Extensions.Caching.Memory;
 using Midjourney.Infrastructure.Handle;
 using Midjourney.Infrastructure.LoadBalancer;
 using RestSharp;
@@ -44,7 +43,6 @@ namespace Midjourney.Infrastructure
         private readonly IEnumerable<BotMessageHandler> _botMessageHandlers;
         private readonly IEnumerable<UserMessageHandler> _userMessageHandlers;
         private readonly Dictionary<string, string> _paramsMap;
-        private readonly ITaskService _taskService;
         private readonly IHttpClientFactory _httpClientFactory;
 
         public DiscordAccountHelper(
@@ -53,7 +51,6 @@ namespace Midjourney.Infrastructure
             IEnumerable<BotMessageHandler> messageHandlers,
             INotifyService notifyService,
             IEnumerable<UserMessageHandler> userMessageHandlers,
-            ITaskService taskService,
             IHttpClientFactory httpClientFactory)
         {
             _discordHelper = discordHelper;
@@ -84,7 +81,7 @@ namespace Midjourney.Infrastructure
             GlobalConfiguration.ResourcesParamsMap = paramsMap;
 
             _paramsMap = paramsMap;
-            _taskService = taskService;
+
             _httpClientFactory = httpClientFactory;
         }
 
@@ -123,7 +120,6 @@ namespace Midjourney.Infrastructure
                 _discordHelper,
                 _paramsMap,
                 webProxy,
-                _taskService,
                 _httpClientFactory);
 
             if (account.Enable == true)
@@ -137,7 +133,6 @@ namespace Midjourney.Infrastructure
                 }
                 else if (account.IsOfficial)
                 {
-
                 }
                 else
                 {

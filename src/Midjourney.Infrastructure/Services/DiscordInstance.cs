@@ -60,7 +60,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
         private readonly Task _longTask;
         private readonly CancellationTokenSource _longToken;
-        private readonly ManualResetEvent _mre; // 信号
 
         private readonly HttpClient _httpClient;
         private readonly DiscordHelper _discordHelper;
@@ -69,27 +68,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
         private readonly string _discordInteractionUrl;
         private readonly string _discordAttachmentUrl;
         private readonly string _discordMessageUrl;
-        private readonly ITaskService _taskService;
-
-        /// <summary>
-        /// 当前 FAST 队列任务
-        /// </summary>
-        private ConcurrentQueue<(TaskInfo, Func<Task<Message>>)> _fastQueueTasks = [];
-
-        /// <summary>
-        /// FAST 队列锁
-        /// </summary>
-        private readonly AsyncParallelLock _fastLock;
-
-        /// <summary>
-        /// 当前 RELAX 队列任务
-        /// </summary>
-        private ConcurrentQueue<(TaskInfo, Func<Task<Message>>)> _relaxQueueTasks = [];
-
-        /// <summary>
-        /// RELAX 队列锁
-        /// </summary>
-        public readonly AsyncParallelLock _relaxLock;
 
         private DiscordAccount _account;
 
@@ -143,11 +121,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
         private readonly SemaphoreSlim _redisJobSignal = new(0, 1);
 
         /// <summary>
-        /// 是否启用 Redis
-        /// </summary>
-        public bool IsValidRedis { get; private set; } = false;
-
-        /// <summary>
         /// 种子获取任务锁，单节点单账号最大并行任务不超过，默认 12
         /// </summary>
         private readonly AsyncParallelLock _seekParallelLock = new(12);
@@ -159,11 +132,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
             DiscordHelper discordHelper,
             Dictionary<string, string> paramsMap,
             IWebProxy webProxy,
-            ITaskService taskService,
             IHttpClientFactory httpClientFactory)
         {
-            IsValidRedis = GlobalConfiguration.Setting.IsValidRedis;
-
             _httpClientFactory = httpClientFactory;
             _logger = Log.Logger;
 
@@ -178,7 +148,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 Timeout = TimeSpan.FromMinutes(10),
             };
 
-            _taskService = taskService;
             _paramsMap = paramsMap;
             _discordHelper = discordHelper;
 
@@ -188,31 +157,32 @@ namespace Midjourney.Infrastructure.LoadBalancer
             _taskStoreService = taskStoreService;
             _notifyService = notifyService;
 
-            // 最小 1, 最大 12
-            _fastLock = new AsyncParallelLock(Math.Max(1, Math.Min(account.CoreSize, 12)));
-            _relaxLock = new AsyncParallelLock(Math.Max(1, Math.Min(account.RelaxCoreSize, 12)));
-
-            // 初始化信号器
-            _mre = new ManualResetEvent(false);
-
             var discordServer = _discordHelper.GetServer();
 
             _discordInteractionUrl = $"{discordServer}/api/v9/interactions";
             _discordAttachmentUrl = $"{discordServer}/api/v9/channels/{account.ChannelId}/attachments";
             _discordMessageUrl = $"{discordServer}/api/v9/channels/{account.ChannelId}/messages";
 
-            if (IsValidRedis)
-            {
-                _upscaleQueue = new RedisQueue<TaskInfoQueue>(RedisHelper.Instance, $"upscale:{account.ChannelId}");
+            // 放大队列
+            _upscaleQueue = new RedisQueue<TaskInfoQueue>(RedisHelper.Instance, $"upscale:{account.ChannelId}");
 
-                _relaxQueue = new RedisQueue<TaskInfoQueue>(RedisHelper.Instance, $"relax:{account.ChannelId}", account.RelaxCoreSize);
-                _defaultOrFastQueue = new RedisQueue<TaskInfoQueue>(RedisHelper.Instance, $"fast:{account.ChannelId}", account.CoreSize);
-                _describeQueue = new RedisQueue<TaskInfoQueue>(RedisHelper.Instance, $"describe:{account.ChannelId}", account.CoreSize);
+            // 慢速队列
+            _relaxQueue = new RedisQueue<TaskInfoQueue>(RedisHelper.Instance, $"relax:{account.ChannelId}", account.RelaxQueueSize);
 
-                _relaxConcurrent = new RedisConcurrent(RedisHelper.Instance, $"relax:{account.ChannelId}");
-                _defaultOrFastConcurrent = new RedisConcurrent(RedisHelper.Instance, $"fast:{account.ChannelId}");
-                _describeConcurrent = new RedisConcurrent(RedisHelper.Instance, $"describe:{account.ChannelId}");
-            }
+            // 默认/快速队列
+            _defaultOrFastQueue = new RedisQueue<TaskInfoQueue>(RedisHelper.Instance, $"fast:{account.ChannelId}", account.QueueSize);
+
+            // 图生文队列
+            _describeQueue = new RedisQueue<TaskInfoQueue>(RedisHelper.Instance, $"describe:{account.ChannelId}", account.QueueSize);
+
+            // 慢速并发
+            _relaxConcurrent = new RedisConcurrent(RedisHelper.Instance, $"relax:{account.ChannelId}");
+
+            // 默认/快速并发
+            _defaultOrFastConcurrent = new RedisConcurrent(RedisHelper.Instance, $"fast:{account.ChannelId}");
+
+            // 图生文并发
+            _describeConcurrent = new RedisConcurrent(RedisHelper.Instance, $"describe:{account.ChannelId}");
 
             // 后台任务
             // 后台任务取消 token
@@ -299,7 +269,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <summary>
         /// 快速可用剩余次数
         /// </summary>
-        public int FastAvailableCount => (int)AdaptiveCache.GetCounter(_account.FastAvailableCountKey);
+        public int FastAvailableCount => CounterHelper.GetFastTaskAvailableCount(_account.ChannelId);
 
         /// <summary>
         /// 判断悠船是否允许慢速
@@ -317,7 +287,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 }
 
                 // 悠船每日限制慢速
-                var relaxCount = (int)AdaptiveCache.GetCounter(acc.YouchuanRelaxCountKey);
+                var relaxCount = (int)CounterHelper.GetYouchuanRelaxCount(acc.ChannelId);
                 var limit = acc.YouChuanRelaxDailyLimit;
                 if (relaxCount < limit - acc.RelaxCoreSize - acc.RelaxQueueSize)
                 {
@@ -342,31 +312,41 @@ namespace Midjourney.Infrastructure.LoadBalancer
         }
 
         /// <summary>
-        /// 计数器验证，通过确定速度模式判断
-        /// 判断是否快速/慢速次数是否足够
+        /// 计数器验证，通过速度模式精确判断，判断是否快速/慢速次数是否足够
         /// </summary>
-        /// <param name="confirmMode">这里是已确定的速度模式，因此不需要判断固定速度</param>
         /// <returns></returns>
-        public bool IsValidAvailableCount(GenerationSpeedMode confirmMode)
+        public bool IsValidAvailableCount(GenerationSpeedMode? mode)
         {
             // 如果是快速模式，判断快速是否足够次数
-            if (confirmMode == GenerationSpeedMode.FAST)
+            if (mode == GenerationSpeedMode.FAST)
             {
                 // 如果超过 3 次快速
                 return FastAvailableCount > 3;
             }
-            else if (confirmMode == GenerationSpeedMode.TURBO)
+            else if (mode == GenerationSpeedMode.TURBO)
             {
                 // 如果超过 6 次快速
                 return FastAvailableCount > 6;
             }
             // 如果慢速模式，只有悠船才判断慢速次数
-            else if (confirmMode == GenerationSpeedMode.RELAX && Account.IsYouChuan)
+            else if (mode == GenerationSpeedMode.RELAX && Account.IsYouChuan)
             {
                 return IsYouChuanAllowRelax();
             }
 
-            return true;
+            // 没有速度要求
+            if (mode == null)
+            {
+                // 有快速或或慢速
+                if (Account.IsYouChuan)
+                {
+                    return FastAvailableCount > 3 || IsYouChuanAllowRelax();
+                }
+
+                return true;
+            }
+
+            return false;
         }
 
         /// <summary>
@@ -394,7 +374,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                         return false;
                     }
 
-                    var describeCount = (int)AdaptiveCache.GetCounter(acc.YouchuanDescribeCountKey);
+                    var describeCount = CounterHelper.GetDescribeCount(acc.ChannelId);
                     if (describeCount < limit - acc.CoreSize - acc.QueueSize)
                     {
                         return true;
@@ -469,26 +449,27 @@ namespace Midjourney.Infrastructure.LoadBalancer
             {
                 var acc = Account;
 
+                if (acc == null || acc.Enable != true || !IsInit)
+                {
+                    return false;
+                }
+
                 if (acc.IsYouChuan)
                 {
-                    return IsInit && acc != null
-                        && acc.Enable == true
-                        && !string.IsNullOrWhiteSpace(_ymTaskService?.YouChuanToken);
+                    return !string.IsNullOrWhiteSpace(_ymTaskService?.YouChuanToken);
                 }
-                else if (acc.IsOfficial)
+
+                if (acc.IsOfficial)
                 {
-                    return IsInit && acc != null
-                        && acc.Enable == true
-                        && !string.IsNullOrWhiteSpace(_ymTaskService?.OfficialToken);
+                    return !string.IsNullOrWhiteSpace(_ymTaskService?.OfficialToken);
                 }
-                else
+
+                if (acc.IsDiscord)
                 {
-                    return IsInit && acc != null
-                     && acc.Enable == true
-                     && WebSocketManager != null
-                     && WebSocketManager.Running == true
-                     && acc.Lock == false;
+                    return WebSocketManager != null && WebSocketManager.Running == true && acc.Lock == false;
                 }
+
+                return false;
             }
         }
 
@@ -506,33 +487,33 @@ namespace Midjourney.Infrastructure.LoadBalancer
             await _ymTaskService.YouChuanLogin();
         }
 
-        /// <summary>
-        /// 验证 JWT Token 格式
-        /// </summary>
-        /// <param name="token"></param>
-        public bool JwtTokenValidate(string token)
-        {
-            // 验证 jwt 使用正则验证
-            if (string.IsNullOrWhiteSpace(token))
-            {
-                return false;
-            }
+        ///// <summary>
+        ///// 验证 JWT Token 格式
+        ///// </summary>
+        ///// <param name="token"></param>
+        //public bool JwtTokenValidate(string token)
+        //{
+        //    // 验证 jwt 使用正则验证
+        //    if (string.IsNullOrWhiteSpace(token))
+        //    {
+        //        return false;
+        //    }
 
-            // 正则表达式验证 JWT 格式
-            var regex = new Regex(@"^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$");
-            var match = regex.Match(token);
-            return match.Success;
+        //    // 正则表达式验证 JWT 格式
+        //    var regex = new Regex(@"^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$");
+        //    var match = regex.Match(token);
+        //    return match.Success;
 
-            // discord 并非 jwt
-            //// JWT token 格式验证，使用 jwtreader
-            //var jwtHandler = new JwtSecurityTokenHandler();
-            //var securityToken = jwtHandler.ReadJwtToken(token);
-            //if (securityToken == null || securityToken.Payload.Count <= 0)
-            //{
-            //    return false;
-            //}
-            //return true;
-        }
+        //    // discord 并非 jwt
+        //    //// JWT token 格式验证，使用 jwtreader
+        //    //var jwtHandler = new JwtSecurityTokenHandler();
+        //    //var securityToken = jwtHandler.ReadJwtToken(token);
+        //    //if (securityToken == null || securityToken.Payload.Count <= 0)
+        //    //{
+        //    //    return false;
+        //    //}
+        //    //return true;
+        //}
 
         /// <summary>
         /// 获取正在运行的任务列表。
@@ -550,21 +531,14 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 var count = 0;
                 var acc = Account;
 
-                if (IsValidRedis)
-                {
-                    count += _defaultOrFastConcurrent.GetConcurrency(acc.CoreSize);
+                count += _defaultOrFastConcurrent.GetConcurrency(acc.CoreSize);
 
-                    if (acc.IsYouChuan)
-                    {
-                        count += _relaxConcurrent.GetConcurrency(acc.RelaxCoreSize);
-                    }
-
-                    count += _describeConcurrent.GetConcurrency(acc.CoreSize);
-                }
-                else
+                if (acc.IsYouChuan)
                 {
-                    count = _runningTasks.Count;
+                    count += _relaxConcurrent.GetConcurrency(acc.RelaxCoreSize);
                 }
+
+                count += _describeConcurrent.GetConcurrency(acc.CoreSize);
 
                 return count;
             }
@@ -576,29 +550,23 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <returns>队列中的任务列表</returns>
         public List<TaskInfo> GetQueueTasks()
         {
-            if (IsValidRedis)
+            var list = new List<TaskInfo>();
+            var defaultOrFastQueueTasks = _defaultOrFastQueue.Items();
+            if (defaultOrFastQueueTasks != null && defaultOrFastQueueTasks.Count > 0)
             {
-                var list = new List<TaskInfo>();
-                var defaultOrFastQueueTasks = _defaultOrFastQueue.Items();
-                if (defaultOrFastQueueTasks != null && defaultOrFastQueueTasks.Count > 0)
-                {
-                    list.AddRange(defaultOrFastQueueTasks.Select(c => c.Info));
-                }
-
-                if (Account.IsYouChuan)
-                {
-                    var relaxQueueTasks = _relaxQueue.Items();
-                    if (relaxQueueTasks != null && relaxQueueTasks.Count > 0)
-                    {
-                        list.AddRange(relaxQueueTasks.Select(c => c.Info));
-                    }
-                }
-                return list;
+                list.AddRange(defaultOrFastQueueTasks.Select(c => c.Info));
             }
 
-            return new List<TaskInfo>(_fastQueueTasks.Select(c => c.Item1) ?? [])
-                .Concat(_relaxQueueTasks.Select(c => c.Item1) ?? [])
-                .ToList();
+            if (Account.IsYouChuan)
+            {
+                var relaxQueueTasks = _relaxQueue.Items();
+                if (relaxQueueTasks != null && relaxQueueTasks.Count > 0)
+                {
+                    list.AddRange(relaxQueueTasks.Select(c => c.Info));
+                }
+            }
+
+            return list;
         }
 
         /// <summary>
@@ -608,57 +576,220 @@ namespace Midjourney.Infrastructure.LoadBalancer
         {
             get
             {
-                if (IsValidRedis)
+                var count = _defaultOrFastQueue.Count();
+
+                if (Account.IsYouChuan)
                 {
-                    var count = _defaultOrFastQueue.Count();
-
-                    if (Account.IsYouChuan)
-                    {
-                        count += _relaxQueue.Count();
-                    }
-
-                    count += _describeQueue.Count();
-
-                    return count;
+                    count += _relaxQueue.Count();
                 }
-                else
-                {
-                    var count = _fastQueueTasks.Count + _relaxQueueTasks.Count;
-                    return count;
-                }
+
+                count += _describeQueue.Count();
+
+                return count;
             }
         }
 
+        ///// <summary>
+        ///// 是否存在空闲队列，即：队列是否已满，是否可加入新的任务
+        ///// </summary>
+        //public bool IsIdleQueue(GenerationSpeedMode? mode = null)
+        //{
+        //    mode ??= GenerationSpeedMode.FAST;
+
+        //    var acc = Account;
+
+        //    // 悠船慢速队列验证
+        //    if (acc.IsYouChuan && mode == GenerationSpeedMode.RELAX)
+        //    {
+        //        var queueCount = _relaxQueue.Count();
+
+        //        // 判断 RELAX 队列是否有空闲
+        //        return acc.RelaxQueueSize <= 0 || queueCount < acc.RelaxQueueSize;
+        //    }
+
+        //    // 快速队列验证
+        //    var defaultOrFastQueueCount = _defaultOrFastQueue.Count();
+        //    return acc.QueueSize <= 0 || defaultOrFastQueueCount < acc.QueueSize;
+        //}
+
         /// <summary>
-        /// 是否存在空闲队列，即：队列是否已满，是否可加入新的任务
+        /// 根据速度模式判断是否允许继续绘图，不判断放大任务
         /// </summary>
-        public bool IsIdleQueue(GenerationSpeedMode? mode = null)
+        /// <param name="mode"></param>
+        /// <returns></returns>
+        public bool IsAllowContinue(GenerationSpeedMode mode)
         {
             var acc = Account;
 
-            if (IsValidRedis)
+            var isContinue = true;
+
+            // 使用数据库判断指定模式是否允许绘图
+            if (isContinue)
             {
+                // 首先判断允许速度
+                if (acc.AllowModes.Count > 0 && !acc.AllowModes.Contains(mode))
+                {
+                    isContinue = false;
+                }
+                else
+                {
+                    // 如果是固定速度，则强制修改速度为固定速度
+                    if (acc.Mode != null)
+                    {
+                        mode = acc.Mode.Value;
+                    }
+
+                    // 判断速度对应的额度是否满足
+                    switch (mode)
+                    {
+                        case GenerationSpeedMode.RELAX:
+                            {
+                                if (acc.IsYouChuan)
+                                {
+                                    isContinue = acc.YouChuanRelaxedReset == null || acc.YouChuanRelaxedReset <= DateTime.Now.Date;
+                                }
+                                else
+                                {
+                                    isContinue = true;
+                                }
+                            }
+                            break;
+
+                        case GenerationSpeedMode.FAST:
+                            {
+                                if (acc.IsYouChuan)
+                                {
+                                    isContinue = acc.YouChuanFastRemaining > 360;
+                                }
+                                if (acc.IsOfficial)
+                                {
+                                    isContinue = acc.OfficialFastRemaining > 360;
+                                }
+                                if (acc.IsDiscord)
+                                {
+                                    isContinue = acc.FastExhausted == false;
+                                }
+                            }
+                            break;
+
+                        case GenerationSpeedMode.TURBO:
+                            {
+                                if (acc.IsYouChuan)
+                                {
+                                    isContinue = acc.YouChuanFastRemaining > 720;
+                                }
+
+                                if (acc.IsOfficial)
+                                {
+                                    isContinue = acc.OfficialFastRemaining > 720;
+                                }
+
+                                if (acc.IsDiscord)
+                                {
+                                    isContinue = acc.FastExhausted == false;
+                                }
+                            }
+                            break;
+
+                        default:
+                            break;
+                    }
+                }
+            }
+
+            // 判断空闲队列
+            if (isContinue)
+            {
+                // 悠船慢速队列验证
                 if (acc.IsYouChuan && mode == GenerationSpeedMode.RELAX)
                 {
                     var queueCount = _relaxQueue.Count();
 
                     // 判断 RELAX 队列是否有空闲
-                    return acc.RelaxQueueSize <= 0 || queueCount < acc.RelaxQueueSize;
+                    isContinue = acc.RelaxQueueSize <= 0 || queueCount < acc.RelaxQueueSize;
                 }
-
-                var defaultOrFastQueueCount = _defaultOrFastQueue.Count();
-                return acc.QueueSize <= 0 || defaultOrFastQueueCount < acc.QueueSize;
-            }
-            else
-            {
-                if (acc.IsYouChuan && mode == GenerationSpeedMode.RELAX)
+                else
                 {
-                    // 判断 RELAX 队列是否有空闲
-                    return acc.RelaxQueueSize <= 0 || _relaxQueueTasks.Count < acc.RelaxQueueSize;
+                    // 快速队列验证
+                    var defaultOrFastQueueCount = _defaultOrFastQueue.Count();
+                    isContinue = acc.QueueSize <= 0 || defaultOrFastQueueCount < acc.QueueSize;
                 }
-
-                return acc.QueueSize <= 0 || _fastQueueTasks.Count < acc.QueueSize;
             }
+
+            // 判断日绘图限制
+            if (isContinue)
+            {
+                // 慢速
+                if (mode == GenerationSpeedMode.RELAX)
+                {
+                    if (acc.DayRelaxDrawLimit <= -1)
+                    {
+                        isContinue = true;
+                    }
+                    else
+                    {
+                        var todayCount = CounterHelper.GetAccountTodayTotalCount(ChannelId, mode);
+                        isContinue = todayCount < acc.DayRelaxDrawLimit;
+                    }
+                }
+                // 快速 | 极速
+                else
+                {
+                    if (acc.DayDrawLimit <= -1)
+                    {
+                        isContinue = true;
+                    }
+                    else
+                    {
+                        var todayCount = CounterHelper.GetAccountTodayTotalCount(ChannelId, mode);
+                        isContinue = todayCount < acc.DayDrawLimit;
+                    }
+                }
+            }
+
+            // 根据计数器精确判断
+            if (isContinue)
+            {
+                // 如果慢速模式，只有悠船才判断慢速次数
+                if (mode == GenerationSpeedMode.RELAX)
+                {
+                    if (acc.IsYouChuan)
+                    {
+                        isContinue = IsYouChuanAllowRelax();
+                    }
+                    else
+                    {
+                        isContinue = true;
+                    }
+                }
+                else
+                {
+                    // 如果是快速，则判断快速是否足够次数
+                    // 快速至少 > 3 次
+                    // 暂不考虑极速的次数、暂不考虑视频的次数
+
+                    if (FastAvailableCount > 3 && FastAvailableCount > acc.CoreSize + acc.QueueCount)
+                    {
+                        isContinue = true;
+                    }
+                    else
+                    {
+                        // 精确计算
+                        var currentCore = _defaultOrFastConcurrent.GetConcurrency(acc.CoreSize);
+                        var currentQueue = _defaultOrFastQueue.Count();
+                        if (FastAvailableCount > 3 && FastAvailableCount > currentCore + currentQueue)
+                        {
+                            isContinue = true;
+                        }
+                        else
+                        {
+                            isContinue = false;
+                        }
+                    }
+                }
+            }
+
+            return isContinue;
         }
 
         /// <summary>
@@ -881,55 +1012,52 @@ namespace Midjourney.Infrastructure.LoadBalancer
             {
                 try
                 {
-                    if (IsValidRedis)
+                    // 预估恢复队列数 * 超时时间的任务
+                    var hour = -1 * 12;
+                    var agoTime = new DateTimeOffset(DateTime.Now.AddHours(hour)).ToUnixTimeMilliseconds();
+                    var list = DbHelper.Instance.TaskStore.Where(c => c.InstanceId == Account.ChannelId && c.SubmitTime >= agoTime && c.Status != TaskStatus.CANCEL && c.Status != TaskStatus.FAILURE && c.Status != TaskStatus.MODAL && c.Status != TaskStatus.SUCCESS);
+
+                    _logger.Information("重启恢复作业账号 {@0} 任务数 {@1}", Account.ChannelId, list.Count);
+
+                    if (list.Count > 0)
                     {
-                        // 预估恢复队列数 * 超时时间的任务
-                        var hour = -1 * 12;
-                        var agoTime = new DateTimeOffset(DateTime.Now.AddHours(hour)).ToUnixTimeMilliseconds();
-                        var list = DbHelper.Instance.TaskStore.Where(c => c.InstanceId == Account.ChannelId && c.SubmitTime >= agoTime && c.Status != TaskStatus.CANCEL && c.Status != TaskStatus.FAILURE && c.Status != TaskStatus.MODAL && c.Status != TaskStatus.SUCCESS);
+                        // 获取所有慢速队列任务
+                        var relaxItems = _relaxQueue.Items();
+                        var fastItems = _defaultOrFastQueue.Items();
 
-                        _logger.Information("重启恢复作业账号 {@0} 任务数 {@1}", Account.ChannelId, list.Count);
-
-                        if (list.Count > 0)
+                        foreach (var item in list)
                         {
-                            // 获取所有慢速队列任务
-                            var relaxItems = _relaxQueue.Items();
-                            var fastItems = _defaultOrFastQueue.Items();
-
-                            foreach (var item in list)
+                            if (item.IsPartnerRelax)
                             {
-                                if (item.IsPartnerRelax)
+                                if (relaxItems.Any(c => c?.Info?.Id == item.Id))
                                 {
-                                    if (relaxItems.Any(c => c?.Info?.Id == item.Id))
-                                    {
-                                        continue;
-                                    }
-
-                                    // 强制加入慢速队列
-                                    var success = await _relaxQueue.EnqueueAsync(new TaskInfoQueue()
-                                    {
-                                        Info = item,
-                                        Function = TaskInfoQueueFunction.REFRESH,
-                                    }, Account.RelaxQueueSize, 10, true);
-
-                                    _logger.Information("重启加入慢速队列任务 {@0} - {@1} - {@2}", Account.ChannelId, item.Id, success);
+                                    continue;
                                 }
-                                else
+
+                                // 强制加入慢速队列
+                                var success = await _relaxQueue.EnqueueAsync(new TaskInfoQueue()
                                 {
-                                    if (fastItems.Any(c => c?.Info?.Id == item.Id))
-                                    {
-                                        continue;
-                                    }
+                                    Info = item,
+                                    Function = TaskInfoQueueFunction.REFRESH,
+                                }, Account.RelaxQueueSize, 10, true);
 
-                                    // 强制加入快速队列
-                                    var success = await _defaultOrFastQueue.EnqueueAsync(new TaskInfoQueue()
-                                    {
-                                        Info = item,
-                                        Function = TaskInfoQueueFunction.REFRESH,
-                                    }, Account.QueueSize, 10, true);
-
-                                    _logger.Information("重启加入快速队列任务 {@0} - {@1} - {@2}", Account.ChannelId, item.Id, success);
+                                _logger.Information("重启加入慢速队列任务 {@0} - {@1} - {@2}", Account.ChannelId, item.Id, success);
+                            }
+                            else
+                            {
+                                if (fastItems.Any(c => c?.Info?.Id == item.Id))
+                                {
+                                    continue;
                                 }
+
+                                // 强制加入快速队列
+                                var success = await _defaultOrFastQueue.EnqueueAsync(new TaskInfoQueue()
+                                {
+                                    Info = item,
+                                    Function = TaskInfoQueueFunction.REFRESH,
+                                }, Account.QueueSize, 10, true);
+
+                                _logger.Information("重启加入快速队列任务 {@0} - {@1} - {@2}", Account.ChannelId, item.Id, success);
                             }
                         }
                     }
@@ -957,273 +1085,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 }
                 catch { }
 
-                try
-                {
-                    var acc = Account;
-
-                    if (acc.IsYouChuan)
-                    {
-                        // 如果队列中没有任务，则等待信号通知
-                        if (_fastQueueTasks.Count <= 0 && _relaxQueueTasks.Count <= 0)
-                        {
-                            _mre.WaitOne();
-                        }
-
-                        // 如果并发数修改，判断信号最大值是否为 acc.CoreSize
-                        while (_fastLock.MaxParallelism != acc.CoreSize)
-                        {
-                            // 重新设置信号量
-                            var oldMax = _fastLock.MaxParallelism;
-                            var newMax = Math.Max(1, Math.Min(acc.CoreSize, 12));
-                            if (_fastLock.SetMaxParallelism(newMax))
-                            {
-                                _logger.Information("频道 {@0} 信号量最大值修改成功，原值：{@1}，当前最大值：{@2} - FAST", acc.ChannelId, oldMax, newMax);
-                            }
-
-                            Thread.Sleep(500);
-                        }
-
-                        // 如果并发数修改，判断信号最大值是否为 acc.RelaxCoreSize
-                        while (_relaxLock.MaxParallelism != acc.RelaxCoreSize)
-                        {
-                            // 重新设置信号量
-                            var oldMax = _relaxLock.MaxParallelism;
-                            var newMax = Math.Max(1, Math.Min(acc.RelaxCoreSize, 12));
-                            if (_relaxLock.SetMaxParallelism(newMax))
-                            {
-                                _logger.Information("频道 {@0} 信号量最大值修改成功，原值：{@1}，当前最大值：{@2} - RELAX", acc.ChannelId, oldMax, newMax);
-                            }
-
-                            Thread.Sleep(500);
-                        }
-
-                        while (true)
-                        {
-                            var isFast = _fastQueueTasks.TryPeek(out _);
-                            var isRelax = _relaxQueueTasks.TryPeek(out _);
-                            if (!isFast && !isRelax)
-                            {
-                                break;
-                            }
-
-                            if (isFast)
-                            {
-                                // 判断是否还有资源可用
-                                if (_fastLock.IsLockAvailable())
-                                {
-                                    var preSleep = acc.Interval;
-                                    if (preSleep <= 0m)
-                                    {
-                                        preSleep = 0m;
-                                    }
-
-                                    // 提交任务前间隔
-                                    // 当一个作业完成后，是否先等待一段时间再提交下一个作业
-                                    Thread.Sleep((int)(preSleep * 1000));
-
-                                    // 从队列中移除任务，并开始执行
-                                    if (_fastQueueTasks.TryDequeue(out var fastInfo))
-                                    {
-                                        _taskFutureMap[fastInfo.Item1.Id] = Task.Run(async () =>
-                                        {
-                                            await ExecuteTaskAsync(fastInfo.Item1, fastInfo.Item2);
-                                        });
-
-                                        // 计算执行后的间隔
-                                        var min = acc.AfterIntervalMin;
-                                        var max = acc.AfterIntervalMax;
-
-                                        // 计算 min ~ max随机数
-                                        var afterInterval = 1200;
-                                        if (max > min && min >= 0m)
-                                        {
-                                            afterInterval = new Random().Next((int)(min * 1000), (int)(max * 1000));
-                                        }
-                                        else if (max == min && min >= 0m)
-                                        {
-                                            afterInterval = (int)(min * 1000);
-                                        }
-
-                                        // 如果是图生文操作
-                                        if (fastInfo.Item1.GetProperty<string>(Constants.TASK_PROPERTY_CUSTOM_ID, default)?.Contains("PicReader") == true)
-                                        {
-                                            // 批量任务操作提交间隔 1.2s + 6.8s
-                                            Thread.Sleep(afterInterval + 6800);
-                                        }
-                                        else
-                                        {
-                                            // 队列提交间隔
-                                            Thread.Sleep(afterInterval);
-                                        }
-                                    }
-                                }
-                                else
-                                {
-                                    // 如果没有可用资源，等待
-                                    Thread.Sleep(100);
-                                }
-                            }
-
-                            if (isRelax)
-                            {
-                                // 判断是否还有资源可用
-                                if (_relaxLock.IsLockAvailable())
-                                {
-                                    var preSleep = acc.Interval;
-                                    if (preSleep <= 0m)
-                                    {
-                                        preSleep = 0m;
-                                    }
-
-                                    // 提交任务前间隔
-                                    // 当一个作业完成后，是否先等待一段时间再提交下一个作业
-                                    Thread.Sleep((int)(preSleep * 1000));
-
-                                    // 从队列中移除任务，并开始执行
-                                    if (_relaxQueueTasks.TryDequeue(out var relaxInfo))
-                                    {
-                                        _taskFutureMap[relaxInfo.Item1.Id] = Task.Run(async () =>
-                                        {
-                                            await ExecuteTaskAsync(relaxInfo.Item1, relaxInfo.Item2);
-                                        });
-
-                                        // 计算执行后的间隔
-                                        var min = acc.AfterIntervalMin;
-                                        var max = acc.AfterIntervalMax;
-
-                                        // 计算 min ~ max随机数
-                                        var afterInterval = 1200;
-                                        if (max > min && min >= 0m)
-                                        {
-                                            afterInterval = new Random().Next((int)(min * 1000), (int)(max * 1000));
-                                        }
-                                        else if (max == min && min >= 0m)
-                                        {
-                                            afterInterval = (int)(min * 1000);
-                                        }
-
-                                        // 如果是图生文操作
-                                        if (relaxInfo.Item1.GetProperty<string>(Constants.TASK_PROPERTY_CUSTOM_ID, default)?.Contains("PicReader") == true)
-                                        {
-                                            // 批量任务操作提交间隔 1.2s + 6.8s
-                                            Thread.Sleep(afterInterval + 6800);
-                                        }
-                                        else
-                                        {
-                                            // 队列提交间隔
-                                            Thread.Sleep(afterInterval);
-                                        }
-                                    }
-                                }
-                                else
-                                {
-                                    // 如果没有可用资源，等待
-                                    Thread.Sleep(100);
-                                }
-                            }
-                        }
-
-                        // 重新设置信号
-                        _mre.Reset();
-                    }
-                    else
-                    {
-                        // 如果队列中没有任务，则等待信号通知
-                        if (_fastQueueTasks.Count <= 0)
-                        {
-                            _mre.WaitOne();
-                        }
-
-                        // 判断是否还有资源可用
-                        while (!_fastLock.IsLockAvailable())
-                        {
-                            // 等待
-                            Thread.Sleep(100);
-                        }
-
-                        // 如果并发数修改，判断信号最大值是否为 acc.CoreSize
-                        while (_fastLock.MaxParallelism != acc.CoreSize)
-                        {
-                            // 重新设置信号量
-                            var oldMax = _fastLock.MaxParallelism;
-                            var newMax = Math.Max(1, Math.Min(acc.CoreSize, 12));
-                            if (_fastLock.SetMaxParallelism(newMax))
-                            {
-                                _logger.Information("频道 {@0} 信号量最大值修改成功，原值：{@1}，当前最大值：{@2}", acc.ChannelId, oldMax, newMax);
-                            }
-
-                            Thread.Sleep(500);
-                        }
-
-                        while (_fastQueueTasks.TryPeek(out var info))
-                        {
-                            // 判断是否还有资源可用
-                            if (_fastLock.IsLockAvailable())
-                            {
-                                var preSleep = acc.Interval;
-                                if (preSleep <= 0m)
-                                {
-                                    preSleep = 0m;
-                                }
-
-                                // 提交任务前间隔
-                                // 当一个作业完成后，是否先等待一段时间再提交下一个作业
-                                Thread.Sleep((int)(preSleep * 1000));
-
-                                // 从队列中移除任务，并开始执行
-                                if (_fastQueueTasks.TryDequeue(out info))
-                                {
-                                    _taskFutureMap[info.Item1.Id] = Task.Run(async () =>
-                                    {
-                                        await ExecuteTaskAsync(info.Item1, info.Item2);
-                                    });
-
-                                    // 计算执行后的间隔
-                                    var min = acc.AfterIntervalMin;
-                                    var max = acc.AfterIntervalMax;
-
-                                    // 计算 min ~ max随机数
-                                    var afterInterval = 1200;
-                                    if (max > min && min >= 0m)
-                                    {
-                                        afterInterval = new Random().Next((int)(min * 1000), (int)(max * 1000));
-                                    }
-                                    else if (max == min && min >= 0m)
-                                    {
-                                        afterInterval = (int)(min * 1000);
-                                    }
-
-                                    // 如果是图生文操作
-                                    if (info.Item1.GetProperty<string>(Constants.TASK_PROPERTY_CUSTOM_ID, default)?.Contains("PicReader") == true)
-                                    {
-                                        // 批量任务操作提交间隔 1.2s + 6.8s
-                                        Thread.Sleep(afterInterval + 6800);
-                                    }
-                                    else
-                                    {
-                                        // 队列提交间隔
-                                        Thread.Sleep(afterInterval);
-                                    }
-                                }
-                            }
-                            else
-                            {
-                                // 如果没有可用资源，等待
-                                Thread.Sleep(100);
-                            }
-                        }
-
-                        // 重新设置信号
-                        _mre.Reset();
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.Error(ex, $"后台作业执行异常 {ChannelId}");
-
-                    // 停止 1min
-                    Thread.Sleep(1000 * 60);
-                }
+                Thread.Sleep(5000);
             }
         }
 
@@ -1234,11 +1096,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <returns></returns>
         private async Task RedisJobRun(CancellationToken token)
         {
-            if (!IsValidRedis)
-            {
-                return;
-            }
-
             var globalLock = GlobalConfiguration.GlobalLock;
             var globalLimit = GlobalConfiguration.GlobalMaxConcurrent;
 
@@ -1703,16 +1560,13 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 }
 
                 // 发送入队提醒
-                if (IsValidRedis)
+                var notification = new RedisNotification
                 {
-                    var notification = new RedisNotification
-                    {
-                        Type = ENotificationType.EnqueueTaskInfo,
-                        ChannelId = ChannelId,
-                        TaskInfoId = info.Id
-                    };
-                    RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
-                }
+                    Type = ENotificationType.EnqueueTaskInfo,
+                    ChannelId = ChannelId,
+                    TaskInfoId = info.Id
+                };
+                RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
 
                 if (currentWaitNumbers == 0)
                 {
@@ -2497,8 +2351,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                         // 图生文
                         if (info.Action == TaskAction.DESCRIBE)
                         {
-                            // 每日计数
-                            AdaptiveCache.Increment(Account.YouchuanDescribeCountKey, 1, TimeSpan.FromDays(1));
+                            CounterHelper.DescribeIncrement(Account);
                         }
                         // 记录今日 relax / fast 次数
                         else if (info.Action != TaskAction.UPSCALE)
@@ -2515,7 +2368,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                         var bs = info.GetVideoBatchSize();
                                         value *= bs * 2;
                                     }
-                                    var count = AdaptiveCache.Increment(Account.YouchuanRelaxCountKey, value, TimeSpan.FromDays(1));
+                                    var count = CounterHelper.YouchuanRelaxIncrement(Account, value);
                                     var relaxAvailable = Math.Max(0, Account.YouChuanRelaxDailyLimit - count);
                                     Log.Information("悠船慢速任务完成，扣减 relax 次数: TaskId={@0}, InstanceId={@1}, 扣除={@2}, 预估慢速剩余次数={@3}, 今日慢速计数={@4}",
                                         info.Id, info.InstanceId, value, relaxAvailable, count);
@@ -2523,10 +2376,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
                             }
                             else
                             {
-                                // 慢速图生文，算快速的消耗
+                                // 今日总成功绘图
+                                var totalCount = CounterHelper.GetAccountTodaySuccessTotalCount(Account.ChannelId);
 
-                                // 记录快速使用次数
-                                var fastAccountTodayCountKey = $"fast_account_count:{DateTime.Now:yyyyMMdd}:{info.InstanceId}";
                                 var value = 1;
                                 if (info.Mode == GenerationSpeedMode.TURBO)
                                 {
@@ -2537,25 +2389,17 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                     var bs = info.GetVideoBatchSize();
                                     value *= bs * 2;
                                 }
-                                var count = AdaptiveCache.Increment(fastAccountTodayCountKey, value, TimeSpan.FromDays(1));
 
                                 // 扣减快速
-                                var fastAvailable = Math.Max(0, AdaptiveCache.Decrement(Account.FastAvailableCountKey, value));
+                                var currentCount = CounterHelper.FastTaskAvailableDecrementCount(Account.ChannelId, value);
+                                var fastAvailable = Math.Max(0, currentCount);
 
-                                Log.Information("任务完成，扣减 fast 次数: TaskId={@0}, InstanceId={@1}, 扣除={@2}, 预估快速剩余次数={@3}, 今日快速计数={@4}",
-                                    info.Id, info.InstanceId, value, fastAvailable, count);
-
-                                //// 通知所有节点并扣减次数
-                                //var notification = new RedisNotification
-                                //{
-                                //    Type = ENotificationType.DecreaseFastCount,
-                                //    ChannelId = info.InstanceId,
-                                //    DecreaseCount = value
-                                //};
-                                //RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
+                                Log.Information("任务完成，扣减 fast 次数: TaskId={@0}, InstanceId={@1}, 扣除={@2}, 预估快速剩余次数={@3}, 今日总绘图计数={@4}",
+                                    info.Id, info.InstanceId, value, fastAvailable, totalCount);
 
                                 // 如果是快速模式，且触发最低阈值，则立即同步一次 info
-                                if (fastAvailable < 12)
+                                // 每 200 次执行一次同步，或 低于 12 次执行一次同步
+                                if (fastAvailable % 200 == 0 || fastAvailable <= 12)
                                 {
                                     await SyncInfoSetting(true);
                                 }
@@ -2575,248 +2419,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 if (!info.IsCompleted)
                 {
                     _logger.Error("警告：未知错误，任务执行结束仍未完成 {@0} - {@1} - {@2}", info.Id, info.InstanceId, info.Status);
-                }
-
-                SaveAndNotify(info);
-            }
-        }
-
-        /// <summary>
-        /// 提交任务。
-        /// </summary>
-        /// <param name="info">任务信息</param>
-        /// <param name="discordSubmit">Discord提交任务的委托</param>
-        /// <returns>任务提交结果</returns>
-        public SubmitResultVO SubmitTaskAsync(TaskInfo info, Func<Task<Message>> discordSubmit)
-        {
-            var currentWaitNumbers = 0;
-
-            if (info.IsPartnerRelax)
-            {
-                // 在任务提交时，前面的的任务数量
-                currentWaitNumbers = _relaxQueueTasks.Count;
-                if (Account.RelaxQueueSize > 0 && currentWaitNumbers >= Account.RelaxQueueSize)
-                {
-                    return SubmitResultVO.Fail(ReturnCode.FAILURE, "提交失败，队列已满，请稍后重试")
-                        .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, ChannelId);
-                }
-            }
-            else
-            {
-                // 在任务提交时，前面的的任务数量
-                currentWaitNumbers = _fastQueueTasks.Count;
-                if (Account.QueueSize > 0 && currentWaitNumbers >= Account.QueueSize)
-                {
-                    return SubmitResultVO.Fail(ReturnCode.FAILURE, "提交失败，队列已满，请稍后重试")
-                        .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, ChannelId);
-                }
-            }
-
-            try
-            {
-                info.InstanceId = ChannelId;
-                _taskStoreService.Save(info);
-
-                if (info.IsPartnerRelax)
-                {
-                    _relaxQueueTasks.Enqueue((info, discordSubmit));
-                }
-                else
-                {
-                    _fastQueueTasks.Enqueue((info, discordSubmit));
-                }
-
-                // 通知后台服务有新的任务
-                _mre.Set();
-
-                if (currentWaitNumbers == 0)
-                {
-                    return SubmitResultVO.Of(ReturnCode.SUCCESS, "提交成功", info.Id)
-                        .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, ChannelId);
-                }
-                else
-                {
-                    return SubmitResultVO.Of(ReturnCode.IN_QUEUE, $"排队中，前面还有{currentWaitNumbers}个任务", info.Id)
-                        .SetProperty("numberOfQueues", currentWaitNumbers)
-                        .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, ChannelId);
-                }
-            }
-            catch (Exception e)
-            {
-                _logger.Error(e, "submit task error");
-
-                _taskStoreService.Delete(info.Id);
-
-                return SubmitResultVO.Fail(ReturnCode.FAILURE, "提交失败，系统异常")
-                    .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, ChannelId);
-            }
-        }
-
-        /// <summary>
-        /// 异步执行任务。
-        /// </summary>
-        /// <param name="info">任务信息</param>
-        /// <param name="discordSubmit">Discord提交任务的委托</param>
-        /// <returns>异步任务</returns>
-        private async Task ExecuteTaskAsync(TaskInfo info, Func<Task<Message>> discordSubmit)
-        {
-            // 初始锁，避免 info 修改导致判断错误
-            var initIsRelax = info.IsPartnerRelax;
-            try
-            {
-                if (initIsRelax)
-                {
-                    await _relaxLock.LockAsync();
-                }
-                else
-                {
-                    await _fastLock.LockAsync();
-                }
-
-                _runningTasks.TryAdd(info.Id, info);
-
-                // 判断当前实例是否可用，尝试最大等待 30s
-                var waitTime = 0;
-                while (!IsAlive)
-                {
-                    // 等待 1s
-                    await Task.Delay(1000);
-
-                    // 计算等待时间
-                    waitTime += 1000;
-                    if (waitTime > 30 * 1000)
-                    {
-                        break;
-                    }
-                }
-
-                // 判断当前实例是否可用
-                if (!IsAlive)
-                {
-                    _logger.Debug("[{@0}] task error, id: {@1}, status: {@2}", Account.GetDisplay(), info.Id, info.Status);
-
-                    info.Fail("实例不可用");
-                    SaveAndNotify(info);
-                    return;
-                }
-
-                info.Status = TaskStatus.SUBMITTED;
-                info.Progress = "0%";
-                SaveAndNotify(info);
-
-                var result = await discordSubmit();
-
-                // 判断当前实例是否可用
-                if (!IsAlive)
-                {
-                    _logger.Debug("[{@0}] task error, id: {@1}, status: {@2}", Account.GetDisplay(), info.Id, info.Status);
-
-                    info.Fail("实例不可用");
-                    SaveAndNotify(info);
-                    return;
-                }
-
-                info.StartTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
-
-                if (result.Code != ReturnCode.SUCCESS)
-                {
-                    _logger.Debug("[{@0}] task finished, id: {@1}, status: {@2}", Account.GetDisplay(), info.Id, info.Status);
-
-                    info.Fail(result.Description);
-                    SaveAndNotify(info);
-                    return;
-                }
-
-                if (info.Status != TaskStatus.FAILURE && info.Status != TaskStatus.SUCCESS)
-                {
-                    info.Status = TaskStatus.SUBMITTED;
-                    info.Progress = "0%";
-                }
-
-                await Task.Delay(500);
-
-                SaveAndNotify(info);
-
-                // 超时处理
-                var timeoutMin = Account.TimeoutMinutes;
-
-                //var sw = new Stopwatch();
-                //sw.Start();
-
-                if (info.StartTime == null || info.StartTime == 0)
-                {
-                    info.StartTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
-                }
-
-                // 转本地时间
-                var startTime = DateTimeOffset.FromUnixTimeMilliseconds(info.StartTime.Value).ToLocalTime();
-
-                while (info.Status == TaskStatus.SUBMITTED || info.Status == TaskStatus.IN_PROGRESS)
-                {
-                    // 如果是悠船任务
-                    if (info.IsPartner || info.IsOfficial)
-                    {
-                        await _ymTaskService.UpdateStatus(info, _taskStoreService, Account);
-                    }
-
-                    SaveAndNotify(info);
-
-                    if ((DateTime.Now - startTime).TotalMinutes > timeoutMin)
-                    {
-                        info.Fail($"执行超时 {timeoutMin} 分钟");
-                        SaveAndNotify(info);
-                        return;
-                    }
-
-                    await Task.Delay(3000);
-                }
-
-                // 任务完成后，自动读消息
-                try
-                {
-                    // 成功才都消息
-                    if (info.Status == TaskStatus.SUCCESS && !info.IsPartner && !info.IsOfficial)
-                    {
-                        var res = await ReadMessageAsync(info.MessageId);
-                        if (res.Code == ReturnCode.SUCCESS)
-                        {
-                            _logger.Debug("自动读消息成功 {@0} - {@1}", info.InstanceId, info.Id);
-                        }
-                        else
-                        {
-                            _logger.Warning("自动读消息失败 {@0} - {@1}", info.InstanceId, info.Id);
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.Error(ex, "自动读消息异常 {@0} - {@1}", info.InstanceId, info.Id);
-                }
-
-                _logger.Debug("[{AccountDisplay}] task finished, id: {TaskId}, status: {TaskStatus}", Account.GetDisplay(), info.Id, info.Status);
-
-                SaveAndNotify(info);
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "[{AccountDisplay}] task execute error, id: {TaskId}", Account.GetDisplay(), info.Id);
-
-                info.Fail("[Internal Server Error] " + ex.Message);
-
-                SaveAndNotify(info);
-            }
-            finally
-            {
-                _runningTasks.TryRemove(info.Id, out _);
-                _taskFutureMap.TryRemove(info.Id, out _);
-
-                if (initIsRelax)
-                {
-                    _relaxLock.Unlock();
-                }
-                else
-                {
-                    _fastLock.Unlock();
                 }
 
                 SaveAndNotify(info);
@@ -2927,13 +2529,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 BotMessageListener?.Dispose();
                 WebSocketManager?.Dispose();
 
-                _mre.Set();
-
                 // 任务取消
                 _longToken.Cancel();
-
-                // 停止后台任务
-                _mre.Set(); // 解除等待，防止死锁
 
                 // 清理后台任务
                 if (_longTask != null && !_longTask.IsCompleted)
@@ -2953,23 +2550,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 {
                     runningTask.Value.Fail("强制取消"); // 取消任务（假设TaskInfo有Cancel方法）
                 }
-
-                // 清理任务队列
-                while (_fastQueueTasks.TryDequeue(out var taskInfo))
-                {
-                    taskInfo.Item1.Fail("强制取消"); // 取消任务（假设TaskInfo有Cancel方法）
-                }
-                while (_relaxQueueTasks.TryDequeue(out var taskInfoRelax))
-                {
-                    taskInfoRelax.Item1.Fail("强制取消"); // 取消任务（假设TaskInfo有Cancel方法）
-                }
-
-                // 释放信号量
-                _fastLock?.Dispose();
-                _relaxLock?.Dispose();
-
-                // 释放信号
-                _mre?.Dispose();
 
                 // 释放任务映射
                 foreach (var task in _taskFutureMap.Values)
@@ -4132,87 +3712,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
             return await PostJsonAndCheckStatusAsync(paramsStr);
         }
 
-        ///// <summary>
-        ///// 全局切换快速模式检查
-        ///// </summary>
-        ///// <returns></returns>
-        //public async Task RelaxToFastValidate()
-        //{
-        //    try
-        //    {
-        //        var acc = Account;
-
-        //        // 快速用完时
-        //        // 并且开启快速切换慢速模式时
-        //        if (acc != null && acc.FastExhausted && acc.EnableRelaxToFast == true)
-        //        {
-        //            // 每 6~12 小时，和启动时检查账号是否有快速时长
-        //            await RandomSyncInfo();
-
-        //            // 判断 info 检查时间是否在 5 分钟内
-        //            if (acc.InfoUpdated != null && acc.InfoUpdated.Value.AddMinutes(5) >= DateTime.Now)
-        //            {
-        //                _logger.Information("自动切换快速模式，验证 {@0}", acc.ChannelId);
-
-        //                // 提取 fastime
-        //                // 如果检查完之后，快速超过 1 小时，则标记为快速未用完
-        //                var fastTime = acc.FastTimeRemaining?.ToString()?.Split('/')?.FirstOrDefault()?.Trim();
-        //                if (!string.IsNullOrWhiteSpace(fastTime) && double.TryParse(fastTime, out var ftime) && ftime >= 1)
-        //                {
-        //                    _logger.Information("自动切换快速模式，开始 {@0}", acc.ChannelId);
-
-        //                    // 标记未用完快速
-        //                    acc.FastExhausted = false;
-        //                    DbHelper.Instance.AccountStore.Update("FastExhausted", acc);
-
-        //                    // 如果开启了自动切换到快速，则自动切换到快速
-        //                    try
-        //                    {
-        //                        if (acc.EnableRelaxToFast == true)
-        //                        {
-        //                            Thread.Sleep(2500);
-        //                            await FastAsync(SnowFlake.NextId(), EBotType.MID_JOURNEY);
-
-        //                            Thread.Sleep(2500);
-        //                            await FastAsync(SnowFlake.NextId(), EBotType.NIJI_JOURNEY);
-        //                        }
-        //                    }
-        //                    catch (Exception ex)
-        //                    {
-        //                        _logger.Error(ex, "自动切换快速模式，执行异常 {@0}", acc.ChannelId);
-        //                    }
-
-        //                    acc.ClearCache();
-
-        //                    _logger.Information("自动切换快速模式，执行完成 {@0}", acc.ChannelId);
-        //                }
-        //            }
-        //        }
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.Error(ex, "快速切换慢速模式，检查执行异常");
-        //    }
-        //}
-
-        ///// <summary>
-        ///// 悠船每 n 分钟同步一次账号信息
-        ///// </summary>
-        ///// <returns></returns>
-        //public async Task YouChuanSyncInfo()
-        //{
-        //    await _ymTaskService.YouChuanSyncInfo();
-        //}
-
-        ///// <summary>
-        ///// 官网每 n 分钟同步一次账号信息
-        ///// </summary>
-        ///// <returns></returns>
-        //public async Task OfficialSyncInfo()
-        //{
-        //    await _ymTaskService.OfficialSyncInfo();
-        //}
-
         /// <summary>
         /// 自动同步 Info Setting
         /// </summary>
@@ -4244,11 +3743,11 @@ namespace Midjourney.Infrastructure.LoadBalancer
                         // 计算快速可用次数
                         var fastAvailableCount = (int)Math.Ceiling(Account.YouChuanFastRemaining / 60D);
 
-                        AdaptiveCache.SetCounter(Account.FastAvailableCountKey, fastAvailableCount, TimeSpan.FromDays(1));
+                        CounterHelper.SetFastTaskAvailableCount(Account.ChannelId, fastAvailableCount);
 
                         // 计算慢速总数
-                        var count = (int?)AdaptiveCache.GetCounter(acc.YouchuanRelaxCountKey) ?? 0;
-                        var youchuanRelaxAvailableCount = Account.YouChuanRelaxedReset > DateTime.Now ? 0 : Math.Max(0, Account.YouChuanRelaxDailyLimit - count);
+                        var count = CounterHelper.GetYouchuanRelaxCount(acc.ChannelId);
+                        var youchuanRelaxAvailableCount = Account.YouChuanRelaxedReset > DateTime.Now.Date ? 0 : Math.Max(0, Account.YouChuanRelaxDailyLimit - count);
 
                         _logger.Information("悠船同步信息完成，ChannelId={@0}, 预估快速剩余次数={@1}, 预估慢速剩余次数={@2}, 用时={@3}ms",
                             ChannelId, fastAvailableCount, youchuanRelaxAvailableCount, sw.ElapsedMilliseconds);
@@ -4265,20 +3764,20 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     // 只有强制同步时才需要添加限制规则
                     // 最新规则：
                     // 每 1 分钟最多同步 1 次
-                    // 每 5 分钟最多同步 2 次
-                    // 每 10 分钟最多同步 3 次
-                    // 每 30 分钟最多同步 4 次
-                    // 每 60 分钟最多同步 10 次
+                    // 每 5 分钟最多同步 1 次
+                    // 每 10 分钟最多同步 2 次
+                    // 每 30 分钟最多同步 3 次
+                    // 每 60 分钟最多同步 6 次
 
                     var keyPrefix = $"syncinfo_limit_{DateTime.Now:yyyyMMdd}:";
 
                     if (!RateLimiter.Check(keyPrefix, acc.ChannelId, 1, 1) ||
-                        !RateLimiter.Check(keyPrefix, acc.ChannelId, 5, 2) ||
-                        !RateLimiter.Check(keyPrefix, acc.ChannelId, 10, 3) ||
-                        !RateLimiter.Check(keyPrefix, acc.ChannelId, 30, 4) ||
-                        !RateLimiter.Check(keyPrefix, acc.ChannelId, 60, 10))
+                        !RateLimiter.Check(keyPrefix, acc.ChannelId, 5, 1) ||
+                        !RateLimiter.Check(keyPrefix, acc.ChannelId, 10, 2) ||
+                        !RateLimiter.Check(keyPrefix, acc.ChannelId, 30, 3) ||
+                        !RateLimiter.Check(keyPrefix, acc.ChannelId, 60, 6))
                     {
-                        Log.Warning("同步调用过于频繁，ChannelId={0}", acc.ChannelId);
+                        Log.Warning("同步信息调用过于频繁，ChannelId={0}", acc.ChannelId);
                         return false;
                     }
                 }
@@ -4299,7 +3798,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                         // 计算快速可用次数
                         var fastAvailableCount = (int)Math.Ceiling(Account.OfficialFastRemaining / 60D);
-                        AdaptiveCache.SetCounter(Account.FastAvailableCountKey, fastAvailableCount, TimeSpan.FromDays(1));
+                        CounterHelper.SetFastTaskAvailableCount(Account.ChannelId, fastAvailableCount);
 
                         _logger.Information("官方同步信息完成，ChannelId={@0}, 预估快速剩余次数={@1}, 用时={@2}ms",
                             ChannelId, fastAvailableCount, sw.ElapsedMilliseconds);
@@ -4310,8 +3809,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                 if (acc.IsDiscord)
                 {
-                    // discord 60-360 分钟
-                    var cacheMinutes = Random.Shared.Next(60, 360);
+                    // discord 60-180 分钟
+                    var cacheMinutes = Random.Shared.Next(60, 180);
                     success = await AdaptiveCache.GetOrCreateAsync(cacheKey, async () =>
                     {
                         var sw = Stopwatch.StartNew();
@@ -4398,7 +3897,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                         // 计算快速可用次数
                         var fastAvailableCount = (int)Math.Ceiling(ftime * 60);
 
-                        AdaptiveCache.SetCounter(Account.FastAvailableCountKey, fastAvailableCount, TimeSpan.FromDays(1));
+                        CounterHelper.SetFastTaskAvailableCount(Account.ChannelId, fastAvailableCount);
 
                         DbHelper.Instance.AccountStore.Update("FastExhausted,AllowModes,CoreSize", acc);
 
@@ -4463,6 +3962,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
         }
     }
 
+    /// <summary>
+    /// 任务信息队列
+    /// </summary>
     public class TaskInfoQueue
     {
         /// <summary>

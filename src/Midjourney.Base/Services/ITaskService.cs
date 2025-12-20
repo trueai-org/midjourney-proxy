@@ -15,11 +15,11 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Additional Terms:
-// This software shall not be used for any illegal activities. 
+// This software shall not be used for any illegal activities.
 // Users must comply with all applicable laws and regulations,
-// particularly those related to image and video processing. 
+// particularly those related to image and video processing.
 // The use of this software for any form of illegal face swapping,
-// invasion of privacy, or any other unlawful purposes is strictly prohibited. 
+// invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
 using Midjourney.Base.Dto;
@@ -68,45 +68,6 @@ namespace Midjourney.Base.Services
         /// <param name="dataUrls">图片数据列表。</param>
         /// <returns>提交结果。</returns>
         Task<SubmitResultVO> SubmitImagine(TaskInfo task, List<DataUrl> dataUrls);
-
-        /// <summary>
-        /// 提交 show 任务
-        /// </summary>
-        /// <param name="info"></param>
-        /// <returns></returns>
-        SubmitResultVO ShowImagine(TaskInfo info);
-
-        /// <summary>
-        /// 提交放大任务。
-        /// </summary>
-        /// <param name="task">任务对象。</param>
-        /// <param name="targetMessageId">目标消息ID。</param>
-        /// <param name="targetMessageHash">目标消息哈希。</param>
-        /// <param name="index">索引。</param>
-        /// <param name="messageFlags">消息标志。</param>
-        /// <returns>提交结果。</returns>
-        SubmitResultVO SubmitUpscale(TaskInfo task, string targetMessageId, string targetMessageHash, int index, int messageFlags);
-
-        /// <summary>
-        /// 提交变换任务。
-        /// </summary>
-        /// <param name="task">任务对象。</param>
-        /// <param name="targetMessageId">目标消息ID。</param>
-        /// <param name="targetMessageHash">目标消息哈希。</param>
-        /// <param name="index">索引。</param>
-        /// <param name="messageFlags">消息标志。</param>
-        /// <returns>提交结果。</returns>
-        SubmitResultVO SubmitVariation(TaskInfo task, string targetMessageId, string targetMessageHash, int index, int messageFlags);
-
-        /// <summary>
-        /// 提交重新生成任务。
-        /// </summary>
-        /// <param name="task">任务对象。</param>
-        /// <param name="targetMessageId">目标消息ID。</param>
-        /// <param name="targetMessageHash">目标消息哈希。</param>
-        /// <param name="messageFlags">消息标志。</param>
-        /// <returns>提交结果。</returns>
-        SubmitResultVO SubmitReroll(TaskInfo task, string targetMessageId, string targetMessageHash, int messageFlags);
 
         /// <summary>
         /// 提交描述任务。
@@ -209,6 +170,5 @@ namespace Midjourney.Base.Services
         /// <param name="dto"></param>
         /// <returns></returns>
         Task MjPlusMigration(MjPlusMigrationDto dto);
-
     }
 }

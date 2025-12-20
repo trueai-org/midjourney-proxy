@@ -445,7 +445,7 @@ namespace Midjourney.Base
         NONE = 0,
 
         /// <summary>
-        /// LiteDB
+        /// LiteDB（废弃）
         /// </summary>
         LiteDB = 1,
 

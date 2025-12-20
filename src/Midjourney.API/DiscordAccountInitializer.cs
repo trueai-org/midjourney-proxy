@@ -91,6 +91,13 @@ namespace Midjourney.API
         {
             try
             {
+                // 必须配置 redis
+                if (!GlobalConfiguration.Setting.IsValidRedis)
+                {
+                    Log.Error("系统配置错误，请检查Redis配置");
+                    return;
+                }
+
                 _applicationLifetime.ApplicationStarted.Register(async () =>
                 {
                     var setting = GlobalConfiguration.Setting;
@@ -196,151 +203,8 @@ namespace Midjourney.API
                     DbHelper.Instance.IndexInit();
 
                     // 迁移 account user domain banded
-                    // 是否开启 LiteDB 自动迁移
-                    if (setting.DatabaseType != DatabaseType.LiteDB && setting.DatabaseType != DatabaseType.MongoDB && setting.IsAutoMigrate)
-                    {
-                        try
-                        {
-                            // account 迁移
-                            var liteAccountIds = LiteDBHelper.AccountStore.GetAllIds();
-                            var accountStore = DbHelper.Instance.AccountStore;
-                            var mongoAccountIds = accountStore.GetAllIds();
-                            var accountIds = liteAccountIds.Except(mongoAccountIds).ToList();
-                            if (accountIds.Count > 0)
-                            {
-                                var liteAccounts = LiteDBHelper.AccountStore.GetAll();
-                                foreach (var id in accountIds)
-                                {
-                                    var model = liteAccounts.FirstOrDefault(c => c.Id == id);
-                                    if (model != null)
-                                    {
-                                        accountStore.Add(model);
-                                    }
-                                }
-                            }
-
-                            // user 迁移
-                            var liteUserIds = LiteDBHelper.UserStore.GetAllIds();
-                            var userStore = DbHelper.Instance.UserStore;
-                            var mongoUserIds = userStore.GetAllIds();
-                            var userIds = liteUserIds.Except(mongoUserIds).ToList();
-                            if (userIds.Count > 0)
-                            {
-                                var liteUsers = LiteDBHelper.UserStore.GetAll();
-                                foreach (var id in userIds)
-                                {
-                                    var model = liteUsers.FirstOrDefault(c => c.Id == id);
-                                    if (model != null)
-                                    {
-                                        userStore.Add(model);
-                                    }
-                                }
-                            }
-
-                            // domain 迁移
-                            var liteDomainIds = LiteDBHelper.DomainStore.GetAllIds();
-                            var domainStore = DbHelper.Instance.DomainStore;
-                            var mongoDomainIds = domainStore.GetAllIds();
-                            var domainIds = liteDomainIds.Except(mongoDomainIds).ToList();
-                            if (domainIds.Count > 0)
-                            {
-                                var liteDomains = LiteDBHelper.DomainStore.GetAll();
-                                foreach (var id in domainIds)
-                                {
-                                    var model = liteDomains.FirstOrDefault(c => c.Id == id);
-                                    if (model != null)
-                                    {
-                                        domainStore.Add(model);
-                                    }
-                                }
-                            }
-
-                            // banded 迁移
-                            var liteBannedIds = LiteDBHelper.BannedWordStore.GetAllIds();
-                            var bannedStore = DbHelper.Instance.BannedWordStore;
-                            var mongoBannedIds = bannedStore.GetAllIds();
-                            var bannedIds = liteBannedIds.Except(mongoBannedIds).ToList();
-                            if (bannedIds.Count > 0)
-                            {
-                                var liteBanneds = LiteDBHelper.BannedWordStore.GetAll();
-                                foreach (var id in bannedIds)
-                                {
-                                    var model = liteBanneds.FirstOrDefault(c => c.Id == id);
-                                    if (model != null)
-                                    {
-                                        bannedStore.Add(model);
-                                    }
-                                }
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.Error(ex, "LiteDB 数据迁移基本信息异常");
-                        }
-
-                        // 迁移 task
-                        try
-                        {
-                            _ = Task.Run(async () =>
-                            {
-                                try
-                                {
-                                    await AdaptiveLock.ExecuteWithLock("TaskInfoAutoMigrate", TimeSpan.FromSeconds(10), () =>
-                                    {
-                                        // 判断最后一条是否存在
-                                        var success = 0;
-                                        var last = LiteDBHelper.TaskStore.GetCollection().Query().OrderByDescending(c => c.SubmitTime).FirstOrDefault();
-                                        if (last != null)
-                                        {
-                                            var taskStore = DbHelper.Instance.TaskStore;
-
-                                            var lastModel = taskStore.Single(c => c.Id == last.Id);
-                                            if (lastModel == null)
-                                            {
-                                                // 迁移数据
-                                                var taskIds = LiteDBHelper.TaskStore.GetCollection().Query().Select(c => c.Id).ToList();
-                                                foreach (var tid in taskIds)
-                                                {
-                                                    try
-                                                    {
-                                                        var info = LiteDBHelper.TaskStore.Get(tid);
-                                                        if (info != null)
-                                                        {
-                                                            // 判断是否存在
-                                                            var exist = taskStore.Any(c => c.Id == info.Id);
-                                                            if (!exist)
-                                                            {
-                                                                taskStore.Add(info);
-                                                                success++;
-                                                            }
-                                                        }
-                                                    }
-                                                    catch (Exception ex)
-                                                    {
-                                                        _logger.Error(ex, "LiteDB 自动迁移绘图任务数异常 TaskId: {@0}", tid);
-                                                    }
-                                                }
-
-                                                _logger.Information("LiteDB 自动迁移绘图任务数据 success: {@0}", success);
-                                            }
-                                        }
-                                    });
-                                }
-                                catch (Exception ex)
-                                {
-                                    _logger.Error(ex, "LiteDB 自动迁移绘图任务数据 error");
-                                }
-                            });
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.Error(ex, "LiteDB 数据迁移任务信息异常");
-                        }
-                    }
-
-                    // 迁移 account user domain banded
                     // 是否开启 MongoDB 自动迁移
-                    if (setting.DatabaseType != DatabaseType.LiteDB && setting.DatabaseType != DatabaseType.MongoDB && setting.IsAutoMigrateMongo)
+                    if (setting.DatabaseType != DatabaseType.MongoDB && setting.IsAutoMigrateMongo)
                     {
                         try
                         {
@@ -606,23 +470,20 @@ namespace Midjourney.API
                     }
 
                     // 订阅 redis 消息
-                    if (setting.IsValidRedis)
+                    RedisHelper.Subscribe((RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, async msg =>
                     {
-                        RedisHelper.Subscribe((RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, async msg =>
+                        try
                         {
-                            try
-                            {
-                                var notification = msg.Body.ToObject<RedisNotification>();
-                                await OnRedisReceived(notification);
-                            }
-                            catch (Exception ex)
-                            {
-                                // 记录日志
-                                Log.Error(ex, $"处理缓存清除通知时发生错误");
-                            }
+                            var notification = msg.Body.ToObject<RedisNotification>();
+                            await OnRedisReceived(notification);
                         }
-                        ));
+                        catch (Exception ex)
+                        {
+                            // 记录日志
+                            Log.Error(ex, $"处理缓存清除通知时发生错误");
+                        }
                     }
+                    ));
                 });
 
                 // 确保在应用程序停止时注销服务
@@ -750,46 +611,46 @@ namespace Midjourney.API
                         userColl.UpdateOne(c => c.Id == item.Key, update);
                     }
                 }
-                else if (setting.DatabaseType == DatabaseType.LiteDB)
-                {
-                    userTotalCount = LiteDBHelper.TaskStore.GetCollection()
-                        .Query()
-                        .Select(c => c.UserId)
-                        .ToList()
-                        .GroupBy(c => c)
-                        .Select(g => new
-                        {
-                            UserId = g.Key,
-                            TotalCount = g.Count()
-                        })
-                        .Where(c => !string.IsNullOrWhiteSpace(c.UserId))
-                        .ToDictionary(c => c.UserId, c => c.TotalCount);
+                //else if (setting.DatabaseType == DatabaseType.LiteDB)
+                //{
+                //    userTotalCount = LiteDBHelper.TaskStore.GetCollection()
+                //        .Query()
+                //        .Select(c => c.UserId)
+                //        .ToList()
+                //        .GroupBy(c => c)
+                //        .Select(g => new
+                //        {
+                //            UserId = g.Key,
+                //            TotalCount = g.Count()
+                //        })
+                //        .Where(c => !string.IsNullOrWhiteSpace(c.UserId))
+                //        .ToDictionary(c => c.UserId, c => c.TotalCount);
 
-                    userTodayCount = LiteDBHelper.TaskStore.GetCollection()
-                        .Query()
-                        .Where(c => c.SubmitTime >= now)
-                        .Select(c => c.UserId)
-                        .ToList()
-                        .GroupBy(c => c)
-                        .Select(g => new
-                        {
-                            UserId = g.Key,
-                            TotalCount = g.Count()
-                        })
-                        .Where(c => !string.IsNullOrWhiteSpace(c.UserId))
-                        .ToDictionary(c => c.UserId, c => c.TotalCount);
+                //    userTodayCount = LiteDBHelper.TaskStore.GetCollection()
+                //        .Query()
+                //        .Where(c => c.SubmitTime >= now)
+                //        .Select(c => c.UserId)
+                //        .ToList()
+                //        .GroupBy(c => c)
+                //        .Select(g => new
+                //        {
+                //            UserId = g.Key,
+                //            TotalCount = g.Count()
+                //        })
+                //        .Where(c => !string.IsNullOrWhiteSpace(c.UserId))
+                //        .ToDictionary(c => c.UserId, c => c.TotalCount);
 
-                    foreach (var item in userTotalCount)
-                    {
-                        if (!userTodayCount.ContainsKey(item.Key))
-                        {
-                            userTodayCount[item.Key] = 0;
-                        }
+                //    foreach (var item in userTotalCount)
+                //    {
+                //        if (!userTodayCount.ContainsKey(item.Key))
+                //        {
+                //            userTodayCount[item.Key] = 0;
+                //        }
 
-                        var userColl = LiteDBHelper.TaskStore.LiteDatabase.GetCollection<User>();
-                        userColl.UpdateMany($"{{ TotalDrawCount: {item.Value}, DayDrawCount: {userTodayCount[item.Key]} }}", $"_id = '{item.Key}'");
-                    }
-                }
+                //        var userColl = LiteDBHelper.TaskStore.LiteDatabase.GetCollection<User>();
+                //        userColl.UpdateMany($"{{ TotalDrawCount: {item.Value}, DayDrawCount: {userTodayCount[item.Key]} }}", $"_id = '{item.Key}'");
+                //    }
+                //}
                 else
                 {
                     var freeSql = FreeSqlHelper.FreeSql;
@@ -900,27 +761,27 @@ namespace Midjourney.API
             // 如果超过 x 条，删除最早插入的数据
             switch (setting.DatabaseType)
             {
-                case DatabaseType.NONE:
-                    break;
+                //case DatabaseType.NONE:
+                //    break;
 
-                case DatabaseType.LiteDB:
-                    {
-                        var documentCount = DbHelper.Instance.TaskStore.Count();
-                        if (documentCount > maxCount)
-                        {
-                            var documentsToDelete = (int)documentCount - maxCount;
-                            var ids = LiteDBHelper.TaskStore.GetCollection().Query().OrderBy(c => c.SubmitTime)
-                                .Limit(documentsToDelete)
-                                .ToList()
-                                .Select(c => c.Id);
+                //case DatabaseType.LiteDB:
+                //    {
+                //        var documentCount = DbHelper.Instance.TaskStore.Count();
+                //        if (documentCount > maxCount)
+                //        {
+                //            var documentsToDelete = (int)documentCount - maxCount;
+                //            var ids = LiteDBHelper.TaskStore.GetCollection().Query().OrderBy(c => c.SubmitTime)
+                //                .Limit(documentsToDelete)
+                //                .ToList()
+                //                .Select(c => c.Id);
 
-                            if (ids.Any())
-                            {
-                                LiteDBHelper.TaskStore.GetCollection().DeleteMany(c => ids.Contains(c.Id));
-                            }
-                        }
-                    }
-                    break;
+                //            if (ids.Any())
+                //            {
+                //                LiteDBHelper.TaskStore.GetCollection().DeleteMany(c => ids.Contains(c.Id));
+                //            }
+                //        }
+                //    }
+                //    break;
 
                 case DatabaseType.MongoDB:
                     {
@@ -984,7 +845,7 @@ namespace Midjourney.API
                 {
                     try
                     {
-                        DrawCounter.InitAccountTodayCounter(account.ChannelId);
+                        //DrawCounter.InitAccountTodayCounter(account.ChannelId);
 
                         await StartAccount(account);
                     }
@@ -1425,8 +1286,8 @@ namespace Midjourney.API
             model.CfHashUrl = null;
             model.CfUrl = null;
 
-            // 清除风控状态
-            model.RiskControlUnlockTime = null;
+            //// 清除风控状态
+            //model.RiskControlUnlockTime = null;
 
             // 验证 Interval
             if (param.Interval < 0m)
@@ -1681,13 +1542,13 @@ namespace Midjourney.API
 
                     case ENotificationType.CompleteTaskInfo:
                         {
-                            // 判断是否自身发出的
-                            if (isSelf)
-                            {
-                                return;
-                            }
+                            //// 判断是否自身发出的
+                            //if (isSelf)
+                            //{
+                            //    return;
+                            //}
 
-                            DrawCounter.Complete(notification.TaskInfo, notification.IsSuccess, false);
+                            //DrawCounter.Complete(notification.TaskInfo, notification.IsSuccess, false);
                         }
                         break;
 
