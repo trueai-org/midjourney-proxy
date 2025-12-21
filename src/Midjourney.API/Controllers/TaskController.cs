@@ -84,8 +84,7 @@ namespace Midjourney.API.Controllers
         [HttpGet("{id}/fetch")]
         public ActionResult<TaskInfo> Fetch(string id)
         {
-            var queueTask = _discordLoadBalancer.GetRunningTasks()?.FirstOrDefault(x => x.Id == id);
-            return queueTask ?? _taskStoreService.Get(id);
+            return _taskStoreService.Get(id);
         }
 
         /// <summary>
@@ -102,31 +101,32 @@ namespace Midjourney.API.Controllers
             }
 
             var user = _workContext.GetUser();
-       
-            var targetTask = _discordLoadBalancer.GetRunningTasks().FirstOrDefault(t => t.Id == id);
 
-            // 如果任务不在队列中，则从存储中获取
-            if (targetTask == null)
-            {
-                targetTask = _taskStoreService.Get(id);
-            }
-
+            var targetTask = _taskStoreService.Get(id);
             if (targetTask != null)
             {
                 if (user.Id == targetTask.UserId || user.Role == EUserRole.ADMIN)
                 {
                     if (!targetTask.IsCompleted)
                     {
-                        targetTask.Fail("取消任务");
-                        _taskStoreService.Save(targetTask);
-                    }
+                        if (DiscordInstance.GlobalRunningTasks.TryGetValue(id, out var task) && task != null)
+                        {
+                            task.Fail("取消任务");
+                            _taskStoreService.Save(targetTask);
+                        }
+                        else
+                        {
+                            targetTask.Fail("取消任务");
+                            _taskStoreService.Save(targetTask);
 
-                    var notification = new RedisNotification
-                    {
-                        Type = ENotificationType.CancelTaskInfo,
-                        TaskInfoId = id
-                    };
-                    RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
+                            var notification = new RedisNotification
+                            {
+                                Type = ENotificationType.CancelTaskInfo,
+                                TaskInfoId = id
+                            };
+                            RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
+                        }
+                    }
                 }
             }
 
@@ -168,16 +168,16 @@ namespace Midjourney.API.Controllers
             return NotFound(SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "关联任务不存在或已失效"));
         }
 
-        /// <summary>
-        /// 获取任务队列中的所有任务
-        /// </summary>
-        /// <returns>任务队列中的所有任务</returns>
-        [HttpGet("queue")]
-        public ActionResult<List<TaskInfo>> Queue()
-        {
-            var list = _discordLoadBalancer.GetQueueTasks().OrderBy(t => t.SubmitTime).ToList();
-            return Ok(list);
-        }
+        ///// <summary>
+        ///// 获取任务队列中的所有任务
+        ///// </summary>
+        ///// <returns>任务队列中的所有任务</returns>
+        //[HttpGet("queue")]
+        //public ActionResult<List<TaskInfo>> Queue()
+        //{
+        //    var list = _discordLoadBalancer.GetQueueTasks().OrderBy(t => t.SubmitTime).ToList();
+        //    return Ok(list);
+        //}
 
         /// <summary>
         /// 获取最新100条任务信息
@@ -210,28 +210,9 @@ namespace Midjourney.API.Controllers
                 return Ok(new List<TaskInfo>());
             }
 
-            // 从执行中的任务获取
-            var result = _discordLoadBalancer.GetRunningTasks().Where(c => ids.Contains(c.Id)).ToList();
+            var list = _taskStoreService.GetList(ids);
 
-            var notIds = new HashSet<string>();
-            foreach (var id in ids)
-            {
-                if (!notIds.Contains(id))
-                {
-                    if (!result.Any(c => c.Id == id))
-                    {
-                        notIds.Add(id);
-                    }
-                }
-            }
-
-            var list = _taskStoreService.GetList(notIds.ToList());
-            if (list.Count > 0)
-            {
-                result.AddRange(list);
-            }
-
-            return Ok(result);
+            return Ok(list);
         }
     }
 }

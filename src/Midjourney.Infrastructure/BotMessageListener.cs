@@ -1187,9 +1187,8 @@ namespace Midjourney.Infrastructure
                                             else
                                             {
                                                 // 没有获取到 none 尝试使用 mid 获取 task
-                                                var task = _discordInstance.GetRunningTasks()
-                                                    .Where(c => c.MessageId == metaId || c.MessageIds.Contains(metaId) || c.InteractionMetadataId == metaId)
-                                                    .FirstOrDefault();
+                                                var task = _discordInstance.GetRunningTasks().Where(c => c.MessageId == metaId
+                                                || c.MessageIds.Contains(metaId) || c.InteractionMetadataId == metaId).FirstOrDefault();
                                                 if (task != null)
                                                 {
                                                     var error = $"{title}, {desc}";

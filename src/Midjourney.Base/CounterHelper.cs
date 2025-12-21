@@ -205,6 +205,26 @@
         }
 
         /// <summary>
+        /// 获取所有账号今日绘图总数字典（不包含放大，包含失败）
+        /// key: speed_instacneId, value: count
+        /// </summary>
+        /// <returns></returns>
+        public static Dictionary<string, int> GetAllAccountTodayTotalCountDict()
+        {
+            var result = new Dictionary<string, int>();
+            var hashKeyPrefix = $"TaskAccountAll:{DateTime.Now:yyyyMMdd}";
+            var hashAll = RedisHelper.HGetAll<int>(hashKeyPrefix);
+            if (hashAll?.Count > 0)
+            {
+                foreach (var kvp in hashAll)
+                {
+                    result[kvp.Key] = kvp.Value;
+                }
+            }
+            return result;
+        }
+
+        /// <summary>
         /// 获取用户今日绘图总数
         /// </summary>
         /// <param name="userId"></param>

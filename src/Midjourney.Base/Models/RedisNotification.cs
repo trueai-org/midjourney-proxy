@@ -66,6 +66,11 @@
         CancelTaskInfo = 1,
 
         /// <summary>
+        /// 删除任务通知
+        /// </summary>
+        DeleteTaskInfo = 11,
+
+        /// <summary>
         /// 完成作业事件 - 统计成功/失败
         /// </summary>
         CompleteTaskInfo = 2,

@@ -1442,30 +1442,35 @@ namespace Midjourney.API.Controllers
                 return Result.Fail("演示模式，禁止操作");
             }
 
-            var queueTask = _loadBalancer.GetQueueTasks().FirstOrDefault(t => t.Id == id);
-            if (queueTask != null)
+            var user = _workContext.GetUser();
+            var targetTask = DbHelper.Instance.TaskStore.Get(id);
+            if (targetTask != null)
             {
-                queueTask.Fail("删除任务");
-
-                Thread.Sleep(1000);
-            }
-
-            var task = DbHelper.Instance.TaskStore.Get(id);
-            if (task != null)
-            {
-                var ins = _loadBalancer.GetDiscordInstance(task.InstanceId);
-                if (ins != null)
+                // 管理员才能删除任务
+                if (user.Role == EUserRole.ADMIN)
                 {
-                    var model = ins.FindRunningTask(c => c.Id == id).FirstOrDefault();
-                    if (model != null)
+                    if (!targetTask.IsCompleted)
                     {
-                        model.Fail("删除任务");
+                        if (DiscordInstance.GlobalRunningTasks.TryGetValue(id, out var task) && task != null)
+                        {
+                            // 取消任务
+                            task.Fail("删除任务");
+                            DbHelper.Instance.TaskStore.Delete(id);
+                        }
+                        else
+                        {
+                            targetTask.Fail("删除任务");
+                            DbHelper.Instance.TaskStore.Delete(id);
 
-                        Thread.Sleep(1000);
+                            var notification = new RedisNotification
+                            {
+                                Type = ENotificationType.DeleteTaskInfo,
+                                TaskInfoId = id
+                            };
+                            RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
+                        }
                     }
                 }
-
-                DbHelper.Instance.TaskStore.Delete(id);
             }
 
             return Result.Ok();
@@ -1535,41 +1540,6 @@ namespace Midjourney.API.Controllers
                         .ToDictionary(c => c.UserId, c => c.TotalCount);
                 }
             }
-            //else if (setting.DatabaseType == DatabaseType.LiteDB)
-            //{
-            //    var query = LiteDBHelper.UserStore.GetCollection().Query()
-            //        .WhereIf(!string.IsNullOrWhiteSpace(param.Id), c => c.Id == param.Id)
-            //        .WhereIf(!string.IsNullOrWhiteSpace(param.Name), c => c.Name.Contains(param.Name))
-            //        .WhereIf(!string.IsNullOrWhiteSpace(param.Email), c => c.Email.Contains(param.Email))
-            //        .WhereIf(!string.IsNullOrWhiteSpace(param.Phone), c => c.Phone.Contains(param.Phone))
-            //        .WhereIf(param.Role.HasValue, c => c.Role == param.Role)
-            //        .WhereIf(param.Status.HasValue, c => c.Status == param.Status);
-
-            //    count = query.Count();
-            //    list = query
-            //       .OrderByDescending(c => c.UpdateTime)
-            //       .Skip((page.Current - 1) * page.PageSize)
-            //       .Limit(page.PageSize)
-            //       .ToList();
-
-            //    // 计算用户累计绘图
-            //    var userIds = list.Select(c => c.Id).ToList();
-            //    if (userIds.Count > 0)
-            //    {
-            //        userTotalCount = LiteDBHelper.TaskStore.GetCollection()
-            //            .Query()
-            //            .Where(c => userIds.Contains(c.UserId))
-            //            .Select(c => c.UserId)
-            //            .ToList()
-            //            .GroupBy(c => c)
-            //            .Select(g => new
-            //            {
-            //                UserId = g.Key,
-            //                TotalCount = g.Count()
-            //            })
-            //            .ToDictionary(c => c.UserId, c => c.TotalCount);
-            //    }
-            //}
             else
             {
                 var freeSql = FreeSqlHelper.FreeSql;

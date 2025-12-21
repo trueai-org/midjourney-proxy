@@ -1520,22 +1520,26 @@ namespace Midjourney.API
                                 return;
                             }
 
-                            var targetTask = _discordLoadBalancer.GetRunningTasks().FirstOrDefault(t => t.Id == notification.TaskInfoId);
-
-                            // 如果任务不在队列中，则从存储中获取
-                            if (targetTask == null)
+                            if (DiscordInstance.GlobalRunningTasks.TryGetValue(notification.TaskInfoId, out var task) && task != null)
                             {
-                                targetTask = DbHelper.Instance.TaskStore.Get(notification.TaskInfoId);
+                                task.Fail("取消任务");
+                                DbHelper.Instance.TaskStore.Update(task);
+                            }
+                        }
+                        break;
+
+                    case ENotificationType.DeleteTaskInfo:
+                        {
+                            // 判断是否自身发出的
+                            if (isSelf)
+                            {
+                                return;
                             }
 
-                            if (targetTask != null)
+                            if (DiscordInstance.GlobalRunningTasks.TryGetValue(notification.TaskInfoId, out var task) && task != null)
                             {
-                                if (!targetTask.IsCompleted)
-                                {
-                                    targetTask.Fail("取消任务");
-
-                                    DbHelper.Instance.TaskStore.Update(targetTask);
-                                }
+                                task.Fail("删除任务");
+                                DbHelper.Instance.TaskStore.Delete(task.Id);
                             }
                         }
                         break;

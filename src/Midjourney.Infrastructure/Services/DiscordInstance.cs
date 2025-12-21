@@ -41,22 +41,22 @@ namespace Midjourney.Infrastructure.LoadBalancer
     /// </summary>
     public class DiscordInstance : IDiscordInstance
     {
-        private readonly object _accountLock = new();
+        /// <summary>
+        /// 全局正在运行的任务列表
+        /// </summary>
+        public static readonly ConcurrentDictionary<string, TaskInfo> GlobalRunningTasks = new();
 
+        private readonly object _accountLock = new();
         private readonly ILogger _logger = Log.Logger;
 
         private readonly ITaskStoreService _taskStoreService;
         private readonly INotifyService _notifyService;
 
         /// <summary>
-        /// 正在运行的任务列表 key：任务ID，value：任务信息
+        /// 当前实例正在运行的任务列表
+        /// key: TaskInfo.Id, value: TaskInfo
         /// </summary>
         private readonly ConcurrentDictionary<string, TaskInfo> _runningTasks = [];
-
-        /// <summary>
-        /// 任务Future映射 key：任务ID，value：作业 Action
-        /// </summary>
-        private readonly ConcurrentDictionary<string, Task> _taskFutureMap = [];
 
         private readonly Task _longTask;
         private readonly CancellationTokenSource _longToken;
@@ -487,34 +487,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
             await _ymTaskService.YouChuanLogin();
         }
 
-        ///// <summary>
-        ///// 验证 JWT Token 格式
-        ///// </summary>
-        ///// <param name="token"></param>
-        //public bool JwtTokenValidate(string token)
-        //{
-        //    // 验证 jwt 使用正则验证
-        //    if (string.IsNullOrWhiteSpace(token))
-        //    {
-        //        return false;
-        //    }
-
-        //    // 正则表达式验证 JWT 格式
-        //    var regex = new Regex(@"^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$");
-        //    var match = regex.Match(token);
-        //    return match.Success;
-
-        //    // discord 并非 jwt
-        //    //// JWT token 格式验证，使用 jwtreader
-        //    //var jwtHandler = new JwtSecurityTokenHandler();
-        //    //var securityToken = jwtHandler.ReadJwtToken(token);
-        //    //if (securityToken == null || securityToken.Payload.Count <= 0)
-        //    //{
-        //    //    return false;
-        //    //}
-        //    //return true;
-        //}
-
         /// <summary>
         /// 获取正在运行的任务列表。
         /// </summary>
@@ -544,30 +516,30 @@ namespace Midjourney.Infrastructure.LoadBalancer
             }
         }
 
-        /// <summary>
-        /// 获取队列中的任务列表。
-        /// </summary>
-        /// <returns>队列中的任务列表</returns>
-        public List<TaskInfo> GetQueueTasks()
-        {
-            var list = new List<TaskInfo>();
-            var defaultOrFastQueueTasks = _defaultOrFastQueue.Items();
-            if (defaultOrFastQueueTasks != null && defaultOrFastQueueTasks.Count > 0)
-            {
-                list.AddRange(defaultOrFastQueueTasks.Select(c => c.Info));
-            }
+        ///// <summary>
+        ///// 获取队列中的任务列表。
+        ///// </summary>
+        ///// <returns>队列中的任务列表</returns>
+        //public List<TaskInfo> GetQueueTasks()
+        //{
+        //    var list = new List<TaskInfo>();
+        //    var defaultOrFastQueueTasks = _defaultOrFastQueue.Items();
+        //    if (defaultOrFastQueueTasks != null && defaultOrFastQueueTasks.Count > 0)
+        //    {
+        //        list.AddRange(defaultOrFastQueueTasks.Select(c => c.Info));
+        //    }
 
-            if (Account.IsYouChuan)
-            {
-                var relaxQueueTasks = _relaxQueue.Items();
-                if (relaxQueueTasks != null && relaxQueueTasks.Count > 0)
-                {
-                    list.AddRange(relaxQueueTasks.Select(c => c.Info));
-                }
-            }
+        //    if (Account.IsYouChuan)
+        //    {
+        //        var relaxQueueTasks = _relaxQueue.Items();
+        //        if (relaxQueueTasks != null && relaxQueueTasks.Count > 0)
+        //        {
+        //            list.AddRange(relaxQueueTasks.Select(c => c.Info));
+        //        }
+        //    }
 
-            return list;
-        }
+        //    return list;
+        //}
 
         /// <summary>
         /// 获取队列中的任务数量。
@@ -858,7 +830,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     return;
                 }
 
-                AddRunningTask(task);
+                _runningTasks.TryAdd(task.Id, task);
+                GlobalRunningTasks.TryAdd(task.Id, task);
 
                 var hash = task.GetProperty<string>(Constants.TASK_PROPERTY_MESSAGE_HASH, default);
 
@@ -925,7 +898,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
             {
                 _seekParallelLock.Unlock();
 
-                RemoveRunningTask(task);
+                _runningTasks.TryRemove(task.Id, out _);
+                GlobalRunningTasks.TryRemove(task.Id, out _);
 
                 DbHelper.Instance.TaskStore.Update("Seed,SeedError,SeedMessageId", task);
             }
@@ -1638,6 +1612,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 }
 
                 _runningTasks.TryAdd(info.Id, info);
+                GlobalRunningTasks.TryAdd(info.Id, info);
 
                 // 判断当前实例是否可用
                 if (!IsAlive)
@@ -2413,7 +2388,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 }
 
                 _runningTasks.TryRemove(info.Id, out _);
-                _taskFutureMap.TryRemove(info.Id, out _);
+                GlobalRunningTasks.TryRemove(info.Id, out _);
 
                 // 如果任务执行结束，仍然处于未开始状态
                 if (!info.IsCompleted)
@@ -2423,16 +2398,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                 SaveAndNotify(info);
             }
-        }
-
-        public void AddRunningTask(TaskInfo task)
-        {
-            _runningTasks.TryAdd(task.Id, task);
-        }
-
-        public void RemoveRunningTask(TaskInfo task)
-        {
-            _runningTasks.TryRemove(task.Id, out _);
         }
 
         /// <summary>
@@ -2551,25 +2516,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     runningTask.Value.Fail("强制取消"); // 取消任务（假设TaskInfo有Cancel方法）
                 }
 
-                // 释放任务映射
-                foreach (var task in _taskFutureMap.Values)
-                {
-                    if (!task.IsCompleted)
-                    {
-                        try
-                        {
-                            task.Wait(); // 等待任务完成
-                        }
-                        catch
-                        {
-                            // Ignore exceptions from tasks
-                        }
-                    }
-                }
-
-                // 清理资源
-                _taskFutureMap.Clear();
                 _runningTasks.Clear();
+                GlobalRunningTasks.Clear();
             }
             catch
             {

@@ -1088,9 +1088,8 @@ namespace Midjourney.API.Controllers
                     }
 
                     // 获取执行中的任务数
-                    var rs = _discordLoadBalancer.GetRunningTasks();
-                    var taskCount = rs.Count(x => x.ClientIp == _ip);
-                    if (taskCount >= setting.GuestDefaultCoreSize)
+                    var currentCount = (int)DbHelper.Instance.TaskStore.Count(x => x.SubmitTime >= nowDate && x.ClientIp == _ip && x.Status == TaskStatus.IN_PROGRESS);
+                    if (currentCount >= setting.GuestDefaultCoreSize)
                     {
                         throw new LogicException("并发数已达上限");
                     }
@@ -1107,9 +1106,8 @@ namespace Midjourney.API.Controllers
                     }
 
                     // 获取队列中的任务数
-                    var qs = _discordLoadBalancer.GetQueueTasks();
-                    var taskCount = qs.Count(x => x.ClientIp == _ip);
-                    if (taskCount >= setting.GuestDefaultQueueSize)
+                    var currentCount = (int)DbHelper.Instance.TaskStore.Count(x => x.SubmitTime >= nowDate && x.ClientIp == _ip && (x.Status == TaskStatus.NOT_START || x.Status == TaskStatus.SUBMITTED));
+                    if (currentCount >= setting.GuestDefaultQueueSize)
                     {
                         throw new LogicException("队列数已达上限");
                     }
@@ -1120,17 +1118,8 @@ namespace Midjourney.API.Controllers
                 // 用户并发数
                 if (user.CoreSize > 0)
                 {
-                    var userDrawCount = (int)DbHelper.Instance.TaskStore
-                        .Count(x => x.SubmitTime >= nowDate && x.UserId == user.Id && (x.Status == TaskStatus.NOT_START || x.Status == TaskStatus.IN_PROGRESS || x.Status == TaskStatus.SUBMITTED));
+                    var userDrawCount = (int)DbHelper.Instance.TaskStore.Count(x => x.SubmitTime >= nowDate && x.UserId == user.Id && x.Status == TaskStatus.IN_PROGRESS);
                     if (userDrawCount >= user.CoreSize)
-                    {
-                        throw new LogicException("并发数已达上限");
-                    }
-
-                    // 获取执行中的任务数
-                    var rs = _discordLoadBalancer.GetRunningTasks();
-                    var taskCount = rs.Count(x => x.UserId == user.Id);
-                    if (taskCount >= user.CoreSize)
                     {
                         throw new LogicException("并发数已达上限");
                     }
@@ -1142,14 +1131,6 @@ namespace Midjourney.API.Controllers
                     var userDrawCount = (int)DbHelper.Instance.TaskStore
                         .Count(x => x.SubmitTime >= nowDate && x.UserId == user.Id && (x.Status == TaskStatus.NOT_START || x.Status == TaskStatus.SUBMITTED));
                     if (userDrawCount >= user.QueueSize)
-                    {
-                        throw new LogicException("队列数已达上限");
-                    }
-
-                    // 获取队列中的任务数
-                    var qs = _discordLoadBalancer.GetQueueTasks();
-                    var taskCount = qs.Count(x => x.UserId == user.Id);
-                    if (taskCount >= user.QueueSize)
                     {
                         throw new LogicException("队列数已达上限");
                     }

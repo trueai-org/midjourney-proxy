@@ -15,11 +15,11 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Additional Terms:
-// This software shall not be used for any illegal activities. 
+// This software shall not be used for any illegal activities.
 // Users must comply with all applicable laws and regulations,
-// particularly those related to image and video processing. 
+// particularly those related to image and video processing.
 // The use of this software for any form of illegal face swapping,
-// invasion of privacy, or any other unlawful purposes is strictly prohibited. 
+// invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
 using System.Collections.Concurrent;
@@ -36,7 +36,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
     ///
     /// TODO webhooks
     /// https://replicate.com/docs/reference/webhooks
-    /// 
+    ///
     /// https://github.com/deepinsight/insightface
     /// https://www.picsi.ai/
     /// https://www.picsi.ai/faceswap
@@ -86,71 +86,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
         }
 
         /// <summary>
-        /// 获取正在运行的任务列表。
-        /// </summary>
-        /// <returns>正在运行的任务列表</returns>
-        public List<TaskInfo> GetRunningTasks() => _runningTasks.Keys.ToList();
-
-        /// <summary>
-        /// 获取队列中的任务列表。
-        /// </summary>
-        /// <returns>队列中的任务列表</returns>
-        public List<TaskInfo> GetQueueTasks() => new List<TaskInfo>(_queueTasks);
-
-        /// <summary>
-        /// 退出任务并进行保存和通知。
-        /// </summary>
-        /// <param name="task">任务信息</param>
-        public void ExitTask(TaskInfo task)
-        {
-            _taskFutureMap.TryRemove(task.Id, out _);
-
-            SaveAndNotify(task);
-
-            // 判断 _queueTasks 队列中是否存在指定任务，如果有则移除
-            //if (_queueTasks.Any(c => c.Item1.Id == task.Id))
-            //{
-            //    _queueTasks = new ConcurrentQueue<(TaskInfo, Func<Task<Message>>)>(_queueTasks.Where(c => c.Item1.Id != task.Id));
-            //}
-
-            // 判断 _queueTasks 队列中是否存在指定任务，如果有则移除
-            // 使用线程安全的方式移除
-            if (_queueTasks.Any(c => c.Id == task.Id))
-            {
-                // 移除 _queueTasks 队列中指定的任务
-                var tempQueue = new ConcurrentQueue<TaskInfo>();
-
-                // 将不需要移除的元素加入到临时队列中
-                while (_queueTasks.TryDequeue(out var item))
-                {
-                    if (item.Id != task.Id)
-                    {
-                        tempQueue.Enqueue(item);
-                    }
-                }
-
-                // 交换队列引用
-                _queueTasks = tempQueue;
-            }
-        }
-
-        /// <summary>
-        /// 获取正在运行的任务Future映射。
-        /// </summary>
-        /// <returns>任务Future映射</returns>
-        public Dictionary<string, Task> GetRunningFutures() => new Dictionary<string, Task>(_taskFutureMap);
-
-        public void AddRunningTask(TaskInfo task)
-        {
-            _runningTasks.TryAdd(task, 0);
-        }
-
-        public void RemoveRunningTask(TaskInfo task)
-        {
-            _runningTasks.TryRemove(task, out _);
-        }
-
-        /// <summary>
         /// 异步保存和通知任务。
         /// </summary>
         /// <param name="task">任务信息</param>
@@ -165,36 +100,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
         {
             _taskStoreService.Save(task);
             _notifyService.NotifyTaskChange(task);
-        }
-
-        /// <summary>
-        /// 查找符合条件的正在运行的任务。
-        /// </summary>
-        /// <param name="condition">条件</param>
-        /// <returns>符合条件的正在运行的任务列表</returns>
-        public IEnumerable<TaskInfo> FindRunningTask(Func<TaskInfo, bool> condition)
-        {
-            return GetRunningTasks().Where(condition);
-        }
-
-        /// <summary>
-        /// 根据ID获取正在运行的任务。
-        /// </summary>
-        /// <param name="id">任务ID</param>
-        /// <returns>任务信息</returns>
-        public TaskInfo GetRunningTask(string id)
-        {
-            return GetRunningTasks().FirstOrDefault(t => id == t.Id);
-        }
-
-        /// <summary>
-        /// 根据 ID 获取历史任务
-        /// </summary>
-        /// <param name="id"></param>
-        /// <returns></returns>
-        public TaskInfo GetTask(string id)
-        {
-            return _taskStoreService.Get(id);
         }
 
         /// <summary>
