@@ -397,16 +397,15 @@ namespace Midjourney.Base.Models
         public string ReplicateTarget { get; set; }
 
         /// <summary>
-        /// 当前绘画的速度模式
-        /// 1、优先从路劲获取指定的速度
-        /// 2、如果路径没有指定速度，则从执行结果中获取速度模式
-        /// 3、变化任务时，默认取父级的速度模式
-        /// 4、如果任务成功后，依然没有速度，则默认为 FAST
+        /// 当前绘画的速度模式，选择实例时确定速度，最终速度由任务成功后确定
+        /// 1、变化任务时，默认取父级的速度模式
+        /// 2、如果任务成功后，依然没有速度，则默认为 FAST
         /// </summary>
         public GenerationSpeedMode? Mode { get; set; }
 
         /// <summary>
-        /// 客户请求的速度模式 - 第一优先级速度
+        /// 客户请求的速度模式，期望的第一速度
+        /// 在创建任务时就确定了
         /// </summary>
         public GenerationSpeedMode? RequestMode { get; set; }
 
@@ -710,16 +709,17 @@ namespace Midjourney.Base.Models
             {
                 Mode = GenerationSpeedMode.FAST;
             }
-            if (RequestMode == null)
-            {
-                RequestMode = GenerationSpeedMode.FAST;
-            }
 
             // 如果开启了保持速度模式，且速度模式不一致时，替换提示词 RequestMode
             var setting = GlobalConfiguration.Setting;
-            if (RequestMode != null && Mode != RequestMode && setting.PrivateKeepFinalPromptRequestSpeedMode)
+            if (Mode != RequestMode && setting.PrivateKeepFinalPromptRequestSpeedMode)
             {
-                finalPrompt = finalPrompt.AppendSpeedMode(RequestMode);
+                finalPrompt = finalPrompt.RemoveSpeedMode();
+
+                if (RequestMode != null)
+                {
+                    finalPrompt = finalPrompt.AppendSpeedMode(RequestMode.Value);
+                }
 
                 SetProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, finalPrompt);
             }

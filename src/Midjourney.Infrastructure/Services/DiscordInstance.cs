@@ -287,7 +287,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 }
 
                 // 悠船每日限制慢速
-                var relaxCount = (int)CounterHelper.GetYouchuanRelaxCount(acc.ChannelId);
+                var relaxCount = CounterHelper.GetYouchuanRelaxCount(acc.ChannelId);
                 var limit = acc.YouChuanRelaxDailyLimit;
                 if (relaxCount < limit - acc.RelaxCoreSize - acc.RelaxQueueSize)
                 {
@@ -2986,10 +2986,10 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     && info.Action != TaskAction.DESCRIBE
                     && info.Action != TaskAction.VIDEO)
                 {
-                    if (IsYouChuanAllowRelax())
+                    // 如果有慢速和快速，且前台允许快速和慢速
+                    if (acc.AllowModes == null || (acc.AllowModes.Contains(GenerationSpeedMode.FAST) && acc.AllowModes.Contains(GenerationSpeedMode.RELAX)))
                     {
-                        // 如果有慢速和快速，且前台允许快速和慢速
-                        if (acc.AllowModes == null || (acc.AllowModes.Contains(GenerationSpeedMode.FAST) && acc.AllowModes.Contains(GenerationSpeedMode.RELAX)))
+                        if (IsYouChuanAllowRelax())
                         {
                             prompt = prompt.AppendSpeedMode(GenerationSpeedMode.RELAX);
                         }

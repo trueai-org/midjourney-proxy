@@ -1185,12 +1185,10 @@ namespace Midjourney.API.Controllers
                 }
             }
 
-            // 第四优先级 - NULL
-            // 无需处理
+            // 第四优先级 - NULL - 无需处理
 
             // 最后去重
             accountFilter.Modes = modes.Distinct().ToList() ?? [];
-
 
             task.AccountFilter = accountFilter;
             task.StorageOption = _storageOption;
