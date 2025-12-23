@@ -1160,34 +1160,6 @@ namespace Midjourney.API.Controllers
                     .Take(page.PageSize)
                     .ToList();
             }
-            //else if (setting.DatabaseType == DatabaseType.LiteDB)
-            //{
-            //    var query = LiteDBHelper.AccountStore.GetCollection().Query()
-            //        .WhereIf(!string.IsNullOrWhiteSpace(param.GuildId), c => c.GuildId == param.GuildId)
-            //        .WhereIf(!string.IsNullOrWhiteSpace(param.ChannelId), c => c.ChannelId == param.ChannelId)
-            //        .WhereIf(param.Enable.HasValue, c => c.Enable == param.Enable)
-            //        .WhereIf(!string.IsNullOrWhiteSpace(param.Remark), c => c.Remark.Contains(param.Remark))
-            //        .WhereIf(!string.IsNullOrWhiteSpace(param.Sponsor), c => c.Sponsor.Contains(param.Sponsor));
-
-            //    if (allowModes.Length > 0)
-            //    {
-            //        var m1 = allowModes.First();
-            //        query = query.Where(c => c.AllowModes.Contains(m1));
-            //    }
-
-            //    count = query.Count();
-            //    list = query
-            //        .OrderByIf(nameof(DiscordAccount.GuildId).Equals(sort.Predicate, StringComparison.OrdinalIgnoreCase), c => c.GuildId, sort.Reverse)
-            //        .OrderByIf(nameof(DiscordAccount.ChannelId).Equals(sort.Predicate, StringComparison.OrdinalIgnoreCase), c => c.ChannelId, sort.Reverse)
-            //        .OrderByIf(nameof(DiscordAccount.Enable).Equals(sort.Predicate, StringComparison.OrdinalIgnoreCase), c => c.Enable, sort.Reverse)
-            //        .OrderByIf(nameof(DiscordAccount.Remark).Equals(sort.Predicate, StringComparison.OrdinalIgnoreCase), c => c.Remark, sort.Reverse)
-            //        .OrderByIf(nameof(DiscordAccount.Sponsor).Equals(sort.Predicate, StringComparison.OrdinalIgnoreCase), c => c.Sponsor, sort.Reverse)
-            //        .OrderByIf(nameof(DiscordAccount.DateCreated).Equals(sort.Predicate, StringComparison.OrdinalIgnoreCase), c => c.DateCreated, sort.Reverse)
-            //        .OrderByIf(string.IsNullOrWhiteSpace(sort.Predicate), c => c.DateCreated, true)
-            //        .Skip((page.Current - 1) * page.PageSize)
-            //        .Limit(page.PageSize)
-            //        .ToList();
-            //}
             else
             {
                 var freeSql = FreeSqlHelper.FreeSql;
@@ -1576,7 +1548,8 @@ namespace Midjourney.API.Controllers
 
             foreach (var item in list)
             {
-                item.TotalDrawCount = CounterHelper.GetUserTodayTotalCount(item.Id);
+                item.DayDrawCount = CounterHelper.GetUserTodayTotalCount(item.Id);
+                item.TotalDrawCount = userTotalCount.TryGetValue(item.Id, out int value) ? value : 0;
             }
 
             if (_isAnonymous)

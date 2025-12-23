@@ -108,63 +108,7 @@ namespace Midjourney.API
                         // 启用版本对比更新检查，启用时以注册中心的服务版本为准，如果版本过低则执行更新检查，然后退出应用程序
                         if (setting.ConsulOptions.EnableVersionCheck)
                         {
-                            try
-                            {
-                                var currentVersion = GlobalConfiguration.Version;
-                                var consulVersion = await _consulService.GetCurrentVersionAsync();
-                                if (!string.IsNullOrWhiteSpace(consulVersion) && !string.IsNullOrWhiteSpace(consulVersion) && currentVersion != consulVersion)
-                                {
-                                    var exeVer = new Version(currentVersion.TrimStart('v'));
-                                    var conVer = new Version(consulVersion.TrimStart('v'));
-                                    if (exeVer < conVer)
-                                    {
-                                        _logger.Information("注册中心检测到新版本，当前版本: {@0}，注册中心版本: {@1}，开始更新检查...", currentVersion, consulVersion);
-
-                                        // 检查更新，当有可用更新时
-                                        var downloding = await UpgradeCheck();
-                                        if (downloding)
-                                        {
-                                            // 最多等待 5 分钟，获取下载状态
-                                            var downlodingTask = new Task(() =>
-                                            {
-                                                var sw = new Stopwatch();
-                                                sw.Start();
-                                                while (sw.Elapsed.TotalMinutes < 5)
-                                                {
-                                                    var status = _upgradeService.GetUpgradeStatus();
-                                                    if (status.Status == UpgradeStatus.ReadyToRestart)
-                                                    {
-                                                        break;
-                                                    }
-                                                    Thread.Sleep(1000);
-                                                }
-                                            });
-                                            downlodingTask.Start();
-                                            downlodingTask.Wait();
-
-                                            // 再次获取状态
-                                            var finalStatus = _upgradeService.GetUpgradeStatus();
-                                            if (finalStatus.Status == UpgradeStatus.ReadyToRestart)
-                                            {
-                                                _logger.Information("注册中心版本更新检查完成，应用程序即将退出以完成更新。");
-
-                                                // 使用非 0 退出码，表示需要重启应用程序
-                                                Environment.Exit(101);
-
-                                                return;
-                                            }
-                                            else
-                                            {
-                                                _logger.Warning("注册中心版本更新检查完成，但更新未能成功完成，状态：{@0}，请手动检查更新。", finalStatus.Status);
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                _logger.Error(ex, "Consul 版本对比更新检查执行失败");
-                            }
+                            await ConsulVersionCheck();
                         }
                     }
                     else
@@ -508,6 +452,77 @@ namespace Midjourney.API
             }
         }
 
+        /// <summary>
+        /// 多节点版本一致性更新检查
+        /// </summary>
+        /// <returns></returns>
+        private async Task ConsulVersionCheck()
+        {
+            var setting = GlobalConfiguration.Setting;
+
+            // 启用版本对比更新检查，启用时以注册中心的服务版本为准，如果版本过低则执行更新检查，然后退出应用程序
+            if (setting.ConsulOptions?.Enable == true && setting.ConsulOptions.EnableVersionCheck)
+            {
+                try
+                {
+                    var currentVersion = GlobalConfiguration.Version;
+                    var consulVersion = await _consulService.GetCurrentVersionAsync();
+                    if (!string.IsNullOrWhiteSpace(consulVersion) && !string.IsNullOrWhiteSpace(consulVersion) && currentVersion != consulVersion)
+                    {
+                        var exeVer = new Version(currentVersion.TrimStart('v'));
+                        var conVer = new Version(consulVersion.TrimStart('v'));
+                        if (exeVer < conVer)
+                        {
+                            _logger.Information("注册中心检测到新版本，当前版本: {@0}，注册中心版本: {@1}，开始更新检查...", currentVersion, consulVersion);
+
+                            // 检查更新，当有可用更新时
+                            var downloding = await UpgradeCheck();
+                            if (downloding)
+                            {
+                                // 最多等待 5 分钟，获取下载状态
+                                var downlodingTask = new Task(() =>
+                                {
+                                    var sw = new Stopwatch();
+                                    sw.Start();
+                                    while (sw.Elapsed.TotalMinutes < 5)
+                                    {
+                                        var status = _upgradeService.GetUpgradeStatus();
+                                        if (status.Status == UpgradeStatus.ReadyToRestart)
+                                        {
+                                            break;
+                                        }
+                                        Thread.Sleep(1000);
+                                    }
+                                });
+                                downlodingTask.Start();
+                                downlodingTask.Wait();
+
+                                // 再次获取状态
+                                var finalStatus = _upgradeService.GetUpgradeStatus();
+                                if (finalStatus.Status == UpgradeStatus.ReadyToRestart)
+                                {
+                                    _logger.Information("注册中心版本更新检查完成，应用程序即将退出以完成更新。");
+
+                                    // 使用非 0 退出码，表示需要重启应用程序
+                                    Environment.Exit(101);
+
+                                    return;
+                                }
+                                else
+                                {
+                                    _logger.Warning("注册中心版本更新检查完成，但更新未能成功完成，状态：{@0}，请手动检查更新。", finalStatus.Status);
+                                }
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error(ex, "Consul 版本对比更新检查执行失败");
+                }
+            }
+        }
+
         private async void DoWork(object state)
         {
             _logger.Information("开始例行检查");
@@ -518,6 +533,9 @@ namespace Midjourney.API
                 {
                     try
                     {
+                        // 多节点版本一致性更新检查
+                        await ConsulVersionCheck();
+
                         // 异步更新检查
                         _ = UpgradeCheck();
 
