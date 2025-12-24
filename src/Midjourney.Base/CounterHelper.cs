@@ -330,5 +330,22 @@
             }
             return 0;
         }
+
+        /// <summary>
+        /// 账号同步累计失败次数，1小时超过 10 次禁用账号
+        /// </summary>
+        /// <param name="instanceId"></param>
+        /// <param name="incrementBy"></param>
+        /// <returns></returns>
+        public static int IncrementAccountSyncFailure(string instanceId, int incrementBy = 1)
+        {
+            var key = $"AccountSyncFailureCount:{instanceId}-{DateTime.Now:yyyyMMddHH}";
+            var count = (int)RedisHelper.IncrBy(key, incrementBy);
+
+            // 设置过期时间为1小时
+            RedisHelper.Expire(key, TimeSpan.FromHours(1));
+
+            return count;
+        }
     }
 }

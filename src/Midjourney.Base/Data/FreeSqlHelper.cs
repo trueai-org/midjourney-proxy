@@ -51,7 +51,7 @@ namespace Midjourney.Base.Data
         /// </summary>
         public static IFreeSql Init(DatabaseType databaseType, string databaseConnectionString = null, bool autoSyncStructure = false)
         {
-            if (databaseType == DatabaseType.NONE || databaseType == DatabaseType.MongoDB)
+            if (databaseType == DatabaseType.NONE || databaseType == DatabaseType.LiteDB || databaseType == DatabaseType.MongoDB)
             {
                 return null;
             }

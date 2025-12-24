@@ -3675,8 +3675,13 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 await using var lockHandle = await AdaptiveLock.LockAsync(acc.InfoLockKey, 30);
                 if (!lockHandle.IsAcquired)
                 {
+                    Log.Warning("同步信息被锁定，跳过执行，ChannelId={0}", acc.ChannelId);
                     return false;
                 }
+
+                
+
+
 
                 var success = false;
 
