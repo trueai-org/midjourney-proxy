@@ -11,6 +11,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<PackageReference Include="HtmlAgilityPack" Version="1.12.4" />
 		<PackageReference Include="Consul" Version="1.7.14.7" />
 		<PackageReference Include="CSRedisCore" Version="3.8.805" />
 		<PackageReference Include="FFMpegCore" Version="5.2.0" />

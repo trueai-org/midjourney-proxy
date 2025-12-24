@@ -3680,10 +3680,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     return false;
                 }
 
-                
-
-
-
                 var success = false;
 
                 // 悠船立即同步，不缓存
