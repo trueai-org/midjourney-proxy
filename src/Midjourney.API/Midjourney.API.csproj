@@ -9,7 +9,7 @@
 		<IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
 		<EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
 		<SatelliteResourceLanguages>zh-Hans</SatelliteResourceLanguages>
-		<AssemblyVersion>10.0.9</AssemblyVersion>
+		<AssemblyVersion>10.0.10</AssemblyVersion>
 		<DockerfileContext>..\..</DockerfileContext>
 	</PropertyGroup>
 
@@ -29,16 +29,16 @@
 		<PackageReference Include="Swashbuckle.AspNetCore" Version="6.4.0" />
 	</ItemGroup>
 
-	<!--<ItemGroup>
+	<ItemGroup>
 		<ProjectReference Include="..\Midjourney.Infrastructure\Midjourney.Infrastructure.csproj" />
 		<Reference Include="Midjourney.License">
 			<HintPath>..\lib\Midjourney.License.dll</HintPath>
 		</Reference>
-	</ItemGroup>-->
+	</ItemGroup>
 
 	<!-- 开发时引用项目 -->
 	<!-- 发布时引用 DLL -->
-	<ItemGroup Condition="'$(Configuration)' == 'Debug'">
+	<!--<ItemGroup Condition="'$(Configuration)' == 'Debug'">
 		<ProjectReference Include="..\Midjourney.Infrastructure\Midjourney.Infrastructure.csproj" />
 		<ProjectReference Include="..\..\..\src\Midjourney.License\Midjourney.License.csproj" />
 	</ItemGroup>
@@ -47,7 +47,7 @@
 		<Reference Include="Midjourney.License">
 			<HintPath>..\lib\Midjourney.License.dll</HintPath>
 		</Reference>
-	</ItemGroup>
+	</ItemGroup>-->
 	
 	<ItemGroup>
 	  <Folder Include="Upgrade\" />
