@@ -64,12 +64,15 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <param name="describe">过滤支持 Describe 的账号</param>
         /// <param name="isDomain">过滤垂直领域的账号</param>
         /// <param name="domainIds">过滤垂直领域 ID</param>
-        /// <param name="ids">指定 ids 账号</param>
+        /// <param name="instanceIds">指定 ids 账号</param>
         /// <param name="shorten"></param>
         /// <param name="preferredSpeedMode">首选速度模式，优先使用此模式过滤</param>
         /// <param name="isYm">悠船/官方账号</param>
         /// <param name="isHdVideo"></param>
         /// <param name="isUpscale">是否为 redis 模式下的放大任务，如果 redis 放大任务，则不验证队列长度</param>
+        /// <param name="isVideo"></param>
+        /// <param name="isYouChuan"></param>
+        /// <param name="notInstanceIds">排除的账号</param>
         public (DiscordInstance instance, GenerationSpeedMode? confirmMode) ChooseInstance(
             AccountFilter accountFilter = null,
             bool? isNewTask = null,
@@ -78,13 +81,14 @@ namespace Midjourney.Infrastructure.LoadBalancer
             bool? describe = null,
             bool? isDomain = null,
             List<string> domainIds = null,
-            List<string> ids = null,
+            List<string> instanceIds = null,
             bool? shorten = null,
             bool? isYm = null,
             bool? isVideo = null,
             bool? isHdVideo = null,
             bool? isYouChuan = null,
-            bool? isUpscale = null)
+            bool? isUpscale = null,
+            List<string> notInstanceIds = null)
         {
             var sw = Stopwatch.StartNew();
             try
@@ -106,9 +110,14 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 foreach (var mode in modes)
                 {
                     var list = GetAliveInstances()
-
                        // 指定 ID 的实例
                        .WhereIf(!string.IsNullOrWhiteSpace(accountFilter?.InstanceId), c => c.ChannelId == accountFilter.InstanceId)
+
+                       // 过滤指定账号
+                       .WhereIf(instanceIds?.Count > 0, c => instanceIds.Contains(c.Account.ChannelId))
+
+                       // 排除指定 ID 的实例
+                       .WhereIf(notInstanceIds != null && notInstanceIds.Count > 0, c => !notInstanceIds.Contains(c.ChannelId))
 
                        // 允许继续绘图
                        .Where(c => c.Account.Enable == true && isUpscale != true && c.IsAllowContinue(mode))
@@ -155,8 +164,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
                        .WhereIf(isDomain == true && domainIds?.Count > 0, c => c.Account.IsVerticalDomain && c.Account.VerticalDomainIds.Any(x => domainIds.Contains(x)))
                        .WhereIf(isDomain == false, c => c.Account.IsVerticalDomain != true)
 
-                       // 过滤指定账号
-                       .WhereIf(ids?.Count > 0, c => ids.Contains(c.Account.ChannelId))
                        .ToList();
 
                     inc = _rule.Choose(list);
@@ -184,7 +191,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                         describe,
                         isDomain,
                         domainIds,
-                        ids,
+                        instanceIds,
                         shorten,
                         isYm,
                         isVideo,

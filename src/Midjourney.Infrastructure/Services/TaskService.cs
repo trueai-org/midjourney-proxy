@@ -1273,6 +1273,18 @@ namespace Midjourney.Infrastructure.Services
             var setting = GlobalConfiguration.Setting;
             GenerationSpeedMode? mode = null;
 
+            var targetTask = _taskStoreService.Get(submitAction.TaskId)!;
+            if (targetTask == null)
+            {
+                return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "目标任务不存在");
+            }
+
+            // 如果没有设置模式，则使用目标任务的模式
+            if (task.Mode == null)
+            {
+                task.Mode = targetTask.Mode;
+            }
+
             var instance = _discordLoadBalancer.GetDiscordInstanceIsAlive(task.SubInstanceId ?? task.InstanceId);
             if (instance == null)
             {
@@ -1292,13 +1304,15 @@ namespace Midjourney.Infrastructure.Services
                 {
                     var (okInstance, okMode) = _discordLoadBalancer.ChooseInstance(
                          accountFilter: task.AccountFilter,
-                         botType: task.RealBotType ?? task.BotType, ids: ids,
-                         isUpscale: task.Action == TaskAction.UPSCALE);
+                         botType: task.RealBotType ?? task.BotType,
+                         instanceIds: ids,
+                         isUpscale: task.Action == TaskAction.UPSCALE,
+                         notInstanceIds: [task.SubInstanceId ?? task.InstanceId]);
 
                     if (okInstance != null)
                     {
                         // 如果找到了，则标记当前任务的子频道信息
-                        task.SubInstanceId = task.SubInstanceId ?? task.InstanceId;
+                        task.SubInstanceId = okInstance.ChannelId;
 
                         instance = okInstance;
                         mode = okMode;
@@ -1306,34 +1320,28 @@ namespace Midjourney.Infrastructure.Services
                 }
             }
 
-            var targetTask = _taskStoreService.Get(submitAction.TaskId)!;
-            if (targetTask == null)
-            {
-                return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "目标任务不存在");
-            }
-
-            if (mode == null)
-            {
-                mode = targetTask.Mode;
-            }
-
             // 悠船账号，当无可用账号时，采取重试机制
-            if (instance == null || !instance.IsAllowContinue(mode ?? GenerationSpeedMode.FAST))
+            if (instance == null)
             {
                 if (targetTask.IsPartner && setting.EnableYouChuanRetry)
                 {
+                    // 清除指定实例
+                    task.AccountFilter ??= new();
+                    task.AccountFilter.InstanceId = null;
+
                     var (okInstance, okMode) = _discordLoadBalancer.ChooseInstance(task.AccountFilter,
                         isNewTask: true,
                         botType: task.RealBotType ?? task.BotType,
                         isYouChuan: true,
-                        isUpscale: task.Action == TaskAction.UPSCALE);
+                        isUpscale: task.Action == TaskAction.UPSCALE,
+                        notInstanceIds: [task.SubInstanceId ?? task.InstanceId]);
 
                     instance = okInstance;
                     mode = okMode;
                 }
             }
 
-            if (instance == null || !instance.IsAllowContinue(mode ?? GenerationSpeedMode.FAST))
+            if (instance == null)
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
@@ -1348,23 +1356,10 @@ namespace Midjourney.Infrastructure.Services
             task.IsOfficial = instance.Account.IsOfficial;
             task.InstanceId = instance.ChannelId;
 
-            if (task.Action == TaskAction.UPSCALE)
-            {
-                // redis 模式下放大不验证速度和额度
-            }
-            else
-            {
-                task.Mode = mode;
-            }
-
             var messageFlags = targetTask.GetProperty<string>(Constants.TASK_PROPERTY_FLAGS, default)?.ToInt() ?? 0;
             var messageId = targetTask.GetProperty<string>(Constants.TASK_PROPERTY_MESSAGE_ID, default);
 
-            if (task.Mode == null)
-            {
-                // 如果没有设置模式，则使用目标任务的模式
-                task.Mode = targetTask.Mode;
-            }
+            task.Mode = mode;
 
             task.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, instance.ChannelId);
             task.IsOfficial = targetTask.IsOfficial;
@@ -1763,7 +1758,7 @@ namespace Midjourney.Infrastructure.Services
                 if (ids.Count > 0)
                 {
                     var (okInstance, okMode) = _discordLoadBalancer.ChooseInstance(accountFilter: task.AccountFilter,
-                          botType: task.RealBotType ?? task.BotType, ids: ids);
+                          botType: task.RealBotType ?? task.BotType, instanceIds: ids);
 
                     if (okInstance != null)
                     {
