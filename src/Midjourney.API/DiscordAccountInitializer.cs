@@ -542,7 +542,7 @@ namespace Midjourney.API
                         var now = new DateTimeOffset(DateTime.Now.Date).ToUnixTimeMilliseconds();
 
                         GlobalConfiguration.TodayDraw = (int)DbHelper.Instance.TaskStore.Count(x => x.SubmitTime >= now);
-                        GlobalConfiguration.TotalDraw = (int)DbHelper.Instance.TaskStore.Count(x => true);
+                        GlobalConfiguration.TotalDraw = (int)DbHelper.Instance.TaskStore.Count();
 
                         // 用户绘图统计
                         UserStat();
@@ -593,7 +593,7 @@ namespace Midjourney.API
                     var taskColl = MongoHelper.GetCollection<TaskInfo>();
                     var userColl = MongoHelper.GetCollection<User>();
 
-                    userTotalCount = taskColl.AsQueryable()
+                    userTotalCount = taskColl.AsQueryable(new AggregateOptions() { AllowDiskUse = true })
                            .GroupBy(c => c.UserId)
                            .Select(g => new
                            {
@@ -604,7 +604,7 @@ namespace Midjourney.API
                            .Where(c => !string.IsNullOrWhiteSpace(c.UserId))
                            .ToDictionary(c => c.UserId, c => c.TotalCount);
 
-                    userTodayCount = taskColl.AsQueryable()
+                    userTodayCount = taskColl.AsQueryable(new AggregateOptions() { AllowDiskUse = true })
                            .Where(c => c.SubmitTime >= now)
                            .GroupBy(c => c.UserId)
                            .Select(g => new
@@ -1659,6 +1659,7 @@ namespace Midjourney.API
                             }
 
                             await SettingHelper.Instance.LoadAsync();
+                            SettingHelper.Instance.ApplySettings();
                         }
                         break;
 

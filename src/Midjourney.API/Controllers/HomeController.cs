@@ -73,7 +73,7 @@ namespace Midjourney.API.Controllers
 
                 dto.TodayDraw = (int)DbHelper.Instance.TaskStore.Count(x => x.SubmitTime >= now);
                 dto.YesterdayDraw = (int)DbHelper.Instance.TaskStore.Count(x => x.SubmitTime >= yesterday && x.SubmitTime < now);
-                dto.TotalDraw = (int)DbHelper.Instance.TaskStore.Count(x => true);
+                dto.TotalDraw = (int)DbHelper.Instance.TaskStore.Count();
 
                 // 今日绘图客户端 top 10
                 var setting = GlobalConfiguration.Setting;
@@ -136,11 +136,23 @@ namespace Midjourney.API.Controllers
                 // 使用数据库统计
                 if (GlobalConfiguration.Setting.DatabaseType == DatabaseType.MongoDB)
                 {
-                    var taskInfos = MongoHelper.GetCollection<TaskInfo>().AsQueryable()
-                          .Where(c => c.SubmitTime >= now && c.Status == TaskStatus.SUCCESS)
-                          .GroupBy(c => new { c.Mode, c.Action })
-                          .ToList()
-                          .ToDictionary(c => c.Key, c => c.Count());
+                    //var taskInfos = MongoHelper.GetCollection<TaskInfo>().AsQueryable()
+                    //      .Where(c => c.SubmitTime >= now && c.Status == TaskStatus.SUCCESS)
+                    //      .GroupBy(c => new { c.Mode, c.Action })
+                    //      .ToList()
+                    //      .ToDictionary(c => c.Key, c => c.Count());
+
+                    var collection = MongoHelper.GetCollection<TaskInfo>();
+                    var aggregateOptions = new AggregateOptions { AllowDiskUse = true };
+                    var taskInfos = collection.Aggregate(aggregateOptions)
+                        .Match(c => c.SubmitTime >= now && c.Status == TaskStatus.SUCCESS)
+                        .Group(
+                            c => new { c.Mode, c.Action },
+                            g => new { Key = g.Key, Count = g.Count() }
+                        )
+                        .ToList()
+                        .ToDictionary(c => c.Key, c => c.Count);
+
                     var homeCounter = new Dictionary<GenerationSpeedMode, Dictionary<TaskAction, int>>();
                     foreach (var kvp in taskInfos)
                     {

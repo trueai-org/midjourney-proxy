@@ -15,15 +15,15 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Additional Terms:
-// This software shall not be used for any illegal activities. 
+// This software shall not be used for any illegal activities.
 // Users must comply with all applicable laws and regulations,
-// particularly those related to image and video processing. 
+// particularly those related to image and video processing.
 // The use of this software for any form of illegal face swapping,
-// invasion of privacy, or any other unlawful purposes is strictly prohibited. 
+// invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
-using MongoDB.Driver;
 using System.Linq.Expressions;
+using MongoDB.Driver;
 
 namespace Midjourney.Base.Data
 {
@@ -80,7 +80,7 @@ namespace Midjourney.Base.Data
         public bool Update(string fields, T item)
         {
             // 获取现有文档
-            var model = _collection.Find(c => c.Id == item.Id).FirstOrDefault();
+            var model = _collection.Find(c => c.Id == item.Id, new FindOptions { AllowDiskUse = true }).FirstOrDefault();
             if (model == null)
                 return false;
 
@@ -102,12 +102,10 @@ namespace Midjourney.Base.Data
             return true;
         }
 
-
         public List<T> GetAll()
         {
-            return _collection.Find(Builders<T>.Filter.Empty).ToList();
+            return _collection.Find(Builders<T>.Filter.Empty, new FindOptions { AllowDiskUse = true }).ToList();
         }
-
 
         /// <summary>
         /// 获取所有实体的 ID 列表。
@@ -115,17 +113,17 @@ namespace Midjourney.Base.Data
         /// <returns></returns>
         public List<string> GetAllIds()
         {
-            return _collection.Find(Builders<T>.Filter.Empty).Project(x => x.Id).ToList();
+            return _collection.Find(Builders<T>.Filter.Empty, new FindOptions { AllowDiskUse = true }).Project(x => x.Id).ToList();
         }
 
         public List<T> Where(Expression<Func<T, bool>> predicate)
         {
-            return _collection.Find(predicate).ToList();
+            return _collection.Find(predicate, new FindOptions { AllowDiskUse = true }).ToList();
         }
 
         public List<T> Where(Expression<Func<T, bool>> filter, Expression<Func<T, object>> orderBy, bool orderByAsc = true)
         {
-            var query = _collection.Find(filter);
+            var query = _collection.Find(filter, new FindOptions { AllowDiskUse = true });
             if (orderByAsc)
             {
                 query = query.SortBy(orderBy);
@@ -139,12 +137,12 @@ namespace Midjourney.Base.Data
 
         public T Single(Expression<Func<T, bool>> predicate)
         {
-            return _collection.Find(predicate).FirstOrDefault();
+            return _collection.Find(predicate, new FindOptions { AllowDiskUse = true }).FirstOrDefault();
         }
 
         public T Single(Expression<Func<T, bool>> filter, Expression<Func<T, object>> orderBy, bool orderByAsc = true)
         {
-            var query = _collection.Find(filter);
+            var query = _collection.Find(filter, new FindOptions { AllowDiskUse = true });
             if (orderByAsc)
             {
                 query = query.SortBy(orderBy);
@@ -158,24 +156,25 @@ namespace Midjourney.Base.Data
 
         public bool Any(Expression<Func<T, bool>> predicate)
         {
-            return _collection.Find(predicate).Any();
+            return _collection.Find(predicate, new FindOptions { AllowDiskUse = true }).Any();
         }
 
         public long Count(Expression<Func<T, bool>> predicate)
         {
-            return _collection.CountDocuments(predicate);
+            return _collection.AsQueryable(new AggregateOptions() { AllowDiskUse = true }).Where(predicate).Count();
+            //return _collection.CountDocuments(predicate);
         }
 
         public long Count()
         {
-            return _collection.CountDocuments(c => true);
+            return _collection.CountDocuments(Builders<T>.Filter.Empty);
         }
 
         public void Save(T entity)
         {
             if (entity != null && !string.IsNullOrEmpty(entity.Id))
             {
-                var model = _collection.Find(c => c.Id == entity.Id).FirstOrDefault();
+                var model = _collection.Find(c => c.Id == entity.Id, new FindOptions { AllowDiskUse = true }).FirstOrDefault();
                 if (model == null)
                 {
                     _collection.InsertOne(entity);
@@ -195,17 +194,17 @@ namespace Midjourney.Base.Data
 
         public T Get(string id)
         {
-            return _collection.Find(Builders<T>.Filter.Eq("_id", id)).FirstOrDefault();
+            return _collection.Find(Builders<T>.Filter.Eq("_id", id), new FindOptions { AllowDiskUse = true }).FirstOrDefault();
         }
 
         public List<T> List()
         {
-            return _collection.Find(Builders<T>.Filter.Empty).ToList();
+            return _collection.Find(Builders<T>.Filter.Empty, new FindOptions { AllowDiskUse = true }).ToList();
         }
 
         public List<T> Where(Expression<Func<T, bool>> filter, Expression<Func<T, object>> orderBy, bool orderByAsc, int limit)
         {
-            var query = _collection.Find(filter);
+            var query = _collection.Find(filter, new FindOptions { AllowDiskUse = true });
             if (orderByAsc)
             {
                 return query.SortBy(orderBy).Limit(limit).ToList();

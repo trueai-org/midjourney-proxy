@@ -289,6 +289,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 // 悠船每日限制慢速
                 var relaxCount = CounterHelper.GetYouchuanRelaxCount(acc.ChannelId);
                 var limit = acc.YouChuanRelaxDailyLimit;
+
                 if (relaxCount < limit - acc.RelaxCoreSize - acc.RelaxQueueSize)
                 {
                     return true;

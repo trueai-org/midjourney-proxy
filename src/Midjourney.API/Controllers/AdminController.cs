@@ -1312,7 +1312,7 @@ namespace Midjourney.API.Controllers
             var setting = GlobalConfiguration.Setting;
             if (setting.DatabaseType == DatabaseType.MongoDB)
             {
-                var coll = MongoHelper.GetCollection<TaskInfo>().AsQueryable();
+                var coll = MongoHelper.GetCollection<TaskInfo>().AsQueryable(new AggregateOptions() { AllowDiskUse = true });
                 var query = coll
                     .WhereIf(param.Mode == GenerationSpeedMode.FAST, c => c.Mode == param.Mode || c.Mode == null)
                     .WhereIf(param.Mode == GenerationSpeedMode.TURBO, c => c.Mode == param.Mode)
@@ -1500,7 +1500,7 @@ namespace Midjourney.API.Controllers
                 var userIds = list.Select(c => c.Id).ToList();
                 if (userIds.Count > 0)
                 {
-                    userTotalCount = MongoHelper.GetCollection<TaskInfo>().AsQueryable()
+                    userTotalCount = MongoHelper.GetCollection<TaskInfo>().AsQueryable(new AggregateOptions() { AllowDiskUse = true })
                         .Where(c => userIds.Contains(c.UserId))
                         .GroupBy(c => c.UserId)
                         .Select(g => new
