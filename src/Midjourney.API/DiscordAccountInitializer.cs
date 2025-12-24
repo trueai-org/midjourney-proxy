@@ -242,7 +242,7 @@ namespace Midjourney.API
                                                     // 判断最后一条是否存在
                                                     var success = 0;
                                                     var error = 0;
-                                                    var last = mongo.GetCollection<TaskInfo>().Find(x => true).SortByDescending(c => c.SubmitTime).FirstOrDefault();
+                                                    var last = mongo.GetCollection<TaskInfo>().Find(x => true, new FindOptions() { AllowDiskUse = true }).SortByDescending(c => c.SubmitTime).FirstOrDefault();
                                                     if (last != null)
                                                     {
                                                         var taskStore = DbHelper.Instance.TaskStore;
@@ -250,7 +250,7 @@ namespace Midjourney.API
                                                         if (lastModel == null)
                                                         {
                                                             // 迁移数据
-                                                            var taskIds = mongo.GetCollection<TaskInfo>().Find(x => true).Project(c => c.Id).ToList();
+                                                            var taskIds = mongo.GetCollection<TaskInfo>().Find(x => true, new FindOptions() { AllowDiskUse = true }).Project(c => c.Id).ToList();
                                                             foreach (var tid in taskIds)
                                                             {
                                                                 try
@@ -779,28 +779,6 @@ namespace Midjourney.API
             // 如果超过 x 条，删除最早插入的数据
             switch (setting.DatabaseType)
             {
-                //case DatabaseType.NONE:
-                //    break;
-
-                //case DatabaseType.LiteDB:
-                //    {
-                //        var documentCount = DbHelper.Instance.TaskStore.Count();
-                //        if (documentCount > maxCount)
-                //        {
-                //            var documentsToDelete = (int)documentCount - maxCount;
-                //            var ids = LiteDBHelper.TaskStore.GetCollection().Query().OrderBy(c => c.SubmitTime)
-                //                .Limit(documentsToDelete)
-                //                .ToList()
-                //                .Select(c => c.Id);
-
-                //            if (ids.Any())
-                //            {
-                //                LiteDBHelper.TaskStore.GetCollection().DeleteMany(c => ids.Contains(c.Id));
-                //            }
-                //        }
-                //    }
-                //    break;
-
                 case DatabaseType.MongoDB:
                     {
                         var coll = MongoHelper.GetCollection<TaskInfo>();
@@ -808,7 +786,7 @@ namespace Midjourney.API
                         if (documentCount > maxCount)
                         {
                             var documentsToDelete = documentCount - maxCount;
-                            var ids = coll.Find(c => true).SortBy(c => c.SubmitTime).Limit((int)documentsToDelete).Project(c => c.Id).ToList();
+                            var ids = coll.Find(c => true, new FindOptions() { AllowDiskUse = true }).SortBy(c => c.SubmitTime).Limit((int)documentsToDelete).Project(c => c.Id).ToList();
                             if (ids.Any())
                             {
                                 coll.DeleteMany(c => ids.Contains(c.Id));
