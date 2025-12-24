@@ -1285,6 +1285,11 @@ namespace Midjourney.Infrastructure.Services
                 task.Mode = targetTask.Mode;
             }
 
+            if (task.RequestMode == null)
+            {
+                task.RequestMode = targetTask.RequestMode;
+            }
+
             var instance = _discordLoadBalancer.GetDiscordInstanceIsAlive(task.SubInstanceId ?? task.InstanceId);
             if (instance == null)
             {
@@ -1344,6 +1349,15 @@ namespace Midjourney.Infrastructure.Services
             if (instance == null)
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
+            }
+
+            // 非放大任务判断是否允许继续
+            if (task.Action != TaskAction.UPSCALE)
+            {
+                if (!instance.IsAllowContinue(mode ?? GenerationSpeedMode.FAST))
+                {
+                    return SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "无可用的账号实例");
+                }
             }
 
             // 判断是否允许视频操作
