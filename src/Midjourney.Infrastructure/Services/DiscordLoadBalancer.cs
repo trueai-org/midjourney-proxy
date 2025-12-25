@@ -51,7 +51,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// 获取存活的实例。
         /// </summary>
         /// <returns>存活的实例列表。</returns>
-        public List<DiscordInstance> GetAliveInstances() => _instances.Where(c => c != null && c.IsAlive == true).Where(c => c != null).ToList() ?? [];
+        public List<DiscordInstance> GetAliveInstances() => _instances.Where(c => c != null && c.IsAlive == true).ToList() ?? [];
 
         /// <summary>
         /// 选择一个实例。
@@ -120,7 +120,10 @@ namespace Midjourney.Infrastructure.LoadBalancer
                        .WhereIf(notInstanceIds != null && notInstanceIds.Count > 0, c => !notInstanceIds.Contains(c.ChannelId))
 
                        // 允许继续绘图
-                       .Where(c => c.Account.Enable == true && isUpscale != true && c.IsAllowContinue(mode))
+                       .WhereIf(isUpscale != true, c => c.Account.Enable == true && c.IsAllowContinue(mode))
+
+                       // 放大任务只判断启用即可
+                       .WhereIf(isUpscale == true, c => c.Account.Enable == true)
 
                        // 判断悠船或官方账号
                        .WhereIf(isYm == true, c => c.Account.IsYouChuan || c.Account.IsOfficial)

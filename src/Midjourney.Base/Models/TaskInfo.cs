@@ -318,6 +318,14 @@ namespace Midjourney.Base.Models
         public OfficialJobStatus OfficialTaskInfo { get; set; }
 
         /// <summary>
+        /// 是否为 Discord 账号
+        /// </summary>
+        [LiteDB.BsonIgnore]
+        [MongoDB.Bson.Serialization.Attributes.BsonIgnore]
+        [Column(IsIgnore = true)]
+        public bool IsDiscord => !IsOfficial && !IsPartner;
+
+        /// <summary>
         /// 按钮
         /// </summary>
         [JsonMap]

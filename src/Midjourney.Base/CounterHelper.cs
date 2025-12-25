@@ -79,6 +79,25 @@
         }
 
         /// <summary>
+        /// 获取悠船所有账号慢速每日计数字典
+        /// </summary>
+        /// <returns></returns>
+        public static Dictionary<string, int> GetAllYouchuanRelaxCountDict()
+        {
+            var result = new Dictionary<string, int>();
+            var hashKeyPrefix = $"YouchuanRelaxCount:{DateTime.Now:yyyyMMdd}";
+            var hashAll = RedisHelper.HGetAll<int>(hashKeyPrefix);
+            if (hashAll?.Count > 0)
+            {
+                foreach (var kvp in hashAll)
+                {
+                    result[kvp.Key] = kvp.Value;
+                }
+            }
+            return result;
+        }
+
+        /// <summary>
         /// 设置快速任务可用计数
         /// </summary>
         /// <param name="instanceId"></param>
@@ -141,8 +160,7 @@
 
             var mode = info.Mode ?? GenerationSpeedMode.FAST;
 
-            // 统计所有账号完成，不区分失败/成功 - 用于日绘图限制业务
-            // 不统计放大
+            // 统计所有账号完成，不统计放大，包含失败/成功 - 用于日绘图限制业务
             if (info.Action != TaskAction.UPSCALE)
             {
                 var allHashPrefix = $"TaskAccountAll:{DateTime.Now:yyyyMMdd}";
@@ -177,7 +195,7 @@
         }
 
         /// <summary>
-        /// 获取账号今日绘图总数（不包含放大，包含失败）
+        /// 获取账号今日绘图总数（不包含放大、包含失败）
         /// </summary>
         /// <param name="instanceId"></param>
         /// <param name="mode">慢速时返回快速绘图总数，快速时返回 (快速+极速) 绘图总数</param>
@@ -205,24 +223,37 @@
         }
 
         /// <summary>
-        /// 获取所有账号今日绘图总数字典（不包含放大，包含失败）
-        /// key: speed_instacneId, value: count
+        /// 获取所有账号今日绘图总数字典（不包含放大，包含失败） - 用于日绘图限制业务
         /// </summary>
         /// <returns></returns>
-        public static Dictionary<string, int> GetAllAccountTodayTotalCountDict()
+        public static Dictionary<string, Dictionary<GenerationSpeedMode, int>> GetAllAccountTodayTotalCountDict()
         {
-            var result = new Dictionary<string, int>();
+            var result = new Dictionary<string, Dictionary<GenerationSpeedMode, int>>();
             var hashKeyPrefix = $"TaskAccountAll:{DateTime.Now:yyyyMMdd}";
             var hashAll = RedisHelper.HGetAll<int>(hashKeyPrefix);
             if (hashAll?.Count > 0)
             {
                 foreach (var kvp in hashAll)
                 {
-                    result[kvp.Key] = kvp.Value;
+                    var key = kvp.Key;
+                    var keyParts = key.Split('_');
+                    var value = kvp.Value;
+                    if (keyParts.Length == 2 &&
+                        Enum.TryParse<GenerationSpeedMode>(keyParts[0], out var mode))
+                    {
+                        var instanceId = keyParts[1];
+                        if (!result.ContainsKey(instanceId))
+                        {
+                            result[instanceId] = [];
+                        }
+                        result[instanceId][mode] = value;
+                    }
                 }
             }
             return result;
         }
+
+
 
         /// <summary>
         /// 获取用户今日绘图总数

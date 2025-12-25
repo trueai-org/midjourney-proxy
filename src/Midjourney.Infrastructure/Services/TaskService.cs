@@ -532,7 +532,7 @@ namespace Midjourney.Infrastructure.Services
             var setting = GlobalConfiguration.Setting;
 
             DiscordInstance instance;
-            GenerationSpeedMode? mode;
+            GenerationSpeedMode? mode = null;
 
             // 高清视频
             var isHdVideo = videoDTO.VideoType == "vid_1.1_i2v_720";
@@ -544,13 +544,11 @@ namespace Midjourney.Infrastructure.Services
                     return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "目标任务不存在");
                 }
 
-                instance = _discordLoadBalancer.GetDiscordInstanceIsAlive(info.SubInstanceId ?? info.InstanceId);
-
-                mode = targetTask.Mode;
-                info.IsOfficial = targetTask.IsOfficial;
-                info.IsPartner = targetTask.IsPartner;
-                info.BotType = targetTask.BotType;
-                info.RealBotType = targetTask.RealBotType;
+                instance = GetInstanceByTask(info, targetTask, out var submitResult);
+                if (instance == null || submitResult.Code != ReturnCode.SUCCESS)
+                {
+                    return submitResult;
+                }
 
                 info.SetProperty(Constants.TASK_PROPERTY_BOT_TYPE, targetTask.BotType.GetDescription());
             }
@@ -1263,6 +1261,173 @@ namespace Midjourney.Infrastructure.Services
         }
 
         /// <summary>
+        /// 根据任务获取可用的 Discord 实例（自动选择可用实例）
+        /// </summary>
+        /// <param name="task"></param>
+        /// <param name="parentTaskId"></param>
+        /// <param name="submitResult"></param>
+        /// <returns></returns>
+        public DiscordInstance GetInstanceByTask(TaskInfo task, TaskInfo targetTask, out SubmitResultVO submitResult)
+        {
+            GenerationSpeedMode? mode = null;
+
+            if (targetTask == null)
+            {
+                submitResult = SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "目标任务不存在");
+                return null;
+            }
+
+            // 如果没有设置模式，则使用目标任务的模式
+            if (task.Mode == null)
+            {
+                task.Mode = targetTask.Mode;
+            }
+
+            if (task.RequestMode == null)
+            {
+                task.RequestMode = targetTask.RequestMode;
+            }
+
+            task.IsPartner = targetTask.IsPartner;
+            task.IsOfficial = targetTask.IsOfficial;
+            task.BotType = targetTask.BotType;
+            task.RealBotType = targetTask.RealBotType;
+
+            task.AccountFilter ??= new AccountFilter();
+            task.AccountFilter.Modes ??= [];
+
+            var modes = new List<GenerationSpeedMode>(task.AccountFilter.Modes.Distinct());
+            if (modes.Count == 0)
+            {
+                // 如果没有速度模式，则添加默认的速度模式
+                modes = [GenerationSpeedMode.FAST, GenerationSpeedMode.TURBO, GenerationSpeedMode.RELAX];
+            }
+
+            var instance = _discordLoadBalancer.GetDiscordInstanceIsAlive(task.SubInstanceId ?? task.InstanceId);
+
+            // 是否允许继续任务
+            var isContinue = false;
+
+            // 非放大任务，判断是否允许继续
+            if (task.Action != TaskAction.UPSCALE)
+            {
+                foreach (var m in modes)
+                {
+                    if (instance != null && instance.IsAllowContinue(m))
+                    {
+                        isContinue = true;
+                        mode = m;
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                // 放大任务，实例不为空则允许继续
+                if (instance != null)
+                {
+                    isContinue = true;
+                }
+            }
+
+            if (instance == null || !isContinue)
+            {
+                // discord 账号通过子频道重新获取新的实例
+                if (task.IsDiscord)
+                {
+                    // 如果主实例没有找子实例
+                    var ids = new List<string>();
+                    var list = _discordLoadBalancer.GetAliveInstances().ToList();
+                    foreach (var item in list)
+                    {
+                        if (item.Account.SubChannelValues.ContainsKey(task.SubInstanceId ?? task.InstanceId))
+                        {
+                            ids.Add(item.ChannelId);
+                        }
+                    }
+
+                    // 通过子频道过滤可用账号
+                    if (ids.Count > 0)
+                    {
+                        // 清除指定实例
+                        task.AccountFilter.InstanceId = null;
+                        var (okInstance, okMode) = _discordLoadBalancer.ChooseInstance(
+                             accountFilter: task.AccountFilter,
+                             botType: task.RealBotType ?? task.BotType,
+                             instanceIds: ids,
+                             isUpscale: task.Action == TaskAction.UPSCALE,
+                             notInstanceIds: [task.SubInstanceId ?? task.InstanceId]);
+
+                        if (okInstance != null)
+                        {
+                            // 如果找到了，则标记当前任务的子频道信息
+                            task.SubInstanceId = okInstance.ChannelId;
+                            instance = okInstance;
+                            mode = okMode;
+                        }
+                    }
+                }
+
+                // 悠船账号始终允许跨账号操作
+                if (task.IsPartner)
+                {
+                    // 清除指定实例
+                    task.AccountFilter.InstanceId = null;
+
+                    var (okInstance, okMode) = _discordLoadBalancer.ChooseInstance(task.AccountFilter,
+                        isNewTask: true,
+                        botType: task.RealBotType ?? task.BotType,
+                        isYouChuan: true,
+                        isUpscale: task.Action == TaskAction.UPSCALE,
+                        notInstanceIds: [task.SubInstanceId ?? task.InstanceId]);
+
+                    if (okInstance != null)
+                    {
+                        task.SubInstanceId = okInstance.ChannelId;
+                        instance = okInstance;
+                        mode = okMode;
+                    }
+                }
+
+                // 非放大任务，判断是否允许继续
+                if (task.Action != TaskAction.UPSCALE)
+                {
+                    foreach (var m in modes)
+                    {
+                        if (instance != null && instance.IsAllowContinue(m))
+                        {
+                            isContinue = true;
+                            mode = m;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // 放大任务特殊处理
+            // 放大任务，实例不为空则允许继续
+            if (task.Action == TaskAction.UPSCALE)
+            {
+                if (instance != null)
+                {
+                    isContinue = true;
+                }
+            }
+
+            if (instance == null || !isContinue)
+            {
+                submitResult = SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
+                return null;
+            }
+
+            task.Mode = mode ?? GenerationSpeedMode.FAST;
+
+            submitResult = SubmitResultVO.Of(ReturnCode.SUCCESS, "成功", "");
+
+            return instance;
+        }
+
+        /// <summary>
         /// 执行动作
         /// </summary>
         /// <param name="task"></param>
@@ -1279,106 +1444,10 @@ namespace Midjourney.Infrastructure.Services
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "目标任务不存在");
             }
 
-            // 如果没有设置模式，则使用目标任务的模式
-            if (task.Mode == null)
+            var instance = GetInstanceByTask(task, targetTask, out var submitResult);
+            if (instance == null || submitResult.Code != ReturnCode.SUCCESS)
             {
-                task.Mode = targetTask.Mode;
-            }
-
-            if (task.RequestMode == null)
-            {
-                task.RequestMode = targetTask.RequestMode;
-            }
-
-            var instance = _discordLoadBalancer.GetDiscordInstanceIsAlive(task.SubInstanceId ?? task.InstanceId);
-            if (instance == null)
-            {
-                // 如果主实例没有找子实例
-                var ids = new List<string>();
-                var list = _discordLoadBalancer.GetAliveInstances().ToList();
-                foreach (var item in list)
-                {
-                    if (item.Account.SubChannelValues.ContainsKey(task.SubInstanceId ?? task.InstanceId))
-                    {
-                        ids.Add(item.ChannelId);
-                    }
-                }
-
-                // 通过子频道过滤可用账号
-                if (ids.Count > 0)
-                {
-                    var (okInstance, okMode) = _discordLoadBalancer.ChooseInstance(
-                         accountFilter: task.AccountFilter,
-                         botType: task.RealBotType ?? task.BotType,
-                         instanceIds: ids,
-                         isUpscale: task.Action == TaskAction.UPSCALE,
-                         notInstanceIds: [task.SubInstanceId ?? task.InstanceId]);
-
-                    if (okInstance != null)
-                    {
-                        // 如果找到了，则标记当前任务的子频道信息
-                        task.SubInstanceId = okInstance.ChannelId;
-
-                        instance = okInstance;
-                        mode = okMode;
-                    }
-                }
-            }
-
-            // 悠船账号，当无可用账号时，采取重试机制
-            if (instance == null)
-            {
-                if (targetTask.IsPartner && setting.EnableYouChuanRetry)
-                {
-                    // 清除指定实例
-                    task.AccountFilter ??= new();
-                    task.AccountFilter.InstanceId = null;
-
-                    var (okInstance, okMode) = _discordLoadBalancer.ChooseInstance(task.AccountFilter,
-                        isNewTask: true,
-                        botType: task.RealBotType ?? task.BotType,
-                        isYouChuan: true,
-                        isUpscale: task.Action == TaskAction.UPSCALE,
-                        notInstanceIds: [task.SubInstanceId ?? task.InstanceId]);
-
-                    instance = okInstance;
-                    mode = okMode;
-                }
-            }
-
-            if (instance == null)
-            {
-                return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
-            }
-
-            // 非放大任务判断是否允许继续
-            if (task.Action != TaskAction.UPSCALE)
-            {
-                task.AccountFilter ??= new AccountFilter();
-                task.AccountFilter.Modes ??= [];
-
-                var modes = new List<GenerationSpeedMode>(task.AccountFilter.Modes.Distinct());
-                if (modes.Count == 0)
-                {
-                    // 如果没有速度模式，则添加默认的速度模式
-                    modes = [GenerationSpeedMode.FAST, GenerationSpeedMode.TURBO, GenerationSpeedMode.RELAX];
-                }
-
-                var isContinue = false;
-                foreach (var m in modes)
-                {
-                    if (instance.IsAllowContinue(m))
-                    {
-                        isContinue = true;
-                        mode = m;
-                        break;
-                    }
-                }
-
-                if (!isContinue)
-                {
-                    return SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "无可用的账号实例");
-                }
+                return submitResult;
             }
 
             // 判断是否允许视频操作
@@ -1775,59 +1844,12 @@ namespace Midjourney.Infrastructure.Services
             var setting = GlobalConfiguration.Setting;
             GenerationSpeedMode? mode = null;
 
-            var instance = _discordLoadBalancer.GetDiscordInstanceIsAlive(task.SubInstanceId ?? task.InstanceId);
-            if (instance == null)
+            var parentTask = _taskStoreService.Get(task.ParentId);
+
+            var instance = GetInstanceByTask(task, parentTask, out var submitResult);
+            if (instance == null || submitResult.Code != ReturnCode.SUCCESS)
             {
-                // 如果主实例没有找子实例
-                var ids = new List<string>();
-                var list = _discordLoadBalancer.GetAliveInstances().ToList();
-                foreach (var item in list)
-                {
-                    if (item.Account.SubChannelValues.ContainsKey(task.SubInstanceId ?? task.InstanceId))
-                    {
-                        ids.Add(item.ChannelId);
-                    }
-                }
-
-                // 通过子频道过滤可用账号
-                if (ids.Count > 0)
-                {
-                    var (okInstance, okMode) = _discordLoadBalancer.ChooseInstance(accountFilter: task.AccountFilter,
-                          botType: task.RealBotType ?? task.BotType, instanceIds: ids);
-
-                    if (okInstance != null)
-                    {
-                        // 如果找到了，则标记当前任务的子频道信息
-                        task.SubInstanceId = task.SubInstanceId ?? task.InstanceId;
-                        instance = okInstance;
-                        mode = okMode;
-                    }
-                }
-            }
-
-            if (mode == null)
-            {
-                mode = task.Mode;
-            }
-
-            // 悠船账号，当无可用账号时，采取重试机制
-            if (instance == null || !instance.IsAllowContinue(mode ?? GenerationSpeedMode.FAST))
-            {
-                if (task.IsPartner && setting.EnableYouChuanRetry)
-                {
-                    var (okInstance, okMode) = _discordLoadBalancer.ChooseInstance(task.AccountFilter,
-                        isNewTask: true,
-                        botType: task.RealBotType ?? task.BotType,
-                        isYouChuan: true);
-
-                    instance = okInstance;
-                    mode = okMode;
-                }
-            }
-
-            if (instance == null || !instance.IsAllowContinue(mode ?? GenerationSpeedMode.FAST))
-            {
-                return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
+                return submitResult;
             }
 
             task.Mode = mode;
@@ -1836,8 +1858,6 @@ namespace Midjourney.Infrastructure.Services
 
             if (task.IsPartner || task.IsOfficial)
             {
-                var parentTask = _taskStoreService.Get(task.ParentId);
-
                 return await instance.RedisEnqueue(new TaskInfoQueue()
                 {
                     Info = task,
@@ -1877,20 +1897,6 @@ namespace Midjourney.Infrastructure.Services
             }
 
             // 获取 seed 不需要判断额度队列等
-
-            //if (!discordInstance.Account.IsValidateModeContinueDrawing(task.Mode, task.AccountFilter?.Modes, out var mode))
-            //{
-            //    return SubmitResultVO.Fail(ReturnCode.FAILURE, "无可用的账号实例");
-            //}
-            //if (!discordInstance.IsValidAvailableCount(mode))
-            //{
-            //    return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
-            //}
-            //if (!discordInstance.IsIdleQueue(mode))
-            //{
-            //    return SubmitResultVO.Fail(ReturnCode.FAILURE, "提交失败，队列已满，请稍后重试");
-            //}
-            //task.Mode = mode;
 
             // redis 模式
             // 如果是悠船则直接获取
