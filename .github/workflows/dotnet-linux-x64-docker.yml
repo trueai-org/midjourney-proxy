@@ -106,8 +106,8 @@ jobs:
         run: |
           FILE_NAME="midjourney-proxy-linux-x64-${{ github.event.release.tag_name }}-docker.tar.gz"
           ossutil api put-object \
-            --bucket mjcn-midjourney \
+            --bucket mjopen \
             --key releases/${FILE_NAME} \
             --body file://${FILE_NAME} \
-            --region cn-guangzhou \
+            --region cn-hongkong \
             --tagging "Version=${{ github.event.release.tag_name }}&Release=auto"
