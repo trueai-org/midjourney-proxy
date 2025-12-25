@@ -931,11 +931,10 @@ namespace Midjourney.API
                 }
 
                 disInstance = _discordLoadBalancer.GetDiscordInstance(account.ChannelId);
-
-                // 判断是否在工作时间内
-                // 只要在工作时间内，就创建实例
                 var now = new DateTimeOffset(DateTime.Now.Date).ToUnixTimeMilliseconds();
-                if (DateTime.Now.IsInWorkTime(account.WorkTime))
+
+                // 只要在工作时间内或摸鱼时间内，就创建实例
+                if (DateTime.Now.IsInWorkTime(account.WorkTime) || DateTime.Now.IsInFishTime(account.FishingTime))
                 {
                     if (disInstance == null)
                     {
@@ -1101,10 +1100,10 @@ namespace Midjourney.API
                 else
                 {
                     sw.Stop();
-                    info.AppendLine($"{account.Id}初始化中... 非工作时间，不创建实例耗时: {sw.ElapsedMilliseconds}ms");
+                    info.AppendLine($"{account.Id}初始化中... 非工作/摸鱼时间，不创建实例耗时: {sw.ElapsedMilliseconds}ms");
                     sw.Restart();
 
-                    // 非工作时间内，如果存在实例则释放
+                    // 非工作/摸鱼时间内，如果存在实例则释放
                     if (disInstance != null)
                     {
                         _discordLoadBalancer.RemoveInstance(disInstance);
@@ -1112,7 +1111,7 @@ namespace Midjourney.API
                     }
 
                     sw.Stop();
-                    info.AppendLine($"{account.Id}初始化中... 非工作时间，释放实例耗时: {sw.ElapsedMilliseconds}ms");
+                    info.AppendLine($"{account.Id}初始化中... 非工作/摸鱼时间，释放实例耗时: {sw.ElapsedMilliseconds}ms");
                     sw.Restart();
                 }
             }
