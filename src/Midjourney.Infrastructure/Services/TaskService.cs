@@ -580,11 +580,11 @@ namespace Midjourney.Infrastructure.Services
                 info.Mode = mode;
             }
 
+            info.InstanceId = instance.ChannelId;
             info.IsOfficial = instance.Account.IsOfficial;
             info.IsPartner = instance.Account.IsYouChuan;
             info.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, instance.ChannelId);
-            info.InstanceId = instance.ChannelId;
-
+   
             var startImageUrl = "";
             var endImageUrl = "";
 
@@ -1261,7 +1261,7 @@ namespace Midjourney.Infrastructure.Services
         }
 
         /// <summary>
-        /// 根据任务获取可用的 Discord 实例（自动选择可用实例）
+        /// 根据任务获取可用的 Discord 实例（自动选择可用实例，适用于图片变化、视频扩展、弹窗）
         /// </summary>
         /// <param name="task"></param>
         /// <param name="parentTaskId"></param>
@@ -1313,7 +1313,7 @@ namespace Midjourney.Infrastructure.Services
             {
                 foreach (var m in modes)
                 {
-                    if (instance != null && instance.IsAllowContinue(m))
+                    if (instance != null && instance.IsAllowContinue(m) && instance.Account.IsAcceptActionTask())
                     {
                         isContinue = true;
                         mode = m;
@@ -1352,6 +1352,8 @@ namespace Midjourney.Infrastructure.Services
                         // 清除指定实例
                         task.AccountFilter.InstanceId = null;
                         var (okInstance, okMode) = _discordLoadBalancer.ChooseInstance(
+                             isDiscord: true,
+                             isActionTask: true,
                              accountFilter: task.AccountFilter,
                              botType: task.RealBotType ?? task.BotType,
                              instanceIds: ids,
@@ -1360,8 +1362,9 @@ namespace Midjourney.Infrastructure.Services
 
                         if (okInstance != null)
                         {
-                            // 如果找到了，则标记当前任务的子频道信息
-                            task.SubInstanceId = okInstance.ChannelId;
+                            // Discord 标记子频道为原主实例
+                            task.SubInstanceId = task.SubInstanceId ?? task.InstanceId;
+
                             instance = okInstance;
                             mode = okMode;
                         }
@@ -1374,16 +1377,19 @@ namespace Midjourney.Infrastructure.Services
                     // 清除指定实例
                     task.AccountFilter.InstanceId = null;
 
-                    var (okInstance, okMode) = _discordLoadBalancer.ChooseInstance(task.AccountFilter,
-                        isNewTask: true,
-                        botType: task.RealBotType ?? task.BotType,
+                    var (okInstance, okMode) = _discordLoadBalancer.ChooseInstance(
                         isYouChuan: true,
+                        isActionTask: true,
+                        accountFilter: task.AccountFilter,
+                        botType: task.RealBotType ?? task.BotType,
                         isUpscale: task.Action == TaskAction.UPSCALE,
                         notInstanceIds: [task.SubInstanceId ?? task.InstanceId]);
 
                     if (okInstance != null)
                     {
-                        task.SubInstanceId = okInstance.ChannelId;
+                        // 悠船重设实例 ID
+                        task.InstanceId = okInstance.ChannelId;
+
                         instance = okInstance;
                         mode = okMode;
                     }
@@ -1394,7 +1400,7 @@ namespace Midjourney.Infrastructure.Services
                 {
                     foreach (var m in modes)
                     {
-                        if (instance != null && instance.IsAllowContinue(m))
+                        if (instance != null && instance.IsAllowContinue(m) && instance.Account.IsAcceptActionTask())
                         {
                             isContinue = true;
                             mode = m;
@@ -1456,10 +1462,10 @@ namespace Midjourney.Infrastructure.Services
                 return SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "无可用的账号实例");
             }
 
+            task.InstanceId = instance.ChannelId;
             task.IsPartner = instance.Account.IsYouChuan;
             task.IsOfficial = instance.Account.IsOfficial;
-            task.InstanceId = instance.ChannelId;
-
+       
             var messageFlags = targetTask.GetProperty<string>(Constants.TASK_PROPERTY_FLAGS, default)?.ToInt() ?? 0;
             var messageId = targetTask.GetProperty<string>(Constants.TASK_PROPERTY_MESSAGE_ID, default);
 
@@ -1852,8 +1858,8 @@ namespace Midjourney.Infrastructure.Services
                 return submitResult;
             }
 
-            task.Mode = mode;
             task.InstanceId = instance.ChannelId;
+            task.Mode = mode;
             task.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, instance.ChannelId);
 
             if (task.IsPartner || task.IsOfficial)

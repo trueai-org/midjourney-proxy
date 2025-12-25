@@ -399,6 +399,34 @@ namespace Midjourney.Base.Models
         }
 
         /// <summary>
+        /// 判断是否允许操作变化任务（变化/视频拓展/弹窗）
+        /// </summary>
+        /// <returns></returns>
+        public bool IsAcceptActionTask()
+        {
+            // 如果工作时间段和摸鱼时间段都为空
+            if (string.IsNullOrWhiteSpace(WorkTime) && string.IsNullOrWhiteSpace(FishingTime))
+            {
+                return true;
+            }
+
+            // 如果工作时间内且没有摸鱼时间段
+            if (DateTime.Now.IsInWorkTime(WorkTime) && string.IsNullOrWhiteSpace(FishingTime))
+            {
+                return true;
+            }
+
+            // 如果处于摸鱼时间段内
+            if (DateTime.Now.IsInFishTime(FishingTime))
+            {
+                return true;
+            }
+
+            // 表示不允许变化任务
+            return false;
+        }
+
+        /// <summary>
         /// 排序
         /// </summary>
         public int Sort { get; set; }

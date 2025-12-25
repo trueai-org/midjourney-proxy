@@ -73,6 +73,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <param name="isVideo"></param>
         /// <param name="isYouChuan"></param>
         /// <param name="notInstanceIds">排除的账号</param>
+        /// <param name="isActionTask">是否允许变化任务，例如：变化、视频拓展、弹窗任务</param>
+        /// <param name="isDiscord">过滤 discord 账号</param>
         public (DiscordInstance instance, GenerationSpeedMode? confirmMode) ChooseInstance(
             AccountFilter accountFilter = null,
             bool? isNewTask = null,
@@ -88,7 +90,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
             bool? isHdVideo = null,
             bool? isYouChuan = null,
             bool? isUpscale = null,
-            List<string> notInstanceIds = null)
+            List<string> notInstanceIds = null,
+            bool? isActionTask = null,
+            bool? isDiscord = null)
         {
             var sw = Stopwatch.StartNew();
             try
@@ -131,6 +135,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
                        // 判断悠船
                        .WhereIf(isYouChuan == true, c => c.Account.IsYouChuan)
 
+                       // 过滤 discord 账号
+                       .WhereIf(isDiscord == true, c => c.Account.IsDiscord)
+
                        // 判断是否允许视频操作
                        .WhereIf(isVideo == true, c => c.Account.IsAllowGenerateVideo())
 
@@ -153,6 +160,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                        // 过滤只接收新任务的实例
                        .WhereIf(isNewTask == true, c => c.Account.IsAcceptNewTask())
+
+                       // 过滤允许变化任务的账号
+                       .WhereIf(isActionTask == true, c => c.Account.IsAcceptActionTask())
 
                        // 过滤开启 niji mj 的账号
                        .WhereIf(botType == EBotType.NIJI_JOURNEY, c => c.Account.EnableNiji == true)
