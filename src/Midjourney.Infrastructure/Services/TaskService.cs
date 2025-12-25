@@ -1354,7 +1354,28 @@ namespace Midjourney.Infrastructure.Services
             // 非放大任务判断是否允许继续
             if (task.Action != TaskAction.UPSCALE)
             {
-                if (!instance.IsAllowContinue(mode ?? GenerationSpeedMode.FAST))
+                task.AccountFilter ??= new AccountFilter();
+                task.AccountFilter.Modes ??= [];
+
+                var modes = new List<GenerationSpeedMode>(task.AccountFilter.Modes.Distinct());
+                if (modes.Count == 0)
+                {
+                    // 如果没有速度模式，则添加默认的速度模式
+                    modes = [GenerationSpeedMode.FAST, GenerationSpeedMode.TURBO, GenerationSpeedMode.RELAX];
+                }
+
+                var isContinue = false;
+                foreach (var m in modes)
+                {
+                    if (instance.IsAllowContinue(m))
+                    {
+                        isContinue = true;
+                        mode = m;
+                        break;
+                    }
+                }
+
+                if (!isContinue)
                 {
                     return SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "无可用的账号实例");
                 }
