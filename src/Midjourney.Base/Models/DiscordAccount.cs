@@ -410,8 +410,8 @@ namespace Midjourney.Base.Models
                 return true;
             }
 
-            // 如果工作时间内且没有摸鱼时间段
-            if (DateTime.Now.IsInWorkTime(WorkTime) && string.IsNullOrWhiteSpace(FishingTime))
+            // 如果工作时间段内
+            if (DateTime.Now.IsInWorkTime(WorkTime))
             {
                 return true;
             }
