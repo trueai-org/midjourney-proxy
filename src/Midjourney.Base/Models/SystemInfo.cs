@@ -54,7 +54,7 @@ namespace Midjourney.Base.Models
             };
         }
 
-        private static string GetProgramUptime()
+        public static string GetProgramUptime()
         {
             var uptime = DateTime.Now - _programStartTime;
             return FormatTimeSpan(uptime);
