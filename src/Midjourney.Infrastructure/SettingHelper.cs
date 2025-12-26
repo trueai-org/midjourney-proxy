@@ -149,18 +149,23 @@ namespace Midjourney.Infrastructure
                 // 如果本地中没有配置，则从 litedb 中加载
                 if (setting == null)
                 {
-                    var liteDb = new LiteDBRepository<Setting>("data/mj.db");
-
-                    setting = liteDb.Get(Constants.DEFAULT_SETTING_ID);
-
-                    // 写入本地
-                    if (setting != null)
+                    // 判断是否存在旧版 litedb 文件
+                    var litedbPath = Path.Combine(Directory.GetCurrentDirectory(), Path.Combine("data", "mj.db"));
+                    if (File.Exists(litedbPath))
                     {
-                        await File.WriteAllTextAsync(_configPath, setting.ToJson(new Newtonsoft.Json.JsonSerializerSettings()
+                        var liteDb = new LiteDBRepository<Setting>("data/mj.db");
+
+                        setting = liteDb.Get(Constants.DEFAULT_SETTING_ID);
+
+                        // 写入本地
+                        if (setting != null)
                         {
-                            NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore,
-                            Formatting = Newtonsoft.Json.Formatting.Indented
-                        }), cancellation);
+                            await File.WriteAllTextAsync(_configPath, setting.ToJson(new Newtonsoft.Json.JsonSerializerSettings()
+                            {
+                                NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore,
+                                Formatting = Newtonsoft.Json.Formatting.Indented
+                            }), cancellation);
+                        }
                     }
                 }
 

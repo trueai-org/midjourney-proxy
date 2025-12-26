@@ -91,12 +91,7 @@ namespace Midjourney.API
         {
             try
             {
-                // 必须配置 redis
-                if (!GlobalConfiguration.Setting.IsValidRedis)
-                {
-                    Log.Error("系统配置错误，请检查Redis配置");
-                    return;
-                }
+
 
                 _applicationLifetime.ApplicationStarted.Register(async () =>
                 {
@@ -413,21 +408,25 @@ namespace Midjourney.API
                         }
                     }
 
-                    // 订阅 redis 消息
-                    RedisHelper.Subscribe((RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, async msg =>
+                    // 必须配置 redis
+                    if (GlobalConfiguration.Setting.IsValidRedis)
                     {
-                        try
+                        // 订阅 redis 消息
+                        RedisHelper.Subscribe((RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, async msg =>
                         {
-                            var notification = msg.Body.ToObject<RedisNotification>();
-                            await OnRedisReceived(notification);
+                            try
+                            {
+                                var notification = msg.Body.ToObject<RedisNotification>();
+                                await OnRedisReceived(notification);
+                            }
+                            catch (Exception ex)
+                            {
+                                // 记录日志
+                                Log.Error(ex, $"处理缓存清除通知时发生错误");
+                            }
                         }
-                        catch (Exception ex)
-                        {
-                            // 记录日志
-                            Log.Error(ex, $"处理缓存清除通知时发生错误");
-                        }
+                        ));
                     }
-                    ));
                 });
 
                 // 确保在应用程序停止时注销服务
@@ -525,6 +524,13 @@ namespace Midjourney.API
 
         private async void DoWork(object state)
         {
+            // 必须配置 redis
+            if (!GlobalConfiguration.Setting.IsValidRedis)
+            {
+                Log.Error("系统配置错误，请检查Redis配置");
+                return;
+            }
+
             _logger.Information("开始例行检查");
 
             try

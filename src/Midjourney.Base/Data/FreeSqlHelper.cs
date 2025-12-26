@@ -15,11 +15,11 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Additional Terms:
-// This software shall not be used for any illegal activities. 
+// This software shall not be used for any illegal activities.
 // Users must comply with all applicable laws and regulations,
-// particularly those related to image and video processing. 
+// particularly those related to image and video processing.
 // The use of this software for any form of illegal face swapping,
-// invasion of privacy, or any other unlawful purposes is strictly prohibited. 
+// invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
 using FreeSql;
@@ -56,17 +56,19 @@ namespace Midjourney.Base.Data
                 return null;
             }
 
-            if (databaseType != DatabaseType.SQLite)
+            if (databaseType == DatabaseType.SQLite)
             {
-                if (string.IsNullOrWhiteSpace(databaseConnectionString))
-                {
-                    databaseConnectionString = GlobalConfiguration.Setting?.DatabaseConnectionString;
-                }
+                databaseConnectionString = @"Data Source=data/mj_sqlite.db";
+            }
 
-                if (string.IsNullOrWhiteSpace(databaseConnectionString))
-                {
-                    return null;
-                }
+            if (string.IsNullOrWhiteSpace(databaseConnectionString))
+            {
+                databaseConnectionString = GlobalConfiguration.Setting?.DatabaseConnectionString;
+            }
+
+            if (string.IsNullOrWhiteSpace(databaseConnectionString))
+            {
+                return null;
             }
 
             var fsqlBuilder = new FreeSqlBuilder()
@@ -94,7 +96,6 @@ namespace Midjourney.Base.Data
                   });
 #endif
 
-
             switch (databaseType)
             {
                 //case DatabaseType.LiteDB:
@@ -105,27 +106,31 @@ namespace Midjourney.Base.Data
                 case DatabaseType.SQLite:
                     {
                         // Data Source=|DataDirectory|\document.db; Attachs=xxxtb.db; Pooling=true;Min Pool Size=1
-                        fsqlBuilder.UseConnectionString(DataType.Sqlite, @"Data Source=data/mj_sqlite.db");
+                        fsqlBuilder.UseConnectionString(DataType.Sqlite, databaseConnectionString);
                     }
                     break;
+
                 case DatabaseType.MySQL:
                     {
                         // Data Source=192.168.3.241;Port=3306;User ID=root;Password=root; Initial Catalog=mj;Charset=utf8mb4; SslMode=none;Min pool size=1
                         fsqlBuilder.UseConnectionString(DataType.MySql, databaseConnectionString);
                     }
                     break;
+
                 case DatabaseType.PostgreSQL:
                     {
                         // Host=192.168.164.10;Port=5432;Username=postgres;Password=123456; Database=tedb;ArrayNullabilityMode=Always;Pooling=true;Minimum Pool Size=1
                         fsqlBuilder.UseConnectionString(DataType.PostgreSQL, databaseConnectionString);
                     }
                     break;
+
                 case DatabaseType.SQLServer:
                     {
                         // Data Source=.;User Id=sa;Password=123456;Initial Catalog=freesqlTest;Encrypt=True;TrustServerCertificate=True;Pooling=true;Min Pool Size=1
                         fsqlBuilder.UseConnectionString(DataType.SqlServer, databaseConnectionString);
                     }
                     break;
+
                 default:
                     break;
             }

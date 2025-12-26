@@ -282,56 +282,54 @@ namespace Midjourney.Base.Data
         {
             try
             {
-                if (!string.IsNullOrWhiteSpace(databaseConnectionString))
+                switch (databaseType)
                 {
-                    switch (databaseType)
-                    {
-                        case DatabaseType.MongoDB:
+                    case DatabaseType.MongoDB:
+                        {
+                            return MongoHelper.Verify(databaseConnectionString, databaseName);
+                        }
+                    case DatabaseType.SQLite:
+                    case DatabaseType.MySQL:
+                    case DatabaseType.PostgreSQL:
+                    case DatabaseType.SQLServer:
+                        {
+                            // 首次初始化，并同步实体结构
+                            var freeSql = FreeSqlHelper.Init(databaseType, databaseConnectionString, true);
+                            if (freeSql != null)
                             {
-                                return MongoHelper.Verify(databaseConnectionString, databaseName);
-                            }
-                        case DatabaseType.SQLite:
-                        case DatabaseType.MySQL:
-                        case DatabaseType.PostgreSQL:
-                        case DatabaseType.SQLServer:
-                            {
-                                // 首次初始化，并同步实体结构
-                                var freeSql = FreeSqlHelper.Init(databaseType, databaseConnectionString, true);
-                                if (freeSql != null)
+                                var obj = freeSql.Ado.ExecuteScalar("SELECT 1");
+                                var succees = obj != null && obj.ToString() == "1";
+                                if (succees)
                                 {
-                                    var obj = freeSql.Ado.ExecuteScalar("SELECT 1");
-                                    var succees = obj != null && obj.ToString() == "1";
-                                    if (succees)
-                                    {
-                                        // 同步实体结构
+                                    // 同步实体结构
 
-                                        // 注意：
-                                        // 1. MySQL InnoDB 存储引擎的限制 1 行 65535 字节
-                                        // 这个错误提示 "Row size too large" 表示你创建的表 DiscordAccount 的一行数据大小超过了 MySQL InnoDB 存储引擎的限制（65535 字节）。
-                                        // 即使你已经使用了 TEXT 和 LONGTEXT 类型，但这些类型在计算行大小时仍然会占用一部分空间（指针大小，通常很小），而其他 VARCHAR 类型的列仍然会直接计入行大小。
+                                    // 注意：
+                                    // 1. MySQL InnoDB 存储引擎的限制 1 行 65535 字节
+                                    // 这个错误提示 "Row size too large" 表示你创建的表 DiscordAccount 的一行数据大小超过了 MySQL InnoDB 存储引擎的限制（65535 字节）。
+                                    // 即使你已经使用了 TEXT 和 LONGTEXT 类型，但这些类型在计算行大小时仍然会占用一部分空间（指针大小，通常很小），而其他 VARCHAR 类型的列仍然会直接计入行大小。
 
-                                        // 2. postgresql 需要启动扩展支持字典类型
-                                        // CREATE EXTENSION hstore;
+                                    // 2. postgresql 需要启动扩展支持字典类型
+                                    // CREATE EXTENSION hstore;
 
-                                        // 第一批
-                                        freeSql.CodeFirst.SyncStructure(typeof(User), typeof(BannedWord));
+                                    // 第一批
+                                    freeSql.CodeFirst.SyncStructure(typeof(User), typeof(BannedWord));
 
-                                        // 第二批
-                                        freeSql.CodeFirst.SyncStructure(typeof(DiscordAccount), typeof(DomainTag));
+                                    // 第二批
+                                    freeSql.CodeFirst.SyncStructure(typeof(DiscordAccount), typeof(DomainTag));
 
-                                        // 第三批
-                                        freeSql.CodeFirst.SyncStructure(typeof(TaskInfo));
+                                    // 第三批
+                                    freeSql.CodeFirst.SyncStructure(typeof(TaskInfo));
 
-                                        // 第四批
-                                        freeSql.CodeFirst.SyncStructure(typeof(PersonalizeTag));
-                                    }
-                                    return succees;
+                                    // 第四批
+                                    freeSql.CodeFirst.SyncStructure(typeof(PersonalizeTag));
                                 }
-                                return false;
+
+                                return succees;
                             }
-                        default:
-                            break;
-                    }
+                            return false;
+                        }
+                    default:
+                        break;
                 }
             }
             catch (Exception ex)
