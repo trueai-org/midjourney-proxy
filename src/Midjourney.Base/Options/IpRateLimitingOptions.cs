@@ -83,7 +83,7 @@ namespace Midjourney.Base.Options
                 try
                 {
                     // 格式化黑名单
-                    return Blacklist.Select(ip => IPNetwork2.Parse(ip + "/32")).ToList();
+                    return Blacklist.Select(ip => !ip.Contains("/") ? IPNetwork2.Parse(ip + "/32") : IPNetwork2.Parse(ip)).ToList();
                 }
                 catch
                 {
