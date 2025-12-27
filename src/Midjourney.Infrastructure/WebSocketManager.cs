@@ -906,7 +906,7 @@ namespace Midjourney.Infrastructure
                 // 保存
                 Account.Enable = false;
                 Account.DisabledReason = msg;
-                DbHelper.Instance.AccountStore.Update(Account);
+                FreeSqlHelper.FreeSql.Update(Account);
                 Account.ClearCache();
 
                 _discordInstance?.Dispose();
@@ -1114,7 +1114,7 @@ namespace Midjourney.Infrastructure
             }
 
             // 保存
-            DbHelper.Instance.AccountStore.Update("Enable,DisabledReason", Account);
+            FreeSqlHelper.FreeSql.Update("Enable,DisabledReason", Account);
             Account.ClearCache();
         }
 

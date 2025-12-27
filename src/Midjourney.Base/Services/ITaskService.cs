@@ -164,11 +164,11 @@ namespace Midjourney.Base.Services
         /// <returns></returns>
         Task AccountAction(string id, string customId, EBotType botType);
 
-        /// <summary>
-        /// MJ Plus 数据迁移
-        /// </summary>
-        /// <param name="dto"></param>
-        /// <returns></returns>
-        Task MjPlusMigration(MjPlusMigrationDto dto);
+        ///// <summary>
+        ///// MJ Plus 数据迁移
+        ///// </summary>
+        ///// <param name="dto"></param>
+        ///// <returns></returns>
+        //Task MjPlusMigration(MjPlusMigrationDto dto);
     }
 }

@@ -25,6 +25,7 @@
 using System.Net;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Midjourney.Base.Data;
 using Midjourney.Infrastructure.LoadBalancer;
 
 namespace Midjourney.API.Controllers
@@ -38,8 +39,8 @@ namespace Midjourney.API.Controllers
     {
         // 是否匿名用户
         private readonly bool _isAnonymous;
-
         private readonly DiscordLoadBalancer _loadBalancer;
+        private readonly IFreeSql _freeSql = FreeSqlHelper.FreeSql;
 
         public ProfileController(DiscordLoadBalancer loadBalancer, WorkContext workContext, IHttpContextAccessor context)
         {
@@ -112,8 +113,7 @@ namespace Midjourney.API.Controllers
                 Service = res.Service,
                 Version = res.Version,
             };
-
-            DbHelper.Instance.PersonalizeTagWordStore.Add(model);
+            _freeSql.Add(model);
 
             return Ok(SubmitResultVO.Of(ReturnCode.SUCCESS, "成功", model.Id));
         }
@@ -126,7 +126,7 @@ namespace Midjourney.API.Controllers
         [HttpGet("{id}/fetch")]
         public ActionResult<PersonalizeTagResult> ProfileGet(string id)
         {
-            var model = DbHelper.Instance.PersonalizeTagWordStore.Get(id);
+            var model = _freeSql.Get<PersonalizeTag>(id);
             if (model == null)
             {
                 return NotFound();
@@ -154,7 +154,7 @@ namespace Midjourney.API.Controllers
                 return Ok(SubmitResultVO.Fail(ReturnCode.FAILURE, "无可用的账号实例"));
             }
 
-            var model = DbHelper.Instance.PersonalizeTagWordStore.Get(id);
+            var model = _freeSql.Get<PersonalizeTag>(id);
             if (model == null)
             {
                 return Ok(SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "个性化配置不存在"));
@@ -175,8 +175,8 @@ namespace Midjourney.API.Controllers
                 model.RandomPairs = res;
                 model.UpdateTime = DateTime.Now;
 
-                DbHelper.Instance.PersonalizeTagWordStore.Update(model);
-            }
+                _freeSql.Update(model);
+            }   
 
             if (model.RandomPairs.Pairs?.Count > 0)
             {
@@ -218,7 +218,7 @@ namespace Midjourney.API.Controllers
                 return Ok(SubmitResultVO.Fail(ReturnCode.FAILURE, "无可用的账号实例"));
             }
 
-            var model = DbHelper.Instance.PersonalizeTagWordStore.Get(id);
+            var model = _freeSql.Get<PersonalizeTag>(id);
             if (model == null)
             {
                 return Ok(SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "个性化配置不存在"));
@@ -251,7 +251,7 @@ namespace Midjourney.API.Controllers
             model.RandomPairs = res;
             model.UpdateTime = DateTime.Now;
 
-            DbHelper.Instance.PersonalizeTagWordStore.Update(model);
+            _freeSql.Update(model);
 
             var jobIds = res.Pairs.First().Jobs.Select(c => new ProfileSkipResultDto
             {
@@ -288,7 +288,7 @@ namespace Midjourney.API.Controllers
                 return Ok(SubmitResultVO.Fail(ReturnCode.FAILURE, "无可用的账号实例"));
             }
 
-            var model = DbHelper.Instance.PersonalizeTagWordStore.Get(id);
+            var model = _freeSql.Get<PersonalizeTag>(id);
             if (model == null)
             {
                 return Ok(SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "个性化配置不存在"));
@@ -329,7 +329,7 @@ namespace Midjourney.API.Controllers
             model.RandomPairs = res;
             model.UpdateTime = DateTime.Now;
 
-            DbHelper.Instance.PersonalizeTagWordStore.Update(model);
+            _freeSql.Update(model);
 
             var jobIds = res.Pairs.First().Jobs.Select(c => new ProfileSkipResultDto
             {

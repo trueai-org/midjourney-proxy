@@ -50,6 +50,7 @@ namespace Midjourney.Base.Models
     [Index("i_SubmitTime_UserId", "SubmitTime,UserId")]
     [Index("i_SubmitTime_InstanceId", "SubmitTime,InstanceId")]
     [Index("i_SubmitTime_Status_UserId", "SubmitTime,Status,UserId")]
+    [Index("i_SubmitTime_Status", "SubmitTime,Status")]
     [Index("i_State", "State")]
     [Index("i_Mode", "Mode")]
     [Index("i_Nonce", "Nonce")]

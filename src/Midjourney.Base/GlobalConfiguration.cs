@@ -26,6 +26,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Caching.Memory;
 using Midjourney.Base.Util;
+using Serilog.Core;
 
 namespace Midjourney.Base
 {
@@ -38,6 +39,11 @@ namespace Midjourney.Base
         /// 版本号
         /// </summary>
         public static string Version { get; set; } = $"v{(Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly()).GetName().Version}";
+
+        /// <summary>
+        /// 创建一个全局可控的日志级别开关
+        /// </summary>
+        public static LoggingLevelSwitch LogLevel { get; set; } = new LoggingLevelSwitch();
 
         /// <summary>
         /// 今日绘图

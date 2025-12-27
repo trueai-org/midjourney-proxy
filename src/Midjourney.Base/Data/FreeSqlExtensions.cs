@@ -15,11 +15,11 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Additional Terms:
-// This software shall not be used for any illegal activities. 
+// This software shall not be used for any illegal activities.
 // Users must comply with all applicable laws and regulations,
-// particularly those related to image and video processing. 
+// particularly those related to image and video processing.
 // The use of this software for any form of illegal face swapping,
-// invasion of privacy, or any other unlawful purposes is strictly prohibited. 
+// invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
 using System.Linq.Expressions;
@@ -386,6 +386,73 @@ namespace Midjourney.Base.Data
                 dic.TryAdd(item.ParameterName, item.Value);
             }
             return dic;
+        }
+
+        /// <summary>
+        /// 保存实体，有 ID 则更新，无 ID 则新增
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="freeSql"></param>
+        /// <param name="entity"></param>
+        public static void Save<T>(this IFreeSql freeSql, T entity) where T : class, IBaseId
+        {
+            if (entity != null && !string.IsNullOrEmpty(entity.Id))
+            {
+                freeSql.InsertOrUpdate<T>().SetSource(entity).ExecuteAffrows();
+            }
+        }
+
+        /// <summary>
+        /// 执行SQL查询，返回 T1 实体第一条记录，记录不存在时返回 null
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="freeSql"></param>
+        /// <param name="exp"></param>
+        /// <returns></returns>
+        public static T Single<T>(this IFreeSql freeSql, Expression<Func<T, bool>> exp) where T : class
+        {
+            return freeSql.Select<T>().Where(exp).First();
+        }
+
+        /// <summary>
+        /// 所有记录数量
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="freeSql"></param>
+        /// <returns></returns>
+        public static int Count<T>(this IFreeSql freeSql) where T : class
+        {
+            return (int)freeSql.Select<T>().Count();
+        }
+
+        /// <summary>
+        /// 部分更新
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="freeSql"></param>
+        /// <param name="fields"></param>
+        /// <param name="item"></param>
+        /// <returns></returns>
+        public static bool Update<T>(this IFreeSql freeSql, string fields, T item) where T : class, IBaseId
+        {
+            var dic = new Dictionary<string, object>();
+            var fs = fields.Split(',').Select(f => f.Trim()).ToList();
+            foreach (var f in fs)
+            {
+                var prop = typeof(T).GetProperty(f);
+                if (prop != null)
+                {
+                    dic[f] = prop.GetValue(item);
+                }
+            }
+            if (fs.Count > 0)
+            {
+                freeSql.Update<T>()
+                .SetDto(dic)
+                .Where(c => c.Id == item.Id)
+                .ExecuteAffrows();
+            }
+            return true;
         }
     }
 }

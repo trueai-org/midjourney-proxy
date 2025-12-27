@@ -38,10 +38,12 @@ namespace Midjourney.API.Controllers
     public class HomeController : ControllerBase
     {
         private readonly IMemoryCache _memoryCache;
+        private readonly IFreeSql _freeSql;
 
         public HomeController(IMemoryCache memoryCache)
         {
             _memoryCache = memoryCache;
+            _freeSql = FreeSqlHelper.FreeSql;
         }
 
         /// <summary>
@@ -71,9 +73,9 @@ namespace Midjourney.API.Controllers
                 var now = new DateTimeOffset(DateTime.Now.Date).ToUnixTimeMilliseconds();
                 var yesterday = new DateTimeOffset(DateTime.Now.Date.AddDays(-1)).ToUnixTimeMilliseconds();
 
-                dto.TodayDraw = (int)DbHelper.Instance.TaskStore.Count(x => x.SubmitTime >= now);
-                dto.YesterdayDraw = (int)DbHelper.Instance.TaskStore.Count(x => x.SubmitTime >= yesterday && x.SubmitTime < now);
-                dto.TotalDraw = (int)DbHelper.Instance.TaskStore.Count();
+                dto.TodayDraw = (int)_freeSql.Count<TaskInfo>(x => x.SubmitTime >= now);
+                dto.YesterdayDraw = (int)_freeSql.Count<TaskInfo>(x => x.SubmitTime >= yesterday && x.SubmitTime < now);
+                dto.TotalDraw = (int)_freeSql.Count<TaskInfo>();
 
                 // 今日绘图客户端 top 10
                 var setting = GlobalConfiguration.Setting;
@@ -88,44 +90,81 @@ namespace Midjourney.API.Controllers
                     top = 100; // 最多取前100
                 }
 
-                var todayList = DbHelper.Instance.TaskStore.Where(x => x.SubmitTime >= now).ToList();
-                var tops = todayList
-                .GroupBy(c =>
+                // 如果显示 ip 对应的身份
+                if (setting.HomeDisplayUserIPState)
                 {
-                    if (setting.HomeDisplayRealIP)
+                    var todayIps = _freeSql.Select<TaskInfo>().Where(c => c.SubmitTime >= now)
+                    .GroupBy(c => new { c.ClientIp, c.State })
+                    .ToList(c => new
                     {
-                        return c.ClientIp ?? "null";
-                    }
+                        c.Key.ClientIp,
+                        c.Key.State,
+                        Count = c.Count(),
+                    });
+                    var tops = todayIps
+                    .GroupBy(c =>
+                    {
+                        if (setting.HomeDisplayRealIP)
+                        {
+                            return c.ClientIp ?? "null";
+                        }
 
-                    // 如果不显示真实IP，则只显示前两段IP地址
-                    // 只显示前两段IP地址
-                    return string.Join(".", c.ClientIp?.Split('.')?.Take(2) ?? []) + ".x.x";
-                })
-                .Select(c =>
-                {
-                    // 如果显示 ip 对应的身份
-                    if (setting.HomeDisplayUserIPState)
+                        // 如果不显示真实IP，则只显示前两段IP地址
+                        // 只显示前两段IP地址
+                        return string.Join(".", c.ClientIp?.Split('.')?.Take(2) ?? []) + ".x.x";
+                    })
+                    .Select(c =>
                     {
-                        var item = todayList.FirstOrDefault(u => u.ClientIp == c.Key && !string.IsNullOrWhiteSpace(u.State));
+                        var item = todayIps.FirstOrDefault(u => u.ClientIp == c.Key && !string.IsNullOrWhiteSpace(u.State));
 
                         return new
                         {
                             ip = (c.Key ?? "null") + " - " + item?.State,
-                            count = c.Count(),
+                            count = c.Sum(x => x.Count)
                         };
-                    }
+                    })
+                    .OrderByDescending(c => c.count)
+                    .Take(top)
+                    .ToDictionary(c => c.ip, c => c.count);
 
-                    return new
+                    dto.Tops = tops;
+                }
+                else
+                {
+                    var todayIps = _freeSql.Select<TaskInfo>().Where(c => c.SubmitTime >= now)
+                    .GroupBy(c => c.ClientIp)
+                    .ToList(c => new
                     {
-                        ip = c.Key ?? "null",
-                        count = c.Count()
-                    };
-                })
-                .OrderByDescending(c => c.count)
-                .Take(top)
-                .ToDictionary(c => c.ip, c => c.count);
+                        ClientIp = c.Key,
+                        Count = c.Count(),
+                    });
 
-                dto.Tops = tops;
+                    var tops = todayIps
+                    .GroupBy(c =>
+                    {
+                        if (setting.HomeDisplayRealIP)
+                        {
+                            return c.ClientIp ?? "null";
+                        }
+
+                        // 如果不显示真实IP，则只显示前两段IP地址
+                        // 只显示前两段IP地址
+                        return string.Join(".", c.ClientIp?.Split('.')?.Take(2) ?? []) + ".x.x";
+                    })
+                    .Select(c =>
+                    {
+                        return new
+                        {
+                            ip = c.Key ?? "null",
+                            count = c.Sum(x => x.Count)
+                        };
+                    })
+                    .OrderByDescending(c => c.count)
+                    .Take(top)
+                    .ToDictionary(c => c.ip, c => c.count);
+
+                    dto.Tops = tops;
+                }
 
                 var localIp = await PrivateNetworkHelper.GetAliyunPrivateIpAsync();
                 if (!string.IsNullOrWhiteSpace(localIp))
@@ -133,26 +172,14 @@ namespace Midjourney.API.Controllers
                     dto.PrivateIp = localIp;
                 }
 
-                // 使用数据库统计
-                if (GlobalConfiguration.Setting.DatabaseType == DatabaseType.MongoDB)
+                var fsql = FreeSqlHelper.FreeSql;
+                if (fsql != null)
                 {
-                    //var taskInfos = MongoHelper.GetCollection<TaskInfo>().AsQueryable()
-                    //      .Where(c => c.SubmitTime >= now && c.Status == TaskStatus.SUCCESS)
-                    //      .GroupBy(c => new { c.Mode, c.Action })
-                    //      .ToList()
-                    //      .ToDictionary(c => c.Key, c => c.Count());
-
-                    var collection = MongoHelper.GetCollection<TaskInfo>();
-                    var aggregateOptions = new AggregateOptions { AllowDiskUse = true };
-                    var taskInfos = collection.Aggregate(aggregateOptions)
-                        .Match(c => c.SubmitTime >= now && c.Status == TaskStatus.SUCCESS)
-                        .Group(
-                            c => new { c.Mode, c.Action },
-                            g => new { Key = g.Key, Count = g.Count() }
-                        )
-                        .ToList()
-                        .ToDictionary(c => c.Key, c => c.Count);
-
+                    var taskInfos = fsql.Select<TaskInfo>()
+                          .Where(c => c.SubmitTime >= now && c.Status == TaskStatus.SUCCESS)
+                          .GroupBy(c => new { c.Mode, c.Action })
+                          .ToList(c => new { c.Key, Count = c.Count() })
+                          .ToDictionary(c => c.Key, c => c.Count);
                     var homeCounter = new Dictionary<GenerationSpeedMode, Dictionary<TaskAction, int>>();
                     foreach (var kvp in taskInfos)
                     {
@@ -164,29 +191,6 @@ namespace Midjourney.API.Controllers
                         homeCounter[mode][kvp.Key.Action ?? TaskAction.IMAGINE] = kvp.Value;
                     }
                     dto.TodayCounter = homeCounter.OrderBy(c => c.Key).ToDictionary(c => c.Key, c => c.Value.OrderBy(x => x.Key).ToDictionary(x => x.Key, x => x.Value));
-                }
-                else
-                {
-                    var fsql = FreeSqlHelper.FreeSql;
-                    if (fsql != null)
-                    {
-                        var taskInfos = fsql.Select<TaskInfo>()
-                              .Where(c => c.SubmitTime >= now && c.Status == TaskStatus.SUCCESS)
-                              .GroupBy(c => new { c.Mode, c.Action })
-                              .ToList(c => new { c.Key, Count = c.Count() })
-                              .ToDictionary(c => c.Key, c => c.Count);
-                        var homeCounter = new Dictionary<GenerationSpeedMode, Dictionary<TaskAction, int>>();
-                        foreach (var kvp in taskInfos)
-                        {
-                            var mode = kvp.Key.Mode ?? GenerationSpeedMode.FAST;
-                            if (!homeCounter.ContainsKey(mode))
-                            {
-                                homeCounter[mode] = [];
-                            }
-                            homeCounter[mode][kvp.Key.Action ?? TaskAction.IMAGINE] = kvp.Value;
-                        }
-                        dto.TodayCounter = homeCounter.OrderBy(c => c.Key).ToDictionary(c => c.Key, c => c.Value.OrderBy(x => x.Key).ToDictionary(x => x.Key, x => x.Value));
-                    }
                 }
 
                 return dto;

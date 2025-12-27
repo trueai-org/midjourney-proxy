@@ -52,6 +52,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
         private readonly ITaskStoreService _taskStoreService;
         private readonly INotifyService _notifyService;
 
+        private readonly IFreeSql _freeSql = FreeSqlHelper.FreeSql;
+
         /// <summary>
         /// 当前实例正在运行的任务列表
         /// key: TaskInfo.Id, value: TaskInfo
@@ -208,7 +210,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 try
                 {
                     // 从存储取最新数据
-                    var acc = DbHelper.Instance.AccountStore.Get(localOld.Id);
+                    var acc = _freeSql.Get<DiscordAccount>(localOld.Id);
                     if (acc != null && !ReferenceEquals(localOld, acc))
                     {
                         // 在替换订阅之前，先从旧实例取消订阅
@@ -902,7 +904,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 _runningTasks.TryRemove(task.Id, out _);
                 GlobalRunningTasks.TryRemove(task.Id, out _);
 
-                DbHelper.Instance.TaskStore.Update("Seed,SeedError,SeedMessageId", task);
+                _freeSql.Update("Seed,SeedError,SeedMessageId", task);
             }
         }
 
@@ -990,7 +992,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     // 预估恢复队列数 * 超时时间的任务
                     var hour = -1 * 12;
                     var agoTime = new DateTimeOffset(DateTime.Now.AddHours(hour)).ToUnixTimeMilliseconds();
-                    var list = DbHelper.Instance.TaskStore.Where(c => c.InstanceId == Account.ChannelId && c.SubmitTime >= agoTime && c.Status != TaskStatus.CANCEL && c.Status != TaskStatus.FAILURE && c.Status != TaskStatus.MODAL && c.Status != TaskStatus.SUCCESS);
+                    var list = _freeSql.Select<TaskInfo>()
+                    .Where(c => c.InstanceId == Account.ChannelId && c.SubmitTime >= agoTime && c.Status != TaskStatus.CANCEL && c.Status != TaskStatus.FAILURE && c.Status != TaskStatus.MODAL && c.Status != TaskStatus.SUCCESS)
+                    .ToList();
 
                     _logger.Information("重启恢复作业账号 {@0} 任务数 {@1}", Account.ChannelId, list.Count);
 
@@ -3592,7 +3596,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                         Account.Enable = false;
                         Account.DisabledReason = "Http 请求没有操作权限，禁用账号";
-                        DbHelper.Instance.AccountStore.Update(Account);
+                        _freeSql.Update(Account);
                         Account.ClearCache();
 
                         return Message.Of(ReturnCode.FAILURE, "请求失败，禁用账号");
@@ -3707,7 +3711,16 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 }
 
                 var cacheKey = $"info_setting_sync_cache:{acc.ChannelId}";
-                if (isClearCache)
+                var cacheValue = AdaptiveCache.Get<bool?>(cacheKey);
+
+                // 不清理缓存，且有缓存时，直接返回成功
+                if (!isClearCache && cacheValue == true)
+                {
+                    return true;
+                }
+
+                // 清理缓存，或缓存不存在时，执行同步频率验证
+                if (isClearCache || cacheValue != true)
                 {
                     AdaptiveCache.Remove(cacheKey);
 
@@ -3849,7 +3862,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                         CounterHelper.SetFastTaskAvailableCount(Account.ChannelId, fastAvailableCount);
 
-                        DbHelper.Instance.AccountStore.Update("FastExhausted,AllowModes,CoreSize", acc);
+                        _freeSql.Update("FastExhausted,AllowModes,CoreSize", acc);
 
                         acc.ClearCache();
 

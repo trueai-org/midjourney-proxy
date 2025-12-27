@@ -48,6 +48,7 @@ namespace Midjourney.API.Controllers
         private readonly Setting _setting;
         private readonly DiscordLoadBalancer _discordLoadBalancer;
         private readonly string _ip;
+        private readonly IFreeSql _freeSql = FreeSqlHelper.FreeSql;
 
         /// <summary>
         /// 指定绘图速度模式（路径前缀优先级最高）
@@ -938,6 +939,18 @@ namespace Midjourney.API.Controllers
                 throw new LogicException("服务暂不可用，请联系管理员");
             }
 
+            // 参数校验
+            if (baseDTO.State?.Length > 255)
+            {
+                _logger.LogWarning("State参数过长，最大255字符，当前长度：{length}", baseDTO.State.Length);
+                throw new LogicException("State参数过长，最大255字符");
+            }
+            if(baseDTO.NotifyHook?.Length>2000)
+            {
+                _logger.LogWarning("NotifyHook参数过长，最大2000字符，当前长度：{length}", baseDTO.NotifyHook.Length);
+                throw new LogicException("NotifyHook参数过长，最大2000字符");
+            }
+
             var user = _workContext.GetUser();
 
             var task = new TaskInfo
@@ -972,7 +985,7 @@ namespace Midjourney.API.Controllers
                 {
                     if (GlobalConfiguration.Setting.GuestDefaultDayLimit > 0)
                     {
-                        var ipTodayDrawCount = (int)DbHelper.Instance.TaskStore.Count(x => x.SubmitTime >= nowDate && x.ClientIp == _ip);
+                        var ipTodayDrawCount = (int)_freeSql.Count<TaskInfo>(x => x.SubmitTime >= nowDate && x.ClientIp == _ip);
                         if (ipTodayDrawCount > GlobalConfiguration.Setting.GuestDefaultDayLimit)
                         {
                             throw new LogicException("访客今日绘图次数已达上限");
@@ -1055,7 +1068,7 @@ namespace Midjourney.API.Controllers
             {
                 if (user.DayDrawLimit > 0)
                 {
-                    var userTodayDrawCount = (int)DbHelper.Instance.TaskStore.Count(x => x.SubmitTime >= nowDate && x.UserId == user.Id);
+                    var userTodayDrawCount = (int)_freeSql.Count<TaskInfo>(x => x.SubmitTime >= nowDate && x.UserId == user.Id);
                     if (userTodayDrawCount > user.DayDrawLimit)
                     {
                         throw new LogicException("用户今日绘图次数已达上限");
@@ -1064,7 +1077,7 @@ namespace Midjourney.API.Controllers
 
                 if (user.TotalDrawLimit > 0)
                 {
-                    var userTotalDrawCount = (int)DbHelper.Instance.TaskStore.Count(x => x.UserId == user.Id);
+                    var userTotalDrawCount = (int)_freeSql.Count<TaskInfo>(x => x.UserId == user.Id);
                     if (userTotalDrawCount > user.TotalDrawLimit)
                     {
                         throw new LogicException("总绘图次数已达上限");
@@ -1080,15 +1093,14 @@ namespace Midjourney.API.Controllers
                 // 访客并发数
                 if (setting.GuestDefaultCoreSize > 0)
                 {
-                    var ipTodayDrawCount = (int)DbHelper.Instance.TaskStore
-                        .Count(x => x.SubmitTime >= nowDate && x.ClientIp == _ip && x.Status == TaskStatus.IN_PROGRESS);
+                    var ipTodayDrawCount = (int)_freeSql.Count<TaskInfo>(x => x.SubmitTime >= nowDate && x.ClientIp == _ip && x.Status == TaskStatus.IN_PROGRESS);
                     if (ipTodayDrawCount >= setting.GuestDefaultCoreSize)
                     {
                         throw new LogicException("并发数已达上限");
                     }
 
                     // 获取执行中的任务数
-                    var currentCount = (int)DbHelper.Instance.TaskStore.Count(x => x.SubmitTime >= nowDate && x.ClientIp == _ip && x.Status == TaskStatus.IN_PROGRESS);
+                    var currentCount = (int)_freeSql.Count<TaskInfo>(x => x.SubmitTime >= nowDate && x.ClientIp == _ip && x.Status == TaskStatus.IN_PROGRESS);
                     if (currentCount >= setting.GuestDefaultCoreSize)
                     {
                         throw new LogicException("并发数已达上限");
@@ -1098,15 +1110,14 @@ namespace Midjourney.API.Controllers
                 // 访客队列数
                 if (setting.GuestDefaultQueueSize > 0)
                 {
-                    var ipTodayDrawCount = (int)DbHelper.Instance.TaskStore
-                        .Count(x => x.SubmitTime >= nowDate && x.ClientIp == _ip && (x.Status == TaskStatus.NOT_START || x.Status == TaskStatus.SUBMITTED));
+                    var ipTodayDrawCount = (int)_freeSql.Count<TaskInfo>(x => x.SubmitTime >= nowDate && x.ClientIp == _ip && (x.Status == TaskStatus.NOT_START || x.Status == TaskStatus.SUBMITTED));
                     if (ipTodayDrawCount >= setting.GuestDefaultQueueSize)
                     {
                         throw new LogicException("队列数已达上限");
                     }
 
                     // 获取队列中的任务数
-                    var currentCount = (int)DbHelper.Instance.TaskStore.Count(x => x.SubmitTime >= nowDate && x.ClientIp == _ip && (x.Status == TaskStatus.NOT_START || x.Status == TaskStatus.SUBMITTED));
+                    var currentCount = (int)_freeSql.Count<TaskInfo>(x => x.SubmitTime >= nowDate && x.ClientIp == _ip && (x.Status == TaskStatus.NOT_START || x.Status == TaskStatus.SUBMITTED));
                     if (currentCount >= setting.GuestDefaultQueueSize)
                     {
                         throw new LogicException("队列数已达上限");
@@ -1118,7 +1129,7 @@ namespace Midjourney.API.Controllers
                 // 用户并发数
                 if (user.CoreSize > 0)
                 {
-                    var userDrawCount = (int)DbHelper.Instance.TaskStore.Count(x => x.SubmitTime >= nowDate && x.UserId == user.Id && x.Status == TaskStatus.IN_PROGRESS);
+                    var userDrawCount = (int)_freeSql.Count<TaskInfo>(x => x.SubmitTime >= nowDate && x.UserId == user.Id && x.Status == TaskStatus.IN_PROGRESS);
                     if (userDrawCount >= user.CoreSize)
                     {
                         throw new LogicException("并发数已达上限");
@@ -1128,8 +1139,7 @@ namespace Midjourney.API.Controllers
                 // 用户队列数
                 if (user.QueueSize > 0)
                 {
-                    var userDrawCount = (int)DbHelper.Instance.TaskStore
-                        .Count(x => x.SubmitTime >= nowDate && x.UserId == user.Id && (x.Status == TaskStatus.NOT_START || x.Status == TaskStatus.SUBMITTED));
+                    var userDrawCount = (int)_freeSql.Count<TaskInfo>(x => x.SubmitTime >= nowDate && x.UserId == user.Id && (x.Status == TaskStatus.NOT_START || x.Status == TaskStatus.SUBMITTED));
                     if (userDrawCount >= user.QueueSize)
                     {
                         throw new LogicException("队列数已达上限");

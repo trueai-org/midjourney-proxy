@@ -52,6 +52,7 @@ namespace Midjourney.API
         private readonly IHostApplicationLifetime _applicationLifetime;
         private readonly IUpgradeService _upgradeService;
         private readonly IConsulService _consulService;
+        private readonly IFreeSql _freeSql = FreeSqlHelper.FreeSql;
 
         private Timer _timer;
         private DateTime? _upgradeTime = null;
@@ -91,8 +92,6 @@ namespace Midjourney.API
         {
             try
             {
-
-
                 _applicationLifetime.ApplicationStarted.Register(async () =>
                 {
                     var setting = GlobalConfiguration.Setting;
@@ -138,168 +137,15 @@ namespace Midjourney.API
                         }
                     }
 
-                    // 初始化数据库索引
-                    DbHelper.Instance.IndexInit();
+                    //// 初始化数据库索引
+                    //DbHelper.Instance.IndexInit();
 
-                    // 迁移 account user domain banded
-                    // 是否开启 MongoDB 自动迁移
-                    if (setting.DatabaseType != DatabaseType.MongoDB && setting.IsAutoMigrateMongo)
-                    {
-                        try
-                        {
-                            // 创建 mongodb 实例
-                            if (!string.IsNullOrWhiteSpace(setting.MongoDefaultConnectionString) && !string.IsNullOrWhiteSpace(setting.MongoDefaultDatabase))
-                            {
-                                var mongo = MongoDbFactory.Create(setting.MongoDefaultConnectionString, setting.MongoDefaultDatabase);
-                                if (mongo.VerifyConnection())
-                                {
-                                    // account 迁移
-                                    var sourceAccountIds = mongo.GetCollection<DiscordAccount>().Find(x => true).Project(c => c.Id).ToList();
-                                    var accountStore = DbHelper.Instance.AccountStore;
-                                    var targetAccountIds = accountStore.GetAllIds();
-                                    var accountIds = sourceAccountIds.Except(targetAccountIds).ToList();
-                                    if (accountIds.Count > 0)
-                                    {
-                                        var sourceAccounts = mongo.GetCollection<DiscordAccount>().Find(x => true).ToList();
-                                        foreach (var id in accountIds)
-                                        {
-                                            var model = sourceAccounts.FirstOrDefault(c => c.Id == id);
-                                            if (model != null)
-                                            {
-                                                accountStore.Add(model);
-                                            }
-                                        }
-                                    }
-
-                                    // user 迁移
-                                    var sourceUserIds = mongo.GetCollection<User>().Find(x => true).Project(c => c.Id).ToList();
-                                    var userStore = DbHelper.Instance.UserStore;
-                                    var targetUserIds = userStore.GetAllIds();
-                                    var userIds = sourceUserIds.Except(targetUserIds).ToList();
-                                    if (userIds.Count > 0)
-                                    {
-                                        var sourceUsers = mongo.GetCollection<User>().Find(x => true).ToList();
-                                        foreach (var id in userIds)
-                                        {
-                                            var model = sourceUsers.FirstOrDefault(c => c.Id == id);
-                                            if (model != null)
-                                            {
-                                                userStore.Add(model);
-                                            }
-                                        }
-                                    }
-
-                                    // domain 迁移
-                                    var sourceDomainIds = mongo.GetCollection<DomainTag>().Find(x => true).Project(c => c.Id).ToList();
-                                    var domainStore = DbHelper.Instance.DomainStore;
-                                    var targetDomainIds = domainStore.GetAllIds();
-                                    var domainIds = sourceDomainIds.Except(targetDomainIds).ToList();
-                                    if (domainIds.Count > 0)
-                                    {
-                                        var sourceDomains = mongo.GetCollection<DomainTag>().Find(x => true).ToList();
-                                        foreach (var id in domainIds)
-                                        {
-                                            var model = sourceDomains.FirstOrDefault(c => c.Id == id);
-                                            if (model != null)
-                                            {
-                                                domainStore.Add(model);
-                                            }
-                                        }
-                                    }
-
-                                    // banded 迁移
-                                    var sourceBannedIds = mongo.GetCollection<BannedWord>().Find(x => true).Project(c => c.Id).ToList();
-                                    var bannedStore = DbHelper.Instance.BannedWordStore;
-                                    var targetBannedIds = bannedStore.GetAllIds();
-                                    var bannedIds = sourceBannedIds.Except(targetBannedIds).ToList();
-                                    if (bannedIds.Count > 0)
-                                    {
-                                        var sourceBanneds = mongo.GetCollection<BannedWord>().Find(x => true).ToList();
-                                        foreach (var id in bannedIds)
-                                        {
-                                            var model = sourceBanneds.FirstOrDefault(c => c.Id == id);
-                                            if (model != null)
-                                            {
-                                                bannedStore.Add(model);
-                                            }
-                                        }
-                                    }
-
-                                    // 迁移 task
-                                    try
-                                    {
-                                        _ = Task.Run(async () =>
-                                        {
-                                            try
-                                            {
-                                                await AdaptiveLock.ExecuteWithLock("TaskInfoAutoMigrate", TimeSpan.FromSeconds(10), () =>
-                                                {
-                                                    // 判断最后一条是否存在
-                                                    var success = 0;
-                                                    var error = 0;
-                                                    var last = mongo.GetCollection<TaskInfo>().Find(x => true, new FindOptions() { AllowDiskUse = true }).SortByDescending(c => c.SubmitTime).FirstOrDefault();
-                                                    if (last != null)
-                                                    {
-                                                        var taskStore = DbHelper.Instance.TaskStore;
-                                                        var lastModel = taskStore.Single(c => c.Id == last.Id);
-                                                        if (lastModel == null)
-                                                        {
-                                                            // 迁移数据
-                                                            var taskIds = mongo.GetCollection<TaskInfo>().Find(x => true, new FindOptions() { AllowDiskUse = true }).Project(c => c.Id).ToList();
-                                                            foreach (var tid in taskIds)
-                                                            {
-                                                                try
-                                                                {
-                                                                    var info = mongo.GetCollection<TaskInfo>().Find(x => x.Id == tid).FirstOrDefault();
-                                                                    if (info != null)
-                                                                    {
-                                                                        // 判断是否存在
-                                                                        var exist = taskStore.Any(c => c.Id == info.Id);
-                                                                        if (!exist)
-                                                                        {
-                                                                            taskStore.Add(info);
-                                                                            success++;
-                                                                        }
-                                                                    }
-                                                                }
-                                                                catch (Exception ex)
-                                                                {
-                                                                    error++;
-
-                                                                    _logger.Error(ex, "MongoDB 自动迁移绘图任务数异常 TaskId: {@0}", tid);
-                                                                }
-                                                            }
-
-                                                            _logger.Information("MongoDB 自动迁移绘图任务数据 success: {@0}, error: {@1}", success, error);
-                                                        }
-                                                    }
-                                                });
-                                            }
-                                            catch (Exception ex)
-                                            {
-                                                _logger.Error(ex, "MongoDB 自动迁移绘图任务数据 error");
-                                            }
-                                        });
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        _logger.Error(ex, "MongoDB 数据迁移任务信息异常");
-                                    }
-                                }
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.Error(ex, "MongoDB 数据迁移基本信息异常");
-                        }
-                    }
-
-                    // 迁移完后，再验证初始化数据
+                    // 验证初始化数据
                     try
                     {
                         // 初始化管理员用户
                         // 判断超管是否存在
-                        var admin = DbHelper.Instance.UserStore.Get(Constants.ADMIN_USER_ID);
+                        var admin = _freeSql.Get<User>(Constants.ADMIN_USER_ID);
                         if (admin == null)
                         {
                             admin = new User
@@ -317,11 +163,11 @@ namespace Midjourney.API
                                 admin.Token = "admin";
                             }
 
-                            DbHelper.Instance.UserStore.Add(admin);
+                            _freeSql.Add(admin);
                         }
 
                         // 初始化普通用户
-                        var user = DbHelper.Instance.UserStore.Get(Constants.DEFAULT_USER_ID);
+                        var user = _freeSql.Get<User>(Constants.DEFAULT_USER_ID);
                         var userToken = _configuration["UserToken"];
                         if (user == null && !string.IsNullOrWhiteSpace(userToken))
                         {
@@ -334,11 +180,11 @@ namespace Midjourney.API
                                 Status = EUserStatus.NORMAL,
                                 IsWhite = true
                             };
-                            DbHelper.Instance.UserStore.Add(user);
+                            _freeSql.Add(user);
                         }
 
                         // 初始化领域标签
-                        var defaultDomain = DbHelper.Instance.DomainStore.Get(Constants.DEFAULT_DOMAIN_ID);
+                        var defaultDomain = _freeSql.Get<DomainTag>(Constants.DEFAULT_DOMAIN_ID);
                         if (defaultDomain == null)
                         {
                             defaultDomain = new DomainTag
@@ -350,11 +196,11 @@ namespace Midjourney.API
                                 Enable = true,
                                 Keywords = WordsUtils.GetWords()
                             };
-                            DbHelper.Instance.DomainStore.Add(defaultDomain);
+                            _freeSql.Add(defaultDomain);
                         }
 
                         // 完整标签
-                        var fullDomain = DbHelper.Instance.DomainStore.Get(Constants.DEFAULT_DOMAIN_FULL_ID);
+                        var fullDomain = _freeSql.Get<DomainTag>(Constants.DEFAULT_DOMAIN_FULL_ID);
                         if (fullDomain == null)
                         {
                             fullDomain = new DomainTag
@@ -366,11 +212,11 @@ namespace Midjourney.API
                                 Enable = true,
                                 Keywords = WordsUtils.GetWordsFull()
                             };
-                            DbHelper.Instance.DomainStore.Add(fullDomain);
+                            _freeSql.Add(fullDomain);
                         }
 
                         // 违规词
-                        var bannedWord = DbHelper.Instance.BannedWordStore.Get(Constants.DEFAULT_BANNED_WORD_ID);
+                        var bannedWord = _freeSql.Get<BannedWord>(Constants.DEFAULT_BANNED_WORD_ID);
                         if (bannedWord == null)
                         {
                             bannedWord = new BannedWord
@@ -382,7 +228,7 @@ namespace Midjourney.API
                                 Enable = true,
                                 Keywords = BannedPromptUtils.GetStrings()
                             };
-                            DbHelper.Instance.BannedWordStore.Add(bannedWord);
+                            _freeSql.Add(bannedWord);
                         }
                     }
                     catch (Exception ex)
@@ -547,8 +393,8 @@ namespace Midjourney.API
 
                         var now = new DateTimeOffset(DateTime.Now.Date).ToUnixTimeMilliseconds();
 
-                        GlobalConfiguration.TodayDraw = (int)DbHelper.Instance.TaskStore.Count(x => x.SubmitTime >= now);
-                        GlobalConfiguration.TotalDraw = (int)DbHelper.Instance.TaskStore.Count();
+                        GlobalConfiguration.TodayDraw = (int)_freeSql.Count<TaskInfo>(x => x.SubmitTime >= now);
+                        GlobalConfiguration.TotalDraw = (int)_freeSql.Count<TaskInfo>();
 
                         // 用户绘图统计
                         UserStat();
@@ -592,33 +438,27 @@ namespace Midjourney.API
             {
                 var now = new DateTimeOffset(DateTime.Now.Date).ToUnixTimeMilliseconds();
 
-                var userTotalCount = new Dictionary<string, int>();
-                var userTodayCount = new Dictionary<string, int>();
-                if (setting.DatabaseType == DatabaseType.MongoDB)
+                var freeSql = FreeSqlHelper.FreeSql;
+                if (freeSql != null)
                 {
-                    var taskColl = MongoHelper.GetCollection<TaskInfo>();
-                    var userColl = MongoHelper.GetCollection<User>();
+                    var userTotalCount = freeSql.Select<TaskInfo>()
+                          .GroupBy(c => c.UserId)
+                          .ToList(c => new
+                          {
+                              UserId = c.Key,
+                              TotalCount = c.Count()
+                          })
+                          .Where(c => !string.IsNullOrWhiteSpace(c.UserId))
+                          .ToDictionary(c => c.UserId, c => c.TotalCount);
 
-                    userTotalCount = taskColl.AsQueryable(new AggregateOptions() { AllowDiskUse = true })
-                           .GroupBy(c => c.UserId)
-                           .Select(g => new
-                           {
-                               UserId = g.Key,
-                               TotalCount = g.Count()
-                           })
-                           .ToList()
-                           .Where(c => !string.IsNullOrWhiteSpace(c.UserId))
-                           .ToDictionary(c => c.UserId, c => c.TotalCount);
-
-                    userTodayCount = taskColl.AsQueryable(new AggregateOptions() { AllowDiskUse = true })
+                    var userTodayCount = freeSql.Select<TaskInfo>()
                            .Where(c => c.SubmitTime >= now)
                            .GroupBy(c => c.UserId)
-                           .Select(g => new
+                           .ToList(c => new
                            {
-                               UserId = g.Key,
-                               TotalCount = g.Count()
+                               UserId = c.Key,
+                               TotalCount = c.Count()
                            })
-                           .ToList()
                            .Where(c => !string.IsNullOrWhiteSpace(c.UserId))
                            .ToDictionary(c => c.UserId, c => c.TotalCount);
 
@@ -629,91 +469,11 @@ namespace Midjourney.API
                             userTodayCount[item.Key] = 0;
                         }
 
-                        var update = Builders<User>.Update
-                        .Set(c => c.TotalDrawCount, item.Value)
-                        .Set(c => c.DayDrawCount, userTodayCount[item.Key]);
-                        userColl.UpdateOne(c => c.Id == item.Key, update);
-                    }
-                }
-                //else if (setting.DatabaseType == DatabaseType.LiteDB)
-                //{
-                //    userTotalCount = LiteDBHelper.TaskStore.GetCollection()
-                //        .Query()
-                //        .Select(c => c.UserId)
-                //        .ToList()
-                //        .GroupBy(c => c)
-                //        .Select(g => new
-                //        {
-                //            UserId = g.Key,
-                //            TotalCount = g.Count()
-                //        })
-                //        .Where(c => !string.IsNullOrWhiteSpace(c.UserId))
-                //        .ToDictionary(c => c.UserId, c => c.TotalCount);
-
-                //    userTodayCount = LiteDBHelper.TaskStore.GetCollection()
-                //        .Query()
-                //        .Where(c => c.SubmitTime >= now)
-                //        .Select(c => c.UserId)
-                //        .ToList()
-                //        .GroupBy(c => c)
-                //        .Select(g => new
-                //        {
-                //            UserId = g.Key,
-                //            TotalCount = g.Count()
-                //        })
-                //        .Where(c => !string.IsNullOrWhiteSpace(c.UserId))
-                //        .ToDictionary(c => c.UserId, c => c.TotalCount);
-
-                //    foreach (var item in userTotalCount)
-                //    {
-                //        if (!userTodayCount.ContainsKey(item.Key))
-                //        {
-                //            userTodayCount[item.Key] = 0;
-                //        }
-
-                //        var userColl = LiteDBHelper.TaskStore.LiteDatabase.GetCollection<User>();
-                //        userColl.UpdateMany($"{{ TotalDrawCount: {item.Value}, DayDrawCount: {userTodayCount[item.Key]} }}", $"_id = '{item.Key}'");
-                //    }
-                //}
-                else
-                {
-                    var freeSql = FreeSqlHelper.FreeSql;
-                    if (freeSql != null)
-                    {
-                        userTotalCount = freeSql.Select<TaskInfo>()
-                            .GroupBy(c => c.UserId)
-                            .ToList(c => new
-                            {
-                                UserId = c.Key,
-                                TotalCount = c.Count()
-                            })
-                            .Where(c => !string.IsNullOrWhiteSpace(c.UserId))
-                            .ToDictionary(c => c.UserId, c => c.TotalCount);
-
-                        userTodayCount = freeSql.Select<TaskInfo>()
-                            .Where(c => c.SubmitTime >= now)
-                            .GroupBy(c => c.UserId)
-                            .ToList(c => new
-                            {
-                                UserId = c.Key,
-                                TotalCount = c.Count()
-                            })
-                            .Where(c => !string.IsNullOrWhiteSpace(c.UserId))
-                            .ToDictionary(c => c.UserId, c => c.TotalCount);
-
-                        foreach (var item in userTotalCount)
-                        {
-                            if (!userTodayCount.ContainsKey(item.Key))
-                            {
-                                userTodayCount[item.Key] = 0;
-                            }
-
-                            freeSql.Update<User>()
-                                .Set(c => c.TotalDrawCount, item.Value)
-                                .Set(c => c.DayDrawCount, userTodayCount[item.Key])
-                                .Where(c => c.Id == item.Key)
-                                .ExecuteAffrows();
-                        }
+                        freeSql.Update<User>()
+                            .Set(c => c.TotalDrawCount, item.Value)
+                            .Set(c => c.DayDrawCount, userTodayCount[item.Key])
+                            .Where(c => c.Id == item.Key)
+                            .ExecuteAffrows();
                     }
                 }
             }
@@ -785,22 +545,6 @@ namespace Midjourney.API
             // 如果超过 x 条，删除最早插入的数据
             switch (setting.DatabaseType)
             {
-                case DatabaseType.MongoDB:
-                    {
-                        var coll = MongoHelper.GetCollection<TaskInfo>();
-                        var documentCount = coll.CountDocuments(Builders<TaskInfo>.Filter.Empty);
-                        if (documentCount > maxCount)
-                        {
-                            var documentsToDelete = documentCount - maxCount;
-                            var ids = coll.Find(c => true, new FindOptions() { AllowDiskUse = true }).SortBy(c => c.SubmitTime).Limit((int)documentsToDelete).Project(c => c.Id).ToList();
-                            if (ids.Any())
-                            {
-                                coll.DeleteMany(c => ids.Contains(c.Id));
-                            }
-                        }
-                    }
-                    break;
-
                 case DatabaseType.SQLite:
                 case DatabaseType.MySQL:
                 case DatabaseType.PostgreSQL:
@@ -809,11 +553,14 @@ namespace Midjourney.API
                         var freeSql = FreeSqlHelper.FreeSql;
                         if (freeSql != null)
                         {
-                            var documentCount = freeSql.Queryable<TaskInfo>().Count();
+                            var documentCount = freeSql.Select<TaskInfo>().Count();
                             if (documentCount > maxCount)
                             {
-                                var documentsToDelete = (int)documentCount - maxCount;
-                                var ids = freeSql.Queryable<TaskInfo>().OrderBy(c => c.SubmitTime)
+                                // 每次最多删除 3000 条
+                                var documentsToDelete = int.Max(3000, (int)documentCount - maxCount);
+
+                                var ids = freeSql.Select<TaskInfo>()
+                                    .OrderBy(c => c.SubmitTime)
                                     .Take(documentsToDelete)
                                     .ToList()
                                     .Select(c => c.Id);
@@ -839,9 +586,8 @@ namespace Midjourney.API
         {
             var isLock = await AsyncLocalLock.TryLockAsync("initialize:all", TimeSpan.FromSeconds(10), async () =>
             {
-                var db = DbHelper.Instance.AccountStore;
 
-                var accounts = db.GetAll().OrderBy(c => c.Sort).ToList();
+                var accounts = _freeSql.Select<DiscordAccount>().OrderBy(c => c.Sort).ToList();
 
                 foreach (var account in accounts)
                 {
@@ -858,7 +604,7 @@ namespace Midjourney.API
                         account.Enable = false;
                         account.DisabledReason = "初始化失败";
 
-                        db.Update(account);
+                        _freeSql.Update(account);
                     }
                 }
 
@@ -905,13 +651,13 @@ namespace Midjourney.API
 
             var info = new StringBuilder();
 
-            var db = DbHelper.Instance.AccountStore;
+
             DiscordInstance disInstance = null;
 
             try
             {
                 // 获取获取值
-                account = db.Get(account.Id);
+                account = _freeSql.Get<DiscordAccount>(account.Id);
 
                 if (account == null)
                 {
@@ -926,7 +672,7 @@ namespace Midjourney.API
                     {
                         account.IsAutoLogining = false;
                         account.LoginMessage = "登录超时";
-                        db.Update("IsAutoLogining,LoginMessage", account);
+                        _freeSql.Update("IsAutoLogining,LoginMessage", account);
                         account.ClearCache();
                     }
                 }
@@ -1016,7 +762,7 @@ namespace Midjourney.API
                             sw.Restart();
                         }
 
-                        db.Update("NijiBotChannelId,PrivateChannelId,AllowModes,SubChannels,SubChannelValues,FastExhausted", account);
+                        _freeSql.Update("NijiBotChannelId,PrivateChannelId,AllowModes,SubChannels,SubChannelValues,FastExhausted", account);
                         account.ClearCache();
 
                         // discord 启用自动验证账号功能, 连接前先判断账号是否正常
@@ -1166,7 +912,7 @@ namespace Midjourney.API
                 account.Enable = false;
                 account.DisabledReason = ex.Message ?? "初始化失败";
 
-                db.Update(account);
+                _freeSql.Update(account);
                 account.ClearCache();
 
                 disInstance = null;
@@ -1264,7 +1010,7 @@ namespace Midjourney.API
         /// <param name="param"></param>
         public async Task<DiscordAccount> UpdateAccount(DiscordAccount param)
         {
-            var model = DbHelper.Instance.AccountStore.Get(param.Id);
+            var model = _freeSql.Get<DiscordAccount>(param.Id);
             if (model == null)
             {
                 throw new LogicException("账号不存在");
@@ -1277,7 +1023,7 @@ namespace Midjourney.API
                 throw new LogicException("作业执行中，请稍后重试");
             }
 
-            model = DbHelper.Instance.AccountStore.Get(model.Id)!;
+            model = _freeSql.Get<DiscordAccount>(model.Id)!;
 
             // 清空禁用原因
             if (model.IsYouChuan || model.IsOfficial)
@@ -1377,7 +1123,7 @@ namespace Midjourney.API
             model.OfficialEnablePersonalize = param.OfficialEnablePersonalize;
             model.YouChuanEnablePreferRelax = param.YouChuanEnablePreferRelax;
 
-            DbHelper.Instance.AccountStore.Update(model);
+            _freeSql.Update(model);
 
             model.ClearCache();
 
@@ -1430,7 +1176,7 @@ namespace Midjourney.API
         /// <param name="id"></param>
         public void DeleteAccount(string id)
         {
-            var model = DbHelper.Instance.AccountStore.Get(id);
+            var model = _freeSql.Get<DiscordAccount>(id);
             if (model != null)
             {
                 try
@@ -1447,7 +1193,7 @@ namespace Midjourney.API
                 }
 
                 model.ClearCache();
-                DbHelper.Instance.AccountStore.Delete(id);
+                _freeSql.DeleteById<DiscordAccount>(id);
             }
         }
 
@@ -1507,7 +1253,7 @@ namespace Midjourney.API
                                 // 判断账号是否被删除了
                                 if (!string.IsNullOrWhiteSpace(instance.Account.Id))
                                 {
-                                    var account = DbHelper.Instance.AccountStore.Get(instance.Account.Id);
+                                    var account = _freeSql.Get<DiscordAccount>(instance.Account.Id);
                                     if (account == null)
                                     {
                                         instance?.Dispose(false);
@@ -1528,7 +1274,7 @@ namespace Midjourney.API
                             if (DiscordInstance.GlobalRunningTasks.TryGetValue(notification.TaskInfoId, out var task) && task != null)
                             {
                                 task.Fail("取消任务");
-                                DbHelper.Instance.TaskStore.Update(task);
+                                _freeSql.Update(task);
                             }
                         }
                         break;
@@ -1544,7 +1290,7 @@ namespace Midjourney.API
                             if (DiscordInstance.GlobalRunningTasks.TryGetValue(notification.TaskInfoId, out var task) && task != null)
                             {
                                 task.Fail("删除任务");
-                                DbHelper.Instance.TaskStore.Delete(task.Id);
+                                _freeSql.DeleteById<TaskInfo>(task.Id);
                             }
                         }
                         break;

@@ -29,12 +29,12 @@ namespace Midjourney.Base.Dto
     public abstract class BaseSubmitDTO
     {
         /// <summary>
-        /// 自定义参数。
+        /// 自定义参数，最大长度 255
         /// </summary>
         public string State { get; set; }
 
         /// <summary>
-        /// 回调地址, 为空时使用全局notifyHook。
+        /// 回调地址，为空时使用全局 notifyHook，最大长度 2000
         /// </summary>
         public string NotifyHook { get; set; }
     }

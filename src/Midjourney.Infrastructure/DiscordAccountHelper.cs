@@ -36,6 +36,7 @@ namespace Midjourney.Infrastructure
     /// </summary>
     public class DiscordAccountHelper
     {
+        private readonly IFreeSql _freeSql = FreeSqlHelper.FreeSql;
         private readonly DiscordHelper _discordHelper;
         private readonly ITaskStoreService _taskStoreService;
         private readonly INotifyService _notifyService;
@@ -311,7 +312,7 @@ namespace Midjourney.Infrastructure
                 model.IsAutoLogining = true;
                 model.LoginStart = DateTime.Now;
 
-                DbHelper.Instance.AccountStore.Update("LoginStart,IsAutoLogining", model);
+                FreeSqlHelper.FreeSql.Update("LoginStart,IsAutoLogining", model);
 
                 return true;
             }

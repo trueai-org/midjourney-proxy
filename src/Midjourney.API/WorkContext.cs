@@ -68,7 +68,7 @@ namespace Midjourney.API
                     c.SetAbsoluteExpiration(TimeSpan.FromMinutes(30));
                     c.SetSlidingExpiration(TimeSpan.FromMinutes(5));
 
-                    return DbHelper.Instance.UserStore.Single(c => c.Token == _token);
+                    return FreeSqlHelper.FreeSql.Single<User>(c => c.Token == _token);
                 });
 
                 return user;

@@ -440,7 +440,7 @@ namespace Midjourney.Base
     public enum DatabaseType
     {
         /// <summary>
-        /// NONE（未配置，或无法连接时使用，原默认值）
+        /// NONE（未配置）
         /// </summary>
         NONE = 0,
 
@@ -450,12 +450,12 @@ namespace Midjourney.Base
         LiteDB = 1,
 
         /// <summary>
-        /// MongoDB
+        /// MongoDB（废弃）
         /// </summary>
         MongoDB = 2,
 
         /// <summary>
-        /// SQLite
+        /// SQLite（默认）
         /// </summary>
         SQLite = 3,
 

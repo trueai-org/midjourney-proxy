@@ -45,6 +45,7 @@ namespace Midjourney.API.Controllers
         private readonly WorkContext _workContext;
         private readonly FaceSwapInstance _faceSwapInstance;
         private readonly VideoFaceSwapInstance _videoFaceSwapInstance;
+        private readonly IFreeSql _freeSql = FreeSqlHelper.FreeSql;
 
         public InsightFaceController(
             IHttpContextAccessor httpContextAccessor,
@@ -204,7 +205,7 @@ namespace Midjourney.API.Controllers
             {
                 if (GlobalConfiguration.Setting.GuestDefaultDayLimit > 0)
                 {
-                    var ipTodayDrawCount = (int)DbHelper.Instance.TaskStore.Count(x => x.SubmitTime >= now && x.ClientIp == _ip);
+                    var ipTodayDrawCount = (int)_freeSql.Count<TaskInfo>(x => x.SubmitTime >= now && x.ClientIp == _ip);
                     if (ipTodayDrawCount > GlobalConfiguration.Setting.GuestDefaultDayLimit)
                     {
                         throw new LogicException("今日绘图次数已达上限");
@@ -217,7 +218,7 @@ namespace Midjourney.API.Controllers
             {
                 if (user.DayDrawLimit > 0)
                 {
-                    var userTodayDrawCount = (int)DbHelper.Instance.TaskStore.Count(x => x.SubmitTime >= now && x.UserId == user.Id);
+                    var userTodayDrawCount = (int)_freeSql.Count<TaskInfo>(x => x.SubmitTime >= now && x.UserId == user.Id);
                     if (userTodayDrawCount > user.DayDrawLimit)
                     {
                         throw new LogicException("今日绘图次数已达上限");

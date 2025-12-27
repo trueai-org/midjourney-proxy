@@ -29,10 +29,21 @@ using Serilog;
 namespace Midjourney.Base.Data
 {
     /// <summary>
-    /// 任务帮助类
+    /// FreeSql 帮助类 - 使用前必须配置初始化
     /// </summary>
     public class FreeSqlHelper
     {
+        /// <summary>
+        /// 允许的数据库类型
+        /// </summary>
+        public static readonly DatabaseType[] AllowedDatabaseTypes =
+        [
+            DatabaseType.SQLite,
+            DatabaseType.MySQL,
+            DatabaseType.PostgreSQL,
+            DatabaseType.SQLServer,
+        ];
+
         private static IFreeSql _freeSql;
 
         public static IFreeSql FreeSql => _freeSql;
@@ -51,7 +62,7 @@ namespace Midjourney.Base.Data
         /// </summary>
         public static IFreeSql Init(DatabaseType databaseType, string databaseConnectionString = null, bool autoSyncStructure = false)
         {
-            if (databaseType == DatabaseType.NONE || databaseType == DatabaseType.LiteDB || databaseType == DatabaseType.MongoDB)
+            if (!AllowedDatabaseTypes.Contains(databaseType))
             {
                 return null;
             }
@@ -91,18 +102,17 @@ namespace Midjourney.Base.Data
                   // 监视 SQL 命令对象
                   .UseMonitorCommand(cmd =>
                   {
-                      //Log.Information(cmd.CommandText);
-                      //Console.WriteLine(cmd.CommandText);
+                      Log.Debug(cmd.CommandText);
                   });
 #endif
 
             switch (databaseType)
             {
                 //case DatabaseType.LiteDB:
-                case DatabaseType.MongoDB:
-                    {
-                        return null;
-                    }
+                //case DatabaseType.MongoDB:
+                //    {
+                //        return null;
+                //    }
                 case DatabaseType.SQLite:
                     {
                         // Data Source=|DataDirectory|\document.db; Attachs=xxxtb.db; Pooling=true;Min Pool Size=1
@@ -155,12 +165,100 @@ namespace Midjourney.Base.Data
                 }
             };
 
-            //Configure(fsql);
-
-            //// 请务必定义成 Singleton 单例模式
+            // 请务必定义成 Singleton 单例模式
             //services.AddSingleton(fsql);
 
             return fsql;
+        }
+
+        /// <summary>
+        /// 验证并配置数据库连接
+        /// </summary>
+        /// <returns></returns>
+        public static bool VerifyConfigure()
+        {
+            var setting = GlobalConfiguration.Setting;
+            var isSuccess = Verify(setting.DatabaseType, setting.DatabaseConnectionString);
+            if (isSuccess)
+            {
+                // 验证成功后，确认配置当前数据库
+                var freeSql = Init(setting.DatabaseType, setting.DatabaseConnectionString, false);
+                if (freeSql != null)
+                {
+                    Configure(freeSql);
+                }
+            }
+
+            return isSuccess;
+        }
+
+        /// <summary>
+        /// 验证数据库连接
+        /// </summary>
+        /// <param name="databaseType"></param>
+        /// <param name="databaseConnectionString"></param>
+        /// <param name="isConfigure">验证成功后是否配置</param>
+        /// <returns></returns>
+        public static bool Verify(DatabaseType databaseType, string databaseConnectionString)
+        {
+            try
+            {
+                switch (databaseType)
+                {
+                    //case DatabaseType.MongoDB:
+                    //    {
+                    //        return MongoHelper.Verify(databaseConnectionString, databaseName);
+                    //    }
+                    case DatabaseType.SQLite:
+                    case DatabaseType.MySQL:
+                    case DatabaseType.PostgreSQL:
+                    case DatabaseType.SQLServer:
+                        {
+                            // 首次初始化，并同步实体结构
+                            var freeSql = Init(databaseType, databaseConnectionString, true);
+                            if (freeSql != null)
+                            {
+                                var obj = freeSql.Ado.ExecuteScalar("SELECT 1");
+                                var succees = obj != null && obj.ToString() == "1";
+                                if (succees)
+                                {
+                                    // 同步实体结构
+
+                                    // 注意：
+                                    // 1. MySQL InnoDB 存储引擎的限制 1 行 65535 字节
+                                    // 这个错误提示 "Row size too large" 表示你创建的表 DiscordAccount 的一行数据大小超过了 MySQL InnoDB 存储引擎的限制（65535 字节）。
+                                    // 即使你已经使用了 TEXT 和 LONGTEXT 类型，但这些类型在计算行大小时仍然会占用一部分空间（指针大小，通常很小），而其他 VARCHAR 类型的列仍然会直接计入行大小。
+
+                                    // 2. PostgreSQL 需要启动扩展支持字典类型
+                                    // CREATE EXTENSION hstore;
+
+                                    // 第一批
+                                    freeSql.CodeFirst.SyncStructure(typeof(User), typeof(BannedWord));
+
+                                    // 第二批
+                                    freeSql.CodeFirst.SyncStructure(typeof(DiscordAccount), typeof(DomainTag));
+
+                                    // 第三批
+                                    freeSql.CodeFirst.SyncStructure(typeof(TaskInfo));
+
+                                    // 第四批
+                                    freeSql.CodeFirst.SyncStructure(typeof(PersonalizeTag));
+                                }
+
+                                return succees;
+                            }
+                            return false;
+                        }
+                    default:
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "数据库连接验证失败");
+            }
+
+            return false;
         }
     }
 }

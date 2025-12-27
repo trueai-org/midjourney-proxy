@@ -38,11 +38,6 @@ namespace Midjourney.Infrastructure
     /// </summary>
     public class SettingHelper : IDisposable
     {
-        /// <summary>
-        /// 创建一个全局可控的日志级别开关
-        /// </summary>
-        public static Serilog.Core.LoggingLevelSwitch LogLevelSwitch { get; private set; } = new Serilog.Core.LoggingLevelSwitch();
-
         private readonly string _configPath;
 
         private ConsulClient _consulClient;
@@ -92,12 +87,11 @@ namespace Midjourney.Infrastructure
         /// </summary>
         public void ApplySettings()
         {
-            GlobalConfiguration.Setting = Current;
-
             var setting = Current;
 
-            // 日志级别
-            LogLevelSwitch.MinimumLevel = setting.LogEventLevel;
+            GlobalConfiguration.Setting = Current;
+            GlobalConfiguration.LogLevel.MinimumLevel = setting.LogEventLevel;
+
             Log.Write(setting.LogEventLevel, "日志级别已设置为: {Level}", setting.LogEventLevel);
 
             // 存储服务
@@ -118,9 +112,12 @@ namespace Midjourney.Infrastructure
             }
 
             // 缓存 / Redis / Reids 锁
-            var csredis = new CSRedisClient(setting.RedisConnectionString);
-            AdaptiveLock.Initialization(csredis);
-            AdaptiveCache.Initialization(csredis);
+            if (setting.IsValidRedis)
+            {
+                var csredis = new CSRedisClient(setting.RedisConnectionString);
+                AdaptiveLock.Initialization(csredis);
+                AdaptiveCache.Initialization(csredis);
+            }
         }
 
         /// <summary>

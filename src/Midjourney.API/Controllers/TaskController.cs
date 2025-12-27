@@ -42,6 +42,7 @@ namespace Midjourney.API.Controllers
         private readonly ITaskService _taskService;
         private readonly DiscordLoadBalancer _discordLoadBalancer;
         private readonly WorkContext _workContext;
+        private readonly IFreeSql _freeSql = FreeSqlHelper.FreeSql;
 
         // 是否匿名用户
         private readonly bool _isAnonymous;
@@ -186,7 +187,7 @@ namespace Midjourney.API.Controllers
         [HttpGet("list")]
         public ActionResult<List<TaskInfo>> List()
         {
-            var data = DbHelper.Instance.TaskStore.Where(c => true, t => t.SubmitTime, false, 100).ToList();
+            var data = _freeSql.Select<TaskInfo>().OrderByDescending(t => t.SubmitTime).Take(100).ToList();
             return Ok(data);
         }
 

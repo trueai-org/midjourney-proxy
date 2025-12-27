@@ -65,15 +65,15 @@ namespace Midjourney.Base.Data
                     {
                         if (typeof(TMark) == typeof(MongoHelper))
                         {
-                            var connectionString = GlobalConfiguration.Setting.DatabaseConnectionString;
-                            var name = GlobalConfiguration.Setting.DatabaseName;
+                            //var connectionString = GlobalConfiguration.Setting.DatabaseConnectionString;
+                            //var name = GlobalConfiguration.Setting.DatabaseName;
 
-                            if (!string.IsNullOrEmpty(connectionString) && !string.IsNullOrEmpty(name))
-                            {
-                                var client = new MongoClient(connectionString);
-                                var database = client.GetDatabase(name);
-                                _instance = database;
-                            }
+                            //if (!string.IsNullOrEmpty(connectionString) && !string.IsNullOrEmpty(name))
+                            //{
+                            //    var client = new MongoClient(connectionString);
+                            //    var database = client.GetDatabase(name);
+                            //    _instance = database;
+                            //}
                         }
                     }
                 }
@@ -148,13 +148,6 @@ namespace Midjourney.Base.Data
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(databaseConnectionString) && string.IsNullOrWhiteSpace(databaseName))
-                {
-                    var setting = GlobalConfiguration.Setting;
-                    databaseConnectionString = setting.DatabaseConnectionString;
-                    databaseName = setting.DatabaseName;
-                }
-
                 if (string.IsNullOrWhiteSpace(databaseConnectionString) || string.IsNullOrWhiteSpace(databaseName))
                 {
                     return false;

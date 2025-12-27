@@ -37,7 +37,6 @@ namespace Midjourney.Base.Data
 
         public void Init()
         {
-
         }
 
         public void Add(T entity)
@@ -73,25 +72,43 @@ namespace Midjourney.Base.Data
         /// <returns></returns>
         public bool Update(string fields, T item)
         {
-            // 获取现有文档
-            var model = _freeSql.Select<T>().Where(c => c.Id == item.Id).First();
-            if (model == null)
-                return false;
-
-            // 将更新对象的字段值复制到现有文档
-            var fieldArray = fields.Split(',');
-            foreach (var field in fieldArray)
+            var dic = new Dictionary<string, object>();
+            var fs = fields.Split(',').ToTrimList();
+            foreach (var f in fs)
             {
-                var prop = typeof(T).GetProperty(field.Trim());
+                var prop = typeof(T).GetProperty(f);
                 if (prop != null)
                 {
-                    var newValue = prop.GetValue(item);
-                    prop.SetValue(model, newValue);
+                    dic[f] = prop.GetValue(item);
                 }
             }
+            if (fs.Count > 0)
+            {
+                _freeSql.Update<T>()
+                .SetDto(dic)
+                .Where(c => c.Id == item.Id)
+                .ExecuteAffrows();
+            }
 
-            // 更新文档
-            _freeSql.Update(model);
+            //// 获取现有文档
+            //var model = _freeSql.Select<T>().Where(c => c.Id == item.Id).First();
+            //if (model == null)
+            //    return false;
+
+            //// 将更新对象的字段值复制到现有文档
+            //var fieldArray = fields.Split(',');
+            //foreach (var field in fieldArray)
+            //{
+            //    var prop = typeof(T).GetProperty(field.Trim());
+            //    if (prop != null)
+            //    {
+            //        var newValue = prop.GetValue(item);
+            //        prop.SetValue(model, newValue);
+            //    }
+            //}
+
+            //// 更新文档
+            //_freeSql.Update(model);
 
             return true;
         }

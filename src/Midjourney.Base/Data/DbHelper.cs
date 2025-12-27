@@ -23,7 +23,6 @@
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
 using Midjourney.Base.Util;
-using MongoDB.Driver;
 using Serilog;
 
 namespace Midjourney.Base.Data
@@ -94,16 +93,16 @@ namespace Midjourney.Base.Data
                 //    }
                 //    break;
 
-                case DatabaseType.MongoDB:
-                    {
-                        _taskStore = new MongoDBRepository<TaskInfo>();
-                        _accountStore = new MongoDBRepository<DiscordAccount>();
-                        _userStore = new MongoDBRepository<User>();
-                        _domainStore = new MongoDBRepository<DomainTag>();
-                        _bannedWordStore = new MongoDBRepository<BannedWord>();
-                        _personalizeTagWordStore = new MongoDBRepository<PersonalizeTag>();
-                    }
-                    break;
+                //case DatabaseType.MongoDB:
+                //    {
+                //        _taskStore = new MongoDBRepository<TaskInfo>();
+                //        _accountStore = new MongoDBRepository<DiscordAccount>();
+                //        _userStore = new MongoDBRepository<User>();
+                //        _domainStore = new MongoDBRepository<DomainTag>();
+                //        _bannedWordStore = new MongoDBRepository<BannedWord>();
+                //        _personalizeTagWordStore = new MongoDBRepository<PersonalizeTag>();
+                //    }
+                //    break;
 
                 case DatabaseType.SQLite:
                 case DatabaseType.MySQL:
@@ -172,59 +171,59 @@ namespace Midjourney.Base.Data
                         //    }
                         //    break;
 
-                        case DatabaseType.MongoDB:
-                            {
-                                // 不能固定大小，因为无法修改数据
-                                //var database = MongoHelper.Instance;
-                                //var collectionName = "task";
-                                //var collectionExists = database.ListCollectionNames().ToList().Contains(collectionName);
-                                //if (!collectionExists)
-                                //{
-                                //    var options = new CreateCollectionOptions
-                                //    {
-                                //        Capped = true,
-                                //        MaxSize = 1024L * 1024L * 1024L * 1024L,  // 1 TB 的集合大小，实际上不受大小限制
-                                //        MaxDocuments = 1000000
-                                //    };
-                                //    database.CreateCollection("task", options);
-                                //}
+                        //case DatabaseType.MongoDB:
+                        //    {
+                        //        // 不能固定大小，因为无法修改数据
+                        //        //var database = MongoHelper.Instance;
+                        //        //var collectionName = "task";
+                        //        //var collectionExists = database.ListCollectionNames().ToList().Contains(collectionName);
+                        //        //if (!collectionExists)
+                        //        //{
+                        //        //    var options = new CreateCollectionOptions
+                        //        //    {
+                        //        //        Capped = true,
+                        //        //        MaxSize = 1024L * 1024L * 1024L * 1024L,  // 1 TB 的集合大小，实际上不受大小限制
+                        //        //        MaxDocuments = 1000000
+                        //        //    };
+                        //        //    database.CreateCollection("task", options);
+                        //        //}
 
-                                var coll = MongoHelper.GetCollection<TaskInfo>();
+                        //        var coll = MongoHelper.GetCollection<TaskInfo>();
 
-                                var index1 = new CreateIndexModel<TaskInfo>(Builders<TaskInfo>.IndexKeys.Descending(c => c.SubmitTime));
-                                coll.Indexes.CreateOne(index1);
+                        //        var index1 = new CreateIndexModel<TaskInfo>(Builders<TaskInfo>.IndexKeys.Descending(c => c.SubmitTime));
+                        //        coll.Indexes.CreateOne(index1);
 
-                                var index2 = new CreateIndexModel<TaskInfo>(Builders<TaskInfo>.IndexKeys.Ascending(c => c.PromptEn));
-                                coll.Indexes.CreateOne(index2);
+                        //        var index2 = new CreateIndexModel<TaskInfo>(Builders<TaskInfo>.IndexKeys.Ascending(c => c.PromptEn));
+                        //        coll.Indexes.CreateOne(index2);
 
-                                var index3 = new CreateIndexModel<TaskInfo>(Builders<TaskInfo>.IndexKeys.Descending(c => c.Prompt));
-                                coll.Indexes.CreateOne(index3);
+                        //        var index3 = new CreateIndexModel<TaskInfo>(Builders<TaskInfo>.IndexKeys.Descending(c => c.Prompt));
+                        //        coll.Indexes.CreateOne(index3);
 
-                                var index4 = new CreateIndexModel<TaskInfo>(Builders<TaskInfo>.IndexKeys.Ascending(c => c.InstanceId));
-                                coll.Indexes.CreateOne(index4);
+                        //        var index4 = new CreateIndexModel<TaskInfo>(Builders<TaskInfo>.IndexKeys.Ascending(c => c.InstanceId));
+                        //        coll.Indexes.CreateOne(index4);
 
-                                var index5 = new CreateIndexModel<TaskInfo>(Builders<TaskInfo>.IndexKeys.Ascending(c => c.Status));
-                                coll.Indexes.CreateOne(index5);
+                        //        var index5 = new CreateIndexModel<TaskInfo>(Builders<TaskInfo>.IndexKeys.Ascending(c => c.Status));
+                        //        coll.Indexes.CreateOne(index5);
 
-                                var index6 = new CreateIndexModel<TaskInfo>(Builders<TaskInfo>.IndexKeys.Ascending(c => c.Action));
-                                coll.Indexes.CreateOne(index6);
+                        //        var index6 = new CreateIndexModel<TaskInfo>(Builders<TaskInfo>.IndexKeys.Ascending(c => c.Action));
+                        //        coll.Indexes.CreateOne(index6);
 
-                                var index7 = new CreateIndexModel<TaskInfo>(Builders<TaskInfo>.IndexKeys.Ascending(c => c.Description));
-                                coll.Indexes.CreateOne(index7);
+                        //        var index7 = new CreateIndexModel<TaskInfo>(Builders<TaskInfo>.IndexKeys.Ascending(c => c.Description));
+                        //        coll.Indexes.CreateOne(index7);
 
-                                var index8 = new CreateIndexModel<TaskInfo>(Builders<TaskInfo>.IndexKeys.Ascending(c => c.ImageUrl));
-                                coll.Indexes.CreateOne(index8);
+                        //        var index8 = new CreateIndexModel<TaskInfo>(Builders<TaskInfo>.IndexKeys.Ascending(c => c.ImageUrl));
+                        //        coll.Indexes.CreateOne(index8);
 
-                                var index9 = new CreateIndexModel<TaskInfo>(Builders<TaskInfo>.IndexKeys.Ascending(c => c.UserId));
-                                coll.Indexes.CreateOne(index9);
+                        //        var index9 = new CreateIndexModel<TaskInfo>(Builders<TaskInfo>.IndexKeys.Ascending(c => c.UserId));
+                        //        coll.Indexes.CreateOne(index9);
 
-                                var index10 = new CreateIndexModel<TaskInfo>(Builders<TaskInfo>.IndexKeys.Ascending(c => c.ClientIp));
-                                coll.Indexes.CreateOne(index10);
+                        //        var index10 = new CreateIndexModel<TaskInfo>(Builders<TaskInfo>.IndexKeys.Ascending(c => c.ClientIp));
+                        //        coll.Indexes.CreateOne(index10);
 
-                                var index11 = new CreateIndexModel<TaskInfo>(Builders<TaskInfo>.IndexKeys.Ascending(c => c.State));
-                                coll.Indexes.CreateOne(index11);
-                            }
-                            break;
+                        //        var index11 = new CreateIndexModel<TaskInfo>(Builders<TaskInfo>.IndexKeys.Ascending(c => c.State));
+                        //        coll.Indexes.CreateOne(index11);
+                        //    }
+                        //    break;
 
                         case DatabaseType.SQLite:
                             break;
@@ -247,97 +246,6 @@ namespace Midjourney.Base.Data
             {
                 Log.Error(ex, "初始化数据库索引异常");
             }
-        }
-
-        /// <summary>
-        /// 验证并配置数据库连接
-        /// </summary>
-        /// <returns></returns>
-        public static bool VerifyConfigure()
-        {
-            var setting = GlobalConfiguration.Setting;
-            var isSuccess = Verify(setting.DatabaseType, setting.DatabaseConnectionString, setting.DatabaseName);
-            if (isSuccess)
-            {
-                // 验证成功后，确认配置当前数据库
-                var freeSql = FreeSqlHelper.Init(setting.DatabaseType, setting.DatabaseConnectionString, false);
-                if (freeSql != null)
-                {
-                    FreeSqlHelper.Configure(freeSql);
-                }
-            }
-
-            return isSuccess;
-        }
-
-        /// <summary>
-        /// 验证数据库连接
-        /// </summary>
-        /// <param name="databaseType"></param>
-        /// <param name="databaseConnectionString"></param>
-        /// <param name="databaseName"></param>
-        /// <param name="isConfigure">验证成功后是否配置</param>
-        /// <returns></returns>
-        public static bool Verify(DatabaseType databaseType, string databaseConnectionString, string databaseName = null)
-        {
-            try
-            {
-                switch (databaseType)
-                {
-                    case DatabaseType.MongoDB:
-                        {
-                            return MongoHelper.Verify(databaseConnectionString, databaseName);
-                        }
-                    case DatabaseType.SQLite:
-                    case DatabaseType.MySQL:
-                    case DatabaseType.PostgreSQL:
-                    case DatabaseType.SQLServer:
-                        {
-                            // 首次初始化，并同步实体结构
-                            var freeSql = FreeSqlHelper.Init(databaseType, databaseConnectionString, true);
-                            if (freeSql != null)
-                            {
-                                var obj = freeSql.Ado.ExecuteScalar("SELECT 1");
-                                var succees = obj != null && obj.ToString() == "1";
-                                if (succees)
-                                {
-                                    // 同步实体结构
-
-                                    // 注意：
-                                    // 1. MySQL InnoDB 存储引擎的限制 1 行 65535 字节
-                                    // 这个错误提示 "Row size too large" 表示你创建的表 DiscordAccount 的一行数据大小超过了 MySQL InnoDB 存储引擎的限制（65535 字节）。
-                                    // 即使你已经使用了 TEXT 和 LONGTEXT 类型，但这些类型在计算行大小时仍然会占用一部分空间（指针大小，通常很小），而其他 VARCHAR 类型的列仍然会直接计入行大小。
-
-                                    // 2. postgresql 需要启动扩展支持字典类型
-                                    // CREATE EXTENSION hstore;
-
-                                    // 第一批
-                                    freeSql.CodeFirst.SyncStructure(typeof(User), typeof(BannedWord));
-
-                                    // 第二批
-                                    freeSql.CodeFirst.SyncStructure(typeof(DiscordAccount), typeof(DomainTag));
-
-                                    // 第三批
-                                    freeSql.CodeFirst.SyncStructure(typeof(TaskInfo));
-
-                                    // 第四批
-                                    freeSql.CodeFirst.SyncStructure(typeof(PersonalizeTag));
-                                }
-
-                                return succees;
-                            }
-                            return false;
-                        }
-                    default:
-                        break;
-                }
-            }
-            catch (Exception ex)
-            {
-                Log.Error(ex, "数据库连接验证失败");
-            }
-
-            return false;
         }
     }
 }

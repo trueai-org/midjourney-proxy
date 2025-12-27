@@ -34,6 +34,7 @@ namespace Midjourney.Infrastructure.Handle
     {
         protected DiscordLoadBalancer discordLoadBalancer;
         protected DiscordHelper discordHelper;
+        protected IFreeSql _freeSql = FreeSqlHelper.FreeSql;
 
         public UserMessageHandler(DiscordLoadBalancer discordLoadBalancer, DiscordHelper discordHelper)
         {
@@ -290,7 +291,7 @@ namespace Midjourney.Infrastructure.Handle
                     // 标记任务失败
                     upscaleTask.Status = TaskStatus.FAILURE;
                     upscaleTask.FailReason = $"找不到 extend 按钮 (motion: {extendMotion})";
-                    DbHelper.Instance.TaskStore.Update(upscaleTask);
+                    _freeSql.Update(upscaleTask);
                     upscaleTask.Awake();
                     return;
                 }

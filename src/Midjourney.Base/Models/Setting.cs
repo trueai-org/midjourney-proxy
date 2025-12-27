@@ -70,18 +70,18 @@ namespace Midjourney.Base.Models
         public string RedisConnectionString { get; set; }
 
         /// <summary>
-        /// MongoDB 自动迁移任务
+        /// MongoDB 自动迁移任务（废弃）
         /// 启动时将 MongoDB 数据迁移到迁移到当前数据库
         /// </summary>
         public bool IsAutoMigrateMongo { get; set; }
 
         /// <summary>
-        /// MongoDB 默认连接字符串
+        /// MongoDB 默认连接字符串（废弃）
         /// </summary>
         public string MongoDefaultConnectionString { get; set; }
 
         /// <summary>
-        /// MongoDB 默认数据库
+        /// MongoDB 默认数据库（废弃）
         /// </summary>
         public string MongoDefaultDatabase { get; set; }
 
@@ -411,7 +411,7 @@ namespace Midjourney.Base.Models
         /// <summary>
         /// 数据库类型
         /// </summary>
-        public DatabaseType DatabaseType { get; set; } = DatabaseType.NONE;
+        public DatabaseType DatabaseType { get; set; }
 
         /// <summary>
         /// 数据库连接字符串
@@ -419,7 +419,7 @@ namespace Midjourney.Base.Models
         public string DatabaseConnectionString { get; set; }
 
         /// <summary>
-        /// 数据库名称
+        /// 数据库名称（废弃）
         /// </summary>
         public string DatabaseName { get; set; }
 

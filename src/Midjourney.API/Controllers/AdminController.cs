@@ -62,6 +62,7 @@ namespace Midjourney.API.Controllers
         private readonly WorkContext _workContext;
 
         private readonly IUpgradeService _upgradeService;
+        private readonly IFreeSql _freeSql;
 
         public AdminController(
             ITaskService taskService,
@@ -72,6 +73,7 @@ namespace Midjourney.API.Controllers
             IHttpContextAccessor context,
             IUpgradeService upgradeService)
         {
+            _freeSql = FreeSqlHelper.FreeSql;
             _upgradeService = upgradeService;
             _memoryCache = memoryCache;
             _loadBalancer = loadBalancer;
@@ -149,7 +151,7 @@ namespace Midjourney.API.Controllers
             }
 
             // 验证用户是否存在
-            var user = DbHelper.Instance.UserStore.Single(u => u.Email == mail);
+            var user = _freeSql.Select<User>(u => u.Email == mail).First();
             if (user != null)
             {
                 throw new LogicException("用户已存在");
@@ -170,7 +172,7 @@ namespace Midjourney.API.Controllers
                 Token = Guid.NewGuid().ToString("N") + Guid.NewGuid().ToString("N"),
                 Name = mail.Split('@').FirstOrDefault()
             };
-            DbHelper.Instance.UserStore.Add(user);
+            _freeSql.Add(user);
 
             // 发送邮件
             await EmailJob.Instance.EmailSend(GlobalConfiguration.Setting.Smtp,
@@ -217,7 +219,7 @@ namespace Midjourney.API.Controllers
             //    });
             //}
 
-            var user = DbHelper.Instance.UserStore.Single(u => u.Token == token);
+            var user = _freeSql.Single<User>(u => u.Token == token);
             if (user == null)
             {
                 throw new LogicException("用户 Token 错误");
@@ -238,7 +240,7 @@ namespace Midjourney.API.Controllers
             user.LastLoginTime = DateTime.Now;
             user.LastLoginIp = _workContext.GetIp();
 
-            DbHelper.Instance.UserStore.Update(user);
+            _freeSql.Update(user);
 
             return Ok(new
             {
@@ -269,7 +271,7 @@ namespace Midjourney.API.Controllers
         {
             if (!string.IsNullOrWhiteSpace(request.State) && !string.IsNullOrWhiteSpace(request.Url))
             {
-                var item = DbHelper.Instance.AccountStore.Single(c => c.ChannelId == request.State);
+                var item = _freeSql.Single<DiscordAccount>(c => c.ChannelId == request.State);
 
                 if (item != null && item.Lock)
                 {
@@ -303,7 +305,7 @@ namespace Midjourney.API.Controllers
                         }
 
                         // 更新账号信息
-                        DbHelper.Instance.AccountStore.Update(item);
+                        _freeSql.Update(item);
                         item.ClearCache();
 
                         if (!request.Success)
@@ -556,7 +558,7 @@ namespace Midjourney.API.Controllers
             //var instance = _loadBalancer.GetDiscordInstance(id);
             //return instance == null ? (ActionResult<DiscordAccount>)NotFound() : Ok(instance.Account);
 
-            var item = DbHelper.Instance.AccountStore.Get(id);
+            var item = _freeSql.Get<DiscordAccount>(id);
             if (item == null)
             {
                 throw new LogicException("账号不存在");
@@ -608,7 +610,7 @@ namespace Midjourney.API.Controllers
                 return Result.Fail("演示模式，禁止操作");
             }
 
-            var model = DbHelper.Instance.AccountStore.Get(id);
+            var model = _freeSql.Get<DiscordAccount>(id);
             if (model == null)
             {
                 throw new LogicException("账号不存在");
@@ -646,7 +648,7 @@ namespace Midjourney.API.Controllers
         {
             if (!string.IsNullOrWhiteSpace(request.State) && !string.IsNullOrWhiteSpace(request.LoginAccount))
             {
-                var item = DbHelper.Instance.AccountStore.Single(c => c.ChannelId == request.State && c.LoginAccount == request.LoginAccount);
+                var item = _freeSql.Single<DiscordAccount>(c => c.ChannelId == request.State && c.LoginAccount == request.LoginAccount);
 
                 if (item != null && item.IsAutoLogining == true)
                 {
@@ -686,7 +688,7 @@ namespace Midjourney.API.Controllers
                         }
 
                         // 更新账号信息
-                        DbHelper.Instance.AccountStore.Update(item);
+                        _freeSql.Update(item);
                         item.ClearCache();
 
                         if (!request.Success)
@@ -723,7 +725,7 @@ namespace Midjourney.API.Controllers
                 throw new LogicException("演示模式，禁止操作");
             }
 
-            var item = DbHelper.Instance.AccountStore.Get(id);
+            var item = _freeSql.Get<DiscordAccount>(id);
             if (item == null)
             {
                 throw new LogicException("账号不存在");
@@ -773,7 +775,7 @@ namespace Midjourney.API.Controllers
                             item.CfUrl = url;
 
                             // 更新账号信息
-                            DbHelper.Instance.AccountStore.Update(item);
+                            _freeSql.Update(item);
                             item.ClearCache();
                         }
                     }
@@ -801,7 +803,7 @@ namespace Midjourney.API.Controllers
                 throw new LogicException("演示模式，禁止操作");
             }
 
-            var item = DbHelper.Instance.AccountStore.Get(id);
+            var item = _freeSql.Get<DiscordAccount>(id);
             if (item == null)
             {
                 throw new LogicException("账号不存在");
@@ -814,7 +816,7 @@ namespace Midjourney.API.Controllers
             item.DisabledReason = null;
 
             // 更新账号信息
-            DbHelper.Instance.AccountStore.Update(item);
+            _freeSql.Update(item);
             item.ClearCache();
 
             return Result.Ok();
@@ -896,7 +898,7 @@ namespace Midjourney.API.Controllers
 
             if (!accountConfig.IsYouChuan && !accountConfig.IsOfficial)
             {
-                var model = DbHelper.Instance.AccountStore.Single(c => c.ChannelId == accountConfig.ChannelId);
+                var model = _freeSql.Single<DiscordAccount>(c => c.ChannelId == accountConfig.ChannelId);
                 if (model != null)
                 {
                     throw new LogicException("渠道已存在");
@@ -935,7 +937,7 @@ namespace Midjourney.API.Controllers
                 account.IsShorten = false;
             }
 
-            DbHelper.Instance.AccountStore.Add(account);
+            _freeSql.Add(account);
 
             // 后台执行
             _ = _discordAccountInitializer.StartAccount(account);
@@ -978,7 +980,7 @@ namespace Midjourney.API.Controllers
                 return Result.Fail("未开启赞助功能，禁止操作");
             }
 
-            var model = DbHelper.Instance.AccountStore.Get(id);
+            var model = _freeSql.Get<DiscordAccount>(id);
             if (model == null)
             {
                 throw new LogicException("账号不存在");
@@ -1032,7 +1034,7 @@ namespace Midjourney.API.Controllers
                 return Result.Fail("未开启赞助功能，禁止操作");
             }
 
-            var model = DbHelper.Instance.AccountStore.Get(id);
+            var model = _freeSql.Get<DiscordAccount>(id);
             if (model == null)
             {
                 throw new LogicException("账号不存在");
@@ -1057,7 +1059,7 @@ namespace Midjourney.API.Controllers
         {
             var user = _workContext.GetUser();
 
-            var list = DbHelper.Instance.AccountStore.GetAll().Where(c => c.Enable == true)
+            var list = _freeSql.Select<DiscordAccount>().Where(c => c.Enable == true)
                 .ToList()
                 .OrderBy(c => c.Sort).ThenBy(c => c.DateCreated).ToList();
 
@@ -1132,20 +1134,60 @@ namespace Midjourney.API.Controllers
             var allowModes = param.AllowModes?.ToArray() ?? [];
 
             var setting = GlobalConfiguration.Setting;
-            if (setting.DatabaseType == DatabaseType.MongoDB)
+            var freeSql = FreeSqlHelper.FreeSql;
+            if (freeSql != null)
             {
-                var coll = MongoHelper.GetCollection<DiscordAccount>().AsQueryable();
-                var query = coll
+                var query = FreeSqlHelper.FreeSql.Select<DiscordAccount>()
                     .WhereIf(!string.IsNullOrWhiteSpace(param.GuildId), c => c.GuildId == param.GuildId)
                     .WhereIf(!string.IsNullOrWhiteSpace(param.ChannelId), c => c.ChannelId == param.ChannelId)
                     .WhereIf(param.Enable.HasValue, c => c.Enable == param.Enable)
                     .WhereIf(!string.IsNullOrWhiteSpace(param.Remark), c => c.Remark.Contains(param.Remark))
-                    .WhereIf(!string.IsNullOrWhiteSpace(param.Sponsor), c => c.Sponsor.Contains(param.Sponsor))
-                    .WhereIf(allowModes.Length == 3, c => c.AllowModes.Contains(allowModes[0]) || c.AllowModes.Contains(allowModes[1]) || c.AllowModes.Contains(allowModes[2]))
-                    .WhereIf(allowModes.Length == 2, c => c.AllowModes.Contains(allowModes[0]) || c.AllowModes.Contains(allowModes[1]))
-                    .WhereIf(allowModes.Length == 1, c => c.AllowModes.Contains(allowModes[0]));
+                    .WhereIf(!string.IsNullOrWhiteSpace(param.Sponsor), c => c.Sponsor.Contains(param.Sponsor));
 
-                count = query.Count();
+                // MYSQL
+                if (param.AllowModes?.Count > 0 && setting.DatabaseType == DatabaseType.MySQL)
+                {
+                    // 使用 in sql
+                    var allowModesConditions = new List<string>();
+                    var parameters = new Dictionary<string, object>();
+                    int paramIndex = 0;
+
+                    foreach (var mode in param.AllowModes)
+                    {
+                        string paramName = $"@p{paramIndex++}";
+
+                        // *** Determine how GenerationSpeedMode is stored in JSON ***
+                        // Option A: If stored as string (e.g., "Fast", "Relax")
+                        var paramValue = ((int)mode).ToString();
+
+                        // Option B: If stored as integer (e.g., 1, 0)
+                        // paramValue = (int)mode;
+
+                        parameters.Add(paramName, paramValue);
+
+                        // Build the JSON_CONTAINS check for this mode.
+                        // IMPORTANT: Do NOT include the table alias 'a.' here. FreeSql adds it.
+                        // Use the C# property name `AllowModes`. FreeSql maps it to the column.
+                        allowModesConditions.Add($"JSON_CONTAINS(`AllowModes`, {paramName})");
+                    }
+
+                    if (allowModesConditions.Count > 0)
+                    {
+                        // Combine the conditions with OR
+                        string rawSqlWhere = $"({string.Join(" OR ", allowModesConditions)} OR (JSON_LENGTH(`AllowModes`) = 0))";
+
+                        // Apply the raw SQL condition to the ISelect object
+                        query = query.Where(rawSqlWhere, parameters);
+                    }
+                }
+                else if (param.AllowModes?.Count > 0)
+                {
+                    var m1 = allowModes.First();
+                    query = query.Where(c => c.AllowModes.Contains(m1));
+                }
+
+                count = (int)query.Count();
+
                 list = query
                     .OrderByIf(nameof(DiscordAccount.GuildId).Equals(sort.Predicate, StringComparison.OrdinalIgnoreCase), c => c.GuildId, sort.Reverse)
                     .OrderByIf(nameof(DiscordAccount.ChannelId).Equals(sort.Predicate, StringComparison.OrdinalIgnoreCase), c => c.ChannelId, sort.Reverse)
@@ -1153,82 +1195,11 @@ namespace Midjourney.API.Controllers
                     .OrderByIf(nameof(DiscordAccount.Remark).Equals(sort.Predicate, StringComparison.OrdinalIgnoreCase), c => c.Remark, sort.Reverse)
                     .OrderByIf(nameof(DiscordAccount.Sponsor).Equals(sort.Predicate, StringComparison.OrdinalIgnoreCase), c => c.Sponsor, sort.Reverse)
                     .OrderByIf(nameof(DiscordAccount.DateCreated).Equals(sort.Predicate, StringComparison.OrdinalIgnoreCase), c => c.DateCreated, sort.Reverse)
-
-                    // sort 排序 bug, 分页产生重复数据
                     .OrderByIf(string.IsNullOrWhiteSpace(sort.Predicate), c => c.DateCreated, true)
+                    .OrderByDescending(c => c.DateCreated)
                     .Skip((page.Current - 1) * page.PageSize)
                     .Take(page.PageSize)
                     .ToList();
-            }
-            else
-            {
-                var freeSql = FreeSqlHelper.FreeSql;
-                if (freeSql != null)
-                {
-                    var query = freeSql.Select<DiscordAccount>()
-                        .WhereIf(!string.IsNullOrWhiteSpace(param.GuildId), c => c.GuildId == param.GuildId)
-                        .WhereIf(!string.IsNullOrWhiteSpace(param.ChannelId), c => c.ChannelId == param.ChannelId)
-                        .WhereIf(param.Enable.HasValue, c => c.Enable == param.Enable)
-                        .WhereIf(!string.IsNullOrWhiteSpace(param.Remark), c => c.Remark.Contains(param.Remark))
-                        .WhereIf(!string.IsNullOrWhiteSpace(param.Sponsor), c => c.Sponsor.Contains(param.Sponsor));
-
-                    // MYSQL
-                    if (param.AllowModes?.Count > 0 && setting.DatabaseType == DatabaseType.MySQL)
-                    {
-                        // 使用 in sql
-                        var allowModesConditions = new List<string>();
-                        var parameters = new Dictionary<string, object>();
-                        int paramIndex = 0;
-
-                        foreach (var mode in param.AllowModes)
-                        {
-                            string paramName = $"@p{paramIndex++}";
-
-                            // *** Determine how GenerationSpeedMode is stored in JSON ***
-                            // Option A: If stored as string (e.g., "Fast", "Relax")
-                            var paramValue = ((int)mode).ToString();
-
-                            // Option B: If stored as integer (e.g., 1, 0)
-                            // paramValue = (int)mode;
-
-                            parameters.Add(paramName, paramValue);
-
-                            // Build the JSON_CONTAINS check for this mode.
-                            // IMPORTANT: Do NOT include the table alias 'a.' here. FreeSql adds it.
-                            // Use the C# property name `AllowModes`. FreeSql maps it to the column.
-                            allowModesConditions.Add($"JSON_CONTAINS(`AllowModes`, {paramName})");
-                        }
-
-                        if (allowModesConditions.Count > 0)
-                        {
-                            // Combine the conditions with OR
-                            string rawSqlWhere = $"({string.Join(" OR ", allowModesConditions)} OR (JSON_LENGTH(`AllowModes`) = 0))";
-
-                            // Apply the raw SQL condition to the ISelect object
-                            query = query.Where(rawSqlWhere, parameters);
-                        }
-                    }
-                    else if (param.AllowModes?.Count > 0)
-                    {
-                        var m1 = allowModes.First();
-                        query = query.Where(c => c.AllowModes.Contains(m1));
-                    }
-
-                    count = (int)query.Count();
-
-                    list = query
-                        .OrderByIf(nameof(DiscordAccount.GuildId).Equals(sort.Predicate, StringComparison.OrdinalIgnoreCase), c => c.GuildId, sort.Reverse)
-                        .OrderByIf(nameof(DiscordAccount.ChannelId).Equals(sort.Predicate, StringComparison.OrdinalIgnoreCase), c => c.ChannelId, sort.Reverse)
-                        .OrderByIf(nameof(DiscordAccount.Enable).Equals(sort.Predicate, StringComparison.OrdinalIgnoreCase), c => c.Enable, sort.Reverse)
-                        .OrderByIf(nameof(DiscordAccount.Remark).Equals(sort.Predicate, StringComparison.OrdinalIgnoreCase), c => c.Remark, sort.Reverse)
-                        .OrderByIf(nameof(DiscordAccount.Sponsor).Equals(sort.Predicate, StringComparison.OrdinalIgnoreCase), c => c.Sponsor, sort.Reverse)
-                        .OrderByIf(nameof(DiscordAccount.DateCreated).Equals(sort.Predicate, StringComparison.OrdinalIgnoreCase), c => c.DateCreated, sort.Reverse)
-                        .OrderByIf(string.IsNullOrWhiteSpace(sort.Predicate), c => c.DateCreated, true)
-                        .OrderByDescending(c => c.DateCreated)
-                        .Skip((page.Current - 1) * page.PageSize)
-                        .Take(page.PageSize)
-                        .ToList();
-                }
             }
 
             foreach (var item in list)
@@ -1308,12 +1279,10 @@ namespace Midjourney.API.Controllers
 
             var param = request.Search;
 
-            // 这里使用原生查询，因为查询条件比较复杂
-            var setting = GlobalConfiguration.Setting;
-            if (setting.DatabaseType == DatabaseType.MongoDB)
+            var freeSql = FreeSqlHelper.FreeSql;
+            if (freeSql != null)
             {
-                var coll = MongoHelper.GetCollection<TaskInfo>().AsQueryable(new AggregateOptions() { AllowDiskUse = true });
-                var query = coll
+                var query = freeSql.Select<TaskInfo>()
                     .WhereIf(param.Mode == GenerationSpeedMode.FAST, c => c.Mode == param.Mode || c.Mode == null)
                     .WhereIf(param.Mode == GenerationSpeedMode.TURBO, c => c.Mode == param.Mode)
                     .WhereIf(param.Mode == GenerationSpeedMode.RELAX, c => c.Mode == param.Mode)
@@ -1324,7 +1293,8 @@ namespace Midjourney.API.Controllers
                     .WhereIf(!string.IsNullOrWhiteSpace(param.FailReason), c => c.FailReason.Contains(param.FailReason))
                     .WhereIf(!string.IsNullOrWhiteSpace(param.Description), c => c.Prompt.Contains(param.Description));
 
-                var count = query.Count();
+                var count = (int)query.Count();
+
                 var list = query
                     .OrderByDescending(c => c.SubmitTime)
                     .Skip((page.Current - 1) * page.PageSize)
@@ -1334,59 +1304,6 @@ namespace Midjourney.API.Controllers
                 var data = list.ToTableResult(request.Pagination.Current, request.Pagination.PageSize, count);
 
                 return Ok(data);
-            }
-            //else if (setting.DatabaseType == DatabaseType.LiteDB)
-            //{
-            //    var query = LiteDBHelper.TaskStore.GetCollection().Query()
-            //    .WhereIf(param.Mode == GenerationSpeedMode.FAST, c => c.Mode == param.Mode || c.Mode == null)
-            //    .WhereIf(param.Mode == GenerationSpeedMode.TURBO, c => c.Mode == param.Mode)
-            //    .WhereIf(param.Mode == GenerationSpeedMode.RELAX, c => c.Mode == param.Mode)
-            //    .WhereIf(!string.IsNullOrWhiteSpace(param.Id), c => c.Id == param.Id || c.State == param.Id)
-            //    .WhereIf(!string.IsNullOrWhiteSpace(param.InstanceId), c => c.InstanceId == param.InstanceId)
-            //    .WhereIf(param.Status.HasValue, c => c.Status == param.Status)
-            //    .WhereIf(param.Action.HasValue, c => c.Action == param.Action)
-            //    .WhereIf(!string.IsNullOrWhiteSpace(param.FailReason), c => c.FailReason.Contains(param.FailReason))
-            //    .WhereIf(!string.IsNullOrWhiteSpace(param.Description), c => c.Prompt.Contains(param.Description));
-
-            //    var count = query.Count();
-            //    var list = query
-            //        .OrderByDescending(c => c.SubmitTime)
-            //        .Skip((page.Current - 1) * page.PageSize)
-            //        .Limit(page.PageSize)
-            //        .ToList();
-
-            //    var data = list.ToTableResult(request.Pagination.Current, request.Pagination.PageSize, count);
-
-            //    return Ok(data);
-            //}
-            else
-            {
-                var freeSql = FreeSqlHelper.FreeSql;
-                if (freeSql != null)
-                {
-                    var query = freeSql.Select<TaskInfo>()
-                        .WhereIf(param.Mode == GenerationSpeedMode.FAST, c => c.Mode == param.Mode || c.Mode == null)
-                        .WhereIf(param.Mode == GenerationSpeedMode.TURBO, c => c.Mode == param.Mode)
-                        .WhereIf(param.Mode == GenerationSpeedMode.RELAX, c => c.Mode == param.Mode)
-                        .WhereIf(!string.IsNullOrWhiteSpace(param.Id), c => c.Id == param.Id || c.State == param.Id)
-                        .WhereIf(!string.IsNullOrWhiteSpace(param.InstanceId), c => c.InstanceId == param.InstanceId)
-                        .WhereIf(param.Status.HasValue, c => c.Status == param.Status)
-                        .WhereIf(param.Action.HasValue, c => c.Action == param.Action)
-                        .WhereIf(!string.IsNullOrWhiteSpace(param.FailReason), c => c.FailReason.Contains(param.FailReason))
-                        .WhereIf(!string.IsNullOrWhiteSpace(param.Description), c => c.Prompt.Contains(param.Description));
-
-                    var count = (int)query.Count();
-
-                    var list = query
-                        .OrderByDescending(c => c.SubmitTime)
-                        .Skip((page.Current - 1) * page.PageSize)
-                        .Take(page.PageSize)
-                        .ToList();
-
-                    var data = list.ToTableResult(request.Pagination.Current, request.Pagination.PageSize, count);
-
-                    return Ok(data);
-                }
             }
 
             return Ok(new StandardTableResult<TaskInfo>()
@@ -1415,7 +1332,7 @@ namespace Midjourney.API.Controllers
             }
 
             var user = _workContext.GetUser();
-            var targetTask = DbHelper.Instance.TaskStore.Get(id);
+            var targetTask = _freeSql.Get<TaskInfo>(id);
             if (targetTask != null)
             {
                 // 管理员才能删除任务
@@ -1427,12 +1344,12 @@ namespace Midjourney.API.Controllers
                         {
                             // 取消任务
                             task.Fail("删除任务");
-                            DbHelper.Instance.TaskStore.Delete(id);
+                            _freeSql.DeleteById<TaskInfo>(id);
                         }
                         else
                         {
                             targetTask.Fail("删除任务");
-                            DbHelper.Instance.TaskStore.Delete(id);
+                            _freeSql.DeleteById<TaskInfo>(id);
 
                             var notification = new RedisNotification
                             {
@@ -1477,19 +1394,17 @@ namespace Midjourney.API.Controllers
 
             var userTotalCount = new Dictionary<string, int>();
 
-            var setting = GlobalConfiguration.Setting;
-            if (setting.DatabaseType == DatabaseType.MongoDB)
+            var freeSql = FreeSqlHelper.FreeSql;
+            if (freeSql != null)
             {
-                var coll = MongoHelper.GetCollection<User>().AsQueryable();
-                var query = coll
+                var query = freeSql.Select<User>()
                     .WhereIf(!string.IsNullOrWhiteSpace(param.Id), c => c.Id == param.Id)
                     .WhereIf(!string.IsNullOrWhiteSpace(param.Name), c => c.Name.Contains(param.Name))
                     .WhereIf(!string.IsNullOrWhiteSpace(param.Email), c => c.Email.Contains(param.Email))
                     .WhereIf(!string.IsNullOrWhiteSpace(param.Phone), c => c.Phone.Contains(param.Phone))
                     .WhereIf(param.Role.HasValue, c => c.Role == param.Role)
                     .WhereIf(param.Status.HasValue, c => c.Status == param.Status);
-
-                count = query.Count();
+                count = (int)query.Count();
                 list = query
                     .OrderByDescending(c => c.UpdateTime)
                     .Skip((page.Current - 1) * page.PageSize)
@@ -1500,49 +1415,13 @@ namespace Midjourney.API.Controllers
                 var userIds = list.Select(c => c.Id).ToList();
                 if (userIds.Count > 0)
                 {
-                    userTotalCount = MongoHelper.GetCollection<TaskInfo>().AsQueryable(new AggregateOptions() { AllowDiskUse = true })
-                        .Where(c => userIds.Contains(c.UserId))
+                    userTotalCount = freeSql.Select<TaskInfo>().Where(c => userIds.Contains(c.UserId))
                         .GroupBy(c => c.UserId)
-                        .Select(g => new
+                        .ToList((c) => new
                         {
-                            UserId = g.Key,
-                            TotalCount = g.Count()
-                        })
-                        .ToList()
-                        .ToDictionary(c => c.UserId, c => c.TotalCount);
-                }
-            }
-            else
-            {
-                var freeSql = FreeSqlHelper.FreeSql;
-                if (freeSql != null)
-                {
-                    var query = freeSql.Select<User>()
-                        .WhereIf(!string.IsNullOrWhiteSpace(param.Id), c => c.Id == param.Id)
-                        .WhereIf(!string.IsNullOrWhiteSpace(param.Name), c => c.Name.Contains(param.Name))
-                        .WhereIf(!string.IsNullOrWhiteSpace(param.Email), c => c.Email.Contains(param.Email))
-                        .WhereIf(!string.IsNullOrWhiteSpace(param.Phone), c => c.Phone.Contains(param.Phone))
-                        .WhereIf(param.Role.HasValue, c => c.Role == param.Role)
-                        .WhereIf(param.Status.HasValue, c => c.Status == param.Status);
-                    count = (int)query.Count();
-                    list = query
-                        .OrderByDescending(c => c.UpdateTime)
-                        .Skip((page.Current - 1) * page.PageSize)
-                        .Take(page.PageSize)
-                        .ToList();
-
-                    // 计算用户累计绘图
-                    var userIds = list.Select(c => c.Id).ToList();
-                    if (userIds.Count > 0)
-                    {
-                        userTotalCount = freeSql.Select<TaskInfo>().Where(c => userIds.Contains(c.UserId))
-                            .GroupBy(c => c.UserId)
-                            .ToList((c) => new
-                            {
-                                UserId = c.Key,
-                                TotalCount = c.Count()
-                            }).ToDictionary(c => c.UserId, c => c.TotalCount);
-                    }
+                            UserId = c.Key,
+                            TotalCount = c.Count()
+                        }).ToDictionary(c => c.UserId, c => c.TotalCount);
                 }
             }
 
@@ -1591,7 +1470,7 @@ namespace Midjourney.API.Controllers
             }
             else
             {
-                var model = DbHelper.Instance.UserStore.Get(user.Id);
+                var model = _freeSql.Get<User>(user.Id);
                 if (model == null)
                 {
                     throw new LogicException("用户不存在");
@@ -1614,7 +1493,7 @@ namespace Midjourney.API.Controllers
             }
 
             // 判断 token 重复
-            var tokenUser = DbHelper.Instance.UserStore.Single(c => c.Id != user.Id && c.Token == user.Token);
+            var tokenUser = _freeSql.Single<User>(c => c.Id != user.Id && c.Token == user.Token);
             if (tokenUser != null)
             {
                 throw new LogicException("Token 重复");
@@ -1640,7 +1519,7 @@ namespace Midjourney.API.Controllers
 
             user.UpdateTime = DateTime.Now;
 
-            DbHelper.Instance.UserStore.Save(user);
+            _freeSql.Save(user);
 
             // 清除缓存
             var key = $"USER_{oldToken}";
@@ -1662,7 +1541,7 @@ namespace Midjourney.API.Controllers
                 return Result.Fail("演示模式，禁止操作");
             }
 
-            var model = DbHelper.Instance.UserStore.Get(id);
+            var model = _freeSql.Get<User>(id);
             if (model == null)
             {
                 throw new LogicException("用户不存在");
@@ -1680,7 +1559,7 @@ namespace Midjourney.API.Controllers
             var key = $"USER_{model.Token}";
             _memoryCache.Remove(key);
 
-            DbHelper.Instance.UserStore.Delete(id);
+            _freeSql.Delete(model);
 
             return Result.Ok();
         }
@@ -1692,7 +1571,7 @@ namespace Midjourney.API.Controllers
         [HttpGet("domain-tags")]
         public Result<List<SelectOption>> DomainTags()
         {
-            var data = DbHelper.Instance.DomainStore.GetAll()
+            var data = _freeSql.Select<DomainTag>()
                 .Select(c => new SelectOption()
                 {
                     Value = c.Id,
@@ -1719,49 +1598,19 @@ namespace Midjourney.API.Controllers
 
             var count = 0;
             var list = new List<DomainTag>();
-            var setting = GlobalConfiguration.Setting;
-            if (setting.DatabaseType == DatabaseType.MongoDB)
+
+            var freeSql = FreeSqlHelper.FreeSql;
+            if (freeSql != null)
             {
-                var coll = MongoHelper.GetCollection<DomainTag>().AsQueryable();
-                var query = coll
+                var query = freeSql.Select<DomainTag>()
                     .WhereIf(!string.IsNullOrWhiteSpace(param.Id), c => c.Id == param.Id)
                     .WhereIf(!string.IsNullOrWhiteSpace(firstKeyword), c => c.Keywords.Contains(firstKeyword));
-
-                count = query.Count();
+                count = (int)query.Count();
                 list = query
                     .OrderBy(c => c.Sort)
                     .Skip((page.Current - 1) * page.PageSize)
                     .Take(page.PageSize)
                     .ToList();
-            }
-            //else if (setting.DatabaseType == DatabaseType.LiteDB)
-            //{
-            //    var query = LiteDBHelper.DomainStore.GetCollection().Query()
-            //        .WhereIf(!string.IsNullOrWhiteSpace(param.Id), c => c.Id == param.Id)
-            //        .WhereIf(!string.IsNullOrWhiteSpace(firstKeyword), c => c.Keywords.Contains(firstKeyword));
-
-            //    count = query.Count();
-            //    list = query
-            //       .OrderBy(c => c.Sort)
-            //       .Skip((page.Current - 1) * page.PageSize)
-            //       .Limit(page.PageSize)
-            //       .ToList();
-            //}
-            else
-            {
-                var freeSql = FreeSqlHelper.FreeSql;
-                if (freeSql != null)
-                {
-                    var query = freeSql.Select<DomainTag>()
-                        .WhereIf(!string.IsNullOrWhiteSpace(param.Id), c => c.Id == param.Id)
-                        .WhereIf(!string.IsNullOrWhiteSpace(firstKeyword), c => c.Keywords.Contains(firstKeyword));
-                    count = (int)query.Count();
-                    list = query
-                        .OrderBy(c => c.Sort)
-                        .Skip((page.Current - 1) * page.PageSize)
-                        .Take(page.PageSize)
-                        .ToList();
-                }
             }
 
             var data = list?.ToTableResult(request.Pagination.Current, request.Pagination.PageSize, count);
@@ -1789,7 +1638,7 @@ namespace Midjourney.API.Controllers
             }
             else
             {
-                var model = DbHelper.Instance.DomainStore.Get(domain.Id);
+                var model = _freeSql.Get<DomainTag>(domain.Id);
                 if (model == null)
                 {
                     throw new LogicException("领域标签不存在");
@@ -1805,7 +1654,7 @@ namespace Midjourney.API.Controllers
                 .Distinct()
                 .ToList();
 
-            DbHelper.Instance.DomainStore.Save(domain);
+            _freeSql.Save(domain);
 
             _taskService.ClearDomainCache();
 
@@ -1825,7 +1674,7 @@ namespace Midjourney.API.Controllers
                 return Result.Fail("演示模式，禁止操作");
             }
 
-            var model = DbHelper.Instance.DomainStore.Get(id);
+            var model = _freeSql.Get<DomainTag>(id);
             if (model == null)
             {
                 throw new LogicException("领域标签不存在");
@@ -1841,7 +1690,7 @@ namespace Midjourney.API.Controllers
                 throw new LogicException("不能删除默认领域标签");
             }
 
-            DbHelper.Instance.DomainStore.Delete(id);
+            _freeSql.Delete(model);
 
             _taskService.ClearDomainCache();
 
@@ -1864,49 +1713,18 @@ namespace Midjourney.API.Controllers
             var count = 0;
             var list = new List<BannedWord>();
 
-            var setting = GlobalConfiguration.Setting;
-            if (setting.DatabaseType == DatabaseType.MongoDB)
+            var freeSql = FreeSqlHelper.FreeSql;
+            if (freeSql != null)
             {
-                var coll = MongoHelper.GetCollection<BannedWord>().AsQueryable();
-                var query = coll
+                var query = freeSql.Select<BannedWord>()
                     .WhereIf(!string.IsNullOrWhiteSpace(param.Id), c => c.Id == param.Id)
                     .WhereIf(!string.IsNullOrWhiteSpace(firstKeyword), c => c.Keywords.Contains(firstKeyword));
-
-                count = query.Count();
+                count = (int)query.Count();
                 list = query
-                   .OrderBy(c => c.Sort)
-                   .Skip((page.Current - 1) * page.PageSize)
-                   .Take(page.PageSize)
-                   .ToList();
-            }
-            //else if (setting.DatabaseType == DatabaseType.LiteDB)
-            //{
-            //    var query = LiteDBHelper.BannedWordStore.GetCollection().Query()
-            //        .WhereIf(!string.IsNullOrWhiteSpace(param.Id), c => c.Id == param.Id)
-            //        .WhereIf(!string.IsNullOrWhiteSpace(firstKeyword), c => c.Keywords.Contains(firstKeyword));
-
-            //    count = query.Count();
-            //    list = query
-            //        .OrderBy(c => c.Sort)
-            //        .Skip((page.Current - 1) * page.PageSize)
-            //        .Limit(page.PageSize)
-            //        .ToList();
-            //}
-            else
-            {
-                var freeSql = FreeSqlHelper.FreeSql;
-                if (freeSql != null)
-                {
-                    var query = freeSql.Select<BannedWord>()
-                        .WhereIf(!string.IsNullOrWhiteSpace(param.Id), c => c.Id == param.Id)
-                        .WhereIf(!string.IsNullOrWhiteSpace(firstKeyword), c => c.Keywords.Contains(firstKeyword));
-                    count = (int)query.Count();
-                    list = query
-                        .OrderBy(c => c.Sort)
-                        .Skip((page.Current - 1) * page.PageSize)
-                        .Take(page.PageSize)
-                        .ToList();
-                }
+                    .OrderBy(c => c.Sort)
+                    .Skip((page.Current - 1) * page.PageSize)
+                    .Take(page.PageSize)
+                    .ToList();
             }
 
             var data = list?.ToTableResult(request.Pagination.Current, request.Pagination.PageSize, count);
@@ -1934,7 +1752,7 @@ namespace Midjourney.API.Controllers
             }
             else
             {
-                var model = DbHelper.Instance.BannedWordStore.Get(param.Id);
+                var model = _freeSql.Get<BannedWord>(param.Id);
                 if (model == null)
                 {
                     throw new LogicException("违规词不存在");
@@ -1950,7 +1768,7 @@ namespace Midjourney.API.Controllers
                 .Distinct()
                 .ToList();
 
-            DbHelper.Instance.BannedWordStore.Save(param);
+            _freeSql.Save(param);
 
             _taskService.ClearBannedWordsCache();
 
@@ -1970,7 +1788,7 @@ namespace Midjourney.API.Controllers
                 return Result.Fail("演示模式，禁止操作");
             }
 
-            var model = DbHelper.Instance.BannedWordStore.Get(id);
+            var model = _freeSql.Get<BannedWord>(id);
             if (model == null)
             {
                 throw new LogicException("违规词不存在");
@@ -1981,7 +1799,7 @@ namespace Midjourney.API.Controllers
                 throw new LogicException("不能删除默认违规词");
             }
 
-            DbHelper.Instance.BannedWordStore.Delete(id);
+            _freeSql.Delete(model);
 
             _taskService.ClearBannedWordsCache();
 
@@ -2024,10 +1842,10 @@ namespace Midjourney.API.Controllers
                     model.Openai.GptApiKey = "****";
                 }
 
-                if (!string.IsNullOrWhiteSpace(model.MongoDefaultConnectionString))
-                {
-                    model.MongoDefaultConnectionString = "****";
-                }
+                //if (!string.IsNullOrWhiteSpace(model.MongoDefaultConnectionString))
+                //{
+                //    model.MongoDefaultConnectionString = "****";
+                //}
 
                 if (model.AliyunOss != null)
                 {
@@ -2121,15 +1939,16 @@ namespace Midjourney.API.Controllers
                 return Result.Fail("演示模式，禁止操作");
             }
 
-            // 如果是 mongodb 则验证数据库名称
-            if (setting.DatabaseType == DatabaseType.MongoDB)
-            {
-                if (string.IsNullOrWhiteSpace(setting.DatabaseName))
-                {
-                    return Result.Fail("请输入数据库名称");
-                }
-            }
-            var dbSuccess = DbHelper.Verify(setting.DatabaseType, setting.DatabaseConnectionString, setting.DatabaseName);
+            //// 如果是 mongodb 则验证数据库名称
+            //if (setting.DatabaseType == DatabaseType.MongoDB)
+            //{
+            //    if (string.IsNullOrWhiteSpace(setting.DatabaseName))
+            //    {
+            //        return Result.Fail("请输入数据库名称");
+            //    }
+            //}
+
+            var dbSuccess = FreeSqlHelper.Verify(setting.DatabaseType, setting.DatabaseConnectionString);
             if (!dbSuccess)
             {
                 return Result.Fail("数据库连接失败，请检查连接字符串/名称是否正确");
@@ -2259,23 +2078,23 @@ namespace Midjourney.API.Controllers
             return Result.Ok();
         }
 
-        /// <summary>
-        /// MJ Plus 数据迁移（迁移账号数据和任务数据）
-        /// </summary>
-        /// <param name="dto"></param>
-        /// <returns></returns>
-        [HttpPost("mjplus-migration")]
-        public async Task<Result> MjPlusMigration([FromBody] MjPlusMigrationDto dto)
-        {
-            if (_isAnonymous)
-            {
-                return Result.Fail("演示模式，禁止操作");
-            }
+        ///// <summary>
+        ///// MJ Plus 数据迁移（迁移账号数据和任务数据）
+        ///// </summary>
+        ///// <param name="dto"></param>
+        ///// <returns></returns>
+        //[HttpPost("mjplus-migration")]
+        //public async Task<Result> MjPlusMigration([FromBody] MjPlusMigrationDto dto)
+        //{
+        //    if (_isAnonymous)
+        //    {
+        //        return Result.Fail("演示模式，禁止操作");
+        //    }
 
-            await _taskService.MjPlusMigration(dto);
+        //    await _taskService.MjPlusMigration(dto);
 
-            return Result.Ok();
-        }
+        //    return Result.Ok();
+        //}
 
         /// <summary>
         /// 验证数据库连接
@@ -2312,16 +2131,16 @@ namespace Midjourney.API.Controllers
                         return Result.Fail("请选择数据库类型");
                     }
 
-                    // 如果是 mongodb 则验证数据库名称
-                    if (request.DatabaseType == DatabaseType.MongoDB)
-                    {
-                        if (string.IsNullOrWhiteSpace(request.DatabaseName))
-                        {
-                            return Result.Fail("请输入数据库名称");
-                        }
-                    }
+                    //// 如果是 mongodb 则验证数据库名称
+                    //if (request.DatabaseType == DatabaseType.MongoDB)
+                    //{
+                    //    if (string.IsNullOrWhiteSpace(request.DatabaseName))
+                    //    {
+                    //        return Result.Fail("请输入数据库名称");
+                    //    }
+                    //}
 
-                    var success = DbHelper.Verify(request.DatabaseType!.Value, request.DatabaseConnectionString, request.DatabaseName);
+                    var success = FreeSqlHelper.Verify(request.DatabaseType!.Value, request.DatabaseConnectionString);
                     if (success)
                     {
                         return Result.Ok();

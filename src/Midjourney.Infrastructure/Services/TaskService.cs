@@ -39,6 +39,7 @@ namespace Midjourney.Infrastructure.Services
     {
         private readonly ITaskStoreService _taskStoreService;
         private readonly DiscordLoadBalancer _discordLoadBalancer;
+        private readonly IFreeSql _freeSql = FreeSqlHelper.FreeSql;
 
         public TaskService(ITaskStoreService taskStoreService, DiscordLoadBalancer discordLoadBalancer)
         {
@@ -54,7 +55,7 @@ namespace Midjourney.Infrastructure.Services
         {
             return AdaptiveCache.GetOrCreate("domains", () =>
             {
-                var list = DbHelper.Instance.DomainStore.GetAll().Where(c => c.Enable);
+                var list = _freeSql.Select<DomainTag>().Where(c => c.Enable).ToList();
 
                 var dict = new Dictionary<string, HashSet<string>>();
                 foreach (var item in list)
@@ -83,7 +84,7 @@ namespace Midjourney.Infrastructure.Services
         {
             return AdaptiveCache.GetOrCreate("bannedWords", () =>
             {
-                var list = DbHelper.Instance.BannedWordStore.GetAll().Where(c => c.Enable);
+                var list = _freeSql.Select<BannedWord>().Where(c => c.Enable).ToList();
 
                 var dict = new Dictionary<string, HashSet<string>>();
                 foreach (var item in list)
@@ -584,7 +585,7 @@ namespace Midjourney.Infrastructure.Services
             info.IsOfficial = instance.Account.IsOfficial;
             info.IsPartner = instance.Account.IsYouChuan;
             info.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, instance.ChannelId);
-   
+
             var startImageUrl = "";
             var endImageUrl = "";
 
@@ -1465,7 +1466,7 @@ namespace Midjourney.Infrastructure.Services
             task.InstanceId = instance.ChannelId;
             task.IsPartner = instance.Account.IsYouChuan;
             task.IsOfficial = instance.Account.IsOfficial;
-       
+
             var messageFlags = targetTask.GetProperty<string>(Constants.TASK_PROPERTY_FLAGS, default)?.ToInt() ?? 0;
             var messageId = targetTask.GetProperty<string>(Constants.TASK_PROPERTY_MESSAGE_ID, default);
 
@@ -1976,7 +1977,7 @@ namespace Midjourney.Infrastructure.Services
         /// <returns></returns>
         public async Task<bool> SyncInfoSetting(string id, bool isClearCache = false)
         {
-            var model = DbHelper.Instance.AccountStore.Get(id);
+            var model = _freeSql.Get<DiscordAccount>(id);
             if (model == null)
             {
                 throw new LogicException("未找到账号实例");
@@ -1999,7 +2000,7 @@ namespace Midjourney.Infrastructure.Services
         /// <returns></returns>
         public async Task<bool> AccountChangeVersion(string id, string version)
         {
-            var model = DbHelper.Instance.AccountStore.Get(id);
+            var model = _freeSql.Get<DiscordAccount>(id);
             if (model == null)
             {
                 throw new LogicException("未找到账号实例");
@@ -2035,7 +2036,7 @@ namespace Midjourney.Infrastructure.Services
         /// <returns></returns>
         public async Task AccountAction(string id, string customId, EBotType botType)
         {
-            var model = DbHelper.Instance.AccountStore.Get(id);
+            var model = _freeSql.Get<DiscordAccount>(id);
             if (model == null)
             {
                 throw new LogicException("未找到账号实例");
@@ -2062,211 +2063,211 @@ namespace Midjourney.Infrastructure.Services
             await SyncInfoSetting(id);
         }
 
-        /// <summary>
-        /// MJ Plus 数据迁移
-        /// </summary>
-        /// <param name="dto"></param>
-        /// <returns></returns>
-        public async Task MjPlusMigration(MjPlusMigrationDto dto)
-        {
-            var key = "mjplus";
-            var islock = AsyncLocalLock.HasActiveReference(key);
-            if (!islock)
-            {
-                throw new LogicException("迁移任务执行中...");
-            }
+        ///// <summary>
+        ///// MJ Plus 数据迁移
+        ///// </summary>
+        ///// <param name="dto"></param>
+        ///// <returns></returns>
+        //public async Task MjPlusMigration(MjPlusMigrationDto dto)
+        //{
+        //    var key = "mjplus";
+        //    var islock = AsyncLocalLock.HasActiveReference(key);
+        //    if (!islock)
+        //    {
+        //        throw new LogicException("迁移任务执行中...");
+        //    }
 
-            _ = Task.Run(async () =>
-            {
-                var isLock = await AsyncLocalLock.TryLockAsync("mjplus", TimeSpan.FromMilliseconds(3), async () =>
-                {
-                    try
-                    {
-                        // 账号迁移
-                        if (true)
-                        {
-                            var ids = DbHelper.Instance.AccountStore.GetAllIds().ToHashSet<string>();
+        //    _ = Task.Run(async () =>
+        //    {
+        //        var isLock = await AsyncLocalLock.TryLockAsync("mjplus", TimeSpan.FromMilliseconds(3), async () =>
+        //        {
+        //            try
+        //            {
+        //                // 账号迁移
+        //                if (true)
+        //                {
+        //                    var ids = _freeSql.Select<DiscordAccount>().ToList(c => c.Id).ToHashSet<string>();
 
-                            var path = "/mj/account/query";
-                            var pageNumber = 0;
-                            var pageSize = 100;
-                            var isLastPage = false;
-                            var sort = 0;
+        //                    var path = "/mj/account/query";
+        //                    var pageNumber = 0;
+        //                    var pageSize = 100;
+        //                    var isLastPage = false;
+        //                    var sort = 0;
 
-                            while (!isLastPage)
-                            {
-                                var responseContent = await MjPlusPageData(dto, path, pageSize, pageNumber);
-                                var responseObject = JObject.Parse(responseContent);
-                                var contentArray = (JArray)responseObject["content"];
+        //                    while (!isLastPage)
+        //                    {
+        //                        var responseContent = await MjPlusPageData(dto, path, pageSize, pageNumber);
+        //                        var responseObject = JObject.Parse(responseContent);
+        //                        var contentArray = (JArray)responseObject["content"];
 
-                                if (contentArray.Count <= 0)
-                                {
-                                    break;
-                                }
+        //                        if (contentArray.Count <= 0)
+        //                        {
+        //                            break;
+        //                        }
 
-                                foreach (var item in contentArray)
-                                {
-                                    // 反序列化基础 JSON
-                                    var json = item.ToString();
-                                    var accountJson = JsonConvert.DeserializeObject<dynamic>(json);
+        //                        foreach (var item in contentArray)
+        //                        {
+        //                            // 反序列化基础 JSON
+        //                            var json = item.ToString();
+        //                            var accountJson = JsonConvert.DeserializeObject<dynamic>(json);
 
-                                    // 创建
-                                    // 创建 DiscordAccount 实例
-                                    var acc = new DiscordAccount
-                                    {
-                                        Sponsor = "by mjplus",
-                                        DayDrawLimit = -1, // 默认值 -1
+        //                            // 创建
+        //                            // 创建 DiscordAccount 实例
+        //                            var acc = new DiscordAccount
+        //                            {
+        //                                Sponsor = "by mjplus",
+        //                                DayDrawLimit = -1, // 默认值 -1
 
-                                        ChannelId = accountJson.channelId,
-                                        GuildId = accountJson.guildId,
-                                        PrivateChannelId = accountJson.mjBotChannelId,
-                                        NijiBotChannelId = accountJson.nijiBotChannelId,
-                                        UserToken = accountJson.userToken,
-                                        BotToken = null,
-                                        UserAgent = accountJson.userAgent,
-                                        Enable = accountJson.enable,
-                                        EnableMj = true,
-                                        EnableNiji = true,
-                                        CoreSize = accountJson.coreSize ?? 3, // 默认值 3
-                                        Interval = 1.2m, // 默认值 1.2
-                                        AfterIntervalMin = 1.2m, // 默认值 1.2
-                                        AfterIntervalMax = 1.2m, // 默认值 1.2
-                                        QueueSize = accountJson.queueSize ?? 10, // 默认值 10
-                                        TimeoutMinutes = accountJson.timeoutMinutes ?? 5, // 默认值 5
-                                        Remark = accountJson.remark,
+        //                                ChannelId = accountJson.channelId,
+        //                                GuildId = accountJson.guildId,
+        //                                PrivateChannelId = accountJson.mjBotChannelId,
+        //                                NijiBotChannelId = accountJson.nijiBotChannelId,
+        //                                UserToken = accountJson.userToken,
+        //                                BotToken = null,
+        //                                UserAgent = accountJson.userAgent,
+        //                                Enable = accountJson.enable,
+        //                                EnableMj = true,
+        //                                EnableNiji = true,
+        //                                CoreSize = accountJson.coreSize ?? 3, // 默认值 3
+        //                                Interval = 1.2m, // 默认值 1.2
+        //                                AfterIntervalMin = 1.2m, // 默认值 1.2
+        //                                AfterIntervalMax = 1.2m, // 默认值 1.2
+        //                                QueueSize = accountJson.queueSize ?? 10, // 默认值 10
+        //                                TimeoutMinutes = accountJson.timeoutMinutes ?? 5, // 默认值 5
+        //                                Remark = accountJson.remark,
 
-                                        DateCreated = DateTimeOffset.FromUnixTimeMilliseconds((long)accountJson.dateCreated).DateTime,
-                                        Weight = 1, // 假设 weight 来自 properties
-                                        WorkTime = null,
-                                        FishingTime = null,
-                                        Sort = ++sort,
-                                        RemixAutoSubmit = accountJson.remixAutoSubmit,
-                                        Mode = Enum.TryParse<GenerationSpeedMode>((string)accountJson.mode, out var mode) ? mode : (GenerationSpeedMode?)null,
-                                        AllowModes = new List<GenerationSpeedMode>(),
-                                        Components = new List<Component>(),
-                                        IsBlend = true, // 默认 true
-                                        IsDescribe = true, // 默认 true
-                                        IsVerticalDomain = false, // 默认 false
-                                        IsShorten = true,
-                                        VerticalDomainIds = new List<string>(),
-                                        SubChannels = new List<string>(),
-                                        SubChannelValues = new Dictionary<string, string>(),
+        //                                DateCreated = DateTimeOffset.FromUnixTimeMilliseconds((long)accountJson.dateCreated).DateTime,
+        //                                Weight = 1, // 假设 weight 来自 properties
+        //                                WorkTime = null,
+        //                                FishingTime = null,
+        //                                Sort = ++sort,
+        //                                RemixAutoSubmit = accountJson.remixAutoSubmit,
+        //                                Mode = Enum.TryParse<GenerationSpeedMode>((string)accountJson.mode, out var mode) ? mode : (GenerationSpeedMode?)null,
+        //                                AllowModes = new List<GenerationSpeedMode>(),
+        //                                Components = new List<Component>(),
+        //                                IsBlend = true, // 默认 true
+        //                                IsDescribe = true, // 默认 true
+        //                                IsVerticalDomain = false, // 默认 false
+        //                                IsShorten = true,
+        //                                VerticalDomainIds = new List<string>(),
+        //                                SubChannels = new List<string>(),
+        //                                SubChannelValues = new Dictionary<string, string>(),
 
-                                        Id = accountJson.id,
-                                    };
+        //                                Id = accountJson.id,
+        //                            };
 
-                                    if (!ids.Contains(acc.Id))
-                                    {
-                                        DbHelper.Instance.AccountStore.Add(acc);
-                                        ids.Add(acc.Id);
-                                    }
-                                }
+        //                            if (!ids.Contains(acc.Id))
+        //                            {
+        //                                DbHelper.Instance.AccountStore.Add(acc);
+        //                                ids.Add(acc.Id);
+        //                            }
+        //                        }
 
-                                isLastPage = (bool)responseObject["last"];
-                                pageNumber++;
+        //                        isLastPage = (bool)responseObject["last"];
+        //                        pageNumber++;
 
-                                Log.Information($"账号迁移进度, 第 {pageNumber} 页, 每页 {pageSize} 条, 已完成");
-                            }
+        //                        Log.Information($"账号迁移进度, 第 {pageNumber} 页, 每页 {pageSize} 条, 已完成");
+        //                    }
 
-                            Log.Information("账号迁移完成");
-                        }
+        //                    Log.Information("账号迁移完成");
+        //                }
 
-                        // 任务迁移
-                        if (true)
-                        {
-                            var accounts = DbHelper.Instance.AccountStore.GetAll();
+        //                // 任务迁移
+        //                if (true)
+        //                {
+        //                    var accounts = _freeSql.Get < DiscordAccount > All();
 
-                            var ids = DbHelper.Instance.TaskStore.GetAllIds().ToHashSet<string>();
+        //                    var ids = _freeSql.Select<TaskInfo>().ToList(c => c.Id).ToHashSet<string>();
 
-                            var path = "/mj/task-admin/query";
-                            var pageNumber = 0;
-                            var pageSize = 100;
-                            var isLastPage = false;
+        //                    var path = "/mj/task-admin/query";
+        //                    var pageNumber = 0;
+        //                    var pageSize = 100;
+        //                    var isLastPage = false;
 
-                            while (!isLastPage)
-                            {
-                                var responseContent = await MjPlusPageData(dto, path, pageSize, pageNumber);
-                                var responseObject = JObject.Parse(responseContent);
-                                var contentArray = (JArray)responseObject["content"];
+        //                    while (!isLastPage)
+        //                    {
+        //                        var responseContent = await MjPlusPageData(dto, path, pageSize, pageNumber);
+        //                        var responseObject = JObject.Parse(responseContent);
+        //                        var contentArray = (JArray)responseObject["content"];
 
-                                if (contentArray.Count <= 0)
-                                {
-                                    break;
-                                }
+        //                        if (contentArray.Count <= 0)
+        //                        {
+        //                            break;
+        //                        }
 
-                                foreach (var item in contentArray)
-                                {
-                                    // 反序列化基础 JSON
-                                    var json = item.ToString();
-                                    var jsonObject = JsonConvert.DeserializeObject<dynamic>(json);
+        //                        foreach (var item in contentArray)
+        //                        {
+        //                            // 反序列化基础 JSON
+        //                            var json = item.ToString();
+        //                            var jsonObject = JsonConvert.DeserializeObject<dynamic>(json);
 
-                                    string aid = jsonObject.properties?.discordInstanceId;
-                                    var acc = accounts.FirstOrDefault(x => x.Id == aid);
+        //                            string aid = jsonObject.properties?.discordInstanceId;
+        //                            var acc = accounts.FirstOrDefault(x => x.Id == aid);
 
-                                    // 创建 TaskInfo 实例
-                                    var taskInfo = new TaskInfo
-                                    {
-                                        FinishTime = jsonObject.finishTime,
-                                        PromptEn = jsonObject.promptEn,
-                                        Description = jsonObject.description,
-                                        SubmitTime = jsonObject.submitTime,
-                                        ImageUrl = jsonObject.imageUrl,
-                                        Action = Enum.TryParse<TaskAction>((string)jsonObject.action, out var action) ? action : (TaskAction?)null,
-                                        Progress = jsonObject.progress,
-                                        StartTime = jsonObject.startTime,
-                                        FailReason = jsonObject.failReason,
-                                        Id = jsonObject.id,
-                                        State = jsonObject.state,
-                                        Prompt = jsonObject.prompt,
-                                        Status = Enum.TryParse<TaskStatus>((string)jsonObject.status, out var status) ? status : (TaskStatus?)null,
-                                        Nonce = jsonObject.properties?.nonce,
-                                        MessageId = jsonObject.properties?.messageId,
-                                        BotType = Enum.TryParse<EBotType>((string)jsonObject.properties?.botType, out var botType) ? botType : EBotType.MID_JOURNEY,
-                                        InstanceId = acc?.ChannelId,
-                                        Buttons = JsonConvert.DeserializeObject<List<CustomComponentModel>>(JsonConvert.SerializeObject(jsonObject.buttons)),
-                                        Properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonConvert.SerializeObject(jsonObject.properties)),
-                                    };
+        //                            // 创建 TaskInfo 实例
+        //                            var taskInfo = new TaskInfo
+        //                            {
+        //                                FinishTime = jsonObject.finishTime,
+        //                                PromptEn = jsonObject.promptEn,
+        //                                Description = jsonObject.description,
+        //                                SubmitTime = jsonObject.submitTime,
+        //                                ImageUrl = jsonObject.imageUrl,
+        //                                Action = Enum.TryParse<TaskAction>((string)jsonObject.action, out var action) ? action : (TaskAction?)null,
+        //                                Progress = jsonObject.progress,
+        //                                StartTime = jsonObject.startTime,
+        //                                FailReason = jsonObject.failReason,
+        //                                Id = jsonObject.id,
+        //                                State = jsonObject.state,
+        //                                Prompt = jsonObject.prompt,
+        //                                Status = Enum.TryParse<TaskStatus>((string)jsonObject.status, out var status) ? status : (TaskStatus?)null,
+        //                                Nonce = jsonObject.properties?.nonce,
+        //                                MessageId = jsonObject.properties?.messageId,
+        //                                BotType = Enum.TryParse<EBotType>((string)jsonObject.properties?.botType, out var botType) ? botType : EBotType.MID_JOURNEY,
+        //                                InstanceId = acc?.ChannelId,
+        //                                Buttons = JsonConvert.DeserializeObject<List<CustomComponentModel>>(JsonConvert.SerializeObject(jsonObject.buttons)),
+        //                                Properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonConvert.SerializeObject(jsonObject.properties)),
+        //                            };
 
-                                    aid = taskInfo.GetProperty<string>(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, default);
-                                    if (!string.IsNullOrWhiteSpace(aid))
-                                    {
-                                        acc = accounts.FirstOrDefault(x => x.Id == aid);
-                                        if (acc != null)
-                                        {
-                                            taskInfo.InstanceId = acc.ChannelId;
-                                        }
-                                    }
+        //                            aid = taskInfo.GetProperty<string>(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, default);
+        //                            if (!string.IsNullOrWhiteSpace(aid))
+        //                            {
+        //                                acc = accounts.FirstOrDefault(x => x.Id == aid);
+        //                                if (acc != null)
+        //                                {
+        //                                    taskInfo.InstanceId = acc.ChannelId;
+        //                                }
+        //                            }
 
-                                    if (!ids.Contains(taskInfo.Id))
-                                    {
-                                        DbHelper.Instance.TaskStore.Add(taskInfo);
-                                        ids.Add(taskInfo.Id);
-                                    }
-                                }
+        //                            if (!ids.Contains(taskInfo.Id))
+        //                            {
+        //                                _freeSql.Add(taskInfo);
+        //                                ids.Add(taskInfo.Id);
+        //                            }
+        //                        }
 
-                                isLastPage = (bool)responseObject["last"];
-                                pageNumber++;
+        //                        isLastPage = (bool)responseObject["last"];
+        //                        pageNumber++;
 
-                                Log.Information($"任务迁移进度, 第 {pageNumber} 页, 每页 {pageSize} 条, 已完成");
-                            }
+        //                        Log.Information($"任务迁移进度, 第 {pageNumber} 页, 每页 {pageSize} 条, 已完成");
+        //                    }
 
-                            Log.Information("任务迁移完成");
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Log.Error(ex, "mjplus 迁移执行异常");
-                    }
-                });
+        //                    Log.Information("任务迁移完成");
+        //                }
+        //            }
+        //            catch (Exception ex)
+        //            {
+        //                Log.Error(ex, "mjplus 迁移执行异常");
+        //            }
+        //        });
 
-                if (!islock)
-                {
-                    Log.Warning("迁移任务执行中...");
-                }
-            });
+        //        if (!islock)
+        //        {
+        //            Log.Warning("迁移任务执行中...");
+        //        }
+        //    });
 
-            await Task.CompletedTask;
-        }
+        //    await Task.CompletedTask;
+        //}
 
         /// <summary>
         /// 获取分页数据

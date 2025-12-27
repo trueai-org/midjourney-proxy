@@ -79,14 +79,14 @@ namespace Midjourney.API
 
                 // 是否需要重新保存配置
                 var isSaveSetting = false;
-                if (setting.DatabaseType == DatabaseType.NONE || setting.DatabaseType == DatabaseType.LiteDB)
+                if (setting.DatabaseType == DatabaseType.NONE || setting.DatabaseType == DatabaseType.LiteDB || setting.DatabaseType == DatabaseType.MongoDB)
                 {
                     setting.DatabaseType = DatabaseType.SQLite;
                     isSaveSetting = true;
                 }
 
                 // 验证数据库是否可连接
-                if (!DbHelper.VerifyConfigure())
+                if (!FreeSqlHelper.VerifyConfigure())
                 {
                     // 切换为本地数据库
                     setting.DatabaseType = DatabaseType.SQLite;
@@ -350,7 +350,7 @@ namespace Midjourney.API
         private static void ConfigureInitialLogger(IConfiguration configuration, bool isDevelopment)
         {
             // 设置初始日志级别
-            SettingHelper.LogLevelSwitch.MinimumLevel = isDevelopment ? LogEventLevel.Debug : LogEventLevel.Information;
+            GlobalConfiguration.LogLevel.MinimumLevel = isDevelopment ? LogEventLevel.Debug : LogEventLevel.Information;
 
             // 基本日志配置
             //var loggerConfiguration = new LoggerConfiguration()
@@ -362,7 +362,7 @@ namespace Midjourney.API
             var fileSizeLimitBytes = 10 * 1024 * 1024;
             var loggerConfiguration = new LoggerConfiguration()
                 //.MinimumLevel.Information()
-                .MinimumLevel.ControlledBy(SettingHelper.LogLevelSwitch) // 使用 LoggingLevelSwitch 控制日志级别
+                .MinimumLevel.ControlledBy(GlobalConfiguration.LogLevel) // 使用 LoggingLevelSwitch 控制日志级别
                 .MinimumLevel.Override("Default", LogEventLevel.Warning)
                 .MinimumLevel.Override("System", LogEventLevel.Warning)
                 .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)

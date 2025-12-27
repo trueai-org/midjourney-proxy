@@ -38,19 +38,21 @@ namespace Midjourney.Base.Data
     /// </summary>
     public class TaskRepository : ITaskStoreService
     {
+        private readonly IFreeSql _freeSql = FreeSqlHelper.FreeSql;
+
         public void Save(TaskInfo task)
         {
-            DbHelper.Instance.TaskStore.Save(task);
+            _freeSql.Save(task);
         }
 
         public void Delete(string id)
         {
-            DbHelper.Instance.TaskStore.Delete(id);
+            _freeSql.DeleteById<TaskInfo>(id);
         }
 
         public TaskInfo Get(string id)
         {
-            return DbHelper.Instance.TaskStore.Get(id);
+            return _freeSql.Get<TaskInfo>(id);
         }
 
         public List<TaskInfo> GetList(List<string> ids)
@@ -60,7 +62,7 @@ namespace Midjourney.Base.Data
                 return new List<TaskInfo>();
             }
 
-            return DbHelper.Instance.TaskStore.Where(c => ids.Contains(c.Id));
+            return _freeSql.Select<TaskInfo>().Where(c => ids.Contains(c.Id)).ToList();
         }
     }
 

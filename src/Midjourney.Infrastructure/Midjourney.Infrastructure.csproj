@@ -23,7 +23,6 @@
 		<ProjectReference Include="..\..\..\src\Midjourney.License\Midjourney.License.csproj" />
 		<ProjectReference Include="..\Midjourney.Base\Midjourney.Base.csproj" />
 	</ItemGroup>
-
 	<ItemGroup Condition="'$(Configuration)' == 'Release'">
 		<Reference Include="Midjourney.License">
 			<HintPath>..\lib\Midjourney.License.dll</HintPath>
