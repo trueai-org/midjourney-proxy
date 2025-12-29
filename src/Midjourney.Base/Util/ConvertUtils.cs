@@ -15,11 +15,11 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Additional Terms:
-// This software shall not be used for any illegal activities. 
+// This software shall not be used for any illegal activities.
 // Users must comply with all applicable laws and regulations,
-// particularly those related to image and video processing. 
+// particularly those related to image and video processing.
 // The use of this software for any form of illegal face swapping,
-// invasion of privacy, or any other unlawful purposes is strictly prohibited. 
+// invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 using System.Text.RegularExpressions;
 
@@ -39,11 +39,15 @@ namespace Midjourney.Base.Util
         /// </summary>
         private const string CONTENT_REGEX_ACTION = @"\*\*(.*?)\*\* - (.*?)<@(\d+)> \((.*?)\)";
 
-
         /// <summary>
         /// 匹配完整的 prompt 内容
         /// </summary>
         private const string CONTENT_FULL = @"\*\*(.*)\*\*";
+
+        /// <summary>
+        /// 匹配 seed 的正则表达式
+        /// </summary>
+        private const string SEED_REGEX = @"--seed\s+(\d+)";
 
         public static ContentParseData ParseContent(string content)
         {
@@ -184,7 +188,7 @@ namespace Midjourney.Base.Util
             var dataUrlList = new List<DataUrl>();
             foreach (var base64 in base64Array)
             {
-                if(!string.IsNullOrWhiteSpace(base64))
+                if (!string.IsNullOrWhiteSpace(base64))
                 {
                     var dataUrl = DataUrl.Parse(base64);
                     dataUrlList.Add(dataUrl);
@@ -244,6 +248,25 @@ namespace Midjourney.Base.Util
                 return null;
             }
             return changeParams;
+        }
+
+        /// <summary>
+        /// 提取 seed 信息
+        /// </summary>
+        /// <param name="fullPrompt"></param>
+        /// <returns></returns>
+        public static string GetSeedFromContent(string fullPrompt)
+        {
+            if (string.IsNullOrWhiteSpace(fullPrompt))
+            {
+                return null;
+            }
+            var matcher = Regex.Match(fullPrompt, SEED_REGEX);
+            if (matcher.Success)
+            {
+                return matcher.Groups[1].Value;
+            }
+            return null;
         }
     }
 

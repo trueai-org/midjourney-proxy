@@ -24,6 +24,7 @@
 
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using FreeSql.DataAnnotations;
 using Microsoft.Extensions.Caching.Memory;
 using Midjourney.Base.Data;
@@ -691,6 +692,22 @@ namespace Midjourney.Base.Models
 
             // 根据最终提示词更新速度模式
             var finalPrompt = GetProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, "");
+
+            // 是否开启 discord 防撞图机制
+            // 移除原有的 seed 参数
+            if (!string.IsNullOrWhiteSpace(Seed)
+                && IsDiscord
+                && GlobalConfiguration.Setting.EnableDiscordAppendSeed)
+            {
+                finalPrompt = finalPrompt?.RemoveSeed();
+                PromptFull = PromptFull?.RemoveSeed();
+                Prompt = Prompt?.RemoveSeed();
+                PromptEn = PromptEn?.RemoveSeed();
+
+                SetProperty(Constants.TASK_PROPERTY_MESSAGE_CONTENT, 
+                    GetProperty<string>(Constants.TASK_PROPERTY_MESSAGE_CONTENT, default)?.RemoveSeed());
+            }
+
             if (!string.IsNullOrWhiteSpace(finalPrompt))
             {
                 // 解析提示词
@@ -711,6 +728,8 @@ namespace Midjourney.Base.Models
                 }
 
                 Version = GetVersion(finalPrompt);
+
+                SetProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, finalPrompt);
             }
 
             // 如果没有解析到，则使用默认值

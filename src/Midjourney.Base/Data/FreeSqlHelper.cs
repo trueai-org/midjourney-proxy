@@ -102,7 +102,7 @@ namespace Midjourney.Base.Data
                   // 监视 SQL 命令对象
                   .UseMonitorCommand(cmd =>
                   {
-                      Log.Debug(cmd.CommandText);
+                      //Log.Debug(cmd.CommandText);
                   });
 #endif
 

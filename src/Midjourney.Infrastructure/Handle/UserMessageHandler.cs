@@ -15,11 +15,11 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Additional Terms:
-// This software shall not be used for any illegal activities. 
+// This software shall not be used for any illegal activities.
 // Users must comply with all applicable laws and regulations,
-// particularly those related to image and video processing. 
+// particularly those related to image and video processing.
 // The use of this software for any form of illegal face swapping,
-// invasion of privacy, or any other unlawful purposes is strictly prohibited. 
+// invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
 using Midjourney.Infrastructure.LoadBalancer;
@@ -87,7 +87,6 @@ namespace Midjourney.Infrastructure.Handle
             return botType;
         }
 
-
         protected void FindAndFinishImageTask(DiscordInstance instance, TaskAction action, string finalPrompt, EventData message)
         {
             // 跳过 Waiting to start 消息
@@ -114,6 +113,7 @@ namespace Midjourney.Infrastructure.Handle
             string messageHash = discordHelper.GetMessageHash(imageUrl);
 
             var task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && c.MessageId == msgId).FirstOrDefault();
+
             if (task == null && !string.IsNullOrWhiteSpace(message.InteractionMetadata?.Id))
             {
                 task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && c.InteractionMetadataId == message.InteractionMetadata.Id).FirstOrDefault();
@@ -139,6 +139,14 @@ namespace Midjourney.Infrastructure.Handle
                 }
             }
 
+            // 如果没有找到任务，则使用 seed 获取
+            var seed = ConvertUtils.GetSeedFromContent(fullPrompt);
+            if (task == null && !string.IsNullOrWhiteSpace(seed))
+            {
+                task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && c.Seed == seed)
+                    .OrderBy(c => c.StartTime).FirstOrDefault();
+            }
+
             if (task == null)
             {
                 var prompt = finalPrompt.FormatPrompt();
@@ -162,7 +170,6 @@ namespace Midjourney.Infrastructure.Handle
                         .OrderBy(c => c.StartTime).FirstOrDefault();
                 }
             }
-
 
             // 如果依然找不到任务，保留 prompt link 进行匹配
             if (task == null)

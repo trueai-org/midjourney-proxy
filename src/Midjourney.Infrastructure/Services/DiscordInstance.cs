@@ -2129,17 +2129,27 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                 }
                                 else
                                 {
-                                    var result = await BlendAsync(
-                                        queue.BlendParam.FinalFileNames,
-                                        queue.BlendParam.Dimensions,
-                                        info.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default),
-                                        info.RealBotType ?? info.BotType);
+                                    // 调整混图方式，使用 IMAGINE
+                                    var result = await ImagineAsync(info, info.PromptEn,
+                                        info.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default));
                                     if (result?.Code != ReturnCode.SUCCESS)
                                     {
                                         info.Fail(result?.Description ?? "未知错误");
                                         SaveAndNotify(info);
                                         return;
                                     }
+
+                                    //var result = await BlendAsync(
+                                    //    queue.BlendParam.FinalFileNames,
+                                    //    queue.BlendParam.Dimensions,
+                                    //    info.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default),
+                                    //    info.RealBotType ?? info.BotType);
+                                    //if (result?.Code != ReturnCode.SUCCESS)
+                                    //{
+                                    //    info.Fail(result?.Description ?? "未知错误");
+                                    //    SaveAndNotify(info);
+                                    //    return;
+                                    //}
                                 }
 
                                 if (!info.IsCompleted)
@@ -3020,6 +3030,17 @@ namespace Midjourney.Infrastructure.LoadBalancer
             //return prompt.Replace("\\\"", "\"").Replace("\\'", "'").Replace("\\\\", "\\");
 
             prompt = FormatUrls(prompt, info).ConfigureAwait(false).GetAwaiter().GetResult();
+
+            // 是否开启 discord 防撞图机制
+            if (info.IsDiscord && GlobalConfiguration.Setting.EnableDiscordAppendSeed)
+            {
+                if (!prompt.Contains("--seed", StringComparison.OrdinalIgnoreCase))
+                {
+                    var seed = Random.Shared.NextInt64(uint.MaxValue);
+                    prompt += $" --seed {seed}";
+                    info.Seed = seed.ToString();
+                }
+            }
 
             return prompt;
         }

@@ -25,10 +25,8 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
 using Midjourney.Infrastructure.LoadBalancer;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using RestSharp;
-using Serilog;
 
 namespace Midjourney.Infrastructure.Services
 {
@@ -1104,161 +1102,186 @@ namespace Midjourney.Infrastructure.Services
             task.InstanceId = instance.ChannelId;
             task.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, instance.ChannelId);
 
-            var isYm = task.IsPartner || task.IsOfficial;
-            // youchuan | mj
-            if (isYm)
-            {
-                var finalFileNames = new List<string>();
+            var finalFileNames = new List<string>();
 
-                if (task.IsPartner)
+            if (task.IsPartner)
+            {
+                foreach (var dataUrl in dataUrls)
                 {
                     var link = "";
-                    foreach (var dataUrl in dataUrls)
-                    {
-                        // 悠船
-                        if (dataUrl.Url?.StartsWith("http", StringComparison.OrdinalIgnoreCase) == true)
-                        {
-                            link = dataUrl.Url;
-                        }
-                        else
-                        {
-                            var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
-                            link = await instance.YmTaskService.UploadFile(task, dataUrl.Data, taskFileName);
-                        }
 
-                        if (string.IsNullOrWhiteSpace(link))
-                        {
-                            return SubmitResultVO.Fail(ReturnCode.FAILURE, "上传失败，未返回有效链接");
-                        }
-
-                        finalFileNames.Add(link);
-                    }
-                }
-                else
-                {
-                    var link = "";
-                    foreach (var dataUrl in dataUrls)
-                    {
-                        // 官方
-                        if (dataUrl.Url?.StartsWith("http", StringComparison.OrdinalIgnoreCase) == true)
-                        {
-                            link = dataUrl.Url;
-                        }
-                        else
-                        {
-                            var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
-                            var uploadResult = await instance.UploadAsync(taskFileName, dataUrl);
-                            if (uploadResult.Code != ReturnCode.SUCCESS)
-                            {
-                                return SubmitResultVO.Fail(ReturnCode.FAILURE, uploadResult.Description);
-                            }
-
-                            if (uploadResult.Description.StartsWith("http"))
-                            {
-                                link = uploadResult.Description;
-                            }
-                        }
-
-                        if (string.IsNullOrWhiteSpace(link))
-                        {
-                            return SubmitResultVO.Fail(ReturnCode.FAILURE, "上传失败，未返回有效链接");
-                        }
-
-                        finalFileNames.Add(link);
-                    }
-                }
-
-                task.Action = TaskAction.BLEND;
-                task.PromptEn = string.Join(" ", finalFileNames) + " " + task.PromptEn;
-
-                if (!task.PromptEn.Contains("--ar"))
-                {
-                    switch (dimensions)
-                    {
-                        case BlendDimensions.PORTRAIT:
-                            task.PromptEn += " --ar 2:3";
-                            break;
-
-                        case BlendDimensions.SQUARE:
-                            task.PromptEn += " --ar 1:1";
-                            break;
-
-                        case BlendDimensions.LANDSCAPE:
-                            task.PromptEn += " --ar 3:2";
-                            break;
-
-                        default:
-                            break;
-                    }
-                }
-
-                // 入队前不保存
-                //_taskStoreService.Save(task);
-
-                //return await discordInstance.YmTaskService.SubmitTaskAsync(task, _taskStoreService, discordInstance);
-
-                return await instance.RedisEnqueue(new TaskInfoQueue()
-                {
-                    Info = task,
-                    Function = TaskInfoQueueFunction.BLEND
-                });
-            }
-            else
-            {
-                var finalFileNames = new List<string>();
-                foreach (var item in dataUrls)
-                {
-                    var dataUrl = item;
-
-                    // discord 混图只能通过 base64
+                    // 悠船
                     if (dataUrl.Url?.StartsWith("http", StringComparison.OrdinalIgnoreCase) == true)
                     {
-                        // 将 url 转为 bytes
-                        var ff = new FileFetchHelper();
-                        var res = await ff.FetchFileAsync(dataUrl.Url);
-                        if (res.Success && res.FileBytes?.Length > 0)
-                        {
-                            dataUrl = new DataUrl(res.ContentType, res.FileBytes);
-                        }
-                        else
-                        {
-                            //return Message.Failure("Fetch image from url failed: " + dataUrl.Url);
-
-                            return SubmitResultVO.Fail(ReturnCode.FAILURE, "获取图片失败 " + dataUrl.Url);
-                        }
+                        link = dataUrl.Url;
                     }
-
-                    var guid = "";
-                    if (dataUrls.Count > 0)
+                    else
                     {
-                        guid = "-" + Guid.NewGuid().ToString("N");
+                        var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
+                        link = await instance.YmTaskService.UploadFile(task, dataUrl.Data, taskFileName);
                     }
 
-                    var taskFileName = $"{task.Id}{guid}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
-
-                    var uploadResult = await instance.UploadAsync(taskFileName, dataUrl, useDiscordUpload: !isYm);
-                    if (uploadResult.Code != ReturnCode.SUCCESS)
+                    if (string.IsNullOrWhiteSpace(link))
                     {
-                        return SubmitResultVO.Fail(ReturnCode.FAILURE, uploadResult.Description);
+                        return SubmitResultVO.Fail(ReturnCode.FAILURE, "上传失败，未返回有效链接");
                     }
 
-                    finalFileNames.Add(uploadResult.Description);
+                    finalFileNames.Add(link);
                 }
-
-                //return await discordInstance.BlendAsync(finalFileNames, dimensions,
-                //    task.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default), task.RealBotType ?? task.BotType);
-
-                return await instance.RedisEnqueue(new TaskInfoQueue()
-                {
-                    Info = task,
-                    Function = TaskInfoQueueFunction.BLEND,
-                    BlendParam = new TaskInfoQueue.TaskInfoQueueBlendParam()
-                    {
-                        FinalFileNames = finalFileNames,
-                        Dimensions = dimensions
-                    }
-                });
             }
+            else if (task.IsOfficial)
+            {
+                foreach (var dataUrl in dataUrls)
+                {
+                    var link = "";
+
+                    // 官方
+                    if (dataUrl.Url?.StartsWith("http", StringComparison.OrdinalIgnoreCase) == true)
+                    {
+                        link = dataUrl.Url;
+                    }
+                    else
+                    {
+                        var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
+                        var uploadResult = await instance.UploadAsync(taskFileName, dataUrl);
+                        if (uploadResult.Code != ReturnCode.SUCCESS)
+                        {
+                            return SubmitResultVO.Fail(ReturnCode.FAILURE, uploadResult.Description);
+                        }
+
+                        if (uploadResult.Description.StartsWith("http"))
+                        {
+                            link = uploadResult.Description;
+                        }
+                    }
+
+                    if (string.IsNullOrWhiteSpace(link))
+                    {
+                        return SubmitResultVO.Fail(ReturnCode.FAILURE, "上传失败，未返回有效链接");
+                    }
+
+                    finalFileNames.Add(link);
+                }
+            }
+            else if (task.IsDiscord)
+            {
+                // 方式2
+                // 调整 BLEND 混图机制
+                // 采用 IMAGINE 方式上传图片，然后在提示词中加入图片链接的方式进行混图
+
+                foreach (var dataUrl in dataUrls)
+                {
+                    var link = "";
+
+                    if (dataUrl.Url?.StartsWith("http", StringComparison.OrdinalIgnoreCase) == true)
+                    {
+                        link = dataUrl.Url;
+                    }
+                    else
+                    {
+                        var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
+                        var uploadResult = await instance.UploadAsync(taskFileName, dataUrl);
+                        if (uploadResult.Code != ReturnCode.SUCCESS)
+                        {
+                            return SubmitResultVO.Fail(ReturnCode.FAILURE, uploadResult.Description);
+                        }
+
+                        if (uploadResult.Description.StartsWith("http"))
+                        {
+                            link = uploadResult.Description;
+                        }
+                    }
+
+                    if (string.IsNullOrWhiteSpace(link))
+                    {
+                        return SubmitResultVO.Fail(ReturnCode.FAILURE, "上传失败，未返回有效链接");
+                    }
+
+                    finalFileNames.Add(link);
+                }
+            }
+
+            task.Action = TaskAction.BLEND;
+            task.PromptEn = string.Join(" ", finalFileNames) + " " + task.PromptEn;
+
+            if (!task.PromptEn.Contains("--ar"))
+            {
+                switch (dimensions)
+                {
+                    case BlendDimensions.PORTRAIT:
+                        task.PromptEn += " --ar 2:3";
+                        break;
+
+                    case BlendDimensions.SQUARE:
+                        task.PromptEn += " --ar 1:1";
+                        break;
+
+                    case BlendDimensions.LANDSCAPE:
+                        task.PromptEn += " --ar 3:2";
+                        break;
+
+                    default:
+                        break;
+                }
+            }
+
+            return await instance.RedisEnqueue(new TaskInfoQueue()
+            {
+                Info = task,
+                Function = TaskInfoQueueFunction.BLEND
+            });
+
+            //// 方式1
+            //var finalFileNames = new List<string>();
+            //foreach (var item in dataUrls)
+            //{
+            //    var dataUrl = item;
+
+            //    // discord 混图只能通过 base64
+            //    if (dataUrl.Url?.StartsWith("http", StringComparison.OrdinalIgnoreCase) == true)
+            //    {
+            //        // 将 url 转为 bytes
+            //        var ff = new FileFetchHelper();
+            //        var res = await ff.FetchFileAsync(dataUrl.Url);
+            //        if (res.Success && res.FileBytes?.Length > 0)
+            //        {
+            //            dataUrl = new DataUrl(res.ContentType, res.FileBytes);
+            //        }
+            //        else
+            //        {
+            //            //return Message.Failure("Fetch image from url failed: " + dataUrl.Url);
+
+            //            return SubmitResultVO.Fail(ReturnCode.FAILURE, "获取图片失败 " + dataUrl.Url);
+            //        }
+            //    }
+
+            //    var guid = "";
+            //    if (dataUrls.Count > 0)
+            //    {
+            //        guid = "-" + Guid.NewGuid().ToString("N");
+            //    }
+
+            //    var taskFileName = $"{task.Id}{guid}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
+
+            //    var uploadResult = await instance.UploadAsync(taskFileName, dataUrl, useDiscordUpload: !isYm);
+            //    if (uploadResult.Code != ReturnCode.SUCCESS)
+            //    {
+            //        return SubmitResultVO.Fail(ReturnCode.FAILURE, uploadResult.Description);
+            //    }
+
+            //    finalFileNames.Add(uploadResult.Description);
+            //}
+
+            //return await instance.RedisEnqueue(new TaskInfoQueue()
+            //{
+            //    Info = task,
+            //    Function = TaskInfoQueueFunction.BLEND,
+            //    BlendParam = new TaskInfoQueue.TaskInfoQueueBlendParam()
+            //    {
+            //        FinalFileNames = finalFileNames,
+            //        Dimensions = dimensions
+            //    }
+            //});
         }
 
         /// <summary>

@@ -392,7 +392,7 @@ namespace Midjourney.API.Controllers
             List<string> base64Array = blendDTO.Base64Array;
             if (base64Array == null || base64Array.Count < 2 || base64Array.Count > 5)
             {
-                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "base64List参数错误"));
+                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "图片参数错误，2~5张图片"));
             }
 
             // blend 不限制上传

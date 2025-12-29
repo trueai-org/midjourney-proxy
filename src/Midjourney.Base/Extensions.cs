@@ -611,6 +611,22 @@ namespace Midjourney.Base
         }
 
         /// <summary>
+        /// 移除 seed 参数
+        /// </summary>
+        /// <param name="prompt"></param>
+        /// <returns></returns>
+        public static string RemoveSeed(this string prompt)
+        {
+            if (string.IsNullOrWhiteSpace(prompt))
+            {
+                return prompt;
+            }
+
+            // 移除 --seed xxx
+            return Regex.Replace(prompt, @"--seed\s+\d+", "", RegexOptions.IgnoreCase).Trim();
+        }
+
+        /// <summary>
         /// 追加速度模式
         /// </summary>
         /// <param name="prompt"></param>

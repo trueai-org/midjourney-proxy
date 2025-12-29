@@ -77,10 +77,19 @@ namespace Midjourney.Infrastructure.Handle
                         task.PromptFull = fullPrompt;
                     }
                 }
+
                 // 其次再尝试用 MessageId 命中（当 msgId 存在时）
                 if (task == null && !string.IsNullOrWhiteSpace(msgId))
                 {
                     task = instance.GetRunningTaskByMessageId(msgId);
+                }
+
+                // 如果没有找到任务，则使用 seed 获取
+                var seed = ConvertUtils.GetSeedFromContent(fullPrompt);
+                if (task == null && !string.IsNullOrWhiteSpace(seed))
+                {
+                    task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && c.Seed == seed)
+                        .OrderBy(c => c.StartTime).FirstOrDefault();
                 }
 
                 var botType = GetBotType(message);

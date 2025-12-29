@@ -101,6 +101,15 @@ namespace Midjourney.Infrastructure.Handle
                 }
             }
 
+
+            // 如果没有找到任务，则使用 seed 获取
+            var seed = ConvertUtils.GetSeedFromContent(fullPrompt);
+            if (task == null && !string.IsNullOrWhiteSpace(seed))
+            {
+                task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && c.Seed == seed)
+                    .OrderBy(c => c.StartTime).FirstOrDefault();
+            }
+
             // 如果依然找不到任务，可能是 NIJI 任务
             // 不判断 && botType == EBotType.NIJI_JOURNEY
             var botType = GetBotType(message);

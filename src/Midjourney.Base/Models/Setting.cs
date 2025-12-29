@@ -34,6 +34,11 @@ namespace Midjourney.Base.Models
     public class Setting : DomainObject
     {
         /// <summary>
+        /// 启用 Discord 防撞图机制，默认对提示词添加 --seed 参数，避免生成重复图片
+        /// </summary>
+        public bool EnableDiscordAppendSeed { get; set; } = true;
+
+        /// <summary>
         /// 绘图完成是否填充官方 cdn 地址, 默认: false
         /// 如果是 true, 则绘图完成时对 imageUrls 和 videoUrls 填充 cdn.midjourney.com 的官方 cdn 地址
         /// </summary>
