@@ -112,7 +112,22 @@ namespace Midjourney.Infrastructure.Handle
             string imageUrl = GetImageUrl(message);
             string messageHash = discordHelper.GetMessageHash(imageUrl);
 
-            var task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && c.MessageId == msgId).FirstOrDefault();
+            TaskInfo task = null;
+
+            // 如果没有找到任务，则优先使用 seed 获取
+            var seed = ConvertUtils.GetSeedFromContent(fullPrompt);
+            if (task == null && !string.IsNullOrWhiteSpace(seed))
+            {
+                task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && c.Seed == seed)
+                    .OrderBy(c => c.StartTime).FirstOrDefault();
+
+                Log.Information("通过 seed 匹配任务: Seed={@0}, TaskId={@1}", seed, task?.Id);
+            }
+
+            if (task == null && !string.IsNullOrWhiteSpace(msgId))
+            {
+                instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && c.MessageId == msgId).FirstOrDefault();
+            }
 
             if (task == null && !string.IsNullOrWhiteSpace(message.InteractionMetadata?.Id))
             {
@@ -137,14 +152,6 @@ namespace Midjourney.Infrastructure.Handle
                     task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && (c.BotType == botType || c.RealBotType == botType) && c.PromptFull == fullPrompt)
                     .OrderBy(c => c.StartTime).FirstOrDefault();
                 }
-            }
-
-            // 如果没有找到任务，则使用 seed 获取
-            var seed = ConvertUtils.GetSeedFromContent(fullPrompt);
-            if (task == null && !string.IsNullOrWhiteSpace(seed))
-            {
-                task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && c.Seed == seed)
-                    .OrderBy(c => c.StartTime).FirstOrDefault();
             }
 
             if (task == null)

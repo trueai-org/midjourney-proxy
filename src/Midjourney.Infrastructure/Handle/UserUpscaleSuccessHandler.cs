@@ -15,11 +15,11 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Additional Terms:
-// This software shall not be used for any illegal activities. 
+// This software shall not be used for any illegal activities.
 // Users must comply with all applicable laws and regulations,
-// particularly those related to image and video processing. 
+// particularly those related to image and video processing.
 // The use of this software for any form of illegal face swapping,
-// invasion of privacy, or any other unlawful purposes is strictly prohibited. 
+// invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 using System.Text.RegularExpressions;
 using Midjourney.Infrastructure.LoadBalancer;
@@ -88,7 +88,22 @@ namespace Midjourney.Infrastructure.Handle
             var msgId = GetMessageId(message);
             var fullPrompt = GetFullPrompt(message);
 
-            var task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && c.MessageId == msgId).FirstOrDefault();
+            TaskInfo task = null;
+
+            // 如果没有找到任务，则优先使用 seed 获取
+            var seed = ConvertUtils.GetSeedFromContent(fullPrompt);
+            if (task == null && !string.IsNullOrWhiteSpace(seed))
+            {
+                task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && c.Seed == seed)
+                    .OrderBy(c => c.StartTime).FirstOrDefault();
+
+                Log.Information("通过 seed 匹配任务: Seed={@0}, TaskId={@1}", seed, task?.Id);
+            }
+
+            if (task == null && !string.IsNullOrWhiteSpace(msgId))
+            {
+                task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && c.MessageId == msgId).FirstOrDefault();
+            }
 
             if (task == null && message.InteractionMetadata?.Id != null)
             {
@@ -99,15 +114,6 @@ namespace Midjourney.Infrastructure.Handle
                 {
                     task.PromptFull = fullPrompt;
                 }
-            }
-
-
-            // 如果没有找到任务，则使用 seed 获取
-            var seed = ConvertUtils.GetSeedFromContent(fullPrompt);
-            if (task == null && !string.IsNullOrWhiteSpace(seed))
-            {
-                task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && c.Seed == seed)
-                    .OrderBy(c => c.StartTime).FirstOrDefault();
             }
 
             // 如果依然找不到任务，可能是 NIJI 任务
@@ -122,7 +128,6 @@ namespace Midjourney.Infrastructure.Handle
                     .OrderBy(c => c.StartTime).FirstOrDefault();
                 }
             }
-
 
             if (task == null)
             {

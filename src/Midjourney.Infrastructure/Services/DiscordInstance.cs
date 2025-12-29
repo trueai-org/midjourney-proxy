@@ -1812,6 +1812,10 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                                     task.RemixModaling = false;
 
+                                    // 弹窗任务没有 seed 不需要追加 seed
+                                    // 格式化弹窗提示词
+                                    //task.PromptEn = GetPrompt(task.PromptEn, info);
+
                                     // 自定义变焦
                                     if (customId.StartsWith("MJ::CustomZoom::"))
                                     {
