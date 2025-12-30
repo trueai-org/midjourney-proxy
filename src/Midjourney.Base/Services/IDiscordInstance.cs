@@ -16,7 +16,7 @@
         /// <param name="promptEn"></param>
         /// <param name="info"></param>
         /// <returns></returns>
-        string GetPrompt(string promptEn, TaskInfo info);
+        string GetPrompt(string promptEn, TaskInfo info, TaskInfo parentInfo = null);
 
         /// <summary>
         /// Discord 辅助

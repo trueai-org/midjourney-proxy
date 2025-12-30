@@ -72,10 +72,16 @@ namespace Midjourney.Infrastructure.Handle
                         .OrderBy(c => c.StartTime).FirstOrDefault();
 
                     Log.Information("通过 seed 匹配任务: Seed={@0}, TaskId={@1}", seed, task?.Id);
+
+                    // 如果通过 meta id 找到任务，但是 full prompt 为空，则更新 full prompt
+                    if (task != null && string.IsNullOrWhiteSpace(task.PromptFull))
+                    {
+                        task.PromptFull = fullPrompt;
+                    }
                 }
 
                 // 优先用 InteractionMetadataId 命中（更稳定）
-                if (!string.IsNullOrWhiteSpace(message.InteractionMetadata?.Id))
+                if (task == null && !string.IsNullOrWhiteSpace(message.InteractionMetadata?.Id))
                 {
                     task = instance.FindRunningTask(c =>
                         (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED)
@@ -155,7 +161,24 @@ namespace Midjourney.Infrastructure.Handle
 
                 // 先用 InteractionMetadataId 命中，再退到 MessageId
                 TaskInfo task = null;
-                if (!string.IsNullOrWhiteSpace(message.InteractionMetadata?.Id))
+
+                // 如果没有找到任务，则优先使用 seed 获取
+                var seed = ConvertUtils.GetSeedFromContent(fullPrompt);
+                if (task == null && !string.IsNullOrWhiteSpace(seed))
+                {
+                    task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && c.Seed == seed)
+                        .OrderBy(c => c.StartTime).FirstOrDefault();
+
+                    Log.Information("通过 seed 匹配任务: Seed={@0}, TaskId={@1}", seed, task?.Id);
+
+                    // 如果通过 meta id 找到任务，但是 full prompt 为空，则更新 full prompt
+                    if (task != null && string.IsNullOrWhiteSpace(task.PromptFull))
+                    {
+                        task.PromptFull = fullPrompt;
+                    }
+                }
+
+                if (task == null && !string.IsNullOrWhiteSpace(message.InteractionMetadata?.Id))
                 {
                     task = instance.FindRunningTask(c =>
                         (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED)
@@ -167,10 +190,10 @@ namespace Midjourney.Infrastructure.Handle
                         task.PromptFull = fullPrompt;
                     }
                 }
+
                 if (task == null)
                 {
-                    task = instance.FindRunningTask(c =>
-                        (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED)
+                    task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED)
                         && c.MessageId == msgId).FirstOrDefault();
                 }
 
@@ -190,6 +213,7 @@ namespace Midjourney.Infrastructure.Handle
                     if (fallbackTasks.Count == 1)
                     {
                         task = fallbackTasks.First();
+
                         Log.Warning("⚠️ Progress: 通过 PromptFull 回退匹配到任务 {TaskId}, msgId={MsgId}, metaId={MetaId}, 可能强键未正确设置",
                             task.Id, msgId, message.InteractionMetadata?.Id);
                     }

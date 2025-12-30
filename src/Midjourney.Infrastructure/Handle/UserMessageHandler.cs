@@ -122,6 +122,12 @@ namespace Midjourney.Infrastructure.Handle
                     .OrderBy(c => c.StartTime).FirstOrDefault();
 
                 Log.Information("通过 seed 匹配任务: Seed={@0}, TaskId={@1}", seed, task?.Id);
+
+                // 如果通过 meta id 找到任务，但是 full prompt 为空，则更新 full prompt
+                if (task != null && string.IsNullOrWhiteSpace(task.PromptFull))
+                {
+                    task.PromptFull = fullPrompt;
+                }
             }
 
             if (task == null && !string.IsNullOrWhiteSpace(msgId))

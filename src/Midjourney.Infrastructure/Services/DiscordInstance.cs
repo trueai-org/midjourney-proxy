@@ -1766,6 +1766,23 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                 else
                                 {
                                     var task = info;
+                                    var parentTask = _taskStoreService.Get(task.ParentId);
+                                    if (parentTask == null)
+                                    {
+                                        info.Fail("未找到父级任务");
+                                        SaveAndNotify(info);
+                                        return;
+                                    }
+
+                                    // 如果当前任务是重新执行，父级任务可能含有 --seed
+                                    if (task.Action == TaskAction.REROLL)
+                                    {
+                                        if (parentTask.Action == TaskAction.IMAGINE || parentTask.Action == TaskAction.BLEND || parentTask.Action == TaskAction.VIDEO)
+                                        {
+                                            task.PromptEn = GetPrompt(task.PromptEn, info, parentTask);
+                                        }
+                                    }
+
                                     var submitAction = queue.ModalParam.Dto;
 
                                     var customId = task.GetProperty<string>(Constants.TASK_PROPERTY_CUSTOM_ID, default);
@@ -1810,9 +1827,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                                     task.RemixModaling = false;
 
-                                    // 弹窗任务没有 seed 不需要追加 seed
-                                    // 格式化弹窗提示词
-                                    //task.PromptEn = GetPrompt(task.PromptEn, info);
+
+
 
                                     // 自定义变焦
                                     if (customId.StartsWith("MJ::CustomZoom::"))
@@ -1885,20 +1901,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                                         var action = task.Action;
 
-                                        TaskInfo parentTask = null;
-                                        if (!string.IsNullOrWhiteSpace(task.ParentId))
-                                        {
-                                            parentTask = _taskStoreService.Get(task.ParentId);
-                                            if (parentTask == null)
-                                            {
-                                                info.Fail("未找到父级任务");
-                                                SaveAndNotify(info);
-                                                return;
-                                            }
-                                        }
 
-                                        var prevCustomId = parentTask?.GetProperty<string>(Constants.TASK_PROPERTY_REMIX_CUSTOM_ID, default);
-                                        var prevModal = parentTask?.GetProperty<string>(Constants.TASK_PROPERTY_REMIX_MODAL, default);
+                                        var prevCustomId = parentTask.GetProperty<string>(Constants.TASK_PROPERTY_REMIX_CUSTOM_ID, default);
+                                        var prevModal = parentTask.GetProperty<string>(Constants.TASK_PROPERTY_REMIX_MODAL, default);
 
                                         var modal = "MJ::RemixModal::new_prompt";
                                         if (action == TaskAction.REROLL)
@@ -1917,7 +1922,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                                 if (prevModal.Contains("::PanModal"))
                                                 {
                                                     // 如果是 pan, pan 是根据放大图片的 CUSTOM_ID 进行重绘处理
-                                                    var cus = parentTask?.GetProperty<string>(Constants.TASK_PROPERTY_REMIX_U_CUSTOM_ID, default);
+                                                    var cus = parentTask.GetProperty<string>(Constants.TASK_PROPERTY_REMIX_U_CUSTOM_ID, default);
                                                     if (string.IsNullOrWhiteSpace(cus))
                                                     {
                                                         info.Fail("未找到目标图片的 U 操作");
@@ -2931,7 +2936,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <param name="prompt"></param>
         /// <param name="info"></param>
         /// <returns></returns>
-        public string GetPrompt(string prompt, TaskInfo info)
+        public string GetPrompt(string prompt, TaskInfo info, TaskInfo parentInfo = null)
         {
             var acc = Account;
 
@@ -3037,8 +3042,10 @@ namespace Midjourney.Infrastructure.LoadBalancer
             {
                 if (info.Action == TaskAction.IMAGINE
                     || info.Action == TaskAction.BLEND
-                    || info.Action ==  TaskAction.VIDEO 
-                    || info.Action == TaskAction.REROLL)
+                    || info.Action == TaskAction.VIDEO
+                    || parentInfo?.Action == TaskAction.IMAGINE
+                    || parentInfo?.Action == TaskAction.BLEND
+                    || parentInfo?.Action == TaskAction.VIDEO)
                 {
                     if (!prompt.Contains("--seed", StringComparison.OrdinalIgnoreCase))
                     {
