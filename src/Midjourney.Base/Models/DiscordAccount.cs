@@ -29,6 +29,7 @@ using LiteDB;
 using Midjourney.Base.Data;
 using Midjourney.Base.Dto;
 using MongoDB.Bson.Serialization.Attributes;
+using Serilog;
 
 namespace Midjourney.Base.Models
 {
@@ -1077,6 +1078,43 @@ namespace Midjourney.Base.Models
                 SubChannels.Clear();
                 SubChannelValues.Clear();
             }
+        }
+
+        /// <summary>
+        /// 标记快速用完了
+        /// </summary>
+        public void MarkFastExhausted()
+        {
+            // 标记快速模式已经用完了
+            FastExhausted = true;
+
+            // 同时设置官方账号快速时长为 0
+            OfficialFastRemaining = 0;
+
+            // 自动设置慢速，如果快速用完
+            // 且没有固定慢速模式时
+            if (EnableAutoSetRelax == true && Mode != GenerationSpeedMode.RELAX)
+            {
+                AllowModes = [GenerationSpeedMode.RELAX];
+            }
+
+            // 设置并发数
+            CoreSize = 3;
+
+            FreeSqlHelper.FreeSql.Update<DiscordAccount>()
+                .Set(c => c.FastExhausted, FastExhausted)
+                .Set(c => c.OfficialFastRemaining, OfficialFastRemaining)
+                .Set(c => c.AllowModes, AllowModes)
+                .Set(c => c.CoreSize, CoreSize)
+                .Where(c => c.Id == Id)
+                .ExecuteAffrows();
+
+            ClearCache();
+
+            // 标记快速可用次数为 0
+            CounterHelper.SetFastTaskAvailableCount(ChannelId, 0);
+
+            Log.Information("账号 {@0} 标记快速用完了", ChannelId);
         }
     }
 }

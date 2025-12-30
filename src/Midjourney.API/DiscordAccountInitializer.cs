@@ -586,7 +586,6 @@ namespace Midjourney.API
         {
             var isLock = await AsyncLocalLock.TryLockAsync("initialize:all", TimeSpan.FromSeconds(10), async () =>
             {
-
                 var accounts = _freeSql.Select<DiscordAccount>().OrderBy(c => c.Sort).ToList();
 
                 foreach (var account in accounts)
@@ -652,37 +651,46 @@ namespace Midjourney.API
             var info = new StringBuilder();
 
 
-            DiscordInstance disInstance = null;
-
             try
             {
                 // 获取获取值
                 account = _freeSql.Get<DiscordAccount>(account.Id);
-
                 if (account == null)
                 {
                     return;
                 }
 
-                // discord 如果账号处于登录中
+                // discord 如果账号处于登录中，如果超过 10 分钟
                 if (account.IsDiscord && account.IsAutoLogining)
                 {
-                    // 如果超过 10 分钟
                     if (account.LoginStart.HasValue && account.LoginStart.Value.AddMinutes(10) < DateTime.Now)
                     {
                         account.IsAutoLogining = false;
                         account.LoginMessage = "登录超时";
-                        _freeSql.Update("IsAutoLogining,LoginMessage", account);
+
+                        _freeSql.Update<DiscordAccount>()
+                            .Set(c => c.IsAutoLogining, account.IsAutoLogining)
+                            .Set(c => c.LoginMessage, account.LoginMessage)
+                            .Where(c => c.Id == account.Id)
+                            .ExecuteAffrows();
+
                         account.ClearCache();
                     }
                 }
 
+                // 未启用的账号，如果存在实例则释放
                 if (account.Enable != true)
                 {
+                    var discordInstance = _discordLoadBalancer.GetDiscordInstance(account.ChannelId);
+                    if (discordInstance != null)
+                    {
+                        _discordLoadBalancer.RemoveInstance(discordInstance);
+                        discordInstance.Dispose();
+                    }
                     return;
                 }
 
-                disInstance = _discordLoadBalancer.GetDiscordInstance(account.ChannelId);
+                var disInstance = _discordLoadBalancer.GetDiscordInstance(account.ChannelId);
                 var now = new DateTimeOffset(DateTime.Now.Date).ToUnixTimeMilliseconds();
 
                 // 只要在工作时间内或摸鱼时间内，就创建实例
@@ -697,25 +705,18 @@ namespace Midjourney.API
                         }
 
                         // 快速时长校验
-                        // 如果 fastTime <= 0.1，则标记为快速用完
+                        // 如果 fastTime <= 0.2，则标记为快速用完
                         var fastTime = account.FastTimeRemaining?.ToString()?.Split('/')?.FirstOrDefault()?.Trim();
                         if (!string.IsNullOrWhiteSpace(fastTime) && double.TryParse(fastTime, out var ftime) && ftime <= 0.2)
                         {
                             account.FastExhausted = true;
                         }
-                        else
-                        {
-                            account.FastExhausted = false;
-                        }
 
                         // 自动设置慢速，如果快速用完
-                        if (account.FastExhausted == true && account.EnableAutoSetRelax == true)
+                        if (account.FastExhausted == true && account.EnableAutoSetRelax == true && account.Mode != GenerationSpeedMode.RELAX)
                         {
                             account.AllowModes = [GenerationSpeedMode.RELAX];
-                            if (account.CoreSize > 3)
-                            {
-                                account.CoreSize = 3;
-                            }
+                            account.CoreSize = 3;
                         }
 
                         // discord 启用自动获取私信 ID
@@ -762,7 +763,15 @@ namespace Midjourney.API
                             sw.Restart();
                         }
 
-                        _freeSql.Update("NijiBotChannelId,PrivateChannelId,AllowModes,SubChannels,SubChannelValues,FastExhausted", account);
+                        _freeSql.Update<DiscordAccount>()
+                            .Set(c => c.NijiBotChannelId, account.NijiBotChannelId)
+                            .Set(c => c.PrivateChannelId, account.PrivateChannelId)
+                            .Set(c => c.AllowModes, account.AllowModes)
+                            .Set(c => c.SubChannels, account.SubChannels)
+                            .Set(c => c.SubChannelValues, account.SubChannelValues)
+                            .Set(c => c.FastExhausted, account.FastExhausted)
+                            .Where(c => c.Id == account.Id)
+                            .ExecuteAffrows();
                         account.ClearCache();
 
                         // discord 启用自动验证账号功能, 连接前先判断账号是否正常
@@ -786,14 +795,13 @@ namespace Midjourney.API
                         info.AppendLine($"{account.Id}初始化中... 创建实例耗时: {sw.ElapsedMilliseconds}ms");
                         sw.Restart();
 
-                        // 首次创建实例后同步账号信息
-                        // 高频同步 info setting 一定会封号
                         try
                         {
+                            // 首次创建实例后同步账号信息
+                            // 高频同步 info setting 一定会封号
                             // 这里应该等待初始化完成，并获取用户信息验证，获取用户成功后设置为可用状态
                             // 多账号启动时，等待一段时间再启动下一个账号
-                            // Discord 账号启动间隔时间
-                            if (account.IsDiscord)
+                            if (account.IsDiscord || account.IsOfficial)
                             {
                                 await Task.Delay(1000 * 5);
                             }
@@ -833,14 +841,15 @@ namespace Midjourney.API
                             }
                         }
 
-                        // discord 随机延期 token
-                        if (account.IsDiscord && setting.EnableAutoExtendToken)
-                        {
-                            await RandomSyncToken(account);
-                            sw.Stop();
-                            info.AppendLine($"{account.ChannelId}初始化中... 随机延期token耗时: {sw.ElapsedMilliseconds}ms");
-                            sw.Restart();
-                        }
+                        // 废弃
+                        //// discord 随机延期 token
+                        //if (account.IsDiscord && setting.EnableAutoExtendToken)
+                        //{
+                        //    await RandomSyncToken(account);
+                        //    sw.Stop();
+                        //    info.AppendLine($"{account.ChannelId}初始化中... 随机延期token耗时: {sw.ElapsedMilliseconds}ms");
+                        //    sw.Restart();
+                        //}
                     }
                     else
                     {
@@ -914,8 +923,6 @@ namespace Midjourney.API
 
                 _freeSql.Update(account);
                 account.ClearCache();
-
-                disInstance = null;
 
                 sw.Stop();
                 info.AppendLine($"{account.Id}初始化中... 异常，禁用账号耗时: {sw.ElapsedMilliseconds}ms");

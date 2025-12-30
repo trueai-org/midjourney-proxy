@@ -2506,8 +2506,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// </summary>
         public void Dispose(bool isPublishToRedis = true)
         {
-            var accountId = Account?.Id;
-
             try
             {
                 BotMessageListener?.Dispose();
@@ -2530,9 +2528,16 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 }
 
                 // 释放未完成的任务
-                foreach (var runningTask in _runningTasks)
+                foreach (var info in _runningTasks)
                 {
-                    runningTask.Value.Fail("强制取消"); // 取消任务（假设TaskInfo有Cancel方法）
+                    try
+                    {
+                        info.Value.Fail("强制取消");
+                        SaveAndNotify(info.Value);
+                    }
+                    catch
+                    {
+                    }
                 }
 
                 _runningTasks.Clear();
@@ -3030,21 +3035,25 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 prompt += " --draft";
             }
 
+            // 是否开启 Discord 防撞图机制
+            // 仅适用于 IMAGINE / BLEND
+            if (info.IsDiscord && GlobalConfiguration.Setting.EnableDiscordAppendSeed)
+            {
+                if (info.Action == TaskAction.IMAGINE || info.Action == TaskAction.BLEND)
+                {
+                    if (!prompt.Contains("--seed", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var seed = Random.Shared.NextInt64(uint.MaxValue);
+                        prompt += $" --seed {seed}";
+                        info.Seed = seed.ToString();
+                    }
+                }
+            }
+
             //// 处理转义字符引号等
             //return prompt.Replace("\\\"", "\"").Replace("\\'", "'").Replace("\\\\", "\\");
 
             prompt = FormatUrls(prompt, info).ConfigureAwait(false).GetAwaiter().GetResult();
-
-            // 是否开启 discord 防撞图机制
-            if (info.IsDiscord && GlobalConfiguration.Setting.EnableDiscordAppendSeed)
-            {
-                if (!prompt.Contains("--seed", StringComparison.OrdinalIgnoreCase))
-                {
-                    var seed = Random.Shared.NextInt64(uint.MaxValue);
-                    prompt += $" --seed {seed}";
-                    info.Seed = seed.ToString();
-                }
-            }
 
             return prompt;
         }
@@ -3620,9 +3629,17 @@ namespace Midjourney.Infrastructure.LoadBalancer
                         _logger.Error("Http 请求没有操作权限，禁用账号 {@0}", paramsStr);
 
                         Account.Enable = false;
-                        Account.DisabledReason = "Http 请求没有操作权限，禁用账号";
-                        _freeSql.Update(Account);
+                        Account.DisabledReason = "请求没有操作权限";
+
+                        _freeSql.Update<DiscordAccount>()
+                            .Set(c => c.DisabledReason, Account.DisabledReason)
+                            .Set(c => c.Enable, Account.Enable)
+                            .Where(c => c.Id == Account.Id)
+                            .ExecuteAffrows();
+
                         Account.ClearCache();
+
+                        Dispose();
 
                         return Message.Of(ReturnCode.FAILURE, "请求失败，禁用账号");
                     }
@@ -3677,6 +3694,10 @@ namespace Midjourney.Infrastructure.LoadBalancer
             {
                 return Message.Success("忽略提交，未开启 niji");
             }
+            if (botType == EBotType.NIJI_JOURNEY && GlobalConfiguration.Setting.EnableConvertNijiToMj)
+            {
+                return Message.Success("忽略提交，已将 niji 转 mj 处理");
+            }
 
             if (botType == EBotType.MID_JOURNEY && Account.EnableMj != true)
             {
@@ -3709,32 +3730,13 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     return false;
                 }
 
-                var success = false;
-
                 // 悠船立即同步，不缓存
                 if (acc.IsYouChuan)
                 {
-                    var sw = Stopwatch.StartNew();
-                    success = await YmTaskService.SyncYouchuanInfo();
-                    sw.Stop();
-                    if (success)
-                    {
-                        // 计算快速可用次数
-                        var fastAvailableCount = (int)Math.Ceiling(Account.YouChuanFastRemaining / 60D);
-
-                        CounterHelper.SetFastTaskAvailableCount(Account.ChannelId, fastAvailableCount);
-
-                        // 计算慢速总数
-                        var count = CounterHelper.GetYouchuanRelaxCount(acc.ChannelId);
-                        var youchuanRelaxAvailableCount = Account.YouChuanRelaxedReset > DateTime.Now.Date ? 0 : Math.Max(0, Account.YouChuanRelaxDailyLimit - count);
-
-                        _logger.Information("悠船同步信息完成，ChannelId={@0}, 预估快速剩余次数={@1}, 预估慢速剩余次数={@2}, 用时={@3}ms",
-                            ChannelId, fastAvailableCount, youchuanRelaxAvailableCount, sw.ElapsedMilliseconds);
-                    }
-
-                    return success;
+                    return await YmTaskService.SyncYouchuanInfo();
                 }
 
+                var success = false;
                 var cacheKey = $"info_setting_sync_cache:{acc.ChannelId}";
                 var cacheValue = AdaptiveCache.Get<bool?>(cacheKey);
 
@@ -3751,7 +3753,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                     // 只有强制同步时才需要添加限制规则
                     // 最新规则：
-                    // 每 1 分钟最多同步 1 次
                     // 每 5 分钟最多同步 1 次
                     // 每 10 分钟最多同步 2 次
                     // 每 30 分钟最多同步 3 次
@@ -3759,8 +3760,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                     var keyPrefix = $"syncinfo_limit_{DateTime.Now:yyyyMMdd}:";
 
-                    if (!RateLimiter.Check(keyPrefix, acc.ChannelId, 1, 1) ||
-                        !RateLimiter.Check(keyPrefix, acc.ChannelId, 5, 1) ||
+                    if (!RateLimiter.Check(keyPrefix, acc.ChannelId, 5, 1) ||
                         !RateLimiter.Check(keyPrefix, acc.ChannelId, 10, 2) ||
                         !RateLimiter.Check(keyPrefix, acc.ChannelId, 30, 3) ||
                         !RateLimiter.Check(keyPrefix, acc.ChannelId, 60, 6))
@@ -3774,25 +3774,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 {
                     // 官方 60-180 分钟
                     var cacheMinutes = Random.Shared.Next(60, 180);
-                    success = await AdaptiveCache.GetOrCreateAsync(cacheKey, async () =>
-                    {
-                        var sw = Stopwatch.StartNew();
-                        var ok = await YmTaskService.SyncOfficialInfo();
-                        sw.Stop();
-                        if (!ok)
-                        {
-                            throw new LogicException("同步官方信息失败");
-                        }
-
-                        // 计算快速可用次数
-                        var fastAvailableCount = (int)Math.Ceiling(Account.OfficialFastRemaining / 60D);
-                        CounterHelper.SetFastTaskAvailableCount(Account.ChannelId, fastAvailableCount);
-
-                        _logger.Information("官方同步信息完成，ChannelId={@0}, 预估快速剩余次数={@1}, 用时={@2}ms",
-                            ChannelId, fastAvailableCount, sw.ElapsedMilliseconds);
-
-                        return ok;
-                    }, TimeSpan.FromMinutes(cacheMinutes));
+                    success = await AdaptiveCache.GetOrCreateAsync(cacheKey, YmTaskService.SyncOfficialInfo,
+                        TimeSpan.FromMinutes(cacheMinutes));
                 }
 
                 if (acc.IsDiscord)
@@ -3806,24 +3789,24 @@ namespace Midjourney.Infrastructure.LoadBalancer
                         {
                             try
                             {
-                                var settingRes = await SettingAsync(SnowFlake.NextId(), EBotType.MID_JOURNEY);
-                                if (settingRes.Code != ReturnCode.SUCCESS)
-                                {
-                                    throw new LogicException(settingRes.Description);
-                                }
-                                Thread.Sleep(2500);
-
                                 var infoRes = await InfoAsync(SnowFlake.NextId(), EBotType.MID_JOURNEY);
                                 if (infoRes.Code != ReturnCode.SUCCESS)
                                 {
                                     throw new LogicException(infoRes.Description);
                                 }
                                 Thread.Sleep(2500);
+
+                                var settingRes = await SettingAsync(SnowFlake.NextId(), EBotType.MID_JOURNEY);
+                                if (settingRes.Code != ReturnCode.SUCCESS)
+                                {
+                                    throw new LogicException(settingRes.Description);
+                                }
+                                Thread.Sleep(2500);
                             }
                             catch (Exception ex)
                             {
                                 _logger.Error(ex, "同步 MJ 信息异常，ChannelId={@0}", ChannelId);
-                                throw;
+                                return false;
                             }
                         }
 
@@ -3834,17 +3817,17 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                 // 如果没有开启 NIJI 转 MJ
                                 if (GlobalConfiguration.Setting.EnableConvertNijiToMj == false)
                                 {
-                                    var settingRes = await SettingAsync(SnowFlake.NextId(), EBotType.NIJI_JOURNEY);
-                                    if (settingRes.Code != ReturnCode.SUCCESS)
-                                    {
-                                        throw new LogicException(settingRes.Description);
-                                    }
-                                    Thread.Sleep(2500);
-
                                     var infoRes = await InfoAsync(SnowFlake.NextId(), EBotType.NIJI_JOURNEY);
                                     if (infoRes.Code != ReturnCode.SUCCESS)
                                     {
                                         throw new LogicException(infoRes.Description);
+                                    }
+                                    Thread.Sleep(2500);
+
+                                    var settingRes = await SettingAsync(SnowFlake.NextId(), EBotType.NIJI_JOURNEY);
+                                    if (settingRes.Code != ReturnCode.SUCCESS)
+                                    {
+                                        throw new LogicException(settingRes.Description);
                                     }
                                     Thread.Sleep(2500);
                                 }
@@ -3852,47 +3835,12 @@ namespace Midjourney.Infrastructure.LoadBalancer
                             catch (Exception ex)
                             {
                                 _logger.Error(ex, "同步 Niji 信息异常，ChannelId={@0}", ChannelId);
-                                throw;
+                                return false;
                             }
                         }
                         sw.Stop();
 
-                        // 快速时长校验
-                        // 如果 fastTime <= 0.2，则标记为快速用完
-                        var fastTime = Account.FastTimeRemaining?.ToString()?.Split('/')?.FirstOrDefault()?.Trim();
-
-                        // 0.2h = 12 分钟 = 12 次
-                        var ftime = 0.0;
-                        if (!string.IsNullOrWhiteSpace(fastTime) && double.TryParse(fastTime, out ftime) && ftime <= 0.2)
-                        {
-                            Account.FastExhausted = true;
-                        }
-                        else if (ftime > 0.5)
-                        {
-                            Account.FastExhausted = false;
-                        }
-
-                        // 自动设置慢速，如果快速用完
-                        if (Account.FastExhausted == true && Account.EnableAutoSetRelax == true)
-                        {
-                            Account.AllowModes = [GenerationSpeedMode.RELAX];
-                            if (Account.CoreSize > 3)
-                            {
-                                Account.CoreSize = 3;
-                            }
-                        }
-
-                        // 计算快速可用次数
-                        var fastAvailableCount = (int)Math.Ceiling(ftime * 60);
-
-                        CounterHelper.SetFastTaskAvailableCount(Account.ChannelId, fastAvailableCount);
-
-                        _freeSql.Update("FastExhausted,AllowModes,CoreSize", acc);
-
-                        acc.ClearCache();
-
-                        _logger.Information("Discord 同步信息完成，ChannelId={@0}, 预估快速剩余次数={@1}, 用时={@2}ms",
-                            ChannelId, fastAvailableCount, sw.ElapsedMilliseconds);
+                        Log.Information("同步账号信息完成，ChannelId={0}，耗时 {1} ms", ChannelId, sw.ElapsedMilliseconds);
 
                         return true;
                     }, TimeSpan.FromMinutes(cacheMinutes));

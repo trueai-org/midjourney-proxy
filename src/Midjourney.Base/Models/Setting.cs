@@ -459,7 +459,7 @@ namespace Midjourney.Base.Models
         public bool EnableAutoSyncInfoSetting { get; set; }
 
         /// <summary>
-        /// 启用 token 自动延期
+        /// 启用 token 自动延期（废弃）
         /// </summary>
         public bool EnableAutoExtendToken { get; set; }
 

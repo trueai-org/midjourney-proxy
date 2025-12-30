@@ -15,11 +15,11 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Additional Terms:
-// This software shall not be used for any illegal activities. 
+// This software shall not be used for any illegal activities.
 // Users must comply with all applicable laws and regulations,
-// particularly those related to image and video processing. 
+// particularly those related to image and video processing.
 // The use of this software for any form of illegal face swapping,
-// invasion of privacy, or any other unlawful purposes is strictly prohibited. 
+// invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
 using System.Net;
@@ -308,7 +308,6 @@ namespace Midjourney.Infrastructure
                                         _freeSql.Update(Account);
                                         Account.ClearCache();
 
-
                                         try
                                         {
                                             // 通知验证服务器
@@ -348,7 +347,6 @@ namespace Midjourney.Infrastructure
 
                                                     Thread.Sleep(1000);
                                                 } while (true);
-
 
                                                 Task.Run(async () =>
                                                 {
@@ -822,30 +820,77 @@ namespace Midjourney.Infrastructure
                                     {
                                         if (item.TryGetProperty("description", out var description))
                                         {
-                                            var dic = ParseDiscordData(description.GetString());
-                                            foreach (var d in dic)
+                                            try
                                             {
-                                                if (d.Key == "Job Mode")
+                                                var acc = Account;
+                                                var dic = ParseDiscordData(description.GetString());
+
+                                                foreach (var d in dic)
                                                 {
-                                                    if (applicationId == Constants.NIJI_APPLICATION_ID)
+                                                    if (d.Key == "Job Mode")
                                                     {
-                                                        Account.SetProperty($"Niji {d.Key}", d.Value);
+                                                        if (applicationId == Constants.NIJI_APPLICATION_ID)
+                                                        {
+                                                            acc.SetProperty($"Niji {d.Key}", d.Value);
+                                                        }
+                                                        else if (applicationId == Constants.MJ_APPLICATION_ID)
+                                                        {
+                                                            acc.SetProperty(d.Key, d.Value);
+                                                        }
                                                     }
-                                                    else if (applicationId == Constants.MJ_APPLICATION_ID)
+                                                    else
                                                     {
-                                                        Account.SetProperty(d.Key, d.Value);
+                                                        acc.SetProperty(d.Key, d.Value);
                                                     }
                                                 }
-                                                else
+
+                                                acc.InfoUpdated = DateTime.Now;
+
+                                                // 快速时长校验
+                                                // 如果 fastTime <= 0.2，则标记为快速用完
+                                                var fastTime = acc.FastTimeRemaining?.ToString()?.Split('/')?.FirstOrDefault()?.Trim();
+
+                                                // 0.2h = 12 分钟 = 12 次
+                                                var ftime = 0.0;
+                                                if (!string.IsNullOrWhiteSpace(fastTime) && double.TryParse(fastTime, out ftime) && ftime <= 0.2)
                                                 {
-                                                    Account.SetProperty(d.Key, d.Value);
+                                                    acc.FastExhausted = true;
+                                                }
+
+                                                // 自动设置慢速，如果快速用完
+                                                if (acc.FastExhausted == true && acc.EnableAutoSetRelax == true && acc.Mode != GenerationSpeedMode.RELAX)
+                                                {
+                                                    acc.AllowModes = [GenerationSpeedMode.RELAX];
+                                                    acc.CoreSize = 3;
+                                                }
+
+                                                // 计算快速可用次数
+                                                var fastAvailableCount = (int)Math.Ceiling(ftime * 60);
+                                                CounterHelper.SetFastTaskAvailableCount(acc.ChannelId, fastAvailableCount);
+
+                                                _freeSql.Update<DiscordAccount>()
+                                                    .Set(c => c.InfoUpdated, acc.InfoUpdated)
+                                                    .Set(c => c.Properties, acc.Properties)
+                                                    .Set(c => c.FastExhausted, acc.FastExhausted)
+                                                    .Set(c => c.AllowModes, acc.AllowModes)
+                                                    .Set(c => c.CoreSize, acc.CoreSize)
+                                                    .Where(c => c.Id == acc.Id)
+                                                    .ExecuteAffrows();
+                                                acc.ClearCache();
+
+                                                Log.Information("Discord 同步信息完成，ChannelId={@0}, 预估快速剩余次数={@1}",
+                                                    acc.ChannelId, fastAvailableCount);
+
+                                                // 切换慢速模式
+                                                if (acc.FastExhausted)
+                                                {
+                                                    DiscordSetRelax();
                                                 }
                                             }
-
-
-                                            Account.InfoUpdated = DateTime.Now;
-                                            FreeSqlHelper.FreeSql.Update("InfoUpdated,Properties", Account);
-                                            Account.ClearCache();
+                                            catch (Exception ex)
+                                            {
+                                                Log.Error(ex, "解析 info 消息异常 {@0}", description.GetString());
+                                            }
                                         }
                                     }
                                 }
@@ -928,47 +973,12 @@ namespace Midjourney.Infrastructure
                                         }
 
                                         // 标记快速模式已经用完了
-                                        Account.FastExhausted = true;
-
-                                        // 自动设置慢速，如果快速用完
-                                        if (Account.FastExhausted == true && Account.EnableAutoSetRelax == true)
-                                        {
-                                            Account.AllowModes = [GenerationSpeedMode.RELAX];
-
-                                            if (Account.CoreSize > 3)
-                                            {
-                                                Account.CoreSize = 3;
-                                            }
-                                        }
-
-                                        _freeSql.Update("AllowModes,FastExhausted,CoreSize", Account);
-                                        Account.ClearCache();
+                                        Account.MarkFastExhausted();
+                                        DiscordSetRelax();
 
                                         // 如果开启自动切换慢速模式
                                         if (Account.EnableAutoSetRelax == true)
                                         {
-                                            // 切换到慢速模式
-                                            // 加锁切换到慢速模式
-                                            // 执行切换慢速命令
-                                            // 如果当前不是慢速，则切换慢速，加锁切换
-                                            if (Account.MjFastModeOn || Account.NijiFastModeOn)
-                                            {
-                                                _ = AsyncLocalLock.TryLockAsync($"relax:{Account.ChannelId}", TimeSpan.FromSeconds(5), async () =>
-                                                {
-                                                    try
-                                                    {
-                                                        Thread.Sleep(2500);
-                                                        await _discordInstance?.RelaxAsync(SnowFlake.NextId(), EBotType.MID_JOURNEY);
-
-                                                        Thread.Sleep(2500);
-                                                        await _discordInstance?.RelaxAsync(SnowFlake.NextId(), EBotType.NIJI_JOURNEY);
-                                                    }
-                                                    catch (Exception ex)
-                                                    {
-                                                        _logger.Error(ex, "切换慢速异常 {@0}", Account.ChannelId);
-                                                    }
-                                                });
-                                            }
                                         }
                                         else
                                         {
@@ -985,7 +995,13 @@ namespace Midjourney.Infrastructure
                                                     // 保存
                                                     Account.Enable = false;
                                                     Account.DisabledReason = "账号用量已经用完";
-                                                    _freeSql.Update(Account);
+
+                                                    _freeSql.Update<DiscordAccount>()
+                                                    .Set(c => c.Enable, Account.Enable)
+                                                    .Set(c => c.DisabledReason, Account.DisabledReason)
+                                                    .Where(c => c.Id == Account.Id)
+                                                    .ExecuteAffrows();
+
                                                     Account.ClearCache();
 
                                                     _discordInstance?.Dispose();
@@ -1038,7 +1054,6 @@ namespace Midjourney.Infrastructure
                                                 Account.ClearCache();
 
                                                 _discordInstance?.Dispose();
-
 
                                                 Task.Run(async () =>
                                                 {
@@ -1102,7 +1117,6 @@ namespace Midjourney.Infrastructure
                                         || title.Contains("error")
                                         || title.Contains("denied"))
                                     {
-
                                         if (data.TryGetProperty("nonce", out JsonElement noneEle))
                                         {
                                             var nonce = noneEle.GetString();
@@ -1235,7 +1249,6 @@ namespace Midjourney.Infrastructure
                             }
                         }
                     }
-
 
                     if (data.TryGetProperty("nonce", out JsonElement noneElement))
                     {
@@ -1413,6 +1426,59 @@ namespace Midjourney.Infrastructure
             }
 
             return data;
+        }
+
+        /// <summary>
+        /// Discord 账号，调用接口切换慢速（1小时最多执行1次）
+        /// </summary>
+        public void DiscordSetRelax()
+        {
+            if (Account.EnableAutoSetRelax == true && Account.FastExhausted)
+            {
+                // 切换到慢速模式
+                // 加锁切换到慢速模式
+                // 执行切换慢速命令
+                // 如果当前不是慢速，则切换慢速，加锁切换
+                Task.Run(async () =>
+                {
+                    using var isLock = RedisHelper.Lock($"DiscordSetRelax:{Account.ChannelId}", 10);
+                    if (isLock != null)
+                    {
+                        try
+                        {
+                            // 计数器，1 小时最多切换 1 次
+                            var key = $"DiscordSetRelaxCount:{Account.ChannelId}";
+                            var count = RedisHelper.IncrBy(key, 1);
+                            if (count > 1)
+                            {
+                                _logger.Warning("切换慢速跳过，1小时内已切换过 {@0}", Account.ChannelId);
+                                return;
+                            }
+
+                            RedisHelper.Expire(key, TimeSpan.FromHours(1));
+
+                            // 切换到慢速模式
+                            // 加锁切换到慢速模式
+                            // 执行切换慢速命令
+                            // 如果当前不是慢速，则切换慢速，加锁切换
+                            if (Account.MjFastModeOn || Account.NijiFastModeOn)
+                            {
+                                Thread.Sleep(2500);
+                                await _discordInstance?.RelaxAsync(SnowFlake.NextId(), EBotType.MID_JOURNEY);
+
+                                Thread.Sleep(2500);
+                                await _discordInstance?.RelaxAsync(SnowFlake.NextId(), EBotType.NIJI_JOURNEY);
+
+                                _logger.Information("切换慢速成功 {@0}", Account.ChannelId);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.Error(ex, "切换慢速异常 {@0}", Account.ChannelId);
+                        }
+                    }
+                });
+            }
         }
 
         public void Dispose()
