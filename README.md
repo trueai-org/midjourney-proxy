@@ -347,7 +347,7 @@ curl -o linux_install.sh https://raw.githubusercontent.com/trueai-org/midjourney
 - `SQLServer`：数据库连接字符串，示例：`Data Source=192.168.3.241;User Id=sa;Password=xxx;Initial Catalog=mj;Encrypt=True;TrustServerCertificate=True;Pooling=true;Min Pool Size=1`
 - `PostgreSQL`：数据库连接字符串，示例：`Host=192.168.3.241;Port=5432;Username=mj;Password=xxx; Database=mj;ArrayNullabilityMode=Always;Pooling=true;Minimum Pool Size=1`，需要启动扩展支持字典类型 `CREATE EXTENSION hstore`
 
-### Redis 配置
+> Redis 配置
 
 `推荐开启 Redis`
 
@@ -366,6 +366,30 @@ docker run --name mjopen-redis --restart always -p 6379:6379 -v /root/mjopen/red
 
 ```bash
 172.17.1.1:6379,password=123456,defaultDatabase=1,prefix=mjopen:
+```
+
+> 容器互通参考脚本
+
+```bash
+# 创建网络
+docker network create mjopen-network
+
+# 启动 MYSQL
+docker run --name mjopen-mysql --network mjopen-network --restart always \
+  -p 3306:3306 \
+  -v /root/mjopen/mysql:/var/lib/mysql \
+  -e MYSQL_ROOT_PASSWORD=*** \
+  -e TZ=Asia/Shanghai \
+  -d mysql:8.0
+
+# MYSQL 连接字符串
+Data Source=mjopen-mysql;Port=3306;User ID=root;Password=***;Initial Catalog=mjopen;Charset=utf8mb4;SslMode=none;Min pool size=1
+
+# 启动 REDIS
+docker run --name mjopen-redis --network mjopen-network --restart always -p 6379:6379 -v /root/mjopen/redis:/data -d redis:6.2.11 redis-server --appendonly yes --requirepass "***"
+
+# REDSI 连接字符串
+mjopen-redis:6379,password=***,defaultDatabase=1,prefix=mjopen:
 ```
 
 ### MongoDB 配置（v10已废弃）
