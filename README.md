@@ -342,12 +342,10 @@ curl -o linux_install.sh https://raw.githubusercontent.com/trueai-org/midjourney
 ```
 ### 数据库配置
 
-- `LiteDB`（已废弃）：存在性能问题，已废弃（如需迁移或保持请使用 v9.5.0 版本），默认存储位置：`data/mj.db`
-- `Sqlite`（默认）：本地默认数据库，默认存储位置：`data/mj_sqlite.db`
-- `MongoDB`：需要配置数据库连接字符串，示例：`mongodb://mongoadmin:***@192.168.3.241`，需要配置数据库名称：`mj`
-- `MySQL(推荐 8.x 版本)`：需要配置数据库连接字符串，示例：`Data Source=192.168.3.241;Port=3306;User ID=root;Password=xxx; Initial Catalog=mj;Charset=utf8mb4; SslMode=none;Min pool size=1`
-- `SqlServer`：需要配置数据库连接字符串，示例：`Data Source=192.168.3.241;User Id=sa;Password=xxx;Initial Catalog=mj;Encrypt=True;TrustServerCertificate=True;Pooling=true;Min Pool Size=1`
-- `PostgreSQL`：需要配置数据库连接字符串，示例：`Host=192.168.3.241;Port=5432;Username=mj;Password=xxx; Database=mj;ArrayNullabilityMode=Always;Pooling=true;Minimum Pool Size=1`，需要启动扩展支持字典类型 `CREATE EXTENSION hstore`
+- `Sqlite`：本地默认数据库，默认存储位置：`data/mj_sqlite.db`
+- `MySQL`：版本 >= 8.0，数据库连接字符串，示例：`Data Source=192.168.3.241;Port=3306;User ID=root;Password=xxx; Initial Catalog=mj;Charset=utf8mb4; SslMode=none;Min pool size=1`
+- `SQLServer`：数据库连接字符串，示例：`Data Source=192.168.3.241;User Id=sa;Password=xxx;Initial Catalog=mj;Encrypt=True;TrustServerCertificate=True;Pooling=true;Min Pool Size=1`
+- `PostgreSQL`：数据库连接字符串，示例：`Host=192.168.3.241;Port=5432;Username=mj;Password=xxx; Database=mj;ArrayNullabilityMode=Always;Pooling=true;Minimum Pool Size=1`，需要启动扩展支持字典类型 `CREATE EXTENSION hstore`
 
 ### Redis 配置
 
@@ -361,7 +359,7 @@ curl -o linux_install.sh https://raw.githubusercontent.com/trueai-org/midjourney
 > Docker Redis 一键启动脚本参考：
 
 ```bash
-docker run --name redis --restart always -p 6379:6379 -v /root/mjopen/redis:/data -d redis:6.2.11 redis-server --appendonly yes --requirepass "123456"
+docker run --name mjopen-redis --restart always -p 6379:6379 -v /root/mjopen/redis:/data -d redis:6.2.11 redis-server --appendonly yes --requirepass "123456"
 ```
 
 > Docker Redis 连接字符串参考：
@@ -370,7 +368,7 @@ docker run --name redis --restart always -p 6379:6379 -v /root/mjopen/redis:/dat
 172.17.1.1:6379,password=123456,defaultDatabase=1,prefix=mjopen:
 ```
 
-### MongoDB 配置
+### MongoDB 配置（v10已废弃）
 
 > 如果你的任务量未来可能超过 10 万，推荐 Docker 部署 MongoDB。
 
