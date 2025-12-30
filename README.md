@@ -554,6 +554,38 @@ mc mb myminio/test
 mc anonymous set download myminio/test
 ```
 
+## 图片加速说明（仅供参考）
+
+如何选择正确的加速方式，以适用于多种客户需求？
+
+测试地址：https://boce.aliyun.com/detect/http
+
+- 国内用户推荐使用国内 CDN 加速，响应速度最快，稳定性最高，最便宜。
+- 国外用户推荐使用全球 CDN 加速，响应速度较快，稳定性较高，最便宜。
+
+
+```
+MJ 官网 CDN，受 CF 防火墙影响，平均 3s 左右，可能超时
+https://cdn.midjourney.com/4872b862-7aeb-4346-a87d-16e077a2935d/0_2.png
+
+源站加速，OSS 源站（0.5元/G），平均响应时长 2s ~ 3s，可能超时
+https://mjopen.oss-cn-hongkong.aliyuncs.com/attachments/4872b862-7aeb-4346-a87d-16e077a2935d/0_2.png
+
+传输加速（全球 CDN -  1T/126元，国内外都能访问，但是国内访问的话稍微慢一下)，平均响应时长 1s ~ 3s，一般都能响应
+https://mjcdn.googlec.cc/attachments/4872b862-7aeb-4346-a87d-16e077a2935d/0_2.png
+
+传输加速（国内 CDN -  1T/126元，国内极速访问)，平均响应时长 30ms ~ 200ms，极速响应
+https://mjcn-midjourney.googlec.cc/attachments/4872b862-7aeb-4346-a87d-16e077a2935d/0_2.png
+
+传输加速（0.5~1.25元/G，动态加速，非 CDN 节点)，平均响应时长 150ms ~ 500ms，极速响应
+https://mjopen.oss-accelerate.aliyuncs.com/attachments/4872b862-7aeb-4346-a87d-16e077a2935d/0_2.png
+
+腾讯云edge one，免费套餐，无限流量，测试专用，平均响应时长 300ms ~ 1s，快速响应
+http://img.aitop3000.com/attachments/4872b862-7aeb-4346-a87d-16e077a2935d/0_2.png
+
+其他方式：代理、自建、本地等
+```
+
 ## 支持与赞助
 
 - 如果觉得这个项目对您有所帮助，请帮忙点个 Star⭐
