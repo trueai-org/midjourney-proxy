@@ -3036,10 +3036,12 @@ namespace Midjourney.Infrastructure.LoadBalancer
             }
 
             // 是否开启 Discord 防撞图机制
-            // 仅适用于 IMAGINE / BLEND
             if (info.IsDiscord && GlobalConfiguration.Setting.EnableDiscordAppendSeed)
             {
-                if (info.Action == TaskAction.IMAGINE || info.Action == TaskAction.BLEND)
+                if (info.Action == TaskAction.IMAGINE
+                    || info.Action == TaskAction.BLEND
+                    || info.Action ==  TaskAction.VIDEO 
+                    || info.Action == TaskAction.REROLL)
                 {
                     if (!prompt.Contains("--seed", StringComparison.OrdinalIgnoreCase))
                     {
