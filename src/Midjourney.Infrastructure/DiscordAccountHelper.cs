@@ -41,7 +41,6 @@ namespace Midjourney.Infrastructure
         private readonly ITaskStoreService _taskStoreService;
         private readonly INotifyService _notifyService;
 
-        private readonly IEnumerable<BotMessageHandler> _botMessageHandlers;
         private readonly IEnumerable<UserMessageHandler> _userMessageHandlers;
         private readonly Dictionary<string, string> _paramsMap;
         private readonly IHttpClientFactory _httpClientFactory;
@@ -49,7 +48,6 @@ namespace Midjourney.Infrastructure
         public DiscordAccountHelper(
             DiscordHelper discordHelper,
             ITaskStoreService taskStoreService,
-            IEnumerable<BotMessageHandler> messageHandlers,
             INotifyService notifyService,
             IEnumerable<UserMessageHandler> userMessageHandlers,
             IHttpClientFactory httpClientFactory)
@@ -57,7 +55,6 @@ namespace Midjourney.Infrastructure
             _discordHelper = discordHelper;
             _taskStoreService = taskStoreService;
             _notifyService = notifyService;
-            _botMessageHandlers = messageHandlers;
             _userMessageHandlers = userMessageHandlers;
 
             var paramsMap = new Dictionary<string, string>();
@@ -137,21 +134,14 @@ namespace Midjourney.Infrastructure
                 }
                 else
                 {
-                    // bot 消息监听
-                    var messageListener = new BotMessageListener(_discordHelper, webProxy);
-                    messageListener.Init(discordInstance, _botMessageHandlers, _userMessageHandlers);
-                    await messageListener.StartAsync();
-
                     // 用户 WebSocket 连接
-                    var webSocket = new WebSocketManager(
-                        _discordHelper,
-                        messageListener,
+                    var webSocket = new WebSocketManager(_discordHelper, 
                         webProxy,
-                        discordInstance);
+                        discordInstance,
+                        _userMessageHandlers);
                     await webSocket.StartAsync();
 
                     // 跟踪 wss 连接
-                    discordInstance.BotMessageListener = messageListener;
                     discordInstance.WebSocketManager = webSocket;
                 }
             }

@@ -293,7 +293,7 @@ namespace Midjourney.Base
         ZOOM,
 
         /// <summary>
-        /// SHOW 指令
+        /// SHOW 指令（已废弃）
         /// </summary>
         SHOW,
 

@@ -252,8 +252,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// </summary>
         public DiscordHelper DiscordHelper => _discordHelper;
 
-        public BotMessageListener BotMessageListener { get; set; }
-
         public WebSocketManager WebSocketManager { get; set; }
 
         /// <summary>
@@ -2508,7 +2506,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
         {
             try
             {
-                BotMessageListener?.Dispose();
                 WebSocketManager?.Dispose();
 
                 // 任务取消

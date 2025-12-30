@@ -106,7 +106,7 @@ namespace Midjourney.Base
 
             str = GetPrimaryPrompt(str);
 
-            return Regex.Replace(str, @"<[^>]*>|https?://\S+|\s+|\p{P}", "").ToLower();
+            return Regex.Replace(str, @"<[^>]*>|https?://\S+|\s+|\p{P}", "").ToLower().Trim();
         }
 
         /// <summary>

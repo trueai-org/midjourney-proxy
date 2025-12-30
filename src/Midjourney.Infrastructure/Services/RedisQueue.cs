@@ -23,7 +23,6 @@
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
 using CSRedis;
-using Newtonsoft.Json;
 
 namespace Midjourney.Infrastructure.Services
 {

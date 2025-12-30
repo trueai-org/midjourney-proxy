@@ -29,8 +29,10 @@ using System.Net;
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
-using Microsoft.Extensions.Caching.Memory;
+using System.Text.RegularExpressions;
+using Midjourney.Infrastructure.Handle;
 using Midjourney.Infrastructure.LoadBalancer;
+using RestSharp;
 using Serilog;
 using UAParser;
 
@@ -42,6 +44,8 @@ namespace Midjourney.Infrastructure
     /// </summary>
     public class WebSocketManager : IDisposable
     {
+        private readonly IFreeSql _freeSql = FreeSqlHelper.FreeSql;
+
         /// <summary>
         /// 新连接最大重拾次数
         /// </summary>
@@ -60,7 +64,6 @@ namespace Midjourney.Infrastructure
         private readonly ILogger _logger = Log.Logger;
 
         private readonly DiscordHelper _discordHelper;
-        private readonly BotMessageListener _botListener;
         private readonly WebProxy _webProxy;
         private readonly DiscordInstance _discordInstance;
 
@@ -144,6 +147,8 @@ namespace Midjourney.Infrastructure
         /// </summary>
         public bool Running { get; private set; }
 
+        private IEnumerable<UserMessageHandler> _userMessageHandlers;
+
         /// <summary>
         /// 消息队列
         /// </summary>
@@ -153,14 +158,14 @@ namespace Midjourney.Infrastructure
 
         public WebSocketManager(
             DiscordHelper discordHelper,
-            BotMessageListener userMessageListener,
             WebProxy webProxy,
-            DiscordInstance discordInstance)
+            DiscordInstance discordInstance,
+            IEnumerable<UserMessageHandler> userMessageHandlers)
         {
-            _botListener = userMessageListener;
             _discordHelper = discordHelper;
             _webProxy = webProxy;
             _discordInstance = discordInstance;
+            _userMessageHandlers = userMessageHandlers;
 
             _messageQueueTask = new Task(MessageQueueDoWork, TaskCreationOptions.LongRunning);
             _messageQueueTask.Start();
@@ -707,7 +712,7 @@ namespace Midjourney.Infrastructure
                 {
                     try
                     {
-                        _botListener.OnMessage(message);
+                        OnMessage(message);
                     }
                     catch (Exception ex)
                     {
@@ -715,8 +720,1242 @@ namespace Midjourney.Infrastructure
                     }
                 }
 
-                Thread.Sleep(10);
+                Thread.Sleep(20);
             }
+        }
+
+        /// <summary>
+        /// 处理接收到用户 ws 消息
+        /// </summary>
+        /// <param name="raw"></param>
+        public void OnMessage(JsonElement raw)
+        {
+            try
+            {
+                var setting = GlobalConfiguration.Setting;
+
+                _logger.Debug("用户收到消息 {@0}", raw.ToString());
+
+                if (!raw.TryGetProperty("t", out JsonElement messageTypeElement))
+                {
+                    return;
+                }
+
+                var messageType = MessageTypeExtensions.Of(messageTypeElement.GetString());
+                if (messageType == null || messageType == MessageType.DELETE)
+                {
+                    return;
+                }
+
+                if (!raw.TryGetProperty("d", out JsonElement data))
+                {
+                    return;
+                }
+
+                // 触发 CF 真人验证
+                if (messageType == MessageType.INTERACTION_IFRAME_MODAL_CREATE)
+                {
+                    if (data.TryGetProperty("title", out var t))
+                    {
+                        if (t.GetString() == "Action required to continue")
+                        {
+                            _logger.Warning("CF 验证 {@0}, {@1}", Account.ChannelId, raw.ToString());
+
+                            // 全局锁定中
+                            // 等待人工处理或者自动处理
+                            // 重试最多 3 次，最多处理 5 分钟
+                            LocalLock.TryLock($"cf_{Account.ChannelId}", TimeSpan.FromSeconds(10), () =>
+                            {
+                                try
+                                {
+                                    var custom_id = data.TryGetProperty("custom_id", out var c) ? c.GetString() : string.Empty;
+                                    var application_id = data.TryGetProperty("application", out var a) && a.TryGetProperty("id", out var id) ? id.GetString() : string.Empty;
+                                    if (!string.IsNullOrWhiteSpace(custom_id) && !string.IsNullOrWhiteSpace(application_id))
+                                    {
+                                        Account.Lock = true;
+
+                                        // MJ::iframe::U3NmeM-lDTrmTCN_QY5n4DXvjrQRPGOZrQiLa-fT9y3siLA2AGjhj37IjzCqCtVzthUhGBj4KKqNSntQ
+                                        var hash = custom_id.Split("::").LastOrDefault();
+                                        var hashUrl = $"https://{application_id}.discordsays.com/captcha/api/c/{hash}/ack?hash=1";
+
+                                        // 验证中，处于锁定模式
+                                        Account.DisabledReason = "CF 自动验证中...";
+                                        Account.CfHashUrl = hashUrl;
+                                        Account.CfHashCreated = DateTime.Now;
+                                        _freeSql.Update(Account);
+                                        Account.ClearCache();
+
+                                        try
+                                        {
+                                            // 通知验证服务器
+                                            if (!string.IsNullOrWhiteSpace(setting.CaptchaNotifyHook) && !string.IsNullOrWhiteSpace(setting.CaptchaServer))
+                                            {
+                                                // 使用 restsharp 通知，最多 3 次
+                                                var notifyCount = 0;
+                                                do
+                                                {
+                                                    if (notifyCount > 3)
+                                                    {
+                                                        break;
+                                                    }
+
+                                                    notifyCount++;
+                                                    var notifyUrl = $"{setting.CaptchaServer.Trim().TrimEnd('/')}/cf/verify";
+                                                    var client = new RestClient();
+                                                    var request = new RestRequest(notifyUrl, Method.Post);
+                                                    request.AddHeader("Content-Type", "application/json");
+                                                    var body = new CaptchaVerfyRequest
+                                                    {
+                                                        Url = hashUrl,
+                                                        State = Account.ChannelId,
+                                                        NotifyHook = setting.CaptchaNotifyHook,
+                                                        Secret = setting.CaptchaNotifySecret
+                                                    };
+                                                    var json = Newtonsoft.Json.JsonConvert.SerializeObject(body);
+                                                    request.AddJsonBody(json);
+                                                    var response = client.Execute(request);
+                                                    if (response.StatusCode == System.Net.HttpStatusCode.OK)
+                                                    {
+                                                        // 已通知自动验证服务器
+                                                        _logger.Information("CF 验证，已通知服务器 {@0}, {@1}", Account.ChannelId, hashUrl);
+
+                                                        break;
+                                                    }
+
+                                                    Thread.Sleep(1000);
+                                                } while (true);
+
+                                                Task.Run(async () =>
+                                                {
+                                                    try
+                                                    {
+                                                        await EmailJob.Instance.EmailSend(setting.Smtp, $"CF自动真人验证-{Account.ChannelId}", hashUrl);
+                                                    }
+                                                    catch (Exception ex)
+                                                    {
+                                                        _logger.Error(ex, "邮件发送失败");
+                                                    }
+                                                });
+                                            }
+                                            else
+                                            {
+                                                // 发送 hashUrl GET 请求, 返回 {"hash":"OOUxejO94EQNxsCODRVPbg","token":"dXDm-gSb4Zlsx-PCkNVyhQ"}
+                                                // 通过 hash 和 token 拼接验证 CF 验证 URL
+
+                                                WebProxy webProxy = null;
+                                                var proxy = GlobalConfiguration.Setting.Proxy;
+                                                if (!string.IsNullOrEmpty(proxy?.Host))
+                                                {
+                                                    webProxy = new WebProxy(proxy.Host, proxy.Port ?? 80);
+                                                }
+                                                var hch = new HttpClientHandler
+                                                {
+                                                    UseProxy = webProxy != null,
+                                                    Proxy = webProxy
+                                                };
+
+                                                var httpClient = new HttpClient(hch);
+                                                var response = httpClient.GetAsync(hashUrl).Result;
+                                                var con = response.Content.ReadAsStringAsync().Result;
+                                                if (!string.IsNullOrWhiteSpace(con))
+                                                {
+                                                    // 解析
+                                                    var json = JsonSerializer.Deserialize<JsonElement>(con);
+                                                    if (json.TryGetProperty("hash", out var h) && json.TryGetProperty("token", out var to))
+                                                    {
+                                                        var hashStr = h.GetString();
+                                                        var token = to.GetString();
+
+                                                        if (!string.IsNullOrWhiteSpace(hashStr) && !string.IsNullOrWhiteSpace(token))
+                                                        {
+                                                            // 发送验证 URL
+                                                            // 通过 hash 和 token 拼接验证 CF 验证 URL
+                                                            // https://editor.midjourney.com/captcha/challenge/index.html?hash=OOUxejO94EQNxsCODRVPbg&token=dXDm-gSb4Zlsx-PCkNVyhQ
+
+                                                            var url = $"https://editor.midjourney.com/captcha/challenge/index.html?hash={hashStr}&token={token}";
+
+                                                            _logger.Information($"{Account.ChannelId}, CF 真人验证 URL: {url}");
+
+                                                            Account.CfUrl = url;
+
+                                                            Task.Run(async () =>
+                                                            {
+                                                                try
+                                                                {
+                                                                    await EmailJob.Instance.EmailSend(setting.Smtp, $"CF手动真人验证-{Account.ChannelId}", url);
+                                                                }
+                                                                catch (Exception ex)
+                                                                {
+                                                                    _logger.Error(ex, "邮件发送失败");
+                                                                }
+                                                            });
+                                                        }
+                                                    }
+                                                }
+
+                                                Account.DisabledReason = "CF 人工验证...";
+                                                _freeSql.Update(Account);
+                                                Account.ClearCache();
+                                            }
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            _logger.Error(ex, "CF 真人验证处理失败 {@0}", Account.ChannelId);
+                                        }
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    _logger.Error(ex, "CF 真人验证处理异常 {@0}", Account.ChannelId);
+                                }
+                            });
+
+                            return;
+                        }
+                    }
+                }
+
+                // 内容
+                var contentStr = string.Empty;
+                if (data.TryGetProperty("content", out JsonElement content))
+                {
+                    contentStr = content.GetString();
+                }
+
+                // 作者
+                var authorName = string.Empty;
+                var authId = string.Empty;
+                if (data.TryGetProperty("author", out JsonElement author)
+                    && author.TryGetProperty("username", out JsonElement username)
+                    && author.TryGetProperty("id", out JsonElement uid))
+                {
+                    authorName = username.GetString();
+                    authId = uid.GetString();
+                }
+
+                // 应用 ID 即机器人 ID
+                var applicationId = string.Empty;
+                if (data.TryGetProperty("application_id", out JsonElement application))
+                {
+                    applicationId = application.GetString();
+                }
+
+                // 交互元数据 id
+                var metaId = string.Empty;
+                var metaName = string.Empty;
+                if (data.TryGetProperty("interaction_metadata", out JsonElement meta) && meta.TryGetProperty("id", out var mid))
+                {
+                    metaId = mid.GetString();
+
+                    metaName = meta.TryGetProperty("name", out var n) ? n.GetString() : string.Empty;
+                }
+
+                // 处理 remix 开关
+                if (metaName == "prefer remix" && !string.IsNullOrWhiteSpace(contentStr))
+                {
+                    // MJ
+                    if (authId == Constants.MJ_APPLICATION_ID)
+                    {
+                        if (contentStr.StartsWith("Remix mode turned off"))
+                        {
+                            foreach (var item in Account.Components)
+                            {
+                                foreach (var sub in item.Components)
+                                {
+                                    if (sub.Label == "Remix mode")
+                                    {
+                                        sub.Style = 2;
+                                    }
+                                }
+                            }
+                        }
+                        else if (contentStr.StartsWith("Remix mode turned on"))
+                        {
+                            foreach (var item in Account.Components)
+                            {
+                                foreach (var sub in item.Components)
+                                {
+                                    if (sub.Label == "Remix mode")
+                                    {
+                                        sub.Style = 3;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    // NIJI
+                    else if (authId == Constants.NIJI_APPLICATION_ID)
+                    {
+                        if (contentStr.StartsWith("Remix mode turned off"))
+                        {
+                            foreach (var item in Account.NijiComponents)
+                            {
+                                foreach (var sub in item.Components)
+                                {
+                                    if (sub.Label == "Remix mode")
+                                    {
+                                        sub.Style = 2;
+                                    }
+                                }
+                            }
+                        }
+                        else if (contentStr.StartsWith("Remix mode turned on"))
+                        {
+                            foreach (var item in Account.NijiComponents)
+                            {
+                                foreach (var sub in item.Components)
+                                {
+                                    if (sub.Label == "Remix mode")
+                                    {
+                                        sub.Style = 3;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    _freeSql.Update("Components,NijiComponents", Account);
+                    Account.ClearCache();
+
+                    return;
+                }
+                // 同步 settings 和 remix
+                else if (metaName == "settings")
+                {
+                    // settings 指令
+                    var eventDataMsg = data.Deserialize<EventData>();
+                    if (eventDataMsg != null && eventDataMsg.InteractionMetadata?.Name == "settings" && eventDataMsg.Components?.Count > 0)
+                    {
+                        if (applicationId == Constants.NIJI_APPLICATION_ID)
+                        {
+                            Account.NijiComponents = eventDataMsg.Components;
+                            _freeSql.Update("NijiComponents", Account);
+                            Account.ClearCache();
+                        }
+                        else if (applicationId == Constants.MJ_APPLICATION_ID)
+                        {
+                            Account.Components = eventDataMsg.Components;
+                            _freeSql.Update("Components", Account);
+                            Account.ClearCache();
+                        }
+                    }
+                }
+                // 切换 fast 和 relax
+                else if (metaName == "fast" || metaName == "relax" || metaName == "turbo")
+                {
+                    // MJ
+                    // Done! Your jobs now do not consume fast-hours, but might take a little longer. You can always switch back with /fast
+                    if (metaName == "fast" && contentStr.StartsWith("Done!"))
+                    {
+                        foreach (var item in Account.Components)
+                        {
+                            foreach (var sub in item.Components)
+                            {
+                                if (sub.Label == "Fast mode")
+                                {
+                                    sub.Style = 2;
+                                }
+                                else if (sub.Label == "Relax mode")
+                                {
+                                    sub.Style = 2;
+                                }
+                                else if (sub.Label == "Turbo mode")
+                                {
+                                    sub.Style = 3;
+                                }
+                            }
+                        }
+                        foreach (var item in Account.NijiComponents)
+                        {
+                            foreach (var sub in item.Components)
+                            {
+                                if (sub.Label == "Fast mode")
+                                {
+                                    sub.Style = 2;
+                                }
+                                else if (sub.Label == "Relax mode")
+                                {
+                                    sub.Style = 2;
+                                }
+                                else if (sub.Label == "Turbo mode")
+                                {
+                                    sub.Style = 3;
+                                }
+                            }
+                        }
+                    }
+                    else if (metaName == "turbo" && contentStr.StartsWith("Done!"))
+                    {
+                        foreach (var item in Account.Components)
+                        {
+                            foreach (var sub in item.Components)
+                            {
+                                if (sub.Label == "Fast mode")
+                                {
+                                    sub.Style = 3;
+                                }
+                                else if (sub.Label == "Relax mode")
+                                {
+                                    sub.Style = 2;
+                                }
+                                else if (sub.Label == "Turbo mode")
+                                {
+                                    sub.Style = 2;
+                                }
+                            }
+                        }
+                        foreach (var item in Account.NijiComponents)
+                        {
+                            foreach (var sub in item.Components)
+                            {
+                                if (sub.Label == "Fast mode")
+                                {
+                                    sub.Style = 3;
+                                }
+                                else if (sub.Label == "Relax mode")
+                                {
+                                    sub.Style = 2;
+                                }
+                                else if (sub.Label == "Turbo mode")
+                                {
+                                    sub.Style = 2;
+                                }
+                            }
+                        }
+                    }
+                    else if (metaName == "relax" && contentStr.StartsWith("Done!"))
+                    {
+                        foreach (var item in Account.Components)
+                        {
+                            foreach (var sub in item.Components)
+                            {
+                                if (sub.Label == "Fast mode")
+                                {
+                                    sub.Style = 2;
+                                }
+                                else if (sub.Label == "Relax mode")
+                                {
+                                    sub.Style = 3;
+                                }
+                                else if (sub.Label == "Turbo mode")
+                                {
+                                    sub.Style = 2;
+                                }
+                            }
+                        }
+                        foreach (var item in Account.NijiComponents)
+                        {
+                            foreach (var sub in item.Components)
+                            {
+                                if (sub.Label == "Fast mode")
+                                {
+                                    sub.Style = 2;
+                                }
+                                else if (sub.Label == "Relax mode")
+                                {
+                                    sub.Style = 3;
+                                }
+                                else if (sub.Label == "Turbo mode")
+                                {
+                                    sub.Style = 2;
+                                }
+                            }
+                        }
+                    }
+
+                    _freeSql.Update("Components,NijiComponents", Account);
+                    Account.ClearCache();
+
+                    return;
+                }
+
+                // 私信频道
+                var isPrivareChannel = false;
+                if (data.TryGetProperty("channel_id", out JsonElement channelIdElement))
+                {
+                    var cid = channelIdElement.GetString();
+                    if (cid == Account.PrivateChannelId || cid == Account.NijiBotChannelId)
+                    {
+                        isPrivareChannel = true;
+                    }
+
+                    if (channelIdElement.GetString() == Account.ChannelId)
+                    {
+                        isPrivareChannel = false;
+                    }
+
+                    // 都不相同
+                    // 如果有渠道 id，但不是当前渠道 id，则忽略
+                    if (cid != Account.ChannelId
+                        && cid != Account.PrivateChannelId
+                        && cid != Account.NijiBotChannelId)
+                    {
+                        // 如果也不是子频道 id, 则忽略
+                        if (!Account.SubChannelValues.ContainsKey(cid))
+                        {
+                            return;
+                        }
+                    }
+                }
+
+                if (isPrivareChannel)
+                {
+                    // 私信频道
+                    if (messageType == MessageType.CREATE && data.TryGetProperty("id", out JsonElement subIdElement))
+                    {
+                        var id = subIdElement.GetString();
+
+                        // 定义正则表达式模式
+                        // "**girl**\n**Job ID**: 6243686b-7ab1-4174-a9fe-527cca66a829\n**seed** 1259687673"
+                        var pattern = @"\*\*Job ID\*\*:\s*(?<jobId>[a-fA-F0-9-]{36})\s*\*\*seed\*\*\s*(?<seed>\d+)";
+
+                        // 创建正则表达式对象
+                        var regex = new Regex(pattern);
+
+                        // 尝试匹配输入字符串
+                        var match = regex.Match(contentStr);
+
+                        if (match.Success)
+                        {
+                            // 提取 Job ID 和 seed
+                            var jobId = match.Groups["jobId"].Value;
+                            var seed = match.Groups["seed"].Value;
+
+                            if (!string.IsNullOrWhiteSpace(jobId) && !string.IsNullOrWhiteSpace(seed))
+                            {
+                                var task = _discordInstance.FindRunningTask(c => c.GetProperty<string>(Constants.TASK_PROPERTY_MESSAGE_HASH, default) == jobId).FirstOrDefault();
+                                if (task != null)
+                                {
+                                    if (!task.MessageIds.Contains(id))
+                                    {
+                                        task.MessageIds.Add(id);
+                                    }
+
+                                    task.Seed = seed;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            // 获取附件对象 attachments 中的第一个对象的 url 属性
+                            // seed 消息处理
+                            if (data.TryGetProperty("attachments", out JsonElement attachments) && attachments.ValueKind == JsonValueKind.Array)
+                            {
+                                if (attachments.EnumerateArray().Count() > 0)
+                                {
+                                    var item = attachments.EnumerateArray().First();
+
+                                    if (item.ValueKind != JsonValueKind.Null
+                                        && item.TryGetProperty("url", out JsonElement url)
+                                        && url.ValueKind != JsonValueKind.Null)
+                                    {
+                                        var imgUrl = url.GetString();
+                                        if (!string.IsNullOrWhiteSpace(imgUrl))
+                                        {
+                                            var hash = _discordHelper.GetMessageHash(imgUrl);
+                                            if (!string.IsNullOrWhiteSpace(hash))
+                                            {
+                                                var task = _discordInstance.FindRunningTask(c => c.GetProperty<string>(Constants.TASK_PROPERTY_MESSAGE_HASH, default) == hash).FirstOrDefault();
+                                                if (task != null)
+                                                {
+                                                    if (!task.MessageIds.Contains(id))
+                                                    {
+                                                        task.MessageIds.Add(id);
+                                                    }
+                                                    task.SeedMessageId = id;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    return;
+                }
+
+                // 任务 id
+                // 任务 nonce
+                if (data.TryGetProperty("id", out JsonElement idElement))
+                {
+                    var id = idElement.GetString();
+
+                    _logger.Information($"用户消息, {messageType}, {Account.GetDisplay()} - id: {id}, mid: {metaId}, {authorName}, content: {contentStr}");
+
+                    var isEm = data.TryGetProperty("embeds", out var em);
+                    if ((messageType == MessageType.CREATE || messageType == MessageType.UPDATE) && isEm)
+                    {
+                        if (metaName == "info" && messageType == MessageType.UPDATE)
+                        {
+                            // info 指令
+                            if (em.ValueKind == JsonValueKind.Array)
+                            {
+                                foreach (JsonElement item in em.EnumerateArray())
+                                {
+                                    if (item.TryGetProperty("title", out var emtitle) && emtitle.GetString().Contains("Your info"))
+                                    {
+                                        if (item.TryGetProperty("description", out var description))
+                                        {
+                                            try
+                                            {
+                                                var acc = Account;
+                                                var dic = ParseDiscordData(description.GetString());
+
+                                                foreach (var d in dic)
+                                                {
+                                                    if (d.Key == "Job Mode")
+                                                    {
+                                                        if (applicationId == Constants.NIJI_APPLICATION_ID)
+                                                        {
+                                                            acc.SetProperty($"Niji {d.Key}", d.Value);
+                                                        }
+                                                        else if (applicationId == Constants.MJ_APPLICATION_ID)
+                                                        {
+                                                            acc.SetProperty(d.Key, d.Value);
+                                                        }
+                                                    }
+                                                    else
+                                                    {
+                                                        acc.SetProperty(d.Key, d.Value);
+                                                    }
+                                                }
+
+                                                acc.InfoUpdated = DateTime.Now;
+
+                                                // 快速时长校验
+                                                // 如果 fastTime <= 0.2，则标记为快速用完
+                                                var fastTime = acc.FastTimeRemaining?.ToString()?.Split('/')?.FirstOrDefault()?.Trim();
+
+                                                // 0.2h = 12 分钟 = 12 次
+                                                var ftime = 0.0;
+                                                if (!string.IsNullOrWhiteSpace(fastTime) && double.TryParse(fastTime, out ftime) && ftime <= 0.2)
+                                                {
+                                                    acc.FastExhausted = true;
+                                                }
+
+                                                // 自动设置慢速，如果快速用完
+                                                if (acc.FastExhausted == true && acc.EnableAutoSetRelax == true && acc.Mode != GenerationSpeedMode.RELAX)
+                                                {
+                                                    acc.AllowModes = [GenerationSpeedMode.RELAX];
+                                                    acc.CoreSize = 3;
+                                                }
+
+                                                // 计算快速可用次数
+                                                var fastAvailableCount = (int)Math.Ceiling(ftime * 60);
+                                                CounterHelper.SetFastTaskAvailableCount(acc.ChannelId, fastAvailableCount);
+
+                                                _freeSql.Update<DiscordAccount>()
+                                                    .Set(c => c.InfoUpdated, acc.InfoUpdated)
+                                                    .Set(c => c.Properties, acc.Properties)
+                                                    .Set(c => c.FastExhausted, acc.FastExhausted)
+                                                    .Set(c => c.AllowModes, acc.AllowModes)
+                                                    .Set(c => c.CoreSize, acc.CoreSize)
+                                                    .Where(c => c.Id == acc.Id)
+                                                    .ExecuteAffrows();
+                                                acc.ClearCache();
+
+                                                Log.Information("Discord 同步信息完成，ChannelId={@0}, 预估快速剩余次数={@1}",
+                                                    acc.ChannelId, fastAvailableCount);
+
+                                                // 切换慢速模式
+                                                if (acc.FastExhausted)
+                                                {
+                                                    DiscordSetRelax();
+                                                }
+                                            }
+                                            catch (Exception ex)
+                                            {
+                                                Log.Error(ex, "解析 info 消息异常 {@0}", description.GetString());
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            return;
+                        }
+                        else if (metaName == "settings" && data.TryGetProperty("components", out var components))
+                        {
+                            // settings 指令
+                            var eventDataMsg = data.Deserialize<EventData>();
+                            if (eventDataMsg != null && eventDataMsg.InteractionMetadata?.Name == "settings" && eventDataMsg.Components?.Count > 0)
+                            {
+                                if (applicationId == Constants.NIJI_APPLICATION_ID)
+                                {
+                                    Account.NijiComponents = eventDataMsg.Components;
+                                    Account.NijiSettingsMessageId = id;
+
+                                    _freeSql.Update("NijiComponents,NijiSettingsMessageId", Account);
+                                    Account.ClearCache();
+                                }
+                                else if (applicationId == Constants.MJ_APPLICATION_ID)
+                                {
+                                    Account.Components = eventDataMsg.Components;
+                                    Account.SettingsMessageId = id;
+
+                                    _freeSql.Update("Components,SettingsMessageId", Account);
+                                    Account.ClearCache();
+                                }
+                            }
+
+                            return;
+                        }
+
+                        // em 是一个 JSON 数组
+                        if (em.ValueKind == JsonValueKind.Array)
+                        {
+                            foreach (JsonElement item in em.EnumerateArray())
+                            {
+                                if (item.TryGetProperty("title", out var emTitle))
+                                {
+                                    // 判断账号是否用量已经用完
+                                    var title = emTitle.GetString();
+
+                                    // 16711680 error, 65280 success, 16776960 warning
+                                    var color = item.TryGetProperty("color", out var colorEle) ? colorEle.GetInt32() : 0;
+
+                                    // 描述
+                                    var desc = item.GetProperty("description").GetString();
+
+                                    _logger.Information($"用户 embeds 消息, {messageType}, {Account.GetDisplay()} - id: {id}, mid: {metaId}, {authorName}, embeds: {title}, {color}, {desc}");
+
+                                    // 无效参数、违规的提示词、无效提示词
+                                    var errorTitles = new[] {
+                                        "Invalid prompt", // 无效提示词
+                                        "Invalid parameter", // 无效参数
+                                        "Banned prompt detected", // 违规提示词
+                                        "Invalid link", // 无效链接
+                                        "Request cancelled due to output filters",
+                                        "Queue full", // 执行中的队列已满
+                                    };
+
+                                    // 跳过的 title
+                                    var continueTitles = new[] { "Action needed to continue" };
+
+                                    // fast 用量已经使用完了
+                                    if (title == "Credits exhausted")
+                                    {
+                                        // 你的处理逻辑
+                                        _logger.Information($"账号 {Account.GetDisplay()} 用量已经用完");
+
+                                        var task = _discordInstance.FindRunningTask(c => c.MessageId == id).FirstOrDefault();
+                                        if (task == null && !string.IsNullOrWhiteSpace(metaId))
+                                        {
+                                            task = _discordInstance.FindRunningTask(c => c.InteractionMetadataId == metaId).FirstOrDefault();
+                                        }
+                                        if (task != null)
+                                        {
+                                            task.Fail("任务失败，请重试");
+                                        }
+
+                                        // 标记快速模式已经用完了
+                                        Account.MarkFastExhausted();
+                                        DiscordSetRelax();
+
+                                        // 如果开启自动切换慢速模式
+                                        if (Account.EnableAutoSetRelax == true)
+                                        {
+                                        }
+                                        else
+                                        {
+                                            // 你的处理逻辑
+                                            _logger.Warning($"账号 {Account.GetDisplay()} 用量已经用完, 自动禁用账号");
+
+                                            // 5s 后禁用账号
+                                            Task.Run(() =>
+                                            {
+                                                try
+                                                {
+                                                    Thread.Sleep(5 * 1000);
+
+                                                    // 保存
+                                                    Account.Enable = false;
+                                                    Account.DisabledReason = "账号用量已经用完";
+
+                                                    _freeSql.Update<DiscordAccount>()
+                                                    .Set(c => c.Enable, Account.Enable)
+                                                    .Set(c => c.DisabledReason, Account.DisabledReason)
+                                                    .Where(c => c.Id == Account.Id)
+                                                    .ExecuteAffrows();
+
+                                                    Account.ClearCache();
+
+                                                    _discordInstance?.Dispose();
+
+                                                    _ = EmailJob.Instance.EmailSend(setting.Smtp,
+                                                                   $"MJ账号禁用通知-{Account.ChannelId}",
+                                                                   $"{Account.ChannelId}, {Account.DisabledReason}");
+                                                }
+                                                catch (Exception ex)
+                                                {
+                                                    Log.Error(ex, "账号用量已经用完, 禁用账号异常 {@0}", Account.ChannelId);
+                                                }
+                                            });
+                                        }
+
+                                        return;
+                                    }
+                                    // 临时禁止/订阅取消/订阅过期/订阅暂停
+                                    else if (title == "Pending mod message"
+                                        || title == "Blocked"
+                                        || title == "Plan Cancelled"
+                                        || title == "Subscription required"
+                                        || title == "Subscription paused")
+                                    {
+                                        // 你的处理逻辑
+                                        _logger.Warning($"账号 {Account.GetDisplay()} {title}, 自动禁用账号");
+
+                                        var task = _discordInstance.FindRunningTask(c => c.MessageId == id).FirstOrDefault();
+                                        if (task == null && !string.IsNullOrWhiteSpace(metaId))
+                                        {
+                                            task = _discordInstance.FindRunningTask(c => c.InteractionMetadataId == metaId).FirstOrDefault();
+                                        }
+
+                                        if (task != null)
+                                        {
+                                            task.Fail(title);
+                                        }
+
+                                        // 5s 后禁用账号
+                                        Task.Run(() =>
+                                        {
+                                            try
+                                            {
+                                                Thread.Sleep(5 * 1000);
+
+                                                // 保存
+                                                Account.Enable = false;
+                                                Account.DisabledReason = $"{title}, {desc}";
+                                                _freeSql.Update(Account);
+                                                Account.ClearCache();
+
+                                                _discordInstance?.Dispose();
+
+                                                Task.Run(async () =>
+                                                {
+                                                    try
+                                                    {
+                                                        await EmailJob.Instance.EmailSend(setting.Smtp,
+                                                            $"MJ账号禁用通知-{Account.ChannelId}",
+                                                            $"{Account.ChannelId}, {Account.DisabledReason}");
+                                                    }
+                                                    catch (Exception ex)
+                                                    {
+                                                        _logger.Error(ex, "邮件发送失败");
+                                                    }
+                                                });
+                                            }
+                                            catch (Exception ex)
+                                            {
+                                                Log.Error(ex, "{@0}, 禁用账号异常 {@1}", title, Account.ChannelId);
+                                            }
+                                        });
+
+                                        return;
+                                    }
+                                    // 执行中的任务已满（一般超过 3 个时）
+                                    else if (title == "Job queued")
+                                    {
+                                        if (data.TryGetProperty("nonce", out JsonElement noneEle))
+                                        {
+                                            var nonce = noneEle.GetString();
+                                            if (!string.IsNullOrWhiteSpace(id) && !string.IsNullOrWhiteSpace(nonce))
+                                            {
+                                                // 设置 none 对应的任务 id
+                                                var task = _discordInstance.GetRunningTaskByNonce(nonce);
+                                                if (task != null)
+                                                {
+                                                    if (messageType == MessageType.CREATE)
+                                                    {
+                                                        // 不需要赋值
+                                                        //task.MessageId = id;
+
+                                                        task.Description = $"{title}, {desc}";
+
+                                                        if (!task.MessageIds.Contains(id))
+                                                        {
+                                                            task.MessageIds.Add(id);
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    // 暂时跳过的业务处理
+                                    else if (continueTitles.Contains(title))
+                                    {
+                                        _logger.Warning("跳过 embeds {@0}, {@1}", Account.ChannelId, data.ToString());
+                                    }
+                                    // 其他错误消息
+                                    else if (errorTitles.Contains(title)
+                                        || color == 16711680
+                                        || title.Contains("Invalid")
+                                        || title.Contains("error")
+                                        || title.Contains("denied"))
+                                    {
+                                        if (data.TryGetProperty("nonce", out JsonElement noneEle))
+                                        {
+                                            var nonce = noneEle.GetString();
+                                            if (!string.IsNullOrWhiteSpace(id) && !string.IsNullOrWhiteSpace(nonce))
+                                            {
+                                                // 设置 none 对应的任务 id
+                                                var task = _discordInstance.GetRunningTaskByNonce(nonce);
+                                                if (task != null)
+                                                {
+                                                    // 需要用户同意 Tos
+                                                    if (title.Contains("Tos not accepted"))
+                                                    {
+                                                        try
+                                                        {
+                                                            var tosData = data.Deserialize<EventData>();
+                                                            var customId = tosData?.Components?.SelectMany(x => x.Components)
+                                                                .Where(x => x.Label == "Accept ToS")
+                                                                .FirstOrDefault()?.CustomId;
+
+                                                            if (!string.IsNullOrWhiteSpace(customId))
+                                                            {
+                                                                var nonce2 = SnowFlake.NextId();
+                                                                var tosRes = _discordInstance.ActionAsync(id, customId, tosData.Flags, nonce2, task)
+                                                                    .ConfigureAwait(false).GetAwaiter().GetResult();
+
+                                                                if (tosRes?.Code == ReturnCode.SUCCESS)
+                                                                {
+                                                                    _logger.Information("处理 Tos 成功 {@0}", Account.ChannelId);
+                                                                    return;
+                                                                }
+                                                                else
+                                                                {
+                                                                    _logger.Information("处理 Tos 失败 {@0}, {@1}", Account.ChannelId, tosRes);
+                                                                }
+                                                            }
+                                                        }
+                                                        catch (Exception ex)
+                                                        {
+                                                            _logger.Error(ex, "处理 Tos 异常 {@0}", Account.ChannelId);
+                                                        }
+                                                    }
+
+                                                    var error = $"{title}, {desc}";
+
+                                                    task.MessageId = id;
+                                                    task.Description = error;
+
+                                                    if (!task.MessageIds.Contains(id))
+                                                    {
+                                                        task.MessageIds.Add(id);
+                                                    }
+
+                                                    task.Fail(error);
+                                                }
+                                            }
+                                        }
+                                        else
+                                        {
+                                            // 如果 meta 是 show
+                                            // 说明是 show 任务出错了
+                                            if (metaName == "show" && !string.IsNullOrWhiteSpace(desc))
+                                            {
+                                                // 设置 none 对应的任务 id
+                                                var task = _discordInstance.GetRunningTasks().Where(c => c.Action == TaskAction.SHOW && desc.Contains(c.JobId)).FirstOrDefault();
+                                                if (task != null)
+                                                {
+                                                    if (messageType == MessageType.CREATE)
+                                                    {
+                                                        var error = $"{title}, {desc}";
+
+                                                        task.MessageId = id;
+                                                        task.Description = error;
+
+                                                        if (!task.MessageIds.Contains(id))
+                                                        {
+                                                            task.MessageIds.Add(id);
+                                                        }
+
+                                                        task.Fail(error);
+                                                    }
+                                                }
+                                            }
+                                            else
+                                            {
+                                                // 没有获取到 none 尝试使用 mid 获取 task
+                                                var task = _discordInstance.GetRunningTasks().Where(c => c.MessageId == metaId
+                                                || c.MessageIds.Contains(metaId) || c.InteractionMetadataId == metaId).FirstOrDefault();
+                                                if (task != null)
+                                                {
+                                                    var error = $"{title}, {desc}";
+                                                    task.Fail(error);
+                                                }
+                                                else
+                                                {
+                                                    // 如果没有获取到 none
+                                                    _logger.Error("未知 embeds 错误 {@0}, {@1}", Account.ChannelId, data.ToString());
+                                                }
+                                            }
+                                        }
+                                    }
+                                    // 未知消息
+                                    else
+                                    {
+                                        if (data.TryGetProperty("nonce", out JsonElement noneEle))
+                                        {
+                                            var nonce = noneEle.GetString();
+                                            if (!string.IsNullOrWhiteSpace(id) && !string.IsNullOrWhiteSpace(nonce))
+                                            {
+                                                // 设置 none 对应的任务 id
+                                                var task = _discordInstance.GetRunningTaskByNonce(nonce);
+                                                if (task != null)
+                                                {
+                                                    if (messageType == MessageType.CREATE)
+                                                    {
+                                                        task.MessageId = id;
+                                                        task.Description = $"{title}, {desc}";
+
+                                                        if (!task.MessageIds.Contains(id))
+                                                        {
+                                                            task.MessageIds.Add(id);
+                                                        }
+
+                                                        _logger.Warning($"未知消息: {title}, {desc}, {Account.ChannelId}");
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (data.TryGetProperty("nonce", out JsonElement noneElement))
+                    {
+                        var nonce = noneElement.GetString();
+
+                        _logger.Debug($"用户消息, {messageType}, id: {id}, nonce: {nonce}");
+
+                        if (!string.IsNullOrWhiteSpace(id) && !string.IsNullOrWhiteSpace(nonce))
+                        {
+                            // 设置 none 对应的任务 id
+                            var task = _discordInstance.GetRunningTaskByNonce(nonce);
+                            if (task != null && task.Status != TaskStatus.SUCCESS && task.Status != TaskStatus.FAILURE)
+                            {
+                                if (isPrivareChannel)
+                                {
+                                    // 私信频道
+                                }
+                                else
+                                {
+                                    // 绘画频道
+
+                                    // MJ 交互成功后
+                                    if (messageType == MessageType.INTERACTION_SUCCESS)
+                                    {
+                                        task.InteractionMetadataId = id;
+                                    }
+                                    // MJ 局部重绘完成后
+                                    else if (messageType == MessageType.INTERACTION_IFRAME_MODAL_CREATE
+                                        && data.TryGetProperty("custom_id", out var custom_id))
+                                    {
+                                        task.SetProperty(Constants.TASK_PROPERTY_IFRAME_MODAL_CREATE_CUSTOM_ID, custom_id.GetString());
+
+                                        //task.MessageId = id;
+
+                                        if (!task.MessageIds.Contains(id))
+                                        {
+                                            task.MessageIds.Add(id);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        //task.MessageId = id;
+
+                                        if (!task.MessageIds.Contains(id))
+                                        {
+                                            task.MessageIds.Add(id);
+                                        }
+                                    }
+
+                                    // 只有 CREATE 才会设置消息 id
+                                    if (messageType == MessageType.CREATE)
+                                    {
+                                        task.MessageId = id;
+
+                                        // 设置 prompt 完整词
+                                        if (!string.IsNullOrWhiteSpace(contentStr) && contentStr.Contains("(Waiting to start)"))
+                                        {
+                                            if (string.IsNullOrWhiteSpace(task.PromptFull))
+                                            {
+                                                task.PromptFull = ConvertUtils.GetFullPrompt(contentStr);
+                                            }
+                                        }
+                                    }
+
+                                    // 如果任务是 remix 自动提交任务
+                                    if (task.RemixAutoSubmit
+                                        && task.RemixModaling == true
+                                        && messageType == MessageType.INTERACTION_SUCCESS)
+                                    {
+                                        task.RemixModalMessageId = id;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                var eventData = data.Deserialize<EventData>();
+
+                // 如果消息类型是 CREATE
+                // 则再次处理消息确认事件，确保消息的高可用
+                if (messageType == MessageType.CREATE)
+                {
+                    Thread.Sleep(50);
+
+                    if (eventData != null &&
+                        (eventData.ChannelId == Account.ChannelId || Account.SubChannelValues.ContainsKey(eventData.ChannelId)))
+                    {
+                        foreach (var messageHandler in _userMessageHandlers.OrderBy(h => h.Order()))
+                        {
+                            // 处理过了
+                            if (eventData.GetProperty<bool?>(Constants.MJ_MESSAGE_HANDLED, default) == true)
+                            {
+                                return;
+                            }
+
+                            // 消息加锁处理
+                            LocalLock.TryLock($"lock_{eventData.Id}", TimeSpan.FromSeconds(10), () =>
+                            {
+                                messageHandler.Handle(_discordInstance, messageType.Value, eventData);
+                            });
+                        }
+                    }
+                }
+                // describe 重新提交
+                // MJ::Picread::Retry
+                else if (eventData.Embeds.Count > 0 && eventData.Author?.Bot == true && eventData.Components.Count > 0
+                    && eventData.Components.First().Components.Any(x => x.CustomId?.Contains("PicReader") == true))
+                {
+                    // 消息加锁处理
+                    LocalLock.TryLock($"lock_{eventData.Id}", TimeSpan.FromSeconds(10), () =>
+                    {
+                        var em = eventData.Embeds.FirstOrDefault();
+                        if (em != null && !string.IsNullOrWhiteSpace(em.Description))
+                        {
+                            var handler = _userMessageHandlers.FirstOrDefault(x => x.GetType() == typeof(UserDescribeSuccessHandler));
+                            handler?.Handle(_discordInstance, MessageType.CREATE, eventData);
+                        }
+                    });
+                }
+                else
+                {
+                    if (!string.IsNullOrWhiteSpace(eventData.Content)
+                          && eventData.Content.Contains("%")
+                          && eventData.Author?.Bot == true)
+                    {
+                        // 消息加锁处理
+                        LocalLock.TryLock($"lock_{eventData.Id}", TimeSpan.FromSeconds(10), () =>
+                        {
+                            var handler = _userMessageHandlers.FirstOrDefault(x => x.GetType() == typeof(UserStartAndProgressHandler));
+                            handler?.Handle(_discordInstance, MessageType.UPDATE, eventData);
+                        });
+                    }
+                    else if (eventData.InteractionMetadata?.Name == "describe")
+                    {
+                        // 消息加锁处理
+                        LocalLock.TryLock($"lock_{eventData.Id}", TimeSpan.FromSeconds(10), () =>
+                        {
+                            var handler = _userMessageHandlers.FirstOrDefault(x => x.GetType() == typeof(UserDescribeSuccessHandler));
+                            handler?.Handle(_discordInstance, MessageType.CREATE, eventData);
+                        });
+                    }
+                    else if (eventData.InteractionMetadata?.Name == "shorten"
+                        // shorten show details -> PromptAnalyzerExtended
+                        || eventData.Embeds?.FirstOrDefault()?.Footer?.Text.Contains("Click on a button to imagine one of the shortened prompts") == true)
+                    {
+                        // 消息加锁处理
+                        LocalLock.TryLock($"lock_{eventData.Id}", TimeSpan.FromSeconds(10), () =>
+                        {
+                            var handler = _userMessageHandlers.FirstOrDefault(x => x.GetType() == typeof(UserShortenSuccessHandler));
+                            handler?.Handle(_discordInstance, MessageType.CREATE, eventData);
+                        });
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "处理用户消息异常 {@0}", raw.ToString());
+            }
+        }
+
+        /// <summary>
+        /// Discord 账号，调用接口切换慢速（1小时最多执行1次）
+        /// </summary>
+        public void DiscordSetRelax()
+        {
+            if (Account.EnableAutoSetRelax == true && Account.FastExhausted)
+            {
+                // 切换到慢速模式
+                // 加锁切换到慢速模式
+                // 执行切换慢速命令
+                // 如果当前不是慢速，则切换慢速，加锁切换
+                Task.Run(async () =>
+                {
+                    using var isLock = RedisHelper.Lock($"DiscordSetRelax:{Account.ChannelId}", 10);
+                    if (isLock != null)
+                    {
+                        try
+                        {
+                            // 计数器，1 小时最多切换 1 次
+                            var key = $"DiscordSetRelaxCount:{Account.ChannelId}";
+                            var count = RedisHelper.IncrBy(key, 1);
+                            if (count > 1)
+                            {
+                                _logger.Warning("切换慢速跳过，1小时内已切换过 {@0}", Account.ChannelId);
+                                return;
+                            }
+
+                            RedisHelper.Expire(key, TimeSpan.FromHours(1));
+
+                            // 切换到慢速模式
+                            // 加锁切换到慢速模式
+                            // 执行切换慢速命令
+                            // 如果当前不是慢速，则切换慢速，加锁切换
+                            if (Account.MjFastModeOn || Account.NijiFastModeOn)
+                            {
+                                Thread.Sleep(2500);
+                                await _discordInstance?.RelaxAsync(SnowFlake.NextId(), EBotType.MID_JOURNEY);
+
+                                Thread.Sleep(2500);
+                                await _discordInstance?.RelaxAsync(SnowFlake.NextId(), EBotType.NIJI_JOURNEY);
+
+                                _logger.Information("切换慢速成功 {@0}", Account.ChannelId);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.Error(ex, "切换慢速异常 {@0}", Account.ChannelId);
+                        }
+                    }
+                });
+            }
+        }
+
+        private static Dictionary<string, string> ParseDiscordData(string input)
+        {
+            var data = new Dictionary<string, string>();
+
+            foreach (var line in input.Split('\n'))
+            {
+                var parts = line.Split(new[] { ':' }, 2);
+                if (parts.Length == 2)
+                {
+                    var key = parts[0].Replace("**", "").Trim();
+                    var value = parts[1].Trim();
+                    data[key] = value;
+                }
+            }
+
+            return data;
         }
 
         /// <summary>
@@ -1139,10 +2378,6 @@ namespace Midjourney.Infrastructure
             try
             {
                 WebSocket?.Dispose();
-                _botListener?.Dispose();
-
-                // 锁不需要释放
-                //_stateLock?.Dispose();
             }
             catch
             {
