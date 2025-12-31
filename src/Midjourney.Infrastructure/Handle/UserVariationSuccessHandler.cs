@@ -28,6 +28,9 @@ namespace Midjourney.Infrastructure.Handle
 {
     public class UserVariationSuccessHandler : UserMessageHandler
     {
+        // 变化
+        // car --v 7.0 - Variations (Strong) by @VaroSensei (fast)
+        // car --v 7.0 - Variations (Subtle) by @VaroSensei (fast)
         private const string CONTENT_REGEX_1 = "\\*\\*(.*)\\*\\* - Variations by <@\\d+> \\((.*?)\\)";
         private const string CONTENT_REGEX_2 = "\\*\\*(.*)\\*\\* - Variations \\(.*?\\) by <@\\d+> \\((.*?)\\)";
 

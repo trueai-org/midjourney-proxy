@@ -21,6 +21,7 @@
 // The use of this software for any form of illegal face swapping,
 // invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
+
 using System.Text.RegularExpressions;
 using Midjourney.Infrastructure.LoadBalancer;
 using Serilog;
@@ -32,10 +33,16 @@ namespace Midjourney.Infrastructure.Handle
     /// </summary>
     public class UserUpscaleSuccessHandler : UserMessageHandler
     {
+        // 高清放大
+        // car --v 7.0 - Upscaled by @VaroSensei (fast)
         private const string CONTENT_REGEX_1 = "\\*\\*(.*)\\*\\* - Upscaled \\(.*?\\) by <@\\d+> \\((.*?)\\)";
         private const string CONTENT_REGEX_2 = "\\*\\*(.*)\\*\\* - Upscaled by <@\\d+> \\((.*?)\\)";
 
+
+        // 普通放大
+        // https://s.mj.run/JJl2ZVRyWyg https://s.mj.run/pnKPjAjFpAo --ar 1:1 --v 6.1 --s 250 --raw - Image #1 @VaroSensei
         private const string CONTENT_REGEX_U = "\\*\\*(.*)\\*\\* - Image #(\\d) <@\\d+>";
+
 
         public UserUpscaleSuccessHandler(DiscordLoadBalancer discordLoadBalancer, DiscordHelper discordHelper)
             : base(discordLoadBalancer, discordHelper)
