@@ -3,10 +3,10 @@ using Xunit.Abstractions;
 
 namespace Midjourney.Tests
 {
-    public class MjPromptParserTest
+    public class MjPromptParserTests
     {
         private readonly TestOutputWrapper _output;
-        public MjPromptParserTest(ITestOutputHelper output)
+        public MjPromptParserTests(ITestOutputHelper output)
         {
             _output = new TestOutputWrapper(output);
         }

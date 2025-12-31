@@ -374,3 +374,4 @@ temps
 /src/Midjourney.API/ffmpeg.exe
 /src/Midjourney.API/ffprobe.exe
 /src/Midjourney.API/data/mj.json
+/src/Midjourney.Tests/data

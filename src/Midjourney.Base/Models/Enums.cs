@@ -238,32 +238,37 @@ namespace Midjourney.Base
     public enum TaskAction
     {
         /// <summary>
-        /// 生成图片.
+        /// 生成图片
         /// </summary>
         IMAGINE,
 
         /// <summary>
-        /// 选中放大.
+        /// 选中放大 U
+        /// U1, U2, U3, U4
         /// </summary>
         UPSCALE,
 
         /// <summary>
-        /// 选中其中的一张图，生成四张相似的.
+        /// 选中其中的一张图，生成四张相似的
+        /// V1 V2 V3 V4
+        /// Vary Subtle, Vary Strong
+        /// Remix Subtle, Remix Strong
+        /// Vary Region
         /// </summary>
         VARIATION,
 
         /// <summary>
-        /// 重新执行.
+        /// 重新执行（即将废弃，将分解为具体的任务）
         /// </summary>
         REROLL,
 
         /// <summary>
-        /// 图转 prompt.
+        /// 图转 prompt
         /// </summary>
         DESCRIBE,
 
         /// <summary>
-        /// 多图混合.
+        /// 多图混合
         /// </summary>
         BLEND,
 
@@ -283,7 +288,10 @@ namespace Midjourney.Base
         OUTPAINT,
 
         /// <summary>
-        /// 局部重绘
+        /// 局部重绘（即将废弃，调整为 VARIATION）
+        /// <![CDATA[
+        /// **Wear gloves on your hands --relax --ar 3:2 --v 6.1** - Variations (Region) by <@1253988698995818521> (relaxed)
+        /// ]]>
         /// </summary>
         INPAINT,
 
@@ -336,7 +344,14 @@ namespace Midjourney.Base
         /// <summary>
         /// 图生文 - 文生图（废弃）
         /// </summary>
-        PIC_READER
+        PIC_READER,
+
+        /// <summary>
+        /// 高清
+        /// Upscale Subtle, Upscale Creative
+        /// Upscale 2x, Upscale 4x
+        /// </summary>
+        UPSCALE_HD
     }
 
     /// <summary>

@@ -7,6 +7,9 @@
 
 		<IsPackable>false</IsPackable>
 		<IsTestProject>true</IsTestProject>
+
+		<SatelliteResourceLanguages>zh-Hans</SatelliteResourceLanguages>
+
 		<!-- 捕获标准输出 -->
 		<CaptureStandardOutput>true</CaptureStandardOutput>
 	</PropertyGroup>
@@ -20,6 +23,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\Midjourney.Base\Midjourney.Base.csproj" />
+		<ProjectReference Include="..\Midjourney.Infrastructure\Midjourney.Infrastructure.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

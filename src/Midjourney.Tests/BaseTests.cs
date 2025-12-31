@@ -5,9 +5,9 @@ namespace Midjourney.Tests
     /// <summary>
     /// 测试基类
     /// </summary>
-    public class BaseTest : IDisposable
+    public class BaseTests : IDisposable
     {
-        public BaseTest()
+        public BaseTests()
         {
             // 避免中文输出乱码问题
             Console.OutputEncoding = Encoding.UTF8;
