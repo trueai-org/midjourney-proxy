@@ -38,24 +38,15 @@ namespace Midjourney.API.Controllers
     [Route("mj-relax/mj/task")]
     public class TaskController : ControllerBase
     {
-        private readonly ITaskStoreService _taskStoreService;
-        private readonly ITaskService _taskService;
-        private readonly DiscordLoadBalancer _discordLoadBalancer;
-        private readonly WorkContext _workContext;
         private readonly IFreeSql _freeSql = FreeSqlHelper.FreeSql;
+        private readonly WorkContext _workContext;
+        private readonly ITaskService _taskService;
 
         // 是否匿名用户
         private readonly bool _isAnonymous;
 
-        public TaskController(
-            ITaskStoreService taskStoreService,
-            DiscordLoadBalancer discordLoadBalancer,
-            ITaskService taskService,
-            IHttpContextAccessor httpContextAccessor,
-            WorkContext workContext)
+        public TaskController(ITaskService taskService, IHttpContextAccessor httpContextAccessor, WorkContext workContext)
         {
-            _taskStoreService = taskStoreService;
-            _discordLoadBalancer = discordLoadBalancer;
             _taskService = taskService;
 
             _workContext = workContext;
@@ -85,7 +76,7 @@ namespace Midjourney.API.Controllers
         [HttpGet("{id}/fetch")]
         public ActionResult<TaskInfo> Fetch(string id)
         {
-            return _taskStoreService.Get(id);
+            return _freeSql.Get<TaskInfo>(id);
         }
 
         /// <summary>
@@ -103,7 +94,7 @@ namespace Midjourney.API.Controllers
 
             var user = _workContext.GetUser();
 
-            var targetTask = _taskStoreService.Get(id);
+            var targetTask = _freeSql.Get<TaskInfo>(id);
             if (targetTask != null)
             {
                 if (user.Id == targetTask.UserId || user.Role == EUserRole.ADMIN)
@@ -113,12 +104,12 @@ namespace Midjourney.API.Controllers
                         if (DiscordInstance.GlobalRunningTasks.TryGetValue(id, out var task) && task != null)
                         {
                             task.Fail("取消任务");
-                            _taskStoreService.Save(targetTask);
+                            _freeSql.Save(targetTask);
                         }
                         else
                         {
                             targetTask.Fail("取消任务");
-                            _taskStoreService.Save(targetTask);
+                            _freeSql.Save(targetTask);
 
                             var notification = new RedisNotification
                             {
@@ -142,7 +133,7 @@ namespace Midjourney.API.Controllers
         [HttpGet("{id}/image-seed")]
         public async Task<ActionResult<SubmitResultVO>> ImageSeed(string id)
         {
-            var targetTask = _taskStoreService.Get(id);
+            var targetTask = _freeSql.Get<TaskInfo>(id);
             if (targetTask != null)
             {
                 if (!string.IsNullOrWhiteSpace(targetTask.Seed))
@@ -211,7 +202,7 @@ namespace Midjourney.API.Controllers
                 return Ok(new List<TaskInfo>());
             }
 
-            var list = _taskStoreService.GetList(ids);
+            var list = _freeSql.Select<TaskInfo>().Where(t => ids.Contains(t.Id)).ToList();
 
             return Ok(list);
         }

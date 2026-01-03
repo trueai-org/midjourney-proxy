@@ -37,8 +37,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
         private readonly CancellationTokenSource _longToken;
         private readonly ManualResetEvent _mre;
 
-        public FaceSwapInstance(ITaskStoreService taskStoreService, INotifyService notifyService, IMemoryCache memoryCache, DiscordHelper discordHelper)
-            : base(taskStoreService, notifyService, memoryCache, discordHelper)
+        public FaceSwapInstance(INotifyService notifyService, IMemoryCache memoryCache, DiscordHelper discordHelper)
+            : base(notifyService, memoryCache, discordHelper)
         {
             var config = GlobalConfiguration.Setting;
 
@@ -205,7 +205,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 }
 
                 info.IsReplicate = true;
-                _taskStoreService.Save(info);
+                _freeSql.Save(info);
 
                 _queueTasks.Enqueue(info);
 
@@ -226,7 +226,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
             {
                 _logger.Error(ex, "submit task error");
 
-                _taskStoreService.Delete(info.Id);
+                _freeSql.Delete(info);
 
                 if (File.Exists(info.ReplicateTarget))
                 {

@@ -214,6 +214,8 @@ namespace Midjourney.Base.Storage
                     _logger.Warning(ex, "删除文件异常, {key}", key);
                 }
             }
+
+            await Task.CompletedTask;
         }
 
         /// <summary>

@@ -36,8 +36,6 @@ namespace Midjourney.Base.Models
     /// <summary>
     /// Discord账号类。
     /// </summary>
-    [BsonCollection("account")]
-    [MongoDB.Bson.Serialization.Attributes.BsonIgnoreExtraElements]
     [Serializable]
     public class DiscordAccount : DomainObject
     {
@@ -144,7 +142,7 @@ namespace Midjourney.Base.Models
         public string UserToken { get; set; }
 
         /// <summary>
-        /// 机器人 Token
+        /// 机器人 Token（废弃）
         /// </summary>
         [Display(Name = "机器人Token")]
         [Column(StringLength = -1)]
@@ -987,7 +985,7 @@ namespace Midjourney.Base.Models
                 QueueSize = configAccount.QueueSize,
                 RelaxCoreSize = configAccount.RelaxCoreSize,
                 RelaxQueueSize = configAccount.RelaxQueueSize,
-                BotToken = configAccount.BotToken,
+                //BotToken = configAccount.BotToken,
                 TimeoutMinutes = configAccount.TimeoutMinutes,
                 PrivateChannelId = configAccount.PrivateChannelId,
                 NijiBotChannelId = configAccount.NijiBotChannelId,

@@ -40,7 +40,6 @@ namespace Midjourney.API.Controllers
     [Route("mj-relax/mj/submit")]
     public class SubmitController : ControllerBase
     {
-        private readonly ITaskStoreService _taskStoreService;
         private readonly ITaskService _taskService;
         private readonly ILogger<SubmitController> _logger;
         private readonly IMemoryCache _memoryCache;
@@ -61,7 +60,6 @@ namespace Midjourney.API.Controllers
         private readonly EStorageOption? _storageOption;
 
         public SubmitController(
-            ITaskStoreService taskStoreService,
             ITaskService taskService,
             ILogger<SubmitController> logger,
             IHttpContextAccessor httpContextAccessor,
@@ -70,9 +68,7 @@ namespace Midjourney.API.Controllers
             IMemoryCache memoryCache)
         {
             _setting = GlobalConfiguration.Setting;
-
             _memoryCache = memoryCache;
-            _taskStoreService = taskStoreService;
             _taskService = taskService;
             _logger = logger;
             _workContext = workContext;
@@ -445,7 +441,7 @@ namespace Midjourney.API.Controllers
                 return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "参数错误"));
             }
 
-            var targetTask = _taskStoreService.Get(actionDTO.TaskId);
+            var targetTask = _freeSql.Get<TaskInfo>(actionDTO.TaskId);
             if (targetTask == null)
             {
                 return NotFound(SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "关联任务不存在或已失效"));
@@ -527,7 +523,15 @@ namespace Midjourney.API.Controllers
             // MJ::JOB::reroll::0::898416ec-7c18-4762-bf03-8e428fee1860::SOLO
             else if (actionDTO.CustomId.StartsWith("MJ::JOB::reroll::"))
             {
-                task.Action = TaskAction.REROLL;
+                //task.Action = TaskAction.REROLL;
+                if (targetTask.Action == TaskAction.UPSCALE)
+                {
+                    task.Action = TaskAction.IMAGINE;
+                }
+                else
+                {
+                    task.Action = targetTask.Action;
+                }
             }
             // 强变化
             // MJ::JOB::high_variation::1::7af96d1a-67c7-4d74-b173-8430c98c7631::SOLO
@@ -545,7 +549,7 @@ namespace Midjourney.API.Controllers
             // MJ::Outpaint::50::1::7af96d1a-67c7-4d74-b173-8430c98c7631::SOLO
             else if (actionDTO.CustomId.StartsWith("MJ::Outpaint::"))
             {
-                task.Action = TaskAction.ACTION;
+                task.Action = TaskAction.ZOOM;
             }
             // 平移
             // MJ::JOB::pan_left::1::7af96d1a-67c7-4d74-b173-8430c98c7631::SOLO
@@ -558,20 +562,20 @@ namespace Midjourney.API.Controllers
             // MJ::JOB::upsample_v6_2x_creative::1::7af96d1a-67c7-4d74-b173-8430c98c7631::SOLO
             else if (actionDTO.CustomId.StartsWith("MJ::JOB::upsample_"))
             {
-                task.Action = TaskAction.ACTION;
+                task.Action = TaskAction.UPSCALE_HD;
             }
             // 自定义变焦
             // "MJ::CustomZoom::439f8670-52e8-4f57-afaa-fa08f6d6c751"
             else if (actionDTO.CustomId.StartsWith("MJ::CustomZoom::"))
             {
-                task.Action = TaskAction.ACTION;
+                task.Action = TaskAction.ZOOM;
                 task.Description = "Waiting for window confirm";
             }
-            // 局部绘制
+            // 局部绘制 Vary Region
             // MJ::Inpaint::1::da2b1fda-0455-4952-9f0e-d4cb891f8b1e::SOLO
             else if (actionDTO.CustomId.StartsWith("MJ::Inpaint::"))
             {
-                task.Action = TaskAction.INPAINT;
+                task.Action = TaskAction.VARIATION;
             }
             // 视频操作
             // MJ::JOB::animate_low::1::a6b09718-e1f6-4f31-9a42-c6dd7d8f1c83::SOLO
@@ -586,9 +590,16 @@ namespace Midjourney.API.Controllers
                 task.ImageUrl = targetTask.ImageUrl;
                 task.Action = TaskAction.DESCRIBE;
             }
+            // 图生文 -> 再次文生图
+            else if (actionDTO.CustomId.StartsWith("MJ::Job::PicReader"))
+            {
+                task.Action = TaskAction.IMAGINE;
+            }
             else
             {
-                task.Action = TaskAction.ACTION;
+                _logger.LogWarning("未知的 Action 类型: {@0}, pid: {@1}", actionDTO.CustomId, targetTask.Id);
+
+                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "未知的 Action 类型"));
             }
 
             var data = await _taskService.SubmitAction(task, actionDTO);
@@ -609,7 +620,7 @@ namespace Midjourney.API.Controllers
                 return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "参数错误"));
             }
 
-            var task = _taskStoreService.Get(actionDTO.TaskId);
+            var task = _freeSql.Get<TaskInfo>(actionDTO.TaskId);
             if (task == null)
             {
                 return NotFound(SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "关联任务不存在或已失效"));
@@ -621,7 +632,7 @@ namespace Midjourney.API.Controllers
             // 兼容 rix api
             if (string.IsNullOrWhiteSpace(prompt) && !string.IsNullOrWhiteSpace(task.ParentId))
             {
-                var parentTask = _taskStoreService.Get(task.ParentId);
+                var parentTask =_freeSql.Get<TaskInfo>(task.ParentId);
                 if (parentTask != null)
                 {
                     // 优先使用父级提示词
@@ -900,7 +911,7 @@ namespace Midjourney.API.Controllers
                     return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "任务类型错误"));
                 }
 
-                targetTask = _taskStoreService.Get(videoDTO.TaskId);
+                targetTask = _freeSql.Get<TaskInfo>(videoDTO.TaskId);
                 if (targetTask == null)
                 {
                     return NotFound(SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "关联任务不存在或已失效"));
@@ -945,7 +956,7 @@ namespace Midjourney.API.Controllers
                 _logger.LogWarning("State参数过长，最大255字符，当前长度：{length}", baseDTO.State.Length);
                 throw new LogicException("State参数过长，最大255字符");
             }
-            if(baseDTO.NotifyHook?.Length>2000)
+            if (baseDTO.NotifyHook?.Length > 2000)
             {
                 _logger.LogWarning("NotifyHook参数过长，最大2000字符，当前长度：{length}", baseDTO.NotifyHook.Length);
                 throw new LogicException("NotifyHook参数过长，最大2000字符");

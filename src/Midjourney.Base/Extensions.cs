@@ -311,42 +311,6 @@ namespace Midjourney.Base
         }
 
         /// <summary>
-        /// 根据多个条件动态添加查询条件，并支持排序和限制返回数量。
-        /// </summary>
-        /// <typeparam name="T">实体类型。</typeparam>
-        /// <param name="dataHelper">数据助手接口。</param>
-        /// <param name="orderBy">排序字段表达式。</param>
-        /// <param name="orderByAsc">是否升序排序。</param>
-        /// <param name="limit">返回的最大记录数。</param>
-        /// <param name="filters">一组条件表达式及其对应的布尔值。</param>
-        /// <returns>满足条件的实体列表。</returns>
-        public static List<T> WhereIf<T>(this IDataHelper<T> dataHelper, params (bool condition, Expression<Func<T, bool>> filter)[] filters) where T : IBaseId
-        {
-            // 获取所有数据的初始查询
-            var query = dataHelper.GetAll().AsQueryable();
-
-            // 动态应用条件
-            foreach (var (condition, filter) in filters)
-            {
-                if (condition)
-                {
-                    query = query.Where(filter);
-                }
-            }
-
-            //// 应用排序
-            //query = orderByAsc ? query.OrderBy(orderBy) : query.OrderByDescending(orderBy);
-
-            //// 应用限制
-            //if (limit > 0)
-            //{
-            //    query = query.Take(limit);
-            //}
-
-            return query.ToList();
-        }
-
-        /// <summary>
         /// 查询条件扩展
         /// </summary>
         /// <typeparam name="T"></typeparam>

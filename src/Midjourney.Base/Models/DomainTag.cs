@@ -23,17 +23,13 @@
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
 using FreeSql.DataAnnotations;
-using Midjourney.Base.Data;
 using MongoDB.Bson.Serialization.Attributes;
-using Newtonsoft.Json.Linq;
 
 namespace Midjourney.Base.Models
 {
     /// <summary>
     /// 账号垂直领域
     /// </summary>
-    [BsonCollection("domain")]
-    [MongoDB.Bson.Serialization.Attributes.BsonIgnoreExtraElements]
     [Serializable]
     public class DomainTag : DomainObject
     {

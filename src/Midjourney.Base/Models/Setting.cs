@@ -844,21 +844,23 @@ namespace Midjourney.Base.Models
         /// </summary>
         public string UserToken { get; set; }
 
-        /// <summary>
-        /// 机器人 Token
-        ///
-        /// 1. 创建应用
-        /// https://discord.com/developers/applications
-        ///
-        /// 2. 设置应用权限（确保拥有读取内容权限）
-        /// [Bot] 设置 -> 全部开启
-        ///
-        /// 3. 添加应用到频道服务器
-        /// https://discord.com/oauth2/authorize?client_id=xxx&permissions=8&scope=bot
-        ///
-        /// 4. 复制或重置 Bot Token
-        /// </summary>
-        public string BotToken { get; set; }
+        ///// <summary>
+        ///// 机器人 Token（废弃）
+        /////
+        ///// <![CDATA[
+        ///// 1. 创建应用
+        ///// https://discord.com/developers/applications
+        /////
+        ///// 2. 设置应用权限（确保拥有读取内容权限）
+        ///// [Bot] 设置 -> 全部开启
+        /////
+        ///// 3. 添加应用到频道服务器
+        ///// https://discord.com/oauth2/authorize?client_id=xxx&permissions=8&scope=bot
+        /////
+        ///// 4. 复制或重置 Bot Token
+        ///// ]]>
+        ///// </summary>
+        //public string BotToken { get; set; }
 
         /// <summary>
         /// 用户UserAgent.

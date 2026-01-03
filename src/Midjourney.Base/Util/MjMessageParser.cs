@@ -8,15 +8,20 @@ namespace Midjourney.Base.Util
     public static class MjMessagePatterns
     {
         /// <summary>
-        /// 模式匹配: fast, relaxed, turbo 可选 stealth 模式
+        /// 模式匹配 fast, relaxed, turbo 可选 stealth 模式
         /// </summary>
         public const string MODE_PATTERN = @"(fast|relaxed|turbo)(?:,\s*stealth)?";
+
+        /// <summary>
+        /// 进度匹配 (0%)/(45%)/(100%)
+        /// </summary>
+        public const string PROGRESS_PATTERN = @"(?:\((\d+%)\)\s*)?";
 
         /// <summary>
         /// Remix/Variation 变体操作
         /// Variations 消息格式: **prompt** - Variations (type) by @user (mode)
         /// emix 消息格式: **prompt** - Remix (type) by @user (mode)
-        /// <para>捕获组: 1=prompt, 2=type(Subtle|Strong|Region,可选), 3=userId, 4=mode</para>
+        /// <para>捕获组: 1=prompt, 2=Remix|Variations, 3=type(Subtle|Strong|Region,可选), 4=userId, 5=progress(可选), 6=mode</para>
         /// </summary>
         /// <example>
         /// <![CDATA[
@@ -31,11 +36,11 @@ namespace Midjourney.Base.Util
         /// **car --v 7.0** - Remix by <@123456789> (fast)
         /// ]]>
         /// </example>
-        public const string VARIATIONS = @$"\*\*(.+?)\*\* - (Remix|Variations)\s*(?:\((Subtle|Strong|Region)\))?\s*by <@(\d+)> \({MODE_PATTERN}\)";
+        public const string VARIATIONS = @$"\*\*(.+?)\*\* - (Remix|Variations)\s*(?:\((Subtle|Strong|Region)\))?\s*by <@(\d+)>\s*{PROGRESS_PATTERN}\({MODE_PATTERN}\)";
 
         /// <summary>
         /// Pan 平移操作消息格式: **prompt** - Pan (direction) by @user (mode)
-        /// <para>捕获组: 1=prompt, 2=direction(Left|Right|Up|Down), 3=userId, 4=mode</para>
+        /// <para>捕获组: 1=prompt, 2=direction(Left|Right|Up|Down), 3=userId, 4=progress(可选), 5=mode</para>
         /// </summary>
         /// <example>
         /// <![CDATA[
@@ -46,11 +51,11 @@ namespace Midjourney.Base.Util
         /// **landscape --v 7.0** - Pan Left by <@123456789> (fast)
         /// ]]>
         /// </example>
-        public const string PAN = @$"\*\*(.+?)\*\* - Pan (Left|Right|Up|Down) by <@(\d+)> \({MODE_PATTERN}\)";
+        public const string PAN = @$"\*\*(.+?)\*\* - Pan (Left|Right|Up|Down) by <@(\d+)>\s*{PROGRESS_PATTERN}\({MODE_PATTERN}\)";
 
         /// <summary>
         /// Zoom 缩放操作消息格式: **prompt** - Zoom Out by @user (mode)
-        /// <para>捕获组: 1=prompt, 2=userId, 3=mode</para>
+        /// <para>捕获组: 1=prompt, 2=userId, 3=progress(可选), 4=mode</para>
         /// </summary>
         /// <example>
         /// <![CDATA[
@@ -59,7 +64,7 @@ namespace Midjourney.Base.Util
         /// **portrait --v 6.0** - Zoom Out by <@123456789> (turbo)
         /// ]]>
         /// </example>
-        public const string ZOOM = @$"\*\*(.+?)\*\* - Zoom Out by <@(\d+)> \({MODE_PATTERN}\)";
+        public const string ZOOM = @$"\*\*(.+?)\*\* - Zoom Out by <@(\d+)>\s*{PROGRESS_PATTERN}\({MODE_PATTERN}\)";
 
         /// <summary>
         /// Upscale 高清/创意
@@ -75,7 +80,7 @@ namespace Midjourney.Base.Util
         /// **girl --raw --v 7.0** - Upscaling by <@123> (0%) (fast)\n-# Create, explore...
         /// ]]>
         /// </example>
-        public const string UPSCALE_HD = @$"\*\*(.+?)\*\* - (Upscaling|Upscaled)\s*(?:\((Subtle|Creative|4x|2x)\))?\s*by\s*<@\d+>\s*(?:\((\d+%)\)\s*)?(?:\([^)]*\)\s*)*\({MODE_PATTERN}\)";
+        public const string UPSCALE_HD = @$"\*\*(.+?)\*\* - (Upscaling|Upscaled)\s*(?:\((Subtle|Creative|4x|2x)\))?\s*by\s*<@\d+>\s*{PROGRESS_PATTERN}(?:\([^)]*\)\s*)*\({MODE_PATTERN}\)";
 
         /// <summary>
         /// U 操作（U1 U2 U3 U4）（选择单张图片）
@@ -90,23 +95,21 @@ namespace Midjourney.Base.Util
         /// </example>
         public const string UPSCALE_U = @"\*\*(.+?)\*\* - Image #(\d+) <@(\d+)>";
 
-        #region Imagine 图像生成
 
         /// <summary>
-        /// Imagine 基础消息格式: **prompt** - @user (mode)
-        /// <para>捕获组: 1=prompt, 2=mode</para>
+        /// 通用图像生成 / 视频生成
+        /// Imagine 基础消息格式: **prompt** - @user (extra info) (mode)
+        /// <para>捕获组: 1=prompt, 2=progress(可选), 3=mode</para>
         /// </summary>
         /// <example>
         /// <![CDATA[
         /// **a beautiful sunset --v 7.0** - <@123456789> (fast)
-        /// **cat sitting on a chair --ar 16:9** - <@123456789> (relaxed)
+        /// **cat sitting on a chair --ar 16:9** - <@123456789> (relaxed, stealth)
+        /// **<https://s.mj.run/pnvVhedeTbw> cat --fast --video 1 --aspect 1:1** - <@1091167368845213706> [(Open on website for full quality)](<https://midjourney.com/jobs/...>) (fast)
+        /// **<https://s.mj.run/X-tG9-sshyk> Aerial photography --ar 16:9 --v 6.0** - <@1325403477765132341> (Open on website for full quality) (relaxed)
         /// ]]>
         /// </example>
-        public const string IMAGINE_SUCCESS = @"\*\*(.*)\*\* - <@\d+> \((.*?)\)";
-
-        #endregion Imagine 图像生成
-
-        #region Reroll 重新生成
+        public const string IMAGINE_SUCCESS = @$"\*\*(.+?)\*\* - <@\d+>\s*{PROGRESS_PATTERN}(?:\s*\[[^\]]*\]\([^)]*\)|\s*\([^)]*\))*\s*\({MODE_PATTERN}\)";
 
         /// <summary>
         /// Reroll 消息格式（与 Imagine 相同）: **prompt** - @user (mode)
@@ -120,10 +123,6 @@ namespace Midjourney.Base.Util
         /// </example>
         public const string REROLL_SUCCESS = IMAGINE_SUCCESS;
 
-        #endregion Reroll 重新生成
-
-        #region Blend 混图操作
-
         /// <summary>
         /// Blend 消息格式: **prompt** - @user (mode) 或无 prompt
         /// <para>捕获组: 1=prompt(可能为空), 2=mode</para>
@@ -136,43 +135,22 @@ namespace Midjourney.Base.Util
         /// </example>
         public const string BLEND_SUCCESS = IMAGINE_SUCCESS;
 
-        #endregion Blend 混图操作
-
-        #region Describe 图生文
-
         /// <summary>
+        /// Describe 图生文
         /// Describe 消息通过 Embeds 返回，无特定正则格式
-        /// <para>需要检查: message.Embeds.Count > 0 && message.Embeds[0].Image?.Url 存在</para>
+        /// <![CDATA[
+        /// 需要检查: message.Embeds.Count > 0 && message.Embeds[0].Image?.Url 存在
+        /// ]]>
         /// </summary>
         public const string DESCRIBE_SUCCESS = null;
 
-        #endregion Describe 图生文
-
-        #region Shorten Prompt分析
-
         /// <summary>
+        /// Shorten Prompt分析
         /// Shorten 消息通过 Embeds 返回，无特定正则格式
         /// <para>需要检查: message.InteractionMetadata?.Name == "shorten"</para>
         /// <para>或: message.Embeds[0].Footer?.Text.Contains("Click on a button to imagine")</para>
         /// </summary>
         public const string SHORTEN_SUCCESS = null;
-
-        #endregion Shorten Prompt分析
-
-        #region Video 视频扩展
-
-        /// <summary>
-        /// Video Extend 消息格式
-        /// <para>通过 content.Contains("extended") 判断</para>
-        /// </summary>
-        /// <example>
-        /// <![CDATA[
-        /// **prompt** - extended <@123456789> (fast)
-        /// ]]>
-        /// </example>
-        public const string VIDEO_EXTEND = @"\*\*(.*)\*\* - .*?extended.*?<@\d+> \((.*?)\)";
-
-        #endregion Video 视频扩展
     }
 
     /// <summary>
@@ -213,7 +191,8 @@ namespace Midjourney.Base.Util
                 VariationType = match.Groups[3].Success && !string.IsNullOrEmpty(match.Groups[3].Value)
                     ? match.Groups[3].Value : null,
                 UserId = match.Groups[4].Value,
-                Mode = match.Groups[5].Value,
+                Progress = match.Groups[5].Success ? match.Groups[5].Value : null,
+                Mode = match.Groups[6].Value,
                 Status = "done"
             };
         }
@@ -232,7 +211,8 @@ namespace Midjourney.Base.Util
                 Prompt = match.Groups[1].Value,
                 ActionName = match.Groups[2].Value,
                 UserId = match.Groups[3].Value,
-                Mode = match.Groups[4].Value,
+                Progress = match.Groups[4].Success ? match.Groups[4].Value : null,
+                Mode = match.Groups[5].Value,
                 Status = "done"
             };
         }
@@ -293,18 +273,22 @@ namespace Midjourney.Base.Util
         }
 
         /// <summary>
-        /// 尝试解析 Imagine/Reroll 格式
+        /// 尝试解析 Imagine 通用格式
         /// </summary>
         public static MessageParseResult TryParseImagine(string content)
         {
             var match = Regex.Match(content, MjMessagePatterns.IMAGINE_SUCCESS);
-            if (!match.Success) return null;
+            if (!match.Success)
+                return null;
+
+            var isVideo = content.Contains("--video", StringComparison.OrdinalIgnoreCase);
 
             return new MessageParseResult
             {
-                Action = TaskAction.IMAGINE,
+                Action = isVideo ? TaskAction.VIDEO : TaskAction.IMAGINE,
                 Prompt = match.Groups[1].Value,
-                Mode = match.Groups[2].Value
+                Progress = match.Groups[2].Success ? match.Groups[2].Value : null,
+                Mode = match.Groups[3].Value,
             };
         }
 

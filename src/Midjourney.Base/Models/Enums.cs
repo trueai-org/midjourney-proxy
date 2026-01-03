@@ -250,7 +250,7 @@ namespace Midjourney.Base
 
         /// <summary>
         /// 选中其中的一张图，生成四张相似的
-        /// V1 V2 V3 V4
+        /// V1, V2, V3, V4
         /// Vary Subtle, Vary Strong
         /// Remix Subtle, Remix Strong
         /// Vary Region
@@ -258,7 +258,7 @@ namespace Midjourney.Base
         VARIATION,
 
         /// <summary>
-        /// 重新执行（即将废弃，将分解为具体的任务）
+        /// 重新执行（已废弃，分解为具体的任务，不能删除会导致数据库报错）
         /// </summary>
         REROLL,
 
@@ -283,12 +283,12 @@ namespace Midjourney.Base
         PAN,
 
         /// <summary>
-        /// 变焦
+        /// 变焦（已废弃，已调整为 ZOOM，不能删除会导致数据库报错）
         /// </summary>
         OUTPAINT,
 
         /// <summary>
-        /// 局部重绘（即将废弃，调整为 VARIATION）
+        /// 局部重绘（已废弃，已调整为 VARIATION，不能删除会导致数据库报错）
         /// <![CDATA[
         /// **Wear gloves on your hands --relax --ar 3:2 --v 6.1** - Variations (Region) by <@1253988698995818521> (relaxed)
         /// ]]>
@@ -296,12 +296,12 @@ namespace Midjourney.Base
         INPAINT,
 
         /// <summary>
-        /// 自定义变焦
+        /// 变焦/自定义变焦
         /// </summary>
         ZOOM,
 
         /// <summary>
-        /// SHOW 指令（已废弃）
+        /// SHOW 指令（已废弃，不能删除会导致数据库报错）
         /// </summary>
         SHOW,
 
@@ -327,7 +327,7 @@ namespace Midjourney.Base
         VIDEO,
 
         /// <summary>
-        /// 视频拓展（废弃）
+        /// 视频拓展（已废弃，不能删除会导致数据库报错）
         /// </summary>
         VIDEO_EXTEND,
 
@@ -342,7 +342,7 @@ namespace Midjourney.Base
         RETEXTURE,
 
         /// <summary>
-        /// 图生文 - 文生图（废弃）
+        /// 图生文 - 文生图（已废弃，不能删除会导致数据库报错）
         /// </summary>
         PIC_READER,
 

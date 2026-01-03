@@ -27,28 +27,22 @@ namespace Midjourney.Base.Services
         /// 提交任务
         /// </summary>
         /// <param name="task"></param>
-        /// <param name="taskStoreService"></param>
         /// <param name="instance"></param>
         /// <returns></returns>
-        Task<Message> SubmitTaskAsync(TaskInfo task, ITaskStoreService taskStoreService, IDiscordInstance instance);
+        Task<Message> SubmitTaskAsync(TaskInfo task, IDiscordInstance instance);
 
         /// <summary>
         /// 变化任务
         /// </summary>
         /// <returns></returns>
-        Task<Message> SubmitActionAsync(TaskInfo task,
-             SubmitActionDTO submitAction,
-             TaskInfo targetTask,
-             ITaskStoreService taskStoreService,
-             IDiscordInstance discordInstance,
-             string newPrompt = null);
+        Task<Message> SubmitActionAsync(TaskInfo task, SubmitActionDTO submitAction, TaskInfo targetTask, IDiscordInstance discordInstance, string newPrompt = null);
 
         /// <summary>
         /// 获取并更新任务状态
         /// </summary>
         /// <param name="info"></param>
         /// <returns></returns>
-        Task UpdateStatus(TaskInfo info, ITaskStoreService taskStoreService, DiscordAccount account);
+        Task UpdateStatus(TaskInfo info, DiscordAccount account);
 
         /// <summary>
         /// 同步悠船账号信息
@@ -85,7 +79,7 @@ namespace Midjourney.Base.Services
         /// <param name="task"></param>
         /// <param name="parentTask"></param>
         /// <returns></returns>
-        Task<Message> SubmitModal(TaskInfo task, TaskInfo parentTask, SubmitModalDTO submitAction, ITaskStoreService taskStoreService);
+        Task<Message> SubmitModal(TaskInfo task, TaskInfo parentTask, SubmitModalDTO submitAction);
 
         /// <summary>
         /// 上传文件到悠船服务

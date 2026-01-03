@@ -46,7 +46,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
         protected static readonly object _lock = new();
 
         protected readonly ILogger _logger = Log.Logger;
-        protected readonly ITaskStoreService _taskStoreService;
         protected readonly INotifyService _notifyService;
 
         protected readonly DiscordHelper _discordHelper;
@@ -58,7 +57,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
         protected ConcurrentQueue<TaskInfo> _queueTasks = new();
 
-        public BaseFaceSwapInstance(ITaskStoreService taskStoreService, INotifyService notifyService, IMemoryCache memoryCache, DiscordHelper discordHelper)
+        protected readonly IFreeSql _freeSql = FreeSqlHelper.FreeSql;
+
+        public BaseFaceSwapInstance(INotifyService notifyService, IMemoryCache memoryCache, DiscordHelper discordHelper)
         {
             var config = GlobalConfiguration.Setting;
 
@@ -80,7 +81,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
             };
 
             _discordHelper = discordHelper;
-            _taskStoreService = taskStoreService;
             _notifyService = notifyService;
             _cache = memoryCache;
         }
@@ -98,7 +98,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <param name="task">任务信息</param>
         public void SaveAndNotify(TaskInfo task)
         {
-            _taskStoreService.Save(task);
+            _freeSql.Save(task);
             _notifyService.NotifyTaskChange(task);
         }
 
@@ -112,7 +112,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         {
             var options = new RestClientOptions()
             {
-                MaxTimeout = -1,
+                Timeout = TimeSpan.FromMinutes(15),
             };
             var client = new RestClient(options);
             var request = new RestRequest("https://api.replicate.com/v1/files", Method.Post);
@@ -170,7 +170,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         {
             var options = new RestClientOptions()
             {
-                MaxTimeout = -1,
+                Timeout = TimeSpan.FromMinutes(30),
             };
             var client = new RestClient(options);
             var request = new RestRequest("https://api.replicate.com/v1/predictions", Method.Post);
@@ -216,7 +216,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         {
             var options = new RestClientOptions()
             {
-                MaxTimeout = -1,
+                Timeout = TimeSpan.FromMinutes(30),
             };
             var client = new RestClient(options);
             var request = new RestRequest("https://api.replicate.com/v1/predictions", Method.Post);

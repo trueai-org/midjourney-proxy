@@ -23,7 +23,6 @@
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
 using FreeSql.DataAnnotations;
-using Midjourney.Base.Data;
 using Midjourney.Base.Dto;
 using MongoDB.Bson.Serialization.Attributes;
 
@@ -32,8 +31,6 @@ namespace Midjourney.Base.Models
     /// <summary>
     /// 个性化配置 -p
     /// </summary>
-    [BsonCollection("personalize")]
-    [MongoDB.Bson.Serialization.Attributes.BsonIgnoreExtraElements]
     [Serializable]
     public class PersonalizeTag : DomainObject
     {

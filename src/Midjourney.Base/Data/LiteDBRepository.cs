@@ -24,53 +24,14 @@
 
 using System.Linq.Expressions;
 using LiteDB;
-using Midjourney.Base.Services;
 
 namespace Midjourney.Base.Data
 {
-    public interface IBaseId
-    {
-        string Id { get; set; }
-    }
-
-    /// <summary>
-    /// 任务存储服务接口。
-    /// </summary>
-    public class TaskRepository : ITaskStoreService
-    {
-        private readonly IFreeSql _freeSql = FreeSqlHelper.FreeSql;
-
-        public void Save(TaskInfo task)
-        {
-            _freeSql.Save(task);
-        }
-
-        public void Delete(string id)
-        {
-            _freeSql.DeleteById<TaskInfo>(id);
-        }
-
-        public TaskInfo Get(string id)
-        {
-            return _freeSql.Get<TaskInfo>(id);
-        }
-
-        public List<TaskInfo> GetList(List<string> ids)
-        {
-            if (ids == null || ids.Count <= 0)
-            {
-                return new List<TaskInfo>();
-            }
-
-            return _freeSql.Select<TaskInfo>().Where(c => ids.Contains(c.Id)).ToList();
-        }
-    }
-
     /// <summary>
     /// LiteDB 数据库的泛型仓库类。
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public class LiteDBRepository<T> : IDataHelper<T> where T : IBaseId
+    public class LiteDBRepository<T> where T : IBaseId
     {
         private static readonly object _lock = new();
         private readonly LiteDatabase _db;

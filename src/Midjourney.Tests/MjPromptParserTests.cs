@@ -1,4 +1,7 @@
+using Midjourney.Base.Data;
+using Midjourney.Base.Models;
 using Midjourney.Base.Util;
+using Midjourney.Infrastructure;
 using Xunit.Abstractions;
 
 namespace Midjourney.Tests
@@ -6,9 +9,90 @@ namespace Midjourney.Tests
     public class MjPromptParserTests
     {
         private readonly TestOutputWrapper _output;
+
         public MjPromptParserTests(ITestOutputHelper output)
         {
             _output = new TestOutputWrapper(output);
+        }
+
+        private async Task Init()
+        {
+            await SettingHelper.InitializeAsync();
+
+            var setting = SettingHelper.Instance.Current;
+
+            var freeSql = FreeSqlHelper.Init(setting.DatabaseType, setting.DatabaseConnectionString, true);
+            if (freeSql != null)
+            {
+                FreeSqlHelper.Configure(freeSql);
+            }
+        }
+
+        [Fact]
+        public async Task Test_Content()
+        {
+            try
+            {
+                await Init();
+
+                var fsql = FreeSqlHelper.FreeSql;
+
+                string[] ids = [];
+
+                var list = fsql.Select<TaskInfo>()
+                    .Where(c => c.Status == Base.TaskStatus.SUCCESS && c.IsPartner == false && c.IsOfficial == false)
+                    .WhereIf(ids.Length > 0, c => ids.Contains(c.Id))
+                    .OrderByRandom()
+                    .Take(50000)
+                    .ToList();
+
+                foreach (var item in list)
+                {
+                    try
+                    {
+                        var content = item.GetProperty(Constants.TASK_PROPERTY_MESSAGE_CONTENT, "");
+                        if (!string.IsNullOrWhiteSpace(content))
+                        {
+                            var pp = MjMessageParser.Parse(content);
+
+                            var prompt = pp.Prompt;
+
+                            if (!string.IsNullOrWhiteSpace(prompt))
+                            {
+                                _output.WriteLine($"原始: {prompt}");
+                                var r = MjPromptParser.Parse(prompt);
+                                _output.WriteLine($"干净: {r.CleanPrompt}");
+                                _output.WriteLine("参数:");
+
+                                foreach (var (p, info) in MjPromptParser.GetParamsWithInfo(r))
+                                {
+                                    var full = MjPromptParser.GetFullName(p.Name);
+                                    var alias = p.Name != full ? $" ({full})" : "";
+                                    var desc = info?.Description ?? "未知参数";
+                                    _output.WriteLine($"  --{p.Name}{alias} = {p.Value ?? "(flag)"}  // {desc}");
+                                }
+
+                                var seed = r.GetSeed();
+                                _output.WriteLine($"Seed: {seed?.ToString() ?? "null"}");
+                                _output.WriteLine($"全名重建: {MjPromptParser.Rebuild(r, useFullName: true)}");
+                                _output.WriteLine(new string('-', 70));
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _output.WriteLine("解析失败: {0}", ex.Message);
+
+                        throw;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _output.WriteLine("解析失败: {0}", ex.Message);
+
+                throw;
+            }
         }
 
         [Fact]

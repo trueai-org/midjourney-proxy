@@ -23,7 +23,6 @@
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
 using System.Reflection;
-using Midjourney.Infrastructure.Handle;
 using Midjourney.Infrastructure.LoadBalancer;
 using Midjourney.Infrastructure.Services;
 
@@ -34,25 +33,23 @@ namespace Midjourney.API
         public static void AddMidjourneyServices(this IServiceCollection services, Setting config)
         {
             // 用户消息处理程序
-            services.AddTransient<UserMessageHandler, UserImagineSuccessHandler>();
-            services.AddTransient<UserMessageHandler, UserActionSuccessHandler>();
-            services.AddTransient<UserMessageHandler, UserUpscaleSuccessHandler>();
-            services.AddTransient<UserMessageHandler, UserDescribeSuccessHandler>();
-            services.AddTransient<UserMessageHandler, UserVariationSuccessHandler>();
-            services.AddTransient<UserMessageHandler, UserStartAndProgressHandler>();
-            services.AddTransient<UserMessageHandler, UserRerollSuccessHandler>();
-            services.AddTransient<UserMessageHandler, UserShortenSuccessHandler>();
+            //services.AddTransient<UserMessageHandler, UserImagineSuccessHandler>();
+            //services.AddTransient<UserMessageHandler, UserActionSuccessHandler>();
+            //services.AddTransient<UserMessageHandler, UserUpscaleSuccessHandler>();
+            //services.AddTransient<UserMessageHandler, UserDescribeSuccessHandler>();
+            //services.AddTransient<UserMessageHandler, UserVariationSuccessHandler>();
+            //services.AddTransient<UserMessageHandler, UserStartAndProgressHandler>();
+            //services.AddTransient<UserMessageHandler, UserRerollSuccessHandler>();
+            //services.AddTransient<UserMessageHandler, UserShortenSuccessHandler>();
 
             // 换脸服务
             services.AddSingleton<FaceSwapInstance>();
             services.AddSingleton<VideoFaceSwapInstance>();
 
             // 通知服务
-            services.AddSingleton<INotifyService, NotifyServiceImpl>();
+            services.AddSingleton<INotifyService, NotifyService>();
 
-            // 任务服务
-            services.AddSingleton<ITaskStoreService, TaskRepository>();
-
+ 
             // 账号负载均衡服务
             switch (config.AccountChooseRule)
             {

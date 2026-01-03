@@ -30,7 +30,6 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using Midjourney.Infrastructure.Handle;
 using Midjourney.Infrastructure.LoadBalancer;
 using RestSharp;
 using Serilog;
@@ -147,8 +146,6 @@ namespace Midjourney.Infrastructure
         /// </summary>
         public bool Running { get; private set; }
 
-        private IEnumerable<UserMessageHandler> _userMessageHandlers;
-
         /// <summary>
         /// 消息队列
         /// </summary>
@@ -156,18 +153,13 @@ namespace Midjourney.Infrastructure
 
         private readonly Task _messageQueueTask;
 
-        public WebSocketManager(
-            DiscordHelper discordHelper,
-            WebProxy webProxy,
-            DiscordInstance discordInstance,
-            IEnumerable<UserMessageHandler> userMessageHandlers)
+        public WebSocketManager(DiscordHelper discordHelper, WebProxy webProxy, DiscordInstance discordInstance)
         {
             _discordHelper = discordHelper;
             _webProxy = webProxy;
             _discordInstance = discordInstance;
-            _userMessageHandlers = userMessageHandlers;
 
-            _messageQueueTask = new Task(MessageQueueDoWork, TaskCreationOptions.LongRunning);
+            _messageQueueTask = new Task(async () => { await MessageQueueDoWork(); }, TaskCreationOptions.LongRunning);
             _messageQueueTask.Start();
         }
 
@@ -704,7 +696,7 @@ namespace Midjourney.Infrastructure
             }
         }
 
-        private void MessageQueueDoWork()
+        private async Task MessageQueueDoWork()
         {
             while (true)
             {
@@ -712,15 +704,17 @@ namespace Midjourney.Infrastructure
                 {
                     try
                     {
-                        OnMessage(message);
+                        await OnMessage(message);
                     }
                     catch (Exception ex)
                     {
                         _logger.Error(ex, "处理消息队列时发生异常 {@0}", Account.ChannelId);
+
+                        Thread.Sleep(50);
                     }
                 }
 
-                Thread.Sleep(20);
+                Thread.Sleep(10);
             }
         }
 
@@ -728,7 +722,7 @@ namespace Midjourney.Infrastructure
         /// 处理接收到用户 ws 消息
         /// </summary>
         /// <param name="raw"></param>
-        public void OnMessage(JsonElement raw)
+        public async Task OnMessage(JsonElement raw)
         {
             try
             {
@@ -1463,35 +1457,35 @@ namespace Midjourney.Infrastructure
                                             _logger.Warning($"账号 {Account.GetDisplay()} 用量已经用完, 自动禁用账号");
 
                                             // 5s 后禁用账号
-                                            Task.Run(() =>
-                                            {
-                                                try
-                                                {
-                                                    Thread.Sleep(5 * 1000);
+                                            _ = Task.Run(() =>
+                                             {
+                                                 try
+                                                 {
+                                                     Thread.Sleep(5 * 1000);
 
-                                                    // 保存
-                                                    Account.Enable = false;
-                                                    Account.DisabledReason = "账号用量已经用完";
+                                                     // 保存
+                                                     Account.Enable = false;
+                                                     Account.DisabledReason = "账号用量已经用完";
 
-                                                    _freeSql.Update<DiscordAccount>()
-                                                    .Set(c => c.Enable, Account.Enable)
-                                                    .Set(c => c.DisabledReason, Account.DisabledReason)
-                                                    .Where(c => c.Id == Account.Id)
-                                                    .ExecuteAffrows();
+                                                     _freeSql.Update<DiscordAccount>()
+                                                     .Set(c => c.Enable, Account.Enable)
+                                                     .Set(c => c.DisabledReason, Account.DisabledReason)
+                                                     .Where(c => c.Id == Account.Id)
+                                                     .ExecuteAffrows();
 
-                                                    Account.ClearCache();
+                                                     Account.ClearCache();
 
-                                                    _discordInstance?.Dispose();
+                                                     _discordInstance?.Dispose();
 
-                                                    _ = EmailJob.Instance.EmailSend(setting.Smtp,
-                                                                   $"MJ账号禁用通知-{Account.ChannelId}",
-                                                                   $"{Account.ChannelId}, {Account.DisabledReason}");
-                                                }
-                                                catch (Exception ex)
-                                                {
-                                                    Log.Error(ex, "账号用量已经用完, 禁用账号异常 {@0}", Account.ChannelId);
-                                                }
-                                            });
+                                                     _ = EmailJob.Instance.EmailSend(setting.Smtp,
+                                                                    $"MJ账号禁用通知-{Account.ChannelId}",
+                                                                    $"{Account.ChannelId}, {Account.DisabledReason}");
+                                                 }
+                                                 catch (Exception ex)
+                                                 {
+                                                     Log.Error(ex, "账号用量已经用完, 禁用账号异常 {@0}", Account.ChannelId);
+                                                 }
+                                             });
                                         }
 
                                         return;
@@ -1518,7 +1512,7 @@ namespace Midjourney.Infrastructure
                                         }
 
                                         // 5s 后禁用账号
-                                        Task.Run(() =>
+                                        _ = Task.Run(() =>
                                         {
                                             try
                                             {
@@ -1809,25 +1803,26 @@ namespace Midjourney.Infrastructure
                 // 则再次处理消息确认事件，确保消息的高可用
                 if (messageType == MessageType.CREATE)
                 {
-                    Thread.Sleep(50);
+                    Thread.Sleep(10);
 
-                    if (eventData != null &&
-                        (eventData.ChannelId == Account.ChannelId || Account.SubChannelValues.ContainsKey(eventData.ChannelId)))
+                    if (eventData != null && (eventData.ChannelId == Account.ChannelId || Account.SubChannelValues.ContainsKey(eventData.ChannelId)))
                     {
-                        foreach (var messageHandler in _userMessageHandlers.OrderBy(h => h.Order()))
-                        {
-                            // 处理过了
-                            if (eventData.GetProperty<bool?>(Constants.MJ_MESSAGE_HANDLED, default) == true)
-                            {
-                                return;
-                            }
+                        await HandleMessage(_discordInstance, messageType.Value, eventData);
 
-                            // 消息加锁处理
-                            LocalLock.TryLock($"lock_{eventData.Id}", TimeSpan.FromSeconds(10), () =>
-                            {
-                                messageHandler.Handle(_discordInstance, messageType.Value, eventData);
-                            });
-                        }
+                        //foreach (var messageHandler in _userMessageHandlers.OrderBy(h => h.Order()))
+                        //{
+                        //    // 处理过了
+                        //    if (eventData.GetProperty<bool?>(Constants.MJ_MESSAGE_HANDLED, default) == true)
+                        //    {
+                        //        return;
+                        //    }
+
+                        //    // 消息加锁处理
+                        //    LocalLock.TryLock($"lock_{eventData.Id}", TimeSpan.FromSeconds(10), () =>
+                        //    {
+                        //        messageHandler.Handle(_discordInstance, messageType.Value, eventData);
+                        //    });
+                        //}
                     }
                 }
                 // describe 重新提交
@@ -1835,49 +1830,34 @@ namespace Midjourney.Infrastructure
                 else if (eventData.Embeds.Count > 0 && eventData.Author?.Bot == true && eventData.Components.Count > 0
                     && eventData.Components.First().Components.Any(x => x.CustomId?.Contains("PicReader") == true))
                 {
-                    // 消息加锁处理
-                    LocalLock.TryLock($"lock_{eventData.Id}", TimeSpan.FromSeconds(10), () =>
+                    var em = eventData.Embeds.FirstOrDefault();
+                    if (em != null && !string.IsNullOrWhiteSpace(em.Description))
                     {
-                        var em = eventData.Embeds.FirstOrDefault();
-                        if (em != null && !string.IsNullOrWhiteSpace(em.Description))
-                        {
-                            var handler = _userMessageHandlers.FirstOrDefault(x => x.GetType() == typeof(UserDescribeSuccessHandler));
-                            handler?.Handle(_discordInstance, MessageType.CREATE, eventData);
-                        }
-                    });
+                        await HandleDescribe(_discordInstance, MessageType.CREATE, eventData);
+                    }
                 }
                 else
                 {
-                    if (!string.IsNullOrWhiteSpace(eventData.Content)
-                          && eventData.Content.Contains("%")
-                          && eventData.Author?.Bot == true)
+                    if (!string.IsNullOrWhiteSpace(eventData.Content) && eventData.Content.Contains("%") && eventData.Author?.Bot == true)
                     {
-                        // 消息加锁处理
-                        LocalLock.TryLock($"lock_{eventData.Id}", TimeSpan.FromSeconds(10), () =>
-                        {
-                            var handler = _userMessageHandlers.FirstOrDefault(x => x.GetType() == typeof(UserStartAndProgressHandler));
-                            handler?.Handle(_discordInstance, MessageType.UPDATE, eventData);
-                        });
+                        await HandleMessage(_discordInstance, messageType.Value, eventData);
+
+                        // TODO 进度消息
+                        //// 消息加锁处理
+                        //LocalLock.TryLock($"lock_{eventData.Id}", TimeSpan.FromSeconds(10), () =>
+                        //{
+                        //    var handler = _userMessageHandlers.FirstOrDefault(x => x.GetType() == typeof(UserStartAndProgressHandler));
+                        //    handler?.Handle(_discordInstance, MessageType.UPDATE, eventData);
+                        //});
                     }
                     else if (eventData.InteractionMetadata?.Name == "describe")
                     {
-                        // 消息加锁处理
-                        LocalLock.TryLock($"lock_{eventData.Id}", TimeSpan.FromSeconds(10), () =>
-                        {
-                            var handler = _userMessageHandlers.FirstOrDefault(x => x.GetType() == typeof(UserDescribeSuccessHandler));
-                            handler?.Handle(_discordInstance, MessageType.CREATE, eventData);
-                        });
+                        await HandleDescribe(_discordInstance, MessageType.CREATE, eventData);
                     }
                     else if (eventData.InteractionMetadata?.Name == "shorten"
-                        // shorten show details -> PromptAnalyzerExtended
                         || eventData.Embeds?.FirstOrDefault()?.Footer?.Text.Contains("Click on a button to imagine one of the shortened prompts") == true)
                     {
-                        // 消息加锁处理
-                        LocalLock.TryLock($"lock_{eventData.Id}", TimeSpan.FromSeconds(10), () =>
-                        {
-                            var handler = _userMessageHandlers.FirstOrDefault(x => x.GetType() == typeof(UserShortenSuccessHandler));
-                            handler?.Handle(_discordInstance, MessageType.CREATE, eventData);
-                        });
+                        await HandleShorten(_discordInstance, MessageType.CREATE, eventData);
                     }
                 }
             }
@@ -2393,6 +2373,1637 @@ namespace Midjourney.Infrastructure
             _discordInstance.DefaultSessionId = _sessionId;
 
             NotifyWss(ReturnCode.SUCCESS, "");
+        }
+
+        protected string GetMessageId(EventData message)
+        {
+            return message.Id;
+        }
+
+        protected string GetMessageContent(EventData message)
+        {
+            return message.Content;
+        }
+
+        protected string GetFullPrompt(EventData message)
+        {
+            return ConvertUtils.GetFullPrompt(message.Content);
+        }
+
+        protected EBotType? GetBotType(EventData message)
+        {
+            var botId = message.Author?.Id;
+            EBotType? botType = null;
+            if (botId == Constants.NIJI_APPLICATION_ID)
+            {
+                botType = EBotType.NIJI_JOURNEY;
+            }
+            else if (botId == Constants.MJ_APPLICATION_ID)
+            {
+                botType = EBotType.MID_JOURNEY;
+            }
+
+            return botType;
+        }
+
+        protected bool HasImage(EventData message)
+        {
+            return message?.Attachments?.Count > 0;
+        }
+
+        protected string GetImageUrl(EventData message)
+        {
+            if (message?.Attachments?.Count > 0)
+            {
+                return ReplaceCdnUrl(message.Attachments.FirstOrDefault()?.Url);
+            }
+
+            return default;
+        }
+
+        protected string ReplaceCdnUrl(string imageUrl)
+        {
+            if (string.IsNullOrWhiteSpace(imageUrl))
+                return imageUrl;
+
+            string cdn = _discordHelper.GetCdn();
+            if (imageUrl.StartsWith(cdn))
+                return imageUrl;
+
+            return imageUrl.Replace(DiscordHelper.DISCORD_CDN_URL, cdn);
+        }
+
+        protected async Task FinishTask(TaskInfo task, EventData message)
+        {
+            // 设置图片信息
+            var image = message.Attachments?.FirstOrDefault();
+            if (task != null && image != null)
+            {
+                task.Width = image.Width;
+                task.Height = image.Height;
+                task.Url = image.Url;
+                task.ProxyUrl = image.ProxyUrl;
+                task.Size = image.Size;
+                task.ContentType = image.ContentType;
+            }
+
+            task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_ID, message.Id);
+            task.SetProperty(Constants.TASK_PROPERTY_FLAGS, Convert.ToInt32(message.Flags));
+
+            var messageHash = task.GetProperty(Constants.TASK_PROPERTY_MESSAGE_HASH, string.Empty);
+            if (string.IsNullOrWhiteSpace(messageHash))
+            {
+                messageHash = _discordHelper.GetMessageHash(task.ImageUrl);
+
+                task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_HASH, messageHash);
+                task.JobId = messageHash;
+            }
+
+            task.Buttons = message.Components.SelectMany(x => x.Components)
+                .Select(btn =>
+                {
+                    return new CustomComponentModel
+                    {
+                        CustomId = btn.CustomId ?? string.Empty,
+                        Emoji = btn.Emoji?.Name ?? string.Empty,
+                        Label = btn.Label ?? string.Empty,
+                        Style = (int?)btn.Style ?? 0,
+                        Type = (int?)btn.Type ?? 0,
+                    };
+                }).Where(c => c != null && !string.IsNullOrWhiteSpace(c.CustomId)).ToList();
+
+            if (string.IsNullOrWhiteSpace(task.Description))
+            {
+                task.Description = "Submit success";
+            }
+
+            if (string.IsNullOrWhiteSpace(task.FailReason))
+            {
+                task.FailReason = "";
+            }
+
+            if (string.IsNullOrWhiteSpace(task.State))
+            {
+                task.State = "";
+            }
+
+            await task.SuccessAsync();
+        }
+
+        /// <summary>
+        /// 处理图生文完成消息
+        /// </summary>
+        /// <param name="instance"></param>
+        /// <param name="messageType"></param>
+        /// <param name="message"></param>
+        public async Task HandleDescribe(DiscordInstance instance, MessageType messageType, EventData message)
+        {
+            if (instance == null || message == null)
+            {
+                return;
+            }
+
+            var key = $"DiscordMessage:{message.Id}";
+
+            try
+            {
+                // 跳过 Waiting to start 消息
+                if (!string.IsNullOrWhiteSpace(message.Content) && message.Content.Contains("(Waiting to start)"))
+                {
+                    return;
+                }
+
+                using var redisLock = RedisHelper.Instance.Lock($"{key}_lock", 3);
+                if (redisLock == null)
+                {
+                    return;
+                }
+
+                // 判断是否处理过了
+                var used = RedisHelper.Instance.Exists(key);
+                if (used)
+                {
+                    return;
+                }
+
+                if (messageType == MessageType.CREATE && message.Author.Bot == true && message.Author.Username.Contains("journey Bot", StringComparison.OrdinalIgnoreCase))
+                {
+                    // 图生文完成
+                    if (message.Embeds.Count > 0 && !string.IsNullOrWhiteSpace(message.Embeds.FirstOrDefault()?.Image?.Url))
+                    {
+                        var msgId = GetMessageId(message);
+
+                        var task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && c.MessageId == msgId).FirstOrDefault();
+                        if (task == null && !string.IsNullOrWhiteSpace(message.InteractionMetadata?.Id))
+                        {
+                            task = instance.FindRunningTask(c =>
+                            (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && c.InteractionMetadataId == message.InteractionMetadata.Id).FirstOrDefault();
+                        }
+
+                        if (task == null)
+                        {
+                            return;
+                        }
+
+                        var imageUrl = message.Embeds.First().Image?.Url;
+                        var messageHash = _discordHelper.GetMessageHash(imageUrl);
+
+                        var finalPrompt = message.Embeds.First().Description;
+
+                        task.PromptEn = finalPrompt;
+                        task.MessageId = msgId;
+
+                        if (!task.MessageIds.Contains(msgId))
+                            task.MessageIds.Add(msgId);
+
+                        task.SetProperty(Constants.MJ_MESSAGE_HANDLED, true);
+                        task.SetProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, finalPrompt);
+                        task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_HASH, messageHash);
+
+                        task.ImageUrl = imageUrl;
+                        task.JobId = messageHash;
+
+                        await FinishTask(task, message);
+
+                        task.Awake();
+                    }
+                }
+            }
+            finally
+            {
+                // 表示消息已经处理过了
+                RedisHelper.Instance.Set(key, 1, TimeSpan.FromHours(1));
+            }
+        }
+
+        /// <summary>
+        /// 处理 shorten 完成消息
+        /// </summary>
+        /// <param name="instance"></param>
+        /// <param name="messageType"></param>
+        /// <param name="message"></param>
+        public async Task HandleShorten(DiscordInstance instance, MessageType messageType, EventData message)
+        {
+            if (instance == null || message == null)
+            {
+                return;
+            }
+
+            var key = $"DiscordMessage:{message.Id}";
+
+            try
+            {
+                if (message.InteractionMetadata?.Name != "shorten"
+                    && message.Embeds?.FirstOrDefault()?.Footer?.Text.Contains("Click on a button to imagine one of the shortened prompts") != true)
+                {
+                    return;
+                }
+
+                // 跳过 Waiting to start 消息
+                if (!string.IsNullOrWhiteSpace(message.Content) && message.Content.Contains("(Waiting to start)"))
+                {
+                    return;
+                }
+
+                using var redisLock = RedisHelper.Instance.Lock($"{key}_lock", 3);
+                if (redisLock == null)
+                {
+                    return;
+                }
+
+                // 判断是否处理过了
+                var used = RedisHelper.Instance.Exists(key);
+                if (used)
+                {
+                    return;
+                }
+
+                if (messageType == MessageType.CREATE
+                    && message.Author.Bot == true
+                    && message.Author.Username.Contains("journey Bot", StringComparison.OrdinalIgnoreCase))
+                {
+                    // 分析 prompt 完成
+                    if (message.Embeds.Count > 0)
+                    {
+                        var msgId = GetMessageId(message);
+
+                        var task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && c.MessageId == msgId).FirstOrDefault();
+
+                        if (task == null && !string.IsNullOrWhiteSpace(message.InteractionMetadata?.Id))
+                        {
+                            task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) &&
+                            c.InteractionMetadataId == message.InteractionMetadata.Id).FirstOrDefault();
+                        }
+
+                        if (task == null)
+                        {
+                            return;
+                        }
+
+                        var desc = message.Embeds.First().Description;
+
+                        task.Description = desc;
+                        task.MessageId = msgId;
+
+                        if (!task.MessageIds.Contains(msgId))
+                            task.MessageIds.Add(msgId);
+
+                        task.SetProperty(Constants.MJ_MESSAGE_HANDLED, true);
+                        task.SetProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, desc);
+
+                        await FinishTask(task, message);
+                        task.Awake();
+                    }
+                }
+            }
+            finally
+            {
+                // 表示消息已经处理过了
+                RedisHelper.Instance.Set(key, 1, TimeSpan.FromHours(1));
+            }
+        }
+
+        /// <summary>
+        /// 处理进度/完成消息
+        /// </summary>
+        /// <param name="instance"></param>
+        /// <param name="messageType"></param>
+        /// <param name="message"></param>
+        public async Task HandleMessage(DiscordInstance instance, MessageType messageType, EventData message)
+        {
+            if (messageType != MessageType.UPDATE && messageType != MessageType.CREATE)
+            {
+                return;
+            }
+
+            if (instance == null || message == null)
+            {
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(message.Content) && message.Content.Contains("(Waiting to start)"))
+            {
+                return;
+            }
+
+            var key = $"DiscordMessage:{message.Id}";
+
+            try
+            {
+                using var redisLock = RedisHelper.Instance.Lock($"{key}_lock", 3);
+                if (redisLock == null)
+                {
+                    return;
+                }
+
+                // 判断是否处理过了
+                var used = RedisHelper.Instance.Exists(key);
+                if (used)
+                {
+                    return;
+                }
+
+                var content = GetMessageContent(message);
+                if (!string.IsNullOrWhiteSpace(content) && content != "Displaying...")
+                {
+                    var parseResult = MjMessageParser.Parse(content);
+                    if (parseResult == null)
+                    {
+                        Log.Error("解析消息内容失败: {@0}", content);
+                    }
+                    else
+                    {
+                        // 判断消息 action
+                        switch (parseResult.Action)
+                        {
+                            case TaskAction.IMAGINE:
+                                {
+                                    await FindAndFinishImageTask(instance, message, parseResult, messageType);
+                                }
+                                break;
+
+                            case TaskAction.UPSCALE:
+                                {
+                                    await FindAndFinishUTask(instance, message, parseResult, messageType);
+                                }
+                                break;
+
+                            case TaskAction.VARIATION:
+                                {
+                                    await FindAndFinishVaryTask(instance, message, parseResult, messageType);
+                                }
+                                break;
+
+                            case TaskAction.PAN:
+                                {
+                                    await FindAndFinishPanTask(instance, message, parseResult, messageType);
+                                }
+                                break;
+
+                            case TaskAction.ZOOM:
+                                {
+                                    await FindAndFinishZoomTask(instance, message, parseResult, messageType);
+                                }
+                                break;
+
+                            case TaskAction.VIDEO:
+                                {
+                                    await FindAndFinishVideoTask(instance, message, parseResult, messageType);
+                                }
+                                break;
+
+                            case TaskAction.UPSCALE_HD:
+                                {
+                                    await FindAndFinishUpscaleHDTask(instance, message, parseResult, messageType);
+                                }
+                                break;
+
+                            case TaskAction.EDIT:
+                            case TaskAction.RETEXTURE:
+                            case TaskAction.PIC_READER:
+                            case TaskAction.REROLL:
+                            case TaskAction.DESCRIBE:
+                            case TaskAction.BLEND:
+                            case TaskAction.ACTION:
+                            case TaskAction.OUTPAINT:
+                            case TaskAction.INPAINT:
+                            case TaskAction.SHOW:
+                            case TaskAction.SHORTEN:
+                            case TaskAction.SWAP_FACE:
+                            case TaskAction.SWAP_VIDEO_FACE:
+                            case TaskAction.VIDEO_EXTEND:
+                            default:
+                                {
+                                    Log.Error("不支持的消息类型: {@0}, {@1}", parseResult, content);
+                                }
+                                break;
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                // 表示消息已经处理过了
+                RedisHelper.Instance.Set(key, 1, TimeSpan.FromHours(1));
+            }
+        }
+
+        /// <summary>
+        /// 查找并完成放大任务
+        /// </summary>
+        /// <param name="instance"></param>
+        /// <param name="finalPrompt"></param>
+        /// <param name="index">1 | 2 | 3 | 4</param>
+        /// <param name="message"></param>
+        private async Task FindAndFinishUTask(DiscordInstance instance, EventData message, MessageParseResult messageParseResult, MessageType messageType)
+        {
+            var index = messageParseResult.ImageIndex;
+            if (index == null || index <= 0 || index > 4)
+            {
+                Log.Error("跳过无效的放大索引: {@0}, {@1}", messageParseResult, message);
+                return;
+            }
+
+            var msgId = GetMessageId(message);
+            var fullPrompt = GetFullPrompt(message);
+            var imageUrl = GetImageUrl(message);
+            var messageHash = _discordHelper.GetMessageHash(imageUrl);
+
+            if (string.IsNullOrWhiteSpace(msgId)
+                || string.IsNullOrWhiteSpace(fullPrompt)
+                || string.IsNullOrWhiteSpace(imageUrl)
+                || string.IsNullOrWhiteSpace(messageHash))
+            {
+                Log.Warning("跳过无效的放大完成消息: MessageId={@0}, FullPrompt={@1}, ImageUrl={@2}, MessageHash={@3}",
+                    msgId, fullPrompt, imageUrl, messageHash);
+                return;
+            }
+
+            var list = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED)
+            && c.Action == TaskAction.UPSCALE
+            && c.GetProperty(Constants.TASK_PROPERTY_ACTION_INDEX, 0) == index).ToList();
+
+            // 1. 优先通过 message id 精确匹配
+            var task = list.Where(c => c.MessageId == msgId).FirstOrDefault();
+
+            // 2. 其次通过 interaction meta id 匹配
+            if (task == null && message.InteractionMetadata?.Id != null)
+            {
+                task = list.Where(c => c.InteractionMetadataId == message.InteractionMetadata.Id).FirstOrDefault();
+
+                if (task != null)
+                {
+                    Log.Information("通过 InteractionMetadataId 找到放大任务: TaskId={@0}, MessageId={@1}, InteractionMetadataId={@2}",
+                        task.Id, msgId, message.InteractionMetadata.Id);
+                }
+            }
+
+            // 3. 通过提示词查找任务
+            if (task == null)
+            {
+                var parseResult = MjPromptParser.Parse(fullPrompt);
+                if (parseResult == null || string.IsNullOrWhiteSpace(parseResult.CleanPrompt))
+                {
+                    Log.Warning("跳过无效的提示词放大完成消息: FullPrompt={@0}", fullPrompt);
+                    return;
+                }
+                // 注意则使用 MJ 最终返回的 PromptFull 进行匹配
+                var filterList = list.Where(c => !string.IsNullOrWhiteSpace(c.PromptFull) && parseResult.CleanPrompt.Equals(MjPromptParser.Parse(c.PromptFull)?.CleanPrompt, StringComparison.OrdinalIgnoreCase)).ToList();
+                if (filterList.Count == 1)
+                {
+                    task = filterList.FirstOrDefault();
+                }
+                else if (filterList.Count > 1)
+                {
+                    // 根据提交时间取 1 个并记录警告日志
+                    task = filterList.OrderBy(c => c.StartTime).FirstOrDefault();
+                    Log.Warning("通过提示词找到多个放大任务，取最早提交的一个: Count={@0}, TaskId={@1}, FullPrompt={@2}", filterList.Count, task.Id, fullPrompt);
+                }
+            }
+
+            if (task == null || task.IsCompleted)
+            {
+                return;
+            }
+
+            if (messageType == Base.MessageType.UPDATE)
+            {
+                return;
+            }
+
+            // 完善提示词
+            if (task != null && string.IsNullOrWhiteSpace(task.PromptFull))
+            {
+                task.PromptFull = fullPrompt;
+            }
+
+            task.MessageId = msgId;
+
+            if (!task.MessageIds.Contains(msgId))
+                task.MessageIds.Add(msgId);
+
+            task.SetProperty(Constants.MJ_MESSAGE_HANDLED, true);
+            task.SetProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, fullPrompt);
+            task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_HASH, messageHash);
+            task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_CONTENT, message.Content);
+
+            task.ImageUrl = imageUrl;
+            task.JobId = messageHash;
+
+            // 普通放大任务，直接完成
+            await FinishTask(task, message);
+            task.Awake();
+        }
+
+        /// <summary>
+        /// 查找并处理/完成高清任务
+        /// </summary>
+        /// <param name="instance"></param>
+        /// <param name="action"></param>
+        /// <param name="finalPrompt"></param>
+        /// <param name="message"></param>
+        protected async Task FindAndFinishUpscaleHDTask(DiscordInstance instance, EventData message, MessageParseResult messageParseResult, MessageType messageType)
+        {
+            var msgId = GetMessageId(message);
+            var fullPrompt = GetFullPrompt(message);
+            var imageUrl = GetImageUrl(message);
+
+            if (string.IsNullOrWhiteSpace(msgId)
+                || string.IsNullOrWhiteSpace(fullPrompt)
+                || string.IsNullOrWhiteSpace(imageUrl))
+            {
+                Log.Warning("跳过无效的高清消息: MessageId={@0}, FullPrompt={@1}, ImageUrl={@2}",
+                    msgId, fullPrompt, imageUrl);
+                return;
+            }
+
+            var list = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && c.Action == TaskAction.UPSCALE_HD).ToList();
+
+            // 1. 优先通过 message id 精确匹配
+            var task = list.Where(c => c.MessageId == msgId).FirstOrDefault();
+
+            // 2. 其次通过 interaction meta id 匹配
+            if (task == null && message.InteractionMetadata?.Id != null)
+            {
+                task = list.Where(c => c.InteractionMetadataId == message.InteractionMetadata.Id).FirstOrDefault();
+
+                if (task != null)
+                {
+                    Log.Information("通过 InteractionMetadataId 找到高清任务: TaskId={@0}, MessageId={@1}, InteractionMetadataId={@2}",
+                        task.Id, msgId, message.InteractionMetadata.Id);
+                }
+            }
+
+            // 3. 通过提示词查找任务
+            if (task == null)
+            {
+                var parseResult = MjPromptParser.Parse(fullPrompt);
+                if (parseResult == null || string.IsNullOrWhiteSpace(parseResult.CleanPrompt))
+                {
+                    Log.Warning("跳过无效的提示词高清消息: FullPrompt={@0}", fullPrompt);
+                    return;
+                }
+
+                // 注意则使用 MJ 最终返回的 PromptFull 进行匹配
+                var filterList = list.Where(c => !string.IsNullOrWhiteSpace(c.PromptFull) && parseResult.CleanPrompt.Equals(MjPromptParser.Parse(c.PromptFull)?.CleanPrompt, StringComparison.OrdinalIgnoreCase)).ToList();
+                if (filterList.Count == 1)
+                {
+                    task = filterList.FirstOrDefault();
+                }
+                else if (filterList.Count > 1)
+                {
+                    // 根据提交时间取 1 个并记录警告日志
+                    task = filterList.OrderBy(c => c.StartTime).FirstOrDefault();
+
+                    Log.Warning("通过提示词找到多个高清任务，取最早提交的一个: Count={@0}, TaskId={@1}, FullPrompt={@2}", filterList.Count, task.Id, fullPrompt);
+                }
+            }
+
+            if (task == null || task.IsCompleted)
+            {
+                return;
+            }
+
+            if (!task.MessageIds.Contains(msgId))
+                task.MessageIds.Add(msgId);
+
+            message.SetProperty(Constants.MJ_MESSAGE_HANDLED, true);
+            task.SetProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, fullPrompt);
+
+            // 高清放大中
+            if (messageType == MessageType.UPDATE)
+            {
+                if (!string.IsNullOrWhiteSpace(messageParseResult.Progress))
+                {
+                    task.Status = TaskStatus.IN_PROGRESS;
+                    task.Progress = messageParseResult.Progress;
+
+                    // 如果启用保存过程图片
+                    if (GlobalConfiguration.Setting.EnableSaveIntermediateImage && !string.IsNullOrWhiteSpace(imageUrl))
+                    {
+                        var ff = new FileFetchHelper();
+                        var ffUrl = await ff.FetchFileToStorageAsync(imageUrl);
+                        if (!string.IsNullOrWhiteSpace(ffUrl))
+                        {
+                            imageUrl = ffUrl;
+                        }
+
+                        // 必须确保任务仍是 IN_PROGRESS 状态
+                        if (task.Status == TaskStatus.IN_PROGRESS)
+                        {
+                            task.ImageUrl = imageUrl;
+                            task.Awake();
+                        }
+                    }
+                    else
+                    {
+                        task.ImageUrl = imageUrl;
+                        task.Awake();
+                    }
+                }
+                return;
+            }
+
+            // https://www.midjourney.com/jobs/3e8ebcc8-cb3a-472b-a63b-8ef558dc9f48
+            var url = message.Components.SelectMany(x => x.Components).Where(y => y.Url?.StartsWith("https://www.midjourney.com/jobs/") == true).FirstOrDefault()?.Url;
+            var messageHash = "";
+            if (!string.IsNullOrWhiteSpace(url))
+            {
+                messageHash = url.Substring(url.LastIndexOf('/') + 1);
+            }
+            if (string.IsNullOrWhiteSpace(messageHash))
+            {
+                Log.Error("跳过无效的高清完成消息，无法获取 message hash: MessageId={@0}, Url={@1}", msgId, url);
+                return;
+            }
+
+            task.ImageUrl = imageUrl;
+            task.MessageId = msgId;
+            task.JobId = messageHash;
+
+            task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_HASH, messageHash);
+            task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_CONTENT, message.Content);
+
+            await FinishTask(task, message);
+            task.Awake();
+        }
+
+        /// <summary>
+        /// 查找并处理/完成平移任务
+        /// </summary>
+        /// <param name="instance"></param>
+        /// <param name="message"></param>
+        /// <param name="messageParseResult"></param>
+        /// <returns></returns>
+        protected async Task FindAndFinishPanTask(DiscordInstance instance, EventData message, MessageParseResult messageParseResult, MessageType messageType)
+        {
+            var msgId = GetMessageId(message);
+            var fullPrompt = GetFullPrompt(message);
+            var imageUrl = GetImageUrl(message);
+
+            if (string.IsNullOrWhiteSpace(msgId)
+                || string.IsNullOrWhiteSpace(fullPrompt)
+                || string.IsNullOrWhiteSpace(imageUrl))
+            {
+                Log.Warning("跳过无效的平移消息: MessageId={@0}, FullPrompt={@1}, ImageUrl={@2}",
+                    msgId, fullPrompt, imageUrl);
+                return;
+            }
+
+            var list = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && c.Action == messageParseResult.Action).ToList();
+
+            // 1. 优先通过 message id 精确匹配
+            var task = list.Where(c => c.MessageId == msgId).FirstOrDefault();
+
+            // 2. 其次通过 interaction meta id 匹配
+            if (task == null && message.InteractionMetadata?.Id != null)
+            {
+                task = list.Where(c => c.InteractionMetadataId == message.InteractionMetadata.Id).FirstOrDefault();
+
+                if (task != null)
+                {
+                    Log.Information("通过 InteractionMetadataId 找到平移任务: TaskId={@0}, MessageId={@1}, InteractionMetadataId={@2}",
+                        task.Id, msgId, message.InteractionMetadata.Id);
+                }
+            }
+
+            // 3. 通过提示词查找任务
+            if (task == null)
+            {
+                var parseResult = MjPromptParser.Parse(fullPrompt);
+                if (parseResult == null || string.IsNullOrWhiteSpace(parseResult.CleanPrompt))
+                {
+                    Log.Warning("跳过无效的提示词平移消息: FullPrompt={@0}", fullPrompt);
+                    return;
+                }
+
+                var filterList = list.Where(c => !string.IsNullOrWhiteSpace(c.PromptEn) && parseResult.CleanPrompt.Equals(MjPromptParser.Parse(c.PromptEn)?.CleanPrompt, StringComparison.OrdinalIgnoreCase)).ToList();
+                if (filterList.Count == 1)
+                {
+                    task = filterList.FirstOrDefault();
+                }
+                else if (filterList.Count > 1)
+                {
+                    // 根据提交时间取 1 个并记录警告日志
+                    task = filterList.OrderBy(c => c.StartTime).FirstOrDefault();
+
+                    Log.Warning("通过提示词找到多个平移任务，取最早提交的一个: Count={@0}, TaskId={@1}, FullPrompt={@2}", filterList.Count, task.Id, fullPrompt);
+                }
+            }
+
+            // 4. 替换  url 为 <link> 后再次通过提示词查找任务
+            if (task == null)
+            {
+                var parseResult = MjPromptParser.Parse(fullPrompt);
+                if (parseResult == null || string.IsNullOrWhiteSpace(parseResult.CleanPromptNormalized))
+                {
+                    Log.Warning("跳过无效的替换 URL 后的提示词平移消息: FullPrompt={@0}", fullPrompt);
+                    return;
+                }
+                var filterList = list.Where(c => !string.IsNullOrWhiteSpace(c.PromptEn) && parseResult.CleanPromptNormalized.Equals(MjPromptParser.Parse(c.PromptEn)?.CleanPromptNormalized, StringComparison.OrdinalIgnoreCase)).ToList();
+                if (filterList.Count == 1)
+                {
+                    task = filterList.FirstOrDefault();
+                }
+                else if (filterList.Count > 1)
+                {
+                    // 根据提交时间取 1 个并记录警告日志
+                    task = filterList.OrderBy(c => c.StartTime).FirstOrDefault();
+                    Log.Warning("通过替换 URL 后的提示词找到多个平移任务，取最早提交的一个: Count={@0}, TaskId={@1}, FullPrompt={@2}", filterList.Count, task.Id, fullPrompt);
+                }
+            }
+
+            if (task == null || task.IsCompleted)
+            {
+                return;
+            }
+
+            if (!task.MessageIds.Contains(msgId))
+                task.MessageIds.Add(msgId);
+
+            message.SetProperty(Constants.MJ_MESSAGE_HANDLED, true);
+            task.SetProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, fullPrompt);
+
+            // 进度中
+            if (messageType == MessageType.UPDATE)
+            {
+                if (!string.IsNullOrWhiteSpace(messageParseResult.Progress))
+                {
+                    task.Status = TaskStatus.IN_PROGRESS;
+                    task.Progress = messageParseResult.Progress;
+
+                    // 如果启用保存过程图片
+                    if (GlobalConfiguration.Setting.EnableSaveIntermediateImage && !string.IsNullOrWhiteSpace(imageUrl))
+                    {
+                        var ff = new FileFetchHelper();
+                        var ffUrl = await ff.FetchFileToStorageAsync(imageUrl);
+                        if (!string.IsNullOrWhiteSpace(ffUrl))
+                        {
+                            imageUrl = ffUrl;
+                        }
+
+                        // 必须确保任务仍是 IN_PROGRESS 状态
+                        if (task.Status == TaskStatus.IN_PROGRESS)
+                        {
+                            task.ImageUrl = imageUrl;
+                            task.Awake();
+                        }
+                    }
+                    else
+                    {
+                        task.ImageUrl = imageUrl;
+                        task.Awake();
+                    }
+                }
+
+                return;
+            }
+
+            // https://www.midjourney.com/jobs/3e8ebcc8-cb3a-472b-a63b-8ef558dc9f48
+            var url = message.Components.SelectMany(x => x.Components).Where(y => y.Url?.StartsWith("https://www.midjourney.com/jobs/") == true).FirstOrDefault()?.Url;
+            var messageHash = "";
+            if (!string.IsNullOrWhiteSpace(url))
+            {
+                messageHash = url.Substring(url.LastIndexOf('/') + 1);
+            }
+            if (string.IsNullOrWhiteSpace(messageHash))
+            {
+                Log.Error("跳过无效的平移完成消息，无法获取 message hash: MessageId={@0}, Url={@1}", msgId, url);
+                return;
+            }
+
+            task.ImageUrl = imageUrl;
+            task.MessageId = msgId;
+            task.JobId = messageHash;
+
+            task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_HASH, messageHash);
+            task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_CONTENT, message.Content);
+
+            await FinishTask(task, message);
+            task.Awake();
+        }
+
+        /// <summary>
+        /// 查找并处理/完成变焦任务
+        /// </summary>
+        /// <param name="instance"></param>
+        /// <param name="message"></param>
+        /// <param name="messageParseResult"></param>
+        /// <returns></returns>
+        protected async Task FindAndFinishZoomTask(DiscordInstance instance, EventData message, MessageParseResult messageParseResult, MessageType messageType)
+        {
+            var msgId = GetMessageId(message);
+            var fullPrompt = GetFullPrompt(message);
+            var imageUrl = GetImageUrl(message);
+
+            if (string.IsNullOrWhiteSpace(msgId)
+                || string.IsNullOrWhiteSpace(fullPrompt)
+                || string.IsNullOrWhiteSpace(imageUrl))
+            {
+                Log.Warning("跳过无效的变焦消息: MessageId={@0}, FullPrompt={@1}, ImageUrl={@2}",
+                    msgId, fullPrompt, imageUrl);
+                return;
+            }
+
+            var list = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && c.Action == messageParseResult.Action).ToList();
+
+            // 1. 优先通过 message id 精确匹配
+            var task = list.Where(c => c.MessageId == msgId).FirstOrDefault();
+
+            // 2. 其次通过 interaction meta id 匹配
+            if (task == null && message.InteractionMetadata?.Id != null)
+            {
+                task = list.Where(c => c.InteractionMetadataId == message.InteractionMetadata.Id).FirstOrDefault();
+
+                if (task != null)
+                {
+                    Log.Information("通过 InteractionMetadataId 找到变焦任务: TaskId={@0}, MessageId={@1}, InteractionMetadataId={@2}",
+                        task.Id, msgId, message.InteractionMetadata.Id);
+                }
+            }
+
+            // 3. 通过提示词查找任务
+            if (task == null)
+            {
+                var parseResult = MjPromptParser.Parse(fullPrompt);
+                if (parseResult == null || string.IsNullOrWhiteSpace(parseResult.CleanPrompt))
+                {
+                    Log.Warning("跳过无效的提示词变焦消息: FullPrompt={@0}", fullPrompt);
+                    return;
+                }
+
+                var filterList = list.Where(c => !string.IsNullOrWhiteSpace(c.PromptEn) && parseResult.CleanPrompt.Equals(MjPromptParser.Parse(c.PromptEn)?.CleanPrompt, StringComparison.OrdinalIgnoreCase)).ToList();
+                if (filterList.Count == 1)
+                {
+                    task = filterList.FirstOrDefault();
+                }
+                else if (filterList.Count > 1)
+                {
+                    // 根据提交时间取 1 个并记录警告日志
+                    task = filterList.OrderBy(c => c.StartTime).FirstOrDefault();
+
+                    Log.Warning("通过提示词找到多个变焦任务，取最早提交的一个: Count={@0}, TaskId={@1}, FullPrompt={@2}", filterList.Count, task.Id, fullPrompt);
+                }
+            }
+
+            // 4. 替换  url 为 <link> 后再次通过提示词查找任务
+            if (task == null)
+            {
+                var parseResult = MjPromptParser.Parse(fullPrompt);
+                if (parseResult == null || string.IsNullOrWhiteSpace(parseResult.CleanPromptNormalized))
+                {
+                    Log.Warning("跳过无效的替换 URL 后的提示词变焦消息: FullPrompt={@0}", fullPrompt);
+                    return;
+                }
+                var filterList = list.Where(c => !string.IsNullOrWhiteSpace(c.PromptEn) && parseResult.CleanPromptNormalized.Equals(MjPromptParser.Parse(c.PromptEn)?.CleanPromptNormalized, StringComparison.OrdinalIgnoreCase)).ToList();
+                if (filterList.Count == 1)
+                {
+                    task = filterList.FirstOrDefault();
+                }
+                else if (filterList.Count > 1)
+                {
+                    // 根据提交时间取 1 个并记录警告日志
+                    task = filterList.OrderBy(c => c.StartTime).FirstOrDefault();
+                    Log.Warning("通过替换 URL 后的提示词找到多个变焦任务，取最早提交的一个: Count={@0}, TaskId={@1}, FullPrompt={@2}", filterList.Count, task.Id, fullPrompt);
+                }
+            }
+
+            if (task == null || task.IsCompleted)
+            {
+                return;
+            }
+
+            if (!task.MessageIds.Contains(msgId))
+                task.MessageIds.Add(msgId);
+
+            message.SetProperty(Constants.MJ_MESSAGE_HANDLED, true);
+            task.SetProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, fullPrompt);
+
+            // 进度中
+            if (messageType == MessageType.UPDATE)
+            {
+                if (!string.IsNullOrWhiteSpace(messageParseResult.Progress))
+                {
+                    task.Status = TaskStatus.IN_PROGRESS;
+                    task.Progress = messageParseResult.Progress;
+
+                    // 如果启用保存过程图片
+                    if (GlobalConfiguration.Setting.EnableSaveIntermediateImage && !string.IsNullOrWhiteSpace(imageUrl))
+                    {
+                        var ff = new FileFetchHelper();
+                        var ffUrl = await ff.FetchFileToStorageAsync(imageUrl);
+                        if (!string.IsNullOrWhiteSpace(ffUrl))
+                        {
+                            imageUrl = ffUrl;
+                        }
+
+                        // 必须确保任务仍是 IN_PROGRESS 状态
+                        if (task.Status == TaskStatus.IN_PROGRESS)
+                        {
+                            task.ImageUrl = imageUrl;
+                            task.Awake();
+                        }
+                    }
+                    else
+                    {
+                        task.ImageUrl = imageUrl;
+                        task.Awake();
+                    }
+                }
+
+                return;
+            }
+
+            // https://www.midjourney.com/jobs/3e8ebcc8-cb3a-472b-a63b-8ef558dc9f48
+            var url = message.Components.SelectMany(x => x.Components).Where(y => y.Url?.StartsWith("https://www.midjourney.com/jobs/") == true).FirstOrDefault()?.Url;
+            var messageHash = "";
+            if (!string.IsNullOrWhiteSpace(url))
+            {
+                messageHash = url.Substring(url.LastIndexOf('/') + 1);
+            }
+            if (string.IsNullOrWhiteSpace(messageHash))
+            {
+                Log.Error("跳过无效的变焦完成消息，无法获取 message hash: MessageId={@0}, Url={@1}", msgId, url);
+                return;
+            }
+
+            task.ImageUrl = imageUrl;
+            task.MessageId = msgId;
+            task.JobId = messageHash;
+
+            task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_HASH, messageHash);
+            task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_CONTENT, message.Content);
+
+            await FinishTask(task, message);
+            task.Awake();
+        }
+
+        /// <summary>
+        /// 查找并处理/完成变化任务
+        /// </summary>
+        /// <param name="instance"></param>
+        /// <param name="message"></param>
+        /// <param name="messageParseResult"></param>
+        /// <returns></returns>
+        protected async Task FindAndFinishVaryTask(DiscordInstance instance, EventData message, MessageParseResult messageParseResult, MessageType messageType)
+        {
+            var msgId = GetMessageId(message);
+            var fullPrompt = GetFullPrompt(message);
+            var imageUrl = GetImageUrl(message);
+
+            if (string.IsNullOrWhiteSpace(msgId)
+                || string.IsNullOrWhiteSpace(fullPrompt)
+                || string.IsNullOrWhiteSpace(imageUrl))
+            {
+                Log.Warning("跳过无效的变化消息: MessageId={@0}, FullPrompt={@1}, ImageUrl={@2}",
+                    msgId, fullPrompt, imageUrl);
+                return;
+            }
+
+            var list = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && c.Action == messageParseResult.Action).ToList();
+
+            // 1. 优先通过 message id 精确匹配
+            var task = list.Where(c => c.MessageId == msgId).FirstOrDefault();
+
+            // 2. 其次通过 interaction meta id 匹配
+            if (task == null && message.InteractionMetadata?.Id != null)
+            {
+                task = list.Where(c => c.InteractionMetadataId == message.InteractionMetadata.Id).FirstOrDefault();
+
+                if (task != null)
+                {
+                    Log.Information("通过 InteractionMetadataId 找到变化任务: TaskId={@0}, MessageId={@1}, InteractionMetadataId={@2}",
+                        task.Id, msgId, message.InteractionMetadata.Id);
+                }
+            }
+
+            // 3. 通过提示词查找任务
+            if (task == null)
+            {
+                var parseResult = MjPromptParser.Parse(fullPrompt);
+                if (parseResult == null || string.IsNullOrWhiteSpace(parseResult.CleanPrompt))
+                {
+                    Log.Warning("跳过无效的提示词变化消息: FullPrompt={@0}", fullPrompt);
+                    return;
+                }
+
+                var filterList = list.Where(c => !string.IsNullOrWhiteSpace(c.PromptEn) && parseResult.CleanPrompt.Equals(MjPromptParser.Parse(c.PromptEn)?.CleanPrompt, StringComparison.OrdinalIgnoreCase)).ToList();
+                if (filterList.Count == 1)
+                {
+                    task = filterList.FirstOrDefault();
+                }
+                else if (filterList.Count > 1)
+                {
+                    // 根据提交时间取 1 个并记录警告日志
+                    task = filterList.OrderBy(c => c.StartTime).FirstOrDefault();
+
+                    Log.Warning("通过提示词找到多个变化任务，取最早提交的一个: Count={@0}, TaskId={@1}, FullPrompt={@2}", filterList.Count, task.Id, fullPrompt);
+                }
+            }
+
+            // 4. 替换  url 为 <link> 后再次通过提示词查找任务
+            if (task == null)
+            {
+                var parseResult = MjPromptParser.Parse(fullPrompt);
+                if (parseResult == null || string.IsNullOrWhiteSpace(parseResult.CleanPromptNormalized))
+                {
+                    Log.Warning("跳过无效的替换 URL 后的提示词变化消息: FullPrompt={@0}", fullPrompt);
+                    return;
+                }
+                var filterList = list.Where(c => !string.IsNullOrWhiteSpace(c.PromptEn) && parseResult.CleanPromptNormalized.Equals(MjPromptParser.Parse(c.PromptEn)?.CleanPromptNormalized, StringComparison.OrdinalIgnoreCase)).ToList();
+                if (filterList.Count == 1)
+                {
+                    task = filterList.FirstOrDefault();
+                }
+                else if (filterList.Count > 1)
+                {
+                    // 根据提交时间取 1 个并记录警告日志
+                    task = filterList.OrderBy(c => c.StartTime).FirstOrDefault();
+                    Log.Warning("通过替换 URL 后的提示词找到多个变化任务，取最早提交的一个: Count={@0}, TaskId={@1}, FullPrompt={@2}", filterList.Count, task.Id, fullPrompt);
+                }
+            }
+
+            if (task == null || task.IsCompleted)
+            {
+                return;
+            }
+
+            if (!task.MessageIds.Contains(msgId))
+                task.MessageIds.Add(msgId);
+
+            message.SetProperty(Constants.MJ_MESSAGE_HANDLED, true);
+            task.SetProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, fullPrompt);
+
+            // 进度中
+            if (messageType == MessageType.UPDATE)
+            {
+                if (!string.IsNullOrWhiteSpace(messageParseResult.Progress))
+                {
+                    task.Status = TaskStatus.IN_PROGRESS;
+                    task.Progress = messageParseResult.Progress;
+
+                    // 如果启用保存过程图片
+                    if (GlobalConfiguration.Setting.EnableSaveIntermediateImage && !string.IsNullOrWhiteSpace(imageUrl))
+                    {
+                        var ff = new FileFetchHelper();
+                        var ffUrl = await ff.FetchFileToStorageAsync(imageUrl);
+                        if (!string.IsNullOrWhiteSpace(ffUrl))
+                        {
+                            imageUrl = ffUrl;
+                        }
+
+                        // 必须确保任务仍是 IN_PROGRESS 状态
+                        if (task.Status == TaskStatus.IN_PROGRESS)
+                        {
+                            task.ImageUrl = imageUrl;
+                            task.Awake();
+                        }
+                    }
+                    else
+                    {
+                        task.ImageUrl = imageUrl;
+                        task.Awake();
+                    }
+                }
+
+                return;
+            }
+
+            // https://www.midjourney.com/jobs/3e8ebcc8-cb3a-472b-a63b-8ef558dc9f48
+            var url = message.Components.SelectMany(x => x.Components).Where(y => y.Url?.StartsWith("https://www.midjourney.com/jobs/") == true).FirstOrDefault()?.Url;
+            var messageHash = "";
+            if (!string.IsNullOrWhiteSpace(url))
+            {
+                messageHash = url.Substring(url.LastIndexOf('/') + 1);
+            }
+            if (string.IsNullOrWhiteSpace(messageHash))
+            {
+                Log.Error("跳过无效的变化完成消息，无法获取 message hash: MessageId={@0}, Url={@1}", msgId, url);
+                return;
+            }
+
+            task.ImageUrl = imageUrl;
+            task.MessageId = msgId;
+            task.JobId = messageHash;
+
+            task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_HASH, messageHash);
+            task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_CONTENT, message.Content);
+
+            await FinishTask(task, message);
+            task.Awake();
+        }
+
+        /// <summary>
+        /// 查找并放大/处理/完成视频任务
+        /// </summary>
+        /// <param name="instance"></param>
+        /// <param name="message"></param>
+        /// <param name="messageParseResult"></param>
+        /// <returns></returns>
+        protected async Task FindAndFinishVideoTask(DiscordInstance instance, EventData message, MessageParseResult messageParseResult, MessageType messageType)
+        {
+            var msgId = GetMessageId(message);
+            var fullPrompt = GetFullPrompt(message);
+            var imageUrl = GetImageUrl(message);
+
+            if (string.IsNullOrWhiteSpace(msgId)
+                || string.IsNullOrWhiteSpace(fullPrompt)
+                || string.IsNullOrWhiteSpace(imageUrl))
+            {
+                Log.Warning("跳过无效的视频消息: MessageId={@0}, FullPrompt={@1}, ImageUrl={@2}",
+                    msgId, fullPrompt, imageUrl);
+                return;
+            }
+
+            // MJ::JOB::animate_high_extend::3::f77c789c-7b3c-48cc-abef-a36cfef9b3cb
+            var isUpscale = message.Components.SelectMany(c => c.Components).Any(x => x.CustomId.Contains("extend", StringComparison.OrdinalIgnoreCase));
+
+            var list = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED))
+                .WhereIf(isUpscale, c => c.Action == TaskAction.UPSCALE)
+                .WhereIf(!isUpscale, c => c.Action == TaskAction.VIDEO)
+                .ToList();
+
+            // 1. 优先通过 message id 精确匹配
+            var task = list.Where(c => c.MessageId == msgId).FirstOrDefault();
+
+            // 2. 其次通过 interaction meta id 匹配
+            if (task == null && message.InteractionMetadata?.Id != null)
+            {
+                task = list.Where(c => c.InteractionMetadataId == message.InteractionMetadata.Id).FirstOrDefault();
+
+                if (task != null)
+                {
+                    Log.Information("通过 InteractionMetadataId 找到视频任务: TaskId={@0}, MessageId={@1}, InteractionMetadataId={@2}",
+                        task.Id, msgId, message.InteractionMetadata.Id);
+                }
+            }
+
+            // 3. 通过 seed + 干净的提示词 匹配任务
+            if (task == null && fullPrompt.Contains("--seed", StringComparison.OrdinalIgnoreCase))
+            {
+                var parseResult = MjPromptParser.Parse(fullPrompt);
+                if (parseResult == null || string.IsNullOrWhiteSpace(parseResult.CleanPromptNormalized))
+                {
+                    Log.Warning("跳过无效的提示词种子视频消息: FullPrompt={@0}", fullPrompt);
+                    return;
+                }
+
+                var seed = parseResult.GetSeed()?.ToString();
+                var filterList = list
+                    .Where(c => !string.IsNullOrWhiteSpace(c.PromptEn) && parseResult.CleanPromptNormalized.Equals(MjPromptParser.Parse(c.PromptEn)?.CleanPromptNormalized, StringComparison.OrdinalIgnoreCase))
+                    .WhereIf(!string.IsNullOrWhiteSpace(seed), c => c.Seed == seed)
+                    .ToList();
+                if (filterList.Count == 1)
+                {
+                    task = filterList.FirstOrDefault();
+                }
+                else if (filterList.Count > 1)
+                {
+                    // 根据提交时间取 1 个并记录警告日志
+                    task = filterList.OrderBy(c => c.StartTime).FirstOrDefault();
+                    Log.Warning("通过替换 URL 后的提示词找到多个种子视频任务，取最早提交的一个: Count={@0}, TaskId={@1}, FullPrompt={@2}", filterList.Count, task.Id, fullPrompt);
+                }
+            }
+
+            // 4. 通过完整提示词查找任务
+            if (task == null)
+            {
+                var parseResult = MjPromptParser.Parse(fullPrompt);
+                if (parseResult == null || string.IsNullOrWhiteSpace(parseResult.CleanPrompt))
+                {
+                    Log.Warning("跳过无效的提示词视频消息: FullPrompt={@0}", fullPrompt);
+                    return;
+                }
+
+                var filterList = list.Where(c => !string.IsNullOrWhiteSpace(c.PromptEn) && parseResult.CleanPrompt.Equals(MjPromptParser.Parse(c.PromptEn)?.CleanPrompt, StringComparison.OrdinalIgnoreCase)).ToList();
+                if (filterList.Count == 1)
+                {
+                    task = filterList.FirstOrDefault();
+                }
+                else if (filterList.Count > 1)
+                {
+                    // 根据提交时间取 1 个并记录警告日志
+                    task = filterList.OrderBy(c => c.StartTime).FirstOrDefault();
+
+                    Log.Warning("通过提示词找到多个视频任务，取最早提交的一个: Count={@0}, TaskId={@1}, FullPrompt={@2}", filterList.Count, task.Id, fullPrompt);
+                }
+            }
+
+            // 5. 替换  url 为 <link> 后再次通过提示词查找任务
+            if (task == null)
+            {
+                var parseResult = MjPromptParser.Parse(fullPrompt);
+                if (parseResult == null || string.IsNullOrWhiteSpace(parseResult.CleanPromptNormalized))
+                {
+                    Log.Warning("跳过无效的替换 URL 后的提示词视频消息: FullPrompt={@0}", fullPrompt);
+                    return;
+                }
+                var filterList = list.Where(c => !string.IsNullOrWhiteSpace(c.PromptEn) && parseResult.CleanPromptNormalized.Equals(MjPromptParser.Parse(c.PromptEn)?.CleanPromptNormalized, StringComparison.OrdinalIgnoreCase)).ToList();
+                if (filterList.Count == 1)
+                {
+                    task = filterList.FirstOrDefault();
+                }
+                else if (filterList.Count > 1)
+                {
+                    // 根据提交时间取 1 个并记录警告日志
+                    task = filterList.OrderBy(c => c.StartTime).FirstOrDefault();
+                    Log.Warning("通过替换 URL 后的提示词找到多个视频任务，取最早提交的一个: Count={@0}, TaskId={@1}, FullPrompt={@2}", filterList.Count, task.Id, fullPrompt);
+                }
+            }
+
+            if (task == null || task.IsCompleted)
+            {
+                return;
+            }
+
+            if (!task.MessageIds.Contains(msgId))
+                task.MessageIds.Add(msgId);
+
+            message.SetProperty(Constants.MJ_MESSAGE_HANDLED, true);
+            task.SetProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, fullPrompt);
+
+            // 进度中
+            if (messageType == MessageType.UPDATE)
+            {
+                if (!string.IsNullOrWhiteSpace(messageParseResult.Progress))
+                {
+                    task.Status = TaskStatus.IN_PROGRESS;
+                    task.Progress = messageParseResult.Progress;
+
+                    // 如果启用保存过程图片
+                    if (GlobalConfiguration.Setting.EnableSaveIntermediateImage && !string.IsNullOrWhiteSpace(imageUrl))
+                    {
+                        var ff = new FileFetchHelper();
+                        var ffUrl = await ff.FetchFileToStorageAsync(imageUrl);
+                        if (!string.IsNullOrWhiteSpace(ffUrl))
+                        {
+                            imageUrl = ffUrl;
+                        }
+
+                        // 必须确保任务仍是 IN_PROGRESS 状态
+                        if (task.Status == TaskStatus.IN_PROGRESS)
+                        {
+                            task.ImageUrl = imageUrl;
+                            task.Awake();
+                        }
+                    }
+                    else
+                    {
+                        task.ImageUrl = imageUrl;
+                        task.Awake();
+                    }
+                }
+
+                return;
+            }
+
+            var messageHash = "";
+            if (isUpscale)
+            {
+                var customId = message.Components.SelectMany(c => c.Components)
+                    .Where(x => x.CustomId.Contains("extend", StringComparison.OrdinalIgnoreCase))
+                    .FirstOrDefault()?.CustomId;
+                if (!string.IsNullOrWhiteSpace(customId))
+                {
+                    messageHash = customId.Split("::").LastOrDefault();
+                }
+
+                // 视频 API 拓展任务类型
+                // 检查是否是视频扩展的第一步（放大）
+                var isVideoExtend = !string.IsNullOrWhiteSpace(task.GetProperty<string>(Constants.TASK_PROPERTY_VIDEO_EXTEND_TARGET_TASK_ID, default));
+                if (isVideoExtend)
+                {
+                    // 视频扩展任务，不要完成，继续触发扩展操作
+                    task.Status = TaskStatus.IN_PROGRESS;
+                    task.Description = "/video extend";
+                    task.Progress = "0%";
+
+                    Log.Information("视频放大完成，准备触发扩展操作: TaskId={TaskId}", task.Id);
+
+                    // 触发第二步（扩展）
+                    CheckAndTriggerVideoExtend(instance, task, messageHash);
+
+                    return;
+                }
+            }
+            else
+            {
+                // https://www.midjourney.com/jobs/3e8ebcc8-cb3a-472b-a63b-8ef558dc9f48
+                var url = message.Components.SelectMany(x => x.Components).Where(y => y.Url?.StartsWith("https://www.midjourney.com/jobs/") == true).FirstOrDefault()?.Url;
+                if (!string.IsNullOrWhiteSpace(url))
+                {
+                    messageHash = url.Substring(url.LastIndexOf('/') + 1);
+                }
+                if (string.IsNullOrWhiteSpace(messageHash))
+                {
+                    Log.Error("跳过无效的视频完成消息，无法获取 message hash: MessageId={@0}, Url={@1}", msgId, url);
+                    return;
+                }
+            }
+
+            task.ImageUrl = imageUrl;
+            task.MessageId = msgId;
+            task.JobId = messageHash;
+
+            task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_HASH, messageHash);
+            task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_CONTENT, message.Content);
+
+            await FinishTask(task, message);
+            task.Awake();
+        }
+
+        /// <summary>
+        /// 查找并处理/完成想象/混图任务
+        /// </summary>
+        /// <param name="instance"></param>
+        /// <param name="message"></param>
+        /// <param name="messageParseResult"></param>
+        /// <returns></returns>
+        protected async Task FindAndFinishImageTask(DiscordInstance instance, EventData message, MessageParseResult messageParseResult, MessageType messageType)
+        {
+            var msgId = GetMessageId(message);
+            var fullPrompt = GetFullPrompt(message);
+            var imageUrl = GetImageUrl(message);
+
+            if (string.IsNullOrWhiteSpace(msgId)
+                || string.IsNullOrWhiteSpace(fullPrompt)
+                || string.IsNullOrWhiteSpace(imageUrl))
+            {
+                Log.Warning("跳过无效的想象/混图消息: MessageId={@0}, FullPrompt={@1}, ImageUrl={@2}",
+                    msgId, fullPrompt, imageUrl);
+                return;
+            }
+
+            var list = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED)
+            && (c.Action == TaskAction.IMAGINE || c.Action == TaskAction.BLEND)).ToList();
+
+            // 1. 优先通过 message id 精确匹配
+            var task = list.Where(c => c.MessageId == msgId).FirstOrDefault();
+
+            // 2. 其次通过 interaction meta id 匹配
+            if (task == null && message.InteractionMetadata?.Id != null)
+            {
+                task = list.Where(c => c.InteractionMetadataId == message.InteractionMetadata.Id).FirstOrDefault();
+
+                if (task != null)
+                {
+                    Log.Information("通过 InteractionMetadataId 找到想象/混图任务: TaskId={@0}, MessageId={@1}, InteractionMetadataId={@2}",
+                        task.Id, msgId, message.InteractionMetadata.Id);
+                }
+            }
+
+            // 3. 通过 seed + 干净的提示词 匹配任务
+            if (task == null && fullPrompt.Contains("--seed", StringComparison.OrdinalIgnoreCase))
+            {
+                var parseResult = MjPromptParser.Parse(fullPrompt);
+                if (parseResult == null || string.IsNullOrWhiteSpace(parseResult.CleanPromptNormalized))
+                {
+                    Log.Warning("跳过无效的提示词种子想象/混图消息: FullPrompt={@0}", fullPrompt);
+                    return;
+                }
+
+                var seed = parseResult.GetSeed()?.ToString();
+                var filterList = list
+                    .Where(c => !string.IsNullOrWhiteSpace(c.PromptEn) && parseResult.CleanPromptNormalized.Equals(MjPromptParser.Parse(c.PromptEn)?.CleanPromptNormalized, StringComparison.OrdinalIgnoreCase))
+                    .WhereIf(!string.IsNullOrWhiteSpace(seed), c => c.Seed == seed)
+                    .ToList();
+                if (filterList.Count == 1)
+                {
+                    task = filterList.FirstOrDefault();
+                }
+                else if (filterList.Count > 1)
+                {
+                    // 根据提交时间取 1 个并记录警告日志
+                    task = filterList.OrderBy(c => c.StartTime).FirstOrDefault();
+                    Log.Warning("通过替换 URL 后的提示词找到多个种子想象/混图任务，取最早提交的一个: Count={@0}, TaskId={@1}, FullPrompt={@2}", filterList.Count, task.Id, fullPrompt);
+                }
+            }
+
+            // 4. 通过完整提示词查找任务
+            if (task == null)
+            {
+                var parseResult = MjPromptParser.Parse(fullPrompt);
+                if (parseResult == null || string.IsNullOrWhiteSpace(parseResult.CleanPrompt))
+                {
+                    Log.Warning("跳过无效的提示词想象/混图消息: FullPrompt={@0}", fullPrompt);
+                    return;
+                }
+
+                var filterList = list.Where(c => !string.IsNullOrWhiteSpace(c.PromptEn) && parseResult.CleanPrompt.Equals(MjPromptParser.Parse(c.PromptEn)?.CleanPrompt, StringComparison.OrdinalIgnoreCase)).ToList();
+                if (filterList.Count == 1)
+                {
+                    task = filterList.FirstOrDefault();
+                }
+                else if (filterList.Count > 1)
+                {
+                    // 根据提交时间取 1 个并记录警告日志
+                    task = filterList.OrderBy(c => c.StartTime).FirstOrDefault();
+
+                    Log.Warning("通过提示词找到多个想象/混图任务，取最早提交的一个: Count={@0}, TaskId={@1}, FullPrompt={@2}", filterList.Count, task.Id, fullPrompt);
+                }
+            }
+
+            // 5. 替换  url 为 <link> 后再次通过提示词查找任务
+            if (task == null)
+            {
+                var parseResult = MjPromptParser.Parse(fullPrompt);
+                if (parseResult == null || string.IsNullOrWhiteSpace(parseResult.CleanPromptNormalized))
+                {
+                    Log.Warning("跳过无效的替换 URL 后的提示词想象/混图消息: FullPrompt={@0}", fullPrompt);
+                    return;
+                }
+                var filterList = list.Where(c => !string.IsNullOrWhiteSpace(c.PromptEn) && parseResult.CleanPromptNormalized.Equals(MjPromptParser.Parse(c.PromptEn)?.CleanPromptNormalized, StringComparison.OrdinalIgnoreCase)).ToList();
+                if (filterList.Count == 1)
+                {
+                    task = filterList.FirstOrDefault();
+                }
+                else if (filterList.Count > 1)
+                {
+                    // 根据提交时间取 1 个并记录警告日志
+                    task = filterList.OrderBy(c => c.StartTime).FirstOrDefault();
+                    Log.Warning("通过替换 URL 后的提示词找到多个想象/混图任务，取最早提交的一个: Count={@0}, TaskId={@1}, FullPrompt={@2}", filterList.Count, task.Id, fullPrompt);
+                }
+            }
+
+            if (task == null || task.IsCompleted)
+            {
+                return;
+            }
+
+            if (!task.MessageIds.Contains(msgId))
+                task.MessageIds.Add(msgId);
+
+            message.SetProperty(Constants.MJ_MESSAGE_HANDLED, true);
+            task.SetProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, fullPrompt);
+
+            // 进度中
+            if (messageType == MessageType.UPDATE)
+            {
+                if (!string.IsNullOrWhiteSpace(messageParseResult.Progress))
+                {
+                    task.Status = TaskStatus.IN_PROGRESS;
+                    task.Progress = messageParseResult.Progress;
+
+                    // 如果启用保存过程图片
+                    if (GlobalConfiguration.Setting.EnableSaveIntermediateImage && !string.IsNullOrWhiteSpace(imageUrl))
+                    {
+                        var ff = new FileFetchHelper();
+                        var ffUrl = await ff.FetchFileToStorageAsync(imageUrl);
+                        if (!string.IsNullOrWhiteSpace(ffUrl))
+                        {
+                            imageUrl = ffUrl;
+                        }
+
+                        // 必须确保任务仍是 IN_PROGRESS 状态
+                        if (task.Status == TaskStatus.IN_PROGRESS)
+                        {
+                            task.ImageUrl = imageUrl;
+                            task.Awake();
+                        }
+                    }
+                    else
+                    {
+                        task.ImageUrl = imageUrl;
+                        task.Awake();
+                    }
+                }
+
+                return;
+            }
+
+            // https://www.midjourney.com/jobs/3e8ebcc8-cb3a-472b-a63b-8ef558dc9f48
+            var url = message.Components.SelectMany(x => x.Components).Where(y => y.Url?.StartsWith("https://www.midjourney.com/jobs/") == true).FirstOrDefault()?.Url;
+            var messageHash = "";
+            if (!string.IsNullOrWhiteSpace(url))
+            {
+                messageHash = url.Substring(url.LastIndexOf('/') + 1);
+            }
+            if (string.IsNullOrWhiteSpace(messageHash))
+            {
+                Log.Error("跳过无效的想象/混图完成消息，无法获取 message hash: MessageId={@0}, Url={@1}", msgId, url);
+                return;
+            }
+
+            task.ImageUrl = imageUrl;
+            task.MessageId = msgId;
+            task.JobId = messageHash;
+
+            task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_HASH, messageHash);
+            task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_CONTENT, message.Content);
+
+            await FinishTask(task, message);
+            task.Awake();
+        }
+
+        /// <summary>
+        /// 检查并触发视频扩展操作
+        /// </summary>
+        protected void CheckAndTriggerVideoExtend(DiscordInstance instance, TaskInfo upscaleTask, string messageHash)
+        {
+            try
+            {
+                // 检查任务是否有视频扩展标记
+                var videoExtendTargetTaskId = upscaleTask.GetProperty<string>(Constants.TASK_PROPERTY_VIDEO_EXTEND_TARGET_TASK_ID, default);
+                if (string.IsNullOrWhiteSpace(videoExtendTargetTaskId))
+                {
+                    return;
+                }
+
+                // 获取扩展相关参数
+                var extendPrompt = upscaleTask.GetProperty<string>(Constants.TASK_PROPERTY_VIDEO_EXTEND_PROMPT, default);
+                var extendMotion = upscaleTask.GetProperty<string>(Constants.TASK_PROPERTY_VIDEO_EXTEND_MOTION, default);
+                var extendIndex = upscaleTask.GetProperty<int>(Constants.TASK_PROPERTY_VIDEO_EXTEND_INDEX, 1);
+
+                if (string.IsNullOrWhiteSpace(extendMotion))
+                {
+                    extendMotion = "high";
+                }
+
+                Log.Information("视频放大完成，准备触发扩展操作: UpscaleTaskId={UpscaleTaskId}, TargetTaskId={TargetTaskId}, Motion={Motion}, Index={Index}, ButtonsCount={ButtonsCount}",
+                    upscaleTask.Id, videoExtendTargetTaskId, extendMotion, extendIndex, upscaleTask.Buttons?.Count ?? 0);
+
+                // 关键改进：从 Buttons 中查找正确的 extend customId，而不是自己构建
+                // 因为 upscale 后的 JobId 可能不是正确的 hash 值
+                var extendButton = upscaleTask.Buttons?.FirstOrDefault(x =>
+                    x.CustomId?.Contains($"animate_{extendMotion}_extend") == true);
+
+                if (extendButton == null || string.IsNullOrWhiteSpace(extendButton.CustomId))
+                {
+                    Log.Warning("❌ 找不到 extend 按钮: UpscaleTaskId={TaskId}, Motion={Motion}, Buttons={@Buttons}",
+                        upscaleTask.Id, extendMotion, upscaleTask.Buttons);
+
+                    // 标记任务失败
+                    upscaleTask.Status = TaskStatus.FAILURE;
+                    upscaleTask.FailReason = $"找不到 extend 按钮 (motion: {extendMotion})";
+                    _freeSql.Update(upscaleTask);
+                    upscaleTask.Awake();
+                    return;
+                }
+
+                var extendCustomId = extendButton.CustomId;
+
+                // 异步触发扩展操作
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        // 等待 1.5 秒，确保消息已完全处理
+                        await Task.Delay(1500);
+
+                        // 创建一个新的 nonce 用于 extend 操作
+                        var extendNonce = SnowFlake.NextId();
+
+                        // 更新当前任务（upscaleTask 就是用户看到的任务）
+                        upscaleTask.Nonce = extendNonce;
+                        upscaleTask.Status = TaskStatus.SUBMITTED;
+                        upscaleTask.Action = TaskAction.VIDEO;
+                        upscaleTask.Description = "/video extend";
+                        upscaleTask.Progress = "0%";
+                        upscaleTask.PromptEn = extendPrompt;
+                        upscaleTask.RemixAutoSubmit = instance.Account.RemixAutoSubmit && (instance.Account.MjRemixOn || instance.Account.NijiRemixOn);
+
+                        upscaleTask.SetProperty(Constants.TASK_PROPERTY_CUSTOM_ID, extendCustomId);
+                        upscaleTask.SetProperty(Constants.TASK_PROPERTY_NONCE, extendNonce);
+                        upscaleTask.SetProperty(Constants.TASK_PROPERTY_MESSAGE_ID, upscaleTask.MessageId);
+                        upscaleTask.SetProperty(Constants.TASK_PROPERTY_VIDEO_EXTEND_PROMPT, extendPrompt);
+
+                        // 清除 video extend 标记，避免任务完成时再次触发
+                        upscaleTask.SetProperty(Constants.TASK_PROPERTY_VIDEO_EXTEND_TARGET_TASK_ID, null);
+                        upscaleTask.SetProperty(Constants.TASK_PROPERTY_VIDEO_EXTEND_MOTION, null);
+                        upscaleTask.SetProperty(Constants.TASK_PROPERTY_VIDEO_EXTEND_INDEX, null);
+
+                        // 如果开启了 remix 自动提交，标记任务状态
+                        if (upscaleTask.RemixAutoSubmit)
+                        {
+                            upscaleTask.RemixModaling = true;
+                        }
+
+                        // 调用 Action 接口触发扩展
+                        var result = await instance.ActionAsync(upscaleTask.MessageId, extendCustomId,
+                            upscaleTask.GetProperty<int>(Constants.TASK_PROPERTY_FLAGS, 0),
+                            extendNonce, upscaleTask);
+
+                        if (result.Code == ReturnCode.SUCCESS)
+                        {
+                            Log.Information("视频扩展 extend action 触发成功: TaskId={TaskId}", upscaleTask.Id);
+                        }
+                        else
+                        {
+                            Log.Error("视频扩展 extend action 触发失败: TaskId={TaskId}, Error={Error}",
+                                upscaleTask.Id, result.Description);
+                            upscaleTask.Fail(result.Description);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Error(ex, "执行视频扩展操作时发生异常: UpscaleTaskId={UpscaleTaskId}", upscaleTask.Id);
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "检查视频扩展时发生异常: UpscaleTaskId={UpscaleTaskId}", upscaleTask.Id);
+            }
         }
     }
 

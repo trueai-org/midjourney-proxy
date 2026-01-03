@@ -16,6 +16,7 @@ namespace Midjourney.Base.Util
         /// <summary>是否为布尔标志参数（无值）</summary>
         public bool IsFlag => Value == null;
 
+        /// <summary>字符串表示形式</summary>
         public override string ToString() => IsFlag ? $"--{Name}" : $"--{Name} {Value}";
     }
 
@@ -56,6 +57,15 @@ namespace Midjourney.Base.Util
     {
         /// <summary>干净的提示词（移除所有参数后的纯文本）</summary>
         public string CleanPrompt { get; set; } = string.Empty;
+
+        /// <summary>
+        /// 干净的提示词，并将 url 替换为固定 link
+        /// </summary>
+        public string CleanPromptNormalized =>
+            Regex.Replace(CleanPrompt, @"https?://[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]", "<link>")
+            .Replace("<<link>>", "<link>")
+            .Replace(" -- ", " ")
+            .Replace("  ", " ").Trim();
 
         /// <summary>所有解析出的参数列表（支持重复参数）</summary>
         public List<MjParameter> Parameters { get; set; } = new();

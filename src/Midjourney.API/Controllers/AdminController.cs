@@ -568,7 +568,7 @@ namespace Midjourney.API.Controllers
             {
                 // Token 加密
                 item.UserToken = "***";
-                item.BotToken = "***";
+                //item.BotToken = "***";
             }
 
             return Ok(item);
@@ -1076,7 +1076,7 @@ namespace Midjourney.API.Controllers
                 {
                     // Token 加密
                     item.UserToken = "****";
-                    item.BotToken = "****";
+                    //item.BotToken = "****";
 
                     item.CfUrl = "****";
                     item.CfHashUrl = "****";
@@ -1229,7 +1229,7 @@ namespace Midjourney.API.Controllers
                 {
                     // Token 加密
                     item.UserToken = "****";
-                    item.BotToken = "****";
+                    //item.BotToken = "****";
 
                     item.CfUrl = "****";
                     item.CfHashUrl = "****";
@@ -1342,23 +1342,18 @@ namespace Midjourney.API.Controllers
                     {
                         if (DiscordInstance.GlobalRunningTasks.TryGetValue(id, out var task) && task != null)
                         {
-                            // 取消任务
                             task.Fail("删除任务");
-                            _freeSql.DeleteById<TaskInfo>(id);
                         }
-                        else
-                        {
-                            targetTask.Fail("删除任务");
-                            _freeSql.DeleteById<TaskInfo>(id);
 
-                            var notification = new RedisNotification
-                            {
-                                Type = ENotificationType.DeleteTaskInfo,
-                                TaskInfoId = id
-                            };
-                            RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
-                        }
+                        var notification = new RedisNotification
+                        {
+                            Type = ENotificationType.DeleteTaskInfo,
+                            TaskInfoId = id
+                        };
+                        RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
                     }
+
+                    _freeSql.DeleteById<TaskInfo>(id);
                 }
             }
 

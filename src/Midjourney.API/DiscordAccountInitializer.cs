@@ -30,7 +30,6 @@ using Midjourney.Infrastructure.LoadBalancer;
 using Midjourney.Infrastructure.Services;
 using Midjourney.License;
 using MongoDB.Driver;
-using Newtonsoft.Json.Linq;
 using RestSharp;
 using Serilog;
 
@@ -938,78 +937,78 @@ namespace Midjourney.API
             }
         }
 
-        /// <summary>
-        /// 随机 60~600s 延期 token
-        /// </summary>
-        /// <returns></returns>
-        public async Task RandomSyncToken(DiscordAccount account)
-        {
-            var key = $"random_token_{account.ChannelId}";
-            await _memoryCache.GetOrCreateAsync(key, async c =>
-            {
-                try
-                {
-                    _logger.Information("随机对 token 进行延期 {@0}", account.ChannelId);
+        ///// <summary>
+        ///// 随机 60~600s 延期 token
+        ///// </summary>
+        ///// <returns></returns>
+        //public async Task RandomSyncToken(DiscordAccount account)
+        //{
+        //    var key = $"random_token_{account.ChannelId}";
+        //    await _memoryCache.GetOrCreateAsync(key, async c =>
+        //    {
+        //        try
+        //        {
+        //            _logger.Information("随机对 token 进行延期 {@0}", account.ChannelId);
 
-                    // 随机 60~600s
-                    var random = new Random();
-                    var sec = random.Next(60, 600);
-                    c.SetAbsoluteExpiration(TimeSpan.FromSeconds(sec));
+        //            // 随机 60~600s
+        //            var random = new Random();
+        //            var sec = random.Next(60, 600);
+        //            c.SetAbsoluteExpiration(TimeSpan.FromSeconds(sec));
 
-                    var options = new RestClientOptions(_discordHelper.GetServer())
-                    {
-                        MaxTimeout = -1,
-                        UserAgent = account.UserAgent ?? "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
-                    };
-                    var client = new RestClient(options);
-                    var request = new RestRequest("/api/v9/content-inventory/users/@me", Method.Get);
-                    request.AddHeader("authorization", account.UserToken);
+        //            var options = new RestClientOptions(_discordHelper.GetServer())
+        //            {
+        //                Timeout = TimeSpan.FromMinutes(5),
+        //                UserAgent = account.UserAgent ?? "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+        //            };
+        //            var client = new RestClient(options);
+        //            var request = new RestRequest("/api/v9/content-inventory/users/@me", Method.Get);
+        //            request.AddHeader("authorization", account.UserToken);
 
-                    // base64 编码
-                    // "eyJvcyI6IldpbmRvd3MiLCJicm93c2VyIjoiQ2hyb21lIiwiZGV2aWNlIjoiIiwic3lzdGVtX2xvY2FsZSI6InpoLUNOIiwiYnJvd3Nlcl91c2VyX2FnZW50IjoiTW96aWxsYS81LjAgKFdpbmRvd3MgTlQgMTAuMDsgV2luNjQ7IHg2NCkgQXBwbGVXZWJLaXQvNTM3LjM2IChLSFRNTCwgbGlrZSBHZWNrbykgQ2hyb21lLzEyOS4wLjAuMCBTYWZhcmkvNTM3LjM2IiwiYnJvd3Nlcl92ZXJzaW9uIjoiMTI5LjAuMC4wIiwib3NfdmVyc2lvbiI6IjEwIiwicmVmZXJyZXIiOiJodHRwczovL2Rpc2NvcmQuY29tLz9kaXNjb3JkdG9rZW49TVRJM056TXhOVEEyT1RFMU1UQXlNekUzTlEuR1k2U2RpLm9zdl81cVpOcl9xeVdxVDBtTW0tYkJ4RVRXQzgwQzVPbzU4WlJvIiwicmVmZXJyaW5nX2RvbWFpbiI6ImRpc2NvcmQuY29tIiwicmVmZXJyZXJfY3VycmVudCI6IiIsInJlZmVycmluZ19kb21haW5fY3VycmVudCI6IiIsInJlbGVhc2VfY2hhbm5lbCI6InN0YWJsZSIsImNsaWVudF9idWlsZF9udW1iZXIiOjM0Mjk2OCwiY2xpZW50X2V2ZW50X3NvdXJjZSI6bnVsbH0="
+        //            // base64 编码
+        //            // "eyJvcyI6IldpbmRvd3MiLCJicm93c2VyIjoiQ2hyb21lIiwiZGV2aWNlIjoiIiwic3lzdGVtX2xvY2FsZSI6InpoLUNOIiwiYnJvd3Nlcl91c2VyX2FnZW50IjoiTW96aWxsYS81LjAgKFdpbmRvd3MgTlQgMTAuMDsgV2luNjQ7IHg2NCkgQXBwbGVXZWJLaXQvNTM3LjM2IChLSFRNTCwgbGlrZSBHZWNrbykgQ2hyb21lLzEyOS4wLjAuMCBTYWZhcmkvNTM3LjM2IiwiYnJvd3Nlcl92ZXJzaW9uIjoiMTI5LjAuMC4wIiwib3NfdmVyc2lvbiI6IjEwIiwicmVmZXJyZXIiOiJodHRwczovL2Rpc2NvcmQuY29tLz9kaXNjb3JkdG9rZW49TVRJM056TXhOVEEyT1RFMU1UQXlNekUzTlEuR1k2U2RpLm9zdl81cVpOcl9xeVdxVDBtTW0tYkJ4RVRXQzgwQzVPbzU4WlJvIiwicmVmZXJyaW5nX2RvbWFpbiI6ImRpc2NvcmQuY29tIiwicmVmZXJyZXJfY3VycmVudCI6IiIsInJlZmVycmluZ19kb21haW5fY3VycmVudCI6IiIsInJlbGVhc2VfY2hhbm5lbCI6InN0YWJsZSIsImNsaWVudF9idWlsZF9udW1iZXIiOjM0Mjk2OCwiY2xpZW50X2V2ZW50X3NvdXJjZSI6bnVsbH0="
 
-                    var str = "{\"os\":\"Windows\",\"browser\":\"Chrome\",\"device\":\"\",\"system_locale\":\"zh-CN\",\"browser_user_agent\":\"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36\",\"browser_version\":\"129.0.0.0\",\"os_version\":\"10\",\"referrer\":\"https://discord.com/?discordtoken={@token}\",\"referring_domain\":\"discord.com\",\"referrer_current\":\"\",\"referring_domain_current\":\"\",\"release_channel\":\"stable\",\"client_build_number\":342968,\"client_event_source\":null}";
-                    str = str.Replace("{@token}", account.UserToken);
+        //            var str = "{\"os\":\"Windows\",\"browser\":\"Chrome\",\"device\":\"\",\"system_locale\":\"zh-CN\",\"browser_user_agent\":\"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36\",\"browser_version\":\"129.0.0.0\",\"os_version\":\"10\",\"referrer\":\"https://discord.com/?discordtoken={@token}\",\"referring_domain\":\"discord.com\",\"referrer_current\":\"\",\"referring_domain_current\":\"\",\"release_channel\":\"stable\",\"client_build_number\":342968,\"client_event_source\":null}";
+        //            str = str.Replace("{@token}", account.UserToken);
 
-                    // str 转 base64
-                    var bs64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(str));
+        //            // str 转 base64
+        //            var bs64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(str));
 
-                    request.AddHeader("x-super-properties", bs64);
-                    var response = await client.ExecuteAsync(request);
+        //            request.AddHeader("x-super-properties", bs64);
+        //            var response = await client.ExecuteAsync(request);
 
-                    //{
-                    //    "request_id": "62a56587a8964dfa9cbb81c234a9a962",
-                    //    "entries": [],
-                    //    "entries_hash": 0,
-                    //    "expired_at": "2024-11-08T02:50:21.323000+00:00",
-                    //    "refresh_stale_inbox_after_ms": 30000,
-                    //    "refresh_token": "eyJjcmVhdGVkX2F0IjogIjIwMjQtMTEtMDhUMDI6Mzk6MjguNDY4MzcyKzAwOjAwIiwgImNvbnRlbnRfaGFzaCI6ICI0N0RFUXBqOEhCU2ErL1RJbVcrNUpDZXVRZVJrbTVOTXBKV1pHM2hTdUZVPSJ9",
-                    //    "wait_ms_until_next_fetch": 652856
-                    //}
+        //            //{
+        //            //    "request_id": "62a56587a8964dfa9cbb81c234a9a962",
+        //            //    "entries": [],
+        //            //    "entries_hash": 0,
+        //            //    "expired_at": "2024-11-08T02:50:21.323000+00:00",
+        //            //    "refresh_stale_inbox_after_ms": 30000,
+        //            //    "refresh_token": "eyJjcmVhdGVkX2F0IjogIjIwMjQtMTEtMDhUMDI6Mzk6MjguNDY4MzcyKzAwOjAwIiwgImNvbnRlbnRfaGFzaCI6ICI0N0RFUXBqOEhCU2ErL1RJbVcrNUpDZXVRZVJrbTVOTXBKV1pHM2hTdUZVPSJ9",
+        //            //    "wait_ms_until_next_fetch": 652856
+        //            //}
 
-                    var obj = JObject.Parse(response.Content);
-                    if (obj.ContainsKey("refresh_token"))
-                    {
-                        var refreshToken = obj["refresh_token"].ToString();
-                        if (!string.IsNullOrWhiteSpace(refreshToken))
-                        {
-                            _logger.Information("随机对 token 进行延期成功 {@0}", account.ChannelId);
-                            return true;
-                        }
-                    }
+        //            var obj = JObject.Parse(response.Content);
+        //            if (obj.ContainsKey("refresh_token"))
+        //            {
+        //                var refreshToken = obj["refresh_token"].ToString();
+        //                if (!string.IsNullOrWhiteSpace(refreshToken))
+        //                {
+        //                    _logger.Information("随机对 token 进行延期成功 {@0}", account.ChannelId);
+        //                    return true;
+        //                }
+        //            }
 
-                    _logger.Information("随机对 token 进行延期失败 {@0}, {@1}", account.ChannelId, response.Content);
+        //            _logger.Information("随机对 token 进行延期失败 {@0}, {@1}", account.ChannelId, response.Content);
 
-                    return false;
-                }
-                catch (Exception ex)
-                {
-                    _logger.Error(ex, "随机对 token 进行延期异常 {@0}", account.ChannelId);
-                }
+        //            return false;
+        //        }
+        //        catch (Exception ex)
+        //        {
+        //            _logger.Error(ex, "随机对 token 进行延期异常 {@0}", account.ChannelId);
+        //        }
 
-                return false;
-            });
-        }
+        //        return false;
+        //    });
+        //}
 
         /// <summary>
         /// 更新账号信息
@@ -1121,7 +1120,7 @@ namespace Midjourney.API
             model.TimeoutMinutes = param.TimeoutMinutes;
             model.Weight = param.Weight;
             model.Remark = param.Remark;
-            model.BotToken = param.BotToken;
+            //model.BotToken = param.BotToken;
             model.UserToken = param.UserToken;
             model.Mode = param.Mode;
             model.Sponsor = param.Sponsor;

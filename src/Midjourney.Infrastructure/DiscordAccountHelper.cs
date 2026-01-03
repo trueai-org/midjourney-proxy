@@ -24,7 +24,6 @@
 
 using System.Net;
 using System.Text.Json;
-using Midjourney.Infrastructure.Handle;
 using Midjourney.Infrastructure.LoadBalancer;
 using RestSharp;
 using Serilog;
@@ -37,25 +36,19 @@ namespace Midjourney.Infrastructure
     public class DiscordAccountHelper
     {
         private readonly IFreeSql _freeSql = FreeSqlHelper.FreeSql;
-        private readonly DiscordHelper _discordHelper;
-        private readonly ITaskStoreService _taskStoreService;
-        private readonly INotifyService _notifyService;
 
-        private readonly IEnumerable<UserMessageHandler> _userMessageHandlers;
+        private readonly DiscordHelper _discordHelper;
+        private readonly INotifyService _notifyService;
         private readonly Dictionary<string, string> _paramsMap;
         private readonly IHttpClientFactory _httpClientFactory;
 
         public DiscordAccountHelper(
             DiscordHelper discordHelper,
-            ITaskStoreService taskStoreService,
             INotifyService notifyService,
-            IEnumerable<UserMessageHandler> userMessageHandlers,
             IHttpClientFactory httpClientFactory)
         {
             _discordHelper = discordHelper;
-            _taskStoreService = taskStoreService;
             _notifyService = notifyService;
-            _userMessageHandlers = userMessageHandlers;
 
             var paramsMap = new Dictionary<string, string>();
             var assembly = typeof(GlobalConfiguration).Assembly; // Assembly.GetExecutingAssembly();
@@ -113,7 +106,6 @@ namespace Midjourney.Infrastructure
             }
 
             var discordInstance = new DiscordInstance(account,
-                _taskStoreService,
                 _notifyService,
                 _discordHelper,
                 _paramsMap,
@@ -135,10 +127,7 @@ namespace Midjourney.Infrastructure
                 else
                 {
                     // 用户 WebSocket 连接
-                    var webSocket = new WebSocketManager(_discordHelper, 
-                        webProxy,
-                        discordInstance,
-                        _userMessageHandlers);
+                    var webSocket = new WebSocketManager(_discordHelper, webProxy, discordInstance);
                     await webSocket.StartAsync();
 
                     // 跟踪 wss 连接

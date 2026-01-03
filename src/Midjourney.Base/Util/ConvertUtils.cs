@@ -205,50 +205,50 @@ namespace Midjourney.Base.Util
             return matcher.Replace("<<link>>", "<link>");
         }
 
-        public static TaskChangeParams ConvertChangeParams(string content)
-        {
-            var split = content.Split(' ').ToList();
-            if (split.Count != 2)
-            {
-                return null;
-            }
-            var action = split[1].ToLower();
-            var changeParams = new TaskChangeParams
-            {
-                Id = split[0]
-            };
-            if (action.StartsWith('u'))
-            {
-                changeParams.Action = TaskAction.UPSCALE;
-            }
-            else if (action.StartsWith('v'))
-            {
-                changeParams.Action = TaskAction.VARIATION;
-            }
-            else if (action.Equals("r"))
-            {
-                changeParams.Action = TaskAction.REROLL;
-                return changeParams;
-            }
-            else
-            {
-                return null;
-            }
-            try
-            {
-                var index = int.Parse(action.Substring(1, 1));
-                if (index < 1 || index > 4)
-                {
-                    return null;
-                }
-                changeParams.Index = index;
-            }
-            catch (Exception)
-            {
-                return null;
-            }
-            return changeParams;
-        }
+        //public static TaskChangeParams ConvertChangeParams(string content)
+        //{
+        //    var split = content.Split(' ').ToList();
+        //    if (split.Count != 2)
+        //    {
+        //        return null;
+        //    }
+        //    var action = split[1].ToLower();
+        //    var changeParams = new TaskChangeParams
+        //    {
+        //        Id = split[0]
+        //    };
+        //    if (action.StartsWith('u'))
+        //    {
+        //        changeParams.Action = TaskAction.UPSCALE;
+        //    }
+        //    else if (action.StartsWith('v'))
+        //    {
+        //        changeParams.Action = TaskAction.VARIATION;
+        //    }
+        //    else if (action.Equals("r"))
+        //    {
+        //        changeParams.Action = TaskAction.REROLL;
+        //        return changeParams;
+        //    }
+        //    else
+        //    {
+        //        return null;
+        //    }
+        //    try
+        //    {
+        //        var index = int.Parse(action.Substring(1, 1));
+        //        if (index < 1 || index > 4)
+        //        {
+        //            return null;
+        //        }
+        //        changeParams.Index = index;
+        //    }
+        //    catch (Exception)
+        //    {
+        //        return null;
+        //    }
+        //    return changeParams;
+        //}
 
         /// <summary>
         /// 提取 seed 信息

@@ -31,8 +31,6 @@ namespace Midjourney.Base.Models
     /// <summary>
     /// 用户
     /// </summary>
-    [BsonCollection("user")]
-    [MongoDB.Bson.Serialization.Attributes.BsonIgnoreExtraElements]
     [Serializable]
     public class User : DomainObject
     {

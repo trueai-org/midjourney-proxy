@@ -35,7 +35,7 @@ namespace Midjourney.Infrastructure.Services
     /// <summary>
     /// 通知服务实现类。
     /// </summary>
-    public class NotifyServiceImpl : INotifyService
+    public class NotifyService : INotifyService
     {
         private static readonly JsonSerializerOptions _jsonSerializerOptions = new JsonSerializerOptions
         {
@@ -43,13 +43,13 @@ namespace Midjourney.Infrastructure.Services
             Converters = { new JsonStringEnumConverter() } // 添加枚举序列化为字符串的转换器
         };
 
-        private readonly ILogger<NotifyServiceImpl> _logger;
-        private readonly ConcurrentDictionary<string, string> _taskStatusMap = new ConcurrentDictionary<string, string>();
+        private readonly ILogger<NotifyService> _logger;
+        private readonly ConcurrentDictionary<string, string> _taskStatusMap = new();
         private readonly HttpClient _httpClient;
         private readonly SemaphoreSlim _semaphoreSlim;
         private readonly int _notifyPoolSize;
 
-        public NotifyServiceImpl(ILogger<NotifyServiceImpl> logger, HttpClient httpClient)
+        public NotifyService(ILogger<NotifyService> logger, HttpClient httpClient)
         {
             _logger = logger;
             _httpClient = httpClient;

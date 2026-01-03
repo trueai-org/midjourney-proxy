@@ -32,8 +32,6 @@ namespace Midjourney.Base.Models
     /// <summary>
     /// 违规词管理
     /// </summary>
-    [BsonCollection("word")]
-    [MongoDB.Bson.Serialization.Attributes.BsonIgnoreExtraElements]
     [Serializable]
     public class BannedWord : DomainObject
     {

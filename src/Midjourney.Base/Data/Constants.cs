@@ -15,12 +15,13 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Additional Terms:
-// This software shall not be used for any illegal activities. 
+// This software shall not be used for any illegal activities.
 // Users must comply with all applicable laws and regulations,
-// particularly those related to image and video processing. 
+// particularly those related to image and video processing.
 // The use of this software for any form of illegal face swapping,
-// invasion of privacy, or any other unlawful purposes is strictly prohibited. 
+// invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
+
 namespace Midjourney.Base.Data
 {
     /// <summary>
@@ -28,8 +29,6 @@ namespace Midjourney.Base.Data
     /// </summary>
     public static class Constants
     {
-
-
         /// <summary>
         /// 默认配置 ID
         /// </summary>
@@ -150,7 +149,6 @@ namespace Midjourney.Base.Data
         /// </summary>
         public const string TASK_PROPERTY_IFRAME_MODAL_CREATE_CUSTOM_ID = "iframe_modal_custom_id";
 
-
         /// <summary>
         /// remix 模式下的自定义ID
         /// </summary>
@@ -213,7 +211,6 @@ namespace Midjourney.Base.Data
         /// 视频扩展的 index 参数
         /// </summary>
         public const string TASK_PROPERTY_VIDEO_EXTEND_INDEX = "video_extend_index";
-
 
         // --------------- redis ---------------
 

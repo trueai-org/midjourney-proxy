@@ -38,8 +38,6 @@ namespace Midjourney.Base.Models
     /// <summary>
     /// 任务类，表示一个任务的基本信息。
     /// </summary>
-    [BsonCollection("task")]
-    [MongoDB.Bson.Serialization.Attributes.BsonIgnoreExtraElements]
     [Serializable]
     [Index("i_UserId", "UserId")]
     [Index("i_ClientIp", "ClientIp")]
@@ -613,16 +611,6 @@ namespace Midjourney.Base.Models
         public bool IsHdVideo => VideoType == "vid_1.1_i2v_720";
 
         // ------------------------------------- 方法 --------------------------------------
-
-        /// <summary>
-        /// 启动任务。
-        /// </summary>
-        public void Start()
-        {
-            StartTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
-            Status = TaskStatus.SUBMITTED;
-            Progress = "0%";
-        }
 
         /// <summary>
         /// 任务成功。

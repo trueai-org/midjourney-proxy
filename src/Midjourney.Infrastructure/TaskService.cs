@@ -35,13 +35,11 @@ namespace Midjourney.Infrastructure.Services
     /// </summary>
     public class TaskService : ITaskService
     {
-        private readonly ITaskStoreService _taskStoreService;
         private readonly DiscordLoadBalancer _discordLoadBalancer;
         private readonly IFreeSql _freeSql = FreeSqlHelper.FreeSql;
 
-        public TaskService(ITaskStoreService taskStoreService, DiscordLoadBalancer discordLoadBalancer)
+        public TaskService(DiscordLoadBalancer discordLoadBalancer)
         {
-            _taskStoreService = taskStoreService;
             _discordLoadBalancer = discordLoadBalancer;
         }
 
@@ -1468,7 +1466,7 @@ namespace Midjourney.Infrastructure.Services
             var setting = GlobalConfiguration.Setting;
             GenerationSpeedMode? mode = null;
 
-            var targetTask = _taskStoreService.Get(submitAction.TaskId)!;
+            var targetTask = _freeSql.Get<TaskInfo>(submitAction.TaskId)!;
             if (targetTask == null)
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "目标任务不存在");
@@ -1517,6 +1515,29 @@ namespace Midjourney.Infrastructure.Services
                 task.PromptEn = targetTask.PromptEn;
             }
 
+            // 如果是 Modal 作业，则直接返回
+            if (submitAction.CustomId.StartsWith("MJ::CustomZoom::") || submitAction.CustomId.StartsWith("MJ::Inpaint::"))
+            {
+                // 如果是局部重绘，则设置任务状态为 modal
+                if (submitAction.CustomId.StartsWith("MJ::Inpaint::"))
+                {
+                    task.Status = TaskStatus.MODAL;
+                    task.Prompt = "";
+                    task.PromptEn = "";
+                }
+
+                task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_ID, targetTask.MessageId);
+                task.SetProperty(Constants.TASK_PROPERTY_FLAGS, messageFlags);
+
+                _freeSql.Save(task);
+
+                // 状态码为 21
+                // 重绘、自定义变焦始终 remix 为true
+                return SubmitResultVO.Of(ReturnCode.EXISTED, "Waiting for window confirm", task.Id)
+                    .SetProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, task.PromptEn)
+                    .SetProperty(Constants.TASK_PROPERTY_REMIX, true);
+            }
+
             // 如果是 remix
             if (submitAction.EnableRemix == true)
             {
@@ -1537,14 +1558,14 @@ namespace Midjourney.Infrastructure.Services
                 }
 
                 // 悠船、管饭账号不判断 remix
-                if (task.Action == TaskAction.PAN || task.Action == TaskAction.VARIATION || task.Action == TaskAction.REROLL || task.Action == TaskAction.VIDEO)
+                if (task.Action == TaskAction.PAN || task.Action == TaskAction.VARIATION || submitAction.CustomId.StartsWith("MJ::JOB::reroll") || task.Action == TaskAction.VIDEO)
                 {
                     task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_ID, targetTask.MessageId);
                     task.SetProperty(Constants.TASK_PROPERTY_FLAGS, messageFlags);
 
                     // 如果是 REMIX 任务，则设置任务状态为 modal
                     task.Status = TaskStatus.MODAL;
-                    _taskStoreService.Save(task);
+                    _freeSql.Save(task);
 
                     // 状态码为 21
                     return SubmitResultVO.Of(ReturnCode.EXISTED, "Waiting for window confirm", task.Id)
@@ -1572,32 +1593,9 @@ namespace Midjourney.Infrastructure.Services
                 }
             }
 
-            // 如果是 Modal 作业，则直接返回
-            if (submitAction.CustomId.StartsWith("MJ::CustomZoom::")
-                || submitAction.CustomId.StartsWith("MJ::Inpaint::"))
-            {
-                // 如果是局部重绘，则设置任务状态为 modal
-                if (task.Action == TaskAction.INPAINT)
-                {
-                    task.Status = TaskStatus.MODAL;
-                    task.Prompt = "";
-                    task.PromptEn = "";
-                }
 
-                task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_ID, targetTask.MessageId);
-                task.SetProperty(Constants.TASK_PROPERTY_FLAGS, messageFlags);
-
-                _taskStoreService.Save(task);
-
-                // 状态码为 21
-                // 重绘、自定义变焦始终 remix 为true
-                return SubmitResultVO.Of(ReturnCode.EXISTED, "Waiting for window confirm", task.Id)
-                    .SetProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, task.PromptEn)
-                    .SetProperty(Constants.TASK_PROPERTY_REMIX, true);
-            }
             // 手动视频
-            else if (submitAction.CustomId.StartsWith("MJ::JOB::video::")
-                && submitAction.CustomId.Contains("::manual"))
+            else if (submitAction.CustomId.StartsWith("MJ::JOB::video::") && submitAction.CustomId.Contains("::manual"))
             {
                 var cmd = targetTask.IsPartner ? targetTask.PartnerTaskInfo?.FullCommand
                     : targetTask.IsOfficial ? targetTask.OfficialTaskInfo?.FullCommand
@@ -1628,7 +1626,7 @@ namespace Midjourney.Infrastructure.Services
                 task.Status = TaskStatus.MODAL;
                 task.Action = TaskAction.VIDEO;
 
-                _taskStoreService.Save(task);
+                _freeSql.Save(task);
 
                 // 状态码为 21
                 // 重绘、自定义变焦始终 remix 为true
@@ -1676,7 +1674,7 @@ namespace Midjourney.Infrastructure.Services
                     subTask.SetProperty(Constants.TASK_PROPERTY_MESSAGE_ID, targetTask.MessageId);
                     subTask.SetProperty(Constants.TASK_PROPERTY_FLAGS, messageFlags);
 
-                    _taskStoreService.Save(subTask);
+                    _freeSql.Save(subTask);
 
                     var res = await SubmitModal(subTask, new SubmitModalDTO()
                     {
@@ -1724,7 +1722,7 @@ namespace Midjourney.Infrastructure.Services
                         task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_ID, targetTask.MessageId);
                         task.SetProperty(Constants.TASK_PROPERTY_FLAGS, messageFlags);
 
-                        _taskStoreService.Save(task);
+                        _freeSql.Save(task);
 
                         // 状态码为 21
                         // 重绘、自定义变焦始终 remix 为true
@@ -1759,7 +1757,7 @@ namespace Midjourney.Infrastructure.Services
                     if (instance.Account.RemixAutoSubmit)
                     {
                         task.RemixAutoSubmit = true;
-                        _taskStoreService.Save(task);
+                        _freeSql.Save(task);
 
                         return await SubmitModal(task, new SubmitModalDTO()
                         {
@@ -1771,7 +1769,7 @@ namespace Midjourney.Infrastructure.Services
                     }
                     else
                     {
-                        _taskStoreService.Save(task);
+                        _freeSql.Save(task);
 
                         // 状态码为 21
                         // 重绘、自定义变焦始终 remix 为true
@@ -1786,7 +1784,7 @@ namespace Midjourney.Infrastructure.Services
                 }
             }
             // REMIX 处理
-            else if (task.Action == TaskAction.PAN || task.Action == TaskAction.VARIATION || task.Action == TaskAction.REROLL)
+            else if (task.Action == TaskAction.PAN || task.Action == TaskAction.VARIATION || submitAction.CustomId.StartsWith("MJ::JOB::reroll"))
             {
                 task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_ID, targetTask.MessageId);
                 task.SetProperty(Constants.TASK_PROPERTY_FLAGS, messageFlags);
@@ -1800,7 +1798,7 @@ namespace Midjourney.Infrastructure.Services
                     {
                         task.RemixAutoSubmit = true;
 
-                        _taskStoreService.Save(task);
+                        _freeSql.Save(task);
 
                         return await SubmitModal(task, new SubmitModalDTO()
                         {
@@ -1821,7 +1819,7 @@ namespace Midjourney.Infrastructure.Services
                         // 如果是 REMIX 任务，则设置任务状态为 modal
                         task.Status = TaskStatus.MODAL;
 
-                        _taskStoreService.Save(task);
+                        _freeSql.Save(task);
 
                         // 状态码为 21
                         return SubmitResultVO.Of(ReturnCode.EXISTED, "Waiting for window confirm", task.Id)
@@ -1874,7 +1872,7 @@ namespace Midjourney.Infrastructure.Services
             var setting = GlobalConfiguration.Setting;
             GenerationSpeedMode? mode = null;
 
-            var parentTask = _taskStoreService.Get(task.ParentId);
+            var parentTask = _freeSql.Get<TaskInfo>(task.ParentId);
 
             var instance = GetInstanceByTask(task, parentTask, out var submitResult);
             if (instance == null || submitResult.Code != ReturnCode.SUCCESS)
@@ -1936,7 +1934,7 @@ namespace Midjourney.Infrastructure.Services
                 if (!string.IsNullOrWhiteSpace(seek))
                 {
                     task.Seed = seek;
-                    _taskStoreService.Save(task);
+                    _freeSql.Save(task);
                     return SubmitResultVO.Of(ReturnCode.SUCCESS, "成功", seek);
                 }
                 else
@@ -1948,7 +1946,7 @@ namespace Midjourney.Infrastructure.Services
             {
                 // 清空错误
                 task.SeedError = null;
-                _taskStoreService.Save(task);
+                _freeSql.Save(task);
 
                 // 否则由其他节点队列处理
                 // 发送 redis 消息后并等待结果返回
@@ -1966,7 +1964,7 @@ namespace Midjourney.Infrastructure.Services
                     await Task.Delay(500);
                     maxDelay -= 500;
 
-                    task = _taskStoreService.Get(task.Id);
+                    task = _freeSql.Get<TaskInfo>(task.Id);
                     if (!string.IsNullOrWhiteSpace(task.Seed))
                     {
                         return SubmitResultVO.Of(ReturnCode.SUCCESS, "成功", task.Seed);
@@ -1977,7 +1975,7 @@ namespace Midjourney.Infrastructure.Services
                     }
                 } while (string.IsNullOrWhiteSpace(task.Seed) && maxDelay > 0);
 
-                task = _taskStoreService.Get(task.Id);
+                task = _freeSql.Get<TaskInfo>(task.Id);
 
                 if (!string.IsNullOrWhiteSpace(task.Seed))
                 {
@@ -2292,37 +2290,37 @@ namespace Midjourney.Infrastructure.Services
         //    await Task.CompletedTask;
         //}
 
-        /// <summary>
-        /// 获取分页数据
-        /// </summary>
-        /// <param name="dto"></param>
-        /// <param name="path"></param>
-        /// <param name="pageSize"></param>
-        /// <param name="pageNumber"></param>
-        /// <returns></returns>
-        private static async Task<string> MjPlusPageData(MjPlusMigrationDto dto, string path, int pageSize, int pageNumber)
-        {
-            var options = new RestClientOptions(dto.Host)
-            {
-                MaxTimeout = -1,
-            };
-            var client = new RestClient(options);
-            var request = new RestRequest(path, Method.Post);
-            request.AddHeader("Content-Type", "application/json");
+        ///// <summary>
+        ///// 获取分页数据
+        ///// </summary>
+        ///// <param name="dto"></param>
+        ///// <param name="path"></param>
+        ///// <param name="pageSize"></param>
+        ///// <param name="pageNumber"></param>
+        ///// <returns></returns>
+        //private static async Task<string> MjPlusPageData(MjPlusMigrationDto dto, string path, int pageSize, int pageNumber)
+        //{
+        //    var options = new RestClientOptions(dto.Host)
+        //    {
+        //        MaxTimeout = -1,
+        //    };
+        //    var client = new RestClient(options);
+        //    var request = new RestRequest(path, Method.Post);
+        //    request.AddHeader("Content-Type", "application/json");
 
-            if (!string.IsNullOrWhiteSpace(dto.ApiSecret))
-            {
-                request.AddHeader("mj-api-secret", dto.ApiSecret);
-            }
-            var body = new JObject
-            {
-                ["pageSize"] = pageSize,
-                ["pageNumber"] = pageNumber
-            }.ToString();
+        //    if (!string.IsNullOrWhiteSpace(dto.ApiSecret))
+        //    {
+        //        request.AddHeader("mj-api-secret", dto.ApiSecret);
+        //    }
+        //    var body = new JObject
+        //    {
+        //        ["pageSize"] = pageSize,
+        //        ["pageNumber"] = pageNumber
+        //    }.ToString();
 
-            request.AddStringBody(body, DataFormat.Json);
-            var response = await client.ExecuteAsync(request);
-            return response.Content;
-        }
+        //    request.AddStringBody(body, DataFormat.Json);
+        //    var response = await client.ExecuteAsync(request);
+        //    return response.Content;
+        //}
     }
 }

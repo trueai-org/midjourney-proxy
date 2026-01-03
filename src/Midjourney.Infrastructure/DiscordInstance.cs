@@ -47,11 +47,10 @@ namespace Midjourney.Infrastructure.LoadBalancer
         public static readonly ConcurrentDictionary<string, TaskInfo> GlobalRunningTasks = new();
 
         private readonly object _accountLock = new();
+
         private readonly ILogger _logger = Log.Logger;
 
-        private readonly ITaskStoreService _taskStoreService;
         private readonly INotifyService _notifyService;
-
         private readonly IFreeSql _freeSql = FreeSqlHelper.FreeSql;
 
         /// <summary>
@@ -129,7 +128,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
         public DiscordInstance(
             DiscordAccount account,
-            ITaskStoreService taskStoreService,
             INotifyService notifyService,
             DiscordHelper discordHelper,
             Dictionary<string, string> paramsMap,
@@ -156,7 +154,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
             _account = account;
             SubscribeToAccount(_account);
 
-            _taskStoreService = taskStoreService;
             _notifyService = notifyService;
 
             var discordServer = _discordHelper.GetServer();
@@ -789,7 +786,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     return;
                 }
 
-                task = _taskStoreService.Get(task.Id);
+                task = _freeSql.Get<TaskInfo>(task.Id);
                 if (task == null)
                 {
                     return;
@@ -1459,13 +1456,13 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 if (info.Action == TaskAction.UPSCALE)
                 {
                     // 先保存到数据库，再加入到队列
-                    _taskStoreService.Save(info);
+                    _freeSql.Save(info);
 
                     // 放大队列允许溢出
                     var success = await _upscaleQueue.EnqueueAsync(req, -1, ignoreFull: true);
                     if (!success)
                     {
-                        _taskStoreService.Delete(info.Id);
+                        _freeSql.Delete(info);
 
                         return SubmitResultVO.Fail(ReturnCode.FAILURE, "提交失败，队列已满，请稍后重试")
                             .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, ChannelId);
@@ -1482,11 +1479,11 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     }
 
                     // 先保存到数据库，再加入到队列
-                    _taskStoreService.Save(info);
+                    _freeSql.Save(info);
                     var success = await _describeQueue.EnqueueAsync(req, Account.QueueSize);
                     if (!success)
                     {
-                        _taskStoreService.Delete(info.Id);
+                        _freeSql.Delete(info);
 
                         return SubmitResultVO.Fail(ReturnCode.FAILURE, "提交失败，队列已满，请稍后重试")
                             .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, ChannelId);
@@ -1504,11 +1501,11 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     }
 
                     // 先保存到数据库，再加入到队列
-                    _taskStoreService.Save(info);
+                    _freeSql.Save(info);
                     var success = await _relaxQueue.EnqueueAsync(req, Account.RelaxQueueSize);
                     if (!success)
                     {
-                        _taskStoreService.Delete(info.Id);
+                        _freeSql.Delete(info);
 
                         return SubmitResultVO.Fail(ReturnCode.FAILURE, "提交失败，队列已满，请稍后重试")
                             .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, ChannelId);
@@ -1525,11 +1522,11 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     }
 
                     // 先保存到数据库，再加入到队列
-                    _taskStoreService.Save(info);
+                    _freeSql.Save(info);
                     var success = await _defaultOrFastQueue.EnqueueAsync(req, Account.QueueSize);
                     if (!success)
                     {
-                        _taskStoreService.Delete(info.Id);
+                        _freeSql.Delete(info);
 
                         return SubmitResultVO.Fail(ReturnCode.FAILURE, "提交失败，队列已满，请稍后重试")
                             .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, ChannelId);
@@ -1561,7 +1558,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
             {
                 _logger.Error(e, "submit task error");
 
-                _taskStoreService.Delete(info.Id);
+                _freeSql.Delete(info);
 
                 return SubmitResultVO.Fail(ReturnCode.FAILURE, "提交失败，系统异常")
                     .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, ChannelId);
@@ -1600,7 +1597,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 // 重新获取 info
                 var oldId = info.Id;
 
-                info = _taskStoreService.Get(info.Id);
+                info = _freeSql.Get<TaskInfo>(info.Id);
                 if (info == null)
                 {
                     Log.Warning("任务不存在，跳过处理。 {@0}", oldId);
@@ -1677,7 +1674,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                 // 绘画任务未提交
                                 if (info.IsPartner || info.IsOfficial)
                                 {
-                                    var result = await YmTaskService.SubmitTaskAsync(info, _taskStoreService, this);
+                                    var result = await YmTaskService.SubmitTaskAsync(info, this);
                                     if (result?.Code != ReturnCode.SUCCESS)
                                     {
                                         info.Fail(result?.Description ?? "未知错误");
@@ -1712,7 +1709,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                             {
                                 if (info.IsPartner || info.IsOfficial)
                                 {
-                                    var result = await YmTaskService.SubmitActionAsync(info, queue.ActionParam.Dto, queue.ActionParam.TargetTask, _taskStoreService, this);
+                                    var result = await YmTaskService.SubmitActionAsync(info, queue.ActionParam.Dto, queue.ActionParam.TargetTask, this);
                                     if (result?.Code != ReturnCode.SUCCESS)
                                     {
                                         info.Fail(result?.Description ?? "未知错误");
@@ -1755,7 +1752,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                 // 弹窗任务未提交
                                 if (info.IsPartner || info.IsOfficial)
                                 {
-                                    var result = await YmTaskService.SubmitModal(info, queue.ModalParam.TargetTask, queue.ModalParam.Dto, _taskStoreService);
+                                    var result = await YmTaskService.SubmitModal(info, queue.ModalParam.TargetTask, queue.ModalParam.Dto);
                                     if (result?.Code != ReturnCode.SUCCESS)
                                     {
                                         info.Fail(result?.Description ?? "未知错误");
@@ -1766,7 +1763,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                 else
                                 {
                                     var task = info;
-                                    var parentTask = _taskStoreService.Get(task.ParentId);
+                                    var parentTask = _freeSql.Get<TaskInfo>(task.ParentId);
                                     if (parentTask == null)
                                     {
                                         info.Fail("未找到父级任务");
@@ -1775,12 +1772,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                     }
 
                                     // 如果当前任务是重新执行，父级任务可能含有 --seed
-                                    if (task.Action == TaskAction.REROLL)
+                                    if (task.Action == TaskAction.IMAGINE || task.Action == TaskAction.BLEND || task.Action == TaskAction.VIDEO)
                                     {
-                                        if (parentTask.Action == TaskAction.IMAGINE || parentTask.Action == TaskAction.BLEND || parentTask.Action == TaskAction.VIDEO)
-                                        {
-                                            task.PromptEn = GetPrompt(task.PromptEn, info, parentTask);
-                                        }
+                                        task.PromptEn = GetPrompt(task.PromptEn, info);
                                     }
 
                                     var submitAction = queue.ModalParam.Dto;
@@ -1826,9 +1820,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                     Thread.Sleep(1200);
 
                                     task.RemixModaling = false;
-
-
-
 
                                     // 自定义变焦
                                     if (customId.StartsWith("MJ::CustomZoom::"))
@@ -1893,7 +1884,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                         }
                                     }
                                     // Remix mode
-                                    else if (task.Action == TaskAction.VARIATION || task.Action == TaskAction.REROLL || task.Action == TaskAction.PAN)
+                                    else if (task.Action == TaskAction.VARIATION || customId.StartsWith("MJ::JOB::reroll") || task.Action == TaskAction.PAN || task.Action == TaskAction.VIDEO)
                                     {
                                         nonce = SnowFlake.NextId();
                                         task.Nonce = nonce;
@@ -1901,12 +1892,11 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                                         var action = task.Action;
 
-
                                         var prevCustomId = parentTask.GetProperty<string>(Constants.TASK_PROPERTY_REMIX_CUSTOM_ID, default);
                                         var prevModal = parentTask.GetProperty<string>(Constants.TASK_PROPERTY_REMIX_MODAL, default);
 
                                         var modal = "MJ::RemixModal::new_prompt";
-                                        if (action == TaskAction.REROLL)
+                                        if (customId.StartsWith("MJ::JOB::reroll"))
                                         {
                                             // 如果是首次提交，则使用交互 messageId
                                             if (string.IsNullOrWhiteSpace(prevCustomId))
@@ -2006,6 +1996,31 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                                             // 在进行 U 时，记录目标图片的 U 的 customId
                                             task.SetProperty(Constants.TASK_PROPERTY_REMIX_U_CUSTOM_ID, parentTask?.GetProperty<string>(Constants.TASK_PROPERTY_REMIX_U_CUSTOM_ID, default));
+                                        }
+                                        // 视频/视频拓展
+                                        else if (action == TaskAction.VIDEO)
+                                        {
+                                            modal = "MJ::AnimateModal::prompt";
+                                            var parts = customId.Split("::");
+                                            var low = "low";
+                                            if (!customId.Contains("low"))
+                                            {
+                                                low = "high";
+                                            }
+
+                                            // TODO 扩展以 1 结尾
+                                            var extend = "0";
+                                            if (customId.Contains("extend"))
+                                            {
+                                                extend = "1";
+                                            }
+
+                                            // TODO {parts[3]} 应该是 index 1-4
+
+                                            var convertedString = $"MJ::AnimateModal::{parts[4]}::{parts[3]}::{low}::{extend}";
+                                            customId = convertedString;
+                                            task.SetProperty(Constants.TASK_PROPERTY_REMIX_CUSTOM_ID, customId);
+                                            task.SetProperty(Constants.TASK_PROPERTY_REMIX_MODAL, modal);
                                         }
                                         else
                                         {
@@ -2126,7 +2141,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                             {
                                 if (info.IsPartner || info.IsOfficial)
                                 {
-                                    var result = await YmTaskService.SubmitTaskAsync(info, _taskStoreService, this);
+                                    var result = await YmTaskService.SubmitTaskAsync(info, this);
                                     if (result?.Code != ReturnCode.SUCCESS)
                                     {
                                         info.Fail(result?.Description ?? "未知错误");
@@ -2174,7 +2189,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                             {
                                 if (info.IsPartner || info.IsOfficial)
                                 {
-                                    var result = await YmTaskService.SubmitTaskAsync(info, _taskStoreService, this);
+                                    var result = await YmTaskService.SubmitTaskAsync(info, this);
                                     if (result?.Code != ReturnCode.SUCCESS)
                                     {
                                         info.Fail(result?.Description ?? "未知错误");
@@ -2201,7 +2216,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                             {
                                 if (info.IsPartner || info.IsOfficial)
                                 {
-                                    var result = await YmTaskService.SubmitTaskAsync(info, _taskStoreService, this);
+                                    var result = await YmTaskService.SubmitTaskAsync(info, this);
                                     if (result?.Code != ReturnCode.SUCCESS)
                                     {
                                         info.Fail(result?.Description ?? "未知错误");
@@ -2228,7 +2243,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                             {
                                 if (info.IsPartner || info.IsOfficial)
                                 {
-                                    var result = await YmTaskService.SubmitTaskAsync(info, _taskStoreService, this);
+                                    var result = await YmTaskService.SubmitTaskAsync(info, this);
                                     if (result?.Code != ReturnCode.SUCCESS)
                                     {
                                         info.Fail(result?.Description ?? "未知错误");
@@ -2290,7 +2305,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                         // 悠船/官方
                         if (info.IsPartner || info.IsOfficial)
                         {
-                            await _ymTaskService.UpdateStatus(info, _taskStoreService, Account);
+                            await _ymTaskService.UpdateStatus(info, Account);
                         }
 
                         SaveAndNotify(info);
@@ -2435,7 +2450,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     return;
                 }
 
-                _taskStoreService.Save(task);
+                _freeSql.Save(task);
                 _notifyService.NotifyTaskChange(task);
             }
             catch (Exception ex)
@@ -2462,16 +2477,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
         public TaskInfo GetRunningTask(string id)
         {
             return GetRunningTasks().FirstOrDefault(t => id == t.Id);
-        }
-
-        /// <summary>
-        /// 根据 ID 获取历史任务
-        /// </summary>
-        /// <param name="id"></param>
-        /// <returns></returns>
-        public TaskInfo GetTask(string id)
-        {
-            return _taskStoreService.Get(id);
         }
 
         /// <summary>
@@ -2936,7 +2941,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <param name="prompt"></param>
         /// <param name="info"></param>
         /// <returns></returns>
-        public string GetPrompt(string prompt, TaskInfo info, TaskInfo parentInfo = null)
+        public string GetPrompt(string prompt, TaskInfo info)
         {
             var acc = Account;
 
@@ -3037,17 +3042,12 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 prompt += " --draft";
             }
 
-            // 是否开启 Discord 防撞图机制
+            // 是否开启 Discord 防撞图机制，自动追加 --seed
             if (info.IsDiscord && GlobalConfiguration.Setting.EnableDiscordAppendSeed)
             {
-                if (info.Action == TaskAction.IMAGINE
-                    || info.Action == TaskAction.BLEND
-                    || info.Action == TaskAction.VIDEO
-                    || parentInfo?.Action == TaskAction.IMAGINE
-                    || parentInfo?.Action == TaskAction.BLEND
-                    || parentInfo?.Action == TaskAction.VIDEO)
+                if (info.Action == TaskAction.IMAGINE || info.Action == TaskAction.BLEND || info.Action == TaskAction.VIDEO)
                 {
-                    if (!prompt.Contains("--seed", StringComparison.OrdinalIgnoreCase))
+                    if (string.IsNullOrEmpty(info.Seed) && !prompt.Contains("--seed", StringComparison.OrdinalIgnoreCase))
                     {
                         var seed = Random.Shared.NextInt64(uint.MaxValue);
                         prompt += $" --seed {seed}";
@@ -3603,7 +3603,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                         var t = GetRunningTaskByNonce(nonce);
                                         if (t != null && !string.IsNullOrWhiteSpace(t.ParentId))
                                         {
-                                            var p = GetTask(t.ParentId);
+                                            var p = _freeSql.Get<TaskInfo>(t.ParentId);
                                             if (p != null)
                                             {
                                                 var newMessageId = p.MessageIds.Where(c => !messageIds.Contains(c)).FirstOrDefault();
