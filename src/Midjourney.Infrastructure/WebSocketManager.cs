@@ -109,7 +109,6 @@ namespace Midjourney.Infrastructure
 
         private readonly ILogger _logger = Log.Logger;
 
-
         private readonly WebProxy _webProxy;
         private readonly DiscordInstance _discordInstance;
 
@@ -1879,6 +1878,13 @@ namespace Midjourney.Infrastructure
 
                 var eventData = data.Deserialize<EventData>();
 
+                // 加分布式锁，防止重复处理消息
+                using var redisLock = RedisHelper.Instance.Lock($"DiscordMessageHandle:{eventData.Id}", 5);
+                if (redisLock == null)
+                {
+                    return;
+                }
+
                 // 如果消息类型是 CREATE
                 // 则再次处理消息确认事件，确保消息的高可用
                 if (messageType == MessageType.CREATE)
@@ -1920,7 +1926,7 @@ namespace Midjourney.Infrastructure
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "处理用户消息异常 {@0}", raw.ToString());
+                Log.Error(ex, "处理 wss 消息异常 {@0}", raw.ToString());
             }
         }
 
@@ -2488,7 +2494,7 @@ namespace Midjourney.Infrastructure
             return imageUrl.Replace(DiscordHelper.DISCORD_CDN_URL, cdn);
         }
 
-        protected async Task FinishTask(TaskInfo task, EventData message)
+        protected async Task FinishTask(TaskInfo task, EventData message, MessageParseResult messageParseResult)
         {
             // 设置图片信息
             var image = message.Attachments?.FirstOrDefault();
@@ -2542,6 +2548,25 @@ namespace Midjourney.Infrastructure
                 task.State = "";
             }
 
+            // 通过速度模式匹配，计算最终速度 fast/relaxed/turbo
+            switch (messageParseResult?.Mode)
+            {
+                case "fast":
+                    task.Mode = GenerationSpeedMode.FAST;
+                    break;
+
+                case "relaxed":
+                    task.Mode = GenerationSpeedMode.RELAX;
+                    break;
+
+                case "turbo":
+                    task.Mode = GenerationSpeedMode.TURBO;
+                    break;
+
+                default:
+                    break;
+            }
+
             await task.SuccessAsync();
         }
 
@@ -2558,76 +2583,53 @@ namespace Midjourney.Infrastructure
                 return;
             }
 
-            var key = $"DiscordMessage:{message.Id}";
-
-            try
+            // 跳过 Waiting to start 消息
+            if (!string.IsNullOrWhiteSpace(message.Content) && message.Content.Contains("(Waiting to start)"))
             {
-                // 跳过 Waiting to start 消息
-                if (!string.IsNullOrWhiteSpace(message.Content) && message.Content.Contains("(Waiting to start)"))
-                {
-                    return;
-                }
-
-                using var redisLock = RedisHelper.Instance.Lock($"{key}_lock", 3);
-                if (redisLock == null)
-                {
-                    return;
-                }
-
-                // 判断是否处理过了
-                var used = RedisHelper.Instance.Exists(key);
-                if (used)
-                {
-                    return;
-                }
-
-                if (messageType == MessageType.CREATE && message.Author.Bot == true && message.Author.Username.Contains("journey Bot", StringComparison.OrdinalIgnoreCase))
-                {
-                    // 图生文完成
-                    if (message.Embeds.Count > 0 && !string.IsNullOrWhiteSpace(message.Embeds.FirstOrDefault()?.Image?.Url))
-                    {
-                        var msgId = GetMessageId(message);
-
-                        var task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && c.MessageId == msgId).FirstOrDefault();
-                        if (task == null && !string.IsNullOrWhiteSpace(message.InteractionMetadata?.Id))
-                        {
-                            task = instance.FindRunningTask(c =>
-                            (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && c.InteractionMetadataId == message.InteractionMetadata.Id).FirstOrDefault();
-                        }
-
-                        if (task == null)
-                        {
-                            return;
-                        }
-
-                        var imageUrl = message.Embeds.First().Image?.Url;
-                        var messageHash = DiscordHelper.GetMessageHash(imageUrl);
-
-                        var finalPrompt = message.Embeds.First().Description;
-
-                        task.PromptEn = finalPrompt;
-                        task.MessageId = msgId;
-
-                        if (!task.MessageIds.Contains(msgId))
-                            task.MessageIds.Add(msgId);
-
-                        task.SetProperty(Constants.MJ_MESSAGE_HANDLED, true);
-                        task.SetProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, finalPrompt);
-                        task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_HASH, messageHash);
-
-                        task.ImageUrl = imageUrl;
-                        task.JobId = messageHash;
-
-                        await FinishTask(task, message);
-
-                        task.Awake();
-                    }
-                }
+                return;
             }
-            finally
+
+            if (messageType == MessageType.CREATE && message.Author.Bot == true && message.Author.Username.Contains("journey Bot", StringComparison.OrdinalIgnoreCase))
             {
-                // 表示消息已经处理过了
-                RedisHelper.Instance.Set(key, 1, TimeSpan.FromHours(1));
+                // 图生文完成
+                if (message.Embeds.Count > 0 && !string.IsNullOrWhiteSpace(message.Embeds.FirstOrDefault()?.Image?.Url))
+                {
+                    var msgId = GetMessageId(message);
+
+                    var task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && c.MessageId == msgId).FirstOrDefault();
+                    if (task == null && !string.IsNullOrWhiteSpace(message.InteractionMetadata?.Id))
+                    {
+                        task = instance.FindRunningTask(c =>
+                        (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && c.InteractionMetadataId == message.InteractionMetadata.Id).FirstOrDefault();
+                    }
+
+                    if (task == null)
+                    {
+                        return;
+                    }
+
+                    var imageUrl = message.Embeds.First().Image?.Url;
+                    var messageHash = DiscordHelper.GetMessageHash(imageUrl);
+
+                    var finalPrompt = message.Embeds.First().Description;
+
+                    task.PromptEn = finalPrompt;
+                    task.MessageId = msgId;
+
+                    if (!task.MessageIds.Contains(msgId))
+                        task.MessageIds.Add(msgId);
+
+                    task.SetProperty(Constants.MJ_MESSAGE_HANDLED, true);
+                    task.SetProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, finalPrompt);
+                    task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_HASH, messageHash);
+
+                    task.ImageUrl = imageUrl;
+                    task.JobId = messageHash;
+
+                    await FinishTask(task, message, null);
+
+                    task.Awake();
+                }
             }
         }
 
@@ -2644,77 +2646,54 @@ namespace Midjourney.Infrastructure
                 return;
             }
 
-            var key = $"DiscordMessage:{message.Id}";
-
-            try
+            if (message.InteractionMetadata?.Name != "shorten"
+                && message.Embeds?.FirstOrDefault()?.Footer?.Text.Contains("Click on a button to imagine one of the shortened prompts") != true)
             {
-                if (message.InteractionMetadata?.Name != "shorten"
-                    && message.Embeds?.FirstOrDefault()?.Footer?.Text.Contains("Click on a button to imagine one of the shortened prompts") != true)
-                {
-                    return;
-                }
-
-                // 跳过 Waiting to start 消息
-                if (!string.IsNullOrWhiteSpace(message.Content) && message.Content.Contains("(Waiting to start)"))
-                {
-                    return;
-                }
-
-                using var redisLock = RedisHelper.Instance.Lock($"{key}_lock", 3);
-                if (redisLock == null)
-                {
-                    return;
-                }
-
-                // 判断是否处理过了
-                var used = RedisHelper.Instance.Exists(key);
-                if (used)
-                {
-                    return;
-                }
-
-                if (messageType == MessageType.CREATE
-                    && message.Author.Bot == true
-                    && message.Author.Username.Contains("journey Bot", StringComparison.OrdinalIgnoreCase))
-                {
-                    // 分析 prompt 完成
-                    if (message.Embeds.Count > 0)
-                    {
-                        var msgId = GetMessageId(message);
-
-                        var task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && c.MessageId == msgId).FirstOrDefault();
-
-                        if (task == null && !string.IsNullOrWhiteSpace(message.InteractionMetadata?.Id))
-                        {
-                            task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) &&
-                            c.InteractionMetadataId == message.InteractionMetadata.Id).FirstOrDefault();
-                        }
-
-                        if (task == null)
-                        {
-                            return;
-                        }
-
-                        var desc = message.Embeds.First().Description;
-
-                        task.Description = desc;
-                        task.MessageId = msgId;
-
-                        if (!task.MessageIds.Contains(msgId))
-                            task.MessageIds.Add(msgId);
-
-                        task.SetProperty(Constants.MJ_MESSAGE_HANDLED, true);
-                        task.SetProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, desc);
-
-                        await FinishTask(task, message);
-                        task.Awake();
-                    }
-                }
+                return;
             }
-            finally
+
+            // 跳过 Waiting to start 消息
+            if (!string.IsNullOrWhiteSpace(message.Content) && message.Content.Contains("(Waiting to start)"))
             {
-                // 表示消息已经处理过了
-                RedisHelper.Instance.Set(key, 1, TimeSpan.FromHours(1));
+                return;
+            }
+
+            if (messageType == MessageType.CREATE
+                && message.Author.Bot == true
+                && message.Author.Username.Contains("journey Bot", StringComparison.OrdinalIgnoreCase))
+            {
+                // 分析 prompt 完成
+                if (message.Embeds.Count > 0)
+                {
+                    var msgId = GetMessageId(message);
+
+                    var task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) && c.MessageId == msgId).FirstOrDefault();
+
+                    if (task == null && !string.IsNullOrWhiteSpace(message.InteractionMetadata?.Id))
+                    {
+                        task = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED) &&
+                        c.InteractionMetadataId == message.InteractionMetadata.Id).FirstOrDefault();
+                    }
+
+                    if (task == null)
+                    {
+                        return;
+                    }
+
+                    var desc = message.Embeds.First().Description;
+
+                    task.Description = desc;
+                    task.MessageId = msgId;
+
+                    if (!task.MessageIds.Contains(msgId))
+                        task.MessageIds.Add(msgId);
+
+                    task.SetProperty(Constants.MJ_MESSAGE_HANDLED, true);
+                    task.SetProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, desc);
+
+                    await FinishTask(task, message, null);
+                    task.Awake();
+                }
             }
         }
 
@@ -2741,105 +2720,82 @@ namespace Midjourney.Infrastructure
                 return;
             }
 
-            var key = $"DiscordMessage:{message.Id}";
-
-            try
+            var content = GetMessageContent(message);
+            if (!string.IsNullOrWhiteSpace(content) && content != "Displaying...")
             {
-                using var redisLock = RedisHelper.Instance.Lock($"{key}_lock", 3);
-                if (redisLock == null)
+                var parseResult = MjMessageParser.Parse(content);
+                if (parseResult == null)
                 {
-                    return;
+                    Log.Error("解析消息内容失败: {@0}", content);
                 }
-
-                // 判断是否处理过了
-                var used = RedisHelper.Instance.Exists(key);
-                if (used)
+                else
                 {
-                    return;
-                }
-
-                var content = GetMessageContent(message);
-                if (!string.IsNullOrWhiteSpace(content) && content != "Displaying...")
-                {
-                    var parseResult = MjMessageParser.Parse(content);
-                    if (parseResult == null)
+                    // 判断消息 action
+                    switch (parseResult.Action)
                     {
-                        Log.Error("解析消息内容失败: {@0}", content);
-                    }
-                    else
-                    {
-                        // 判断消息 action
-                        switch (parseResult.Action)
-                        {
-                            case TaskAction.IMAGINE:
-                                {
-                                    await FindAndFinishImageTask(instance, message, parseResult, messageType);
-                                }
-                                break;
+                        case TaskAction.IMAGINE:
+                            {
+                                await FindAndFinishImageTask(instance, message, parseResult, messageType);
+                            }
+                            break;
 
-                            case TaskAction.UPSCALE:
-                                {
-                                    await FindAndFinishUTask(instance, message, parseResult, messageType);
-                                }
-                                break;
+                        case TaskAction.UPSCALE:
+                            {
+                                await FindAndFinishUTask(instance, message, parseResult, messageType);
+                            }
+                            break;
 
-                            case TaskAction.VARIATION:
-                                {
-                                    await FindAndFinishVaryTask(instance, message, parseResult, messageType);
-                                }
-                                break;
+                        case TaskAction.VARIATION:
+                            {
+                                await FindAndFinishVaryTask(instance, message, parseResult, messageType);
+                            }
+                            break;
 
-                            case TaskAction.PAN:
-                                {
-                                    await FindAndFinishPanTask(instance, message, parseResult, messageType);
-                                }
-                                break;
+                        case TaskAction.PAN:
+                            {
+                                await FindAndFinishPanTask(instance, message, parseResult, messageType);
+                            }
+                            break;
 
-                            case TaskAction.ZOOM:
-                                {
-                                    await FindAndFinishZoomTask(instance, message, parseResult, messageType);
-                                }
-                                break;
+                        case TaskAction.ZOOM:
+                            {
+                                await FindAndFinishZoomTask(instance, message, parseResult, messageType);
+                            }
+                            break;
 
-                            case TaskAction.VIDEO:
-                                {
-                                    await FindAndFinishVideoTask(instance, message, parseResult, messageType);
-                                }
-                                break;
+                        case TaskAction.VIDEO:
+                            {
+                                await FindAndFinishVideoTask(instance, message, parseResult, messageType);
+                            }
+                            break;
 
-                            case TaskAction.UPSCALE_HD:
-                                {
-                                    await FindAndFinishUpscaleHDTask(instance, message, parseResult, messageType);
-                                }
-                                break;
+                        case TaskAction.UPSCALE_HD:
+                            {
+                                await FindAndFinishUpscaleHDTask(instance, message, parseResult, messageType);
+                            }
+                            break;
 
-                            case TaskAction.EDIT:
-                            case TaskAction.RETEXTURE:
-                            case TaskAction.PIC_READER:
-                            case TaskAction.REROLL:
-                            case TaskAction.DESCRIBE:
-                            case TaskAction.BLEND:
-                            case TaskAction.ACTION:
-                            case TaskAction.OUTPAINT:
-                            case TaskAction.INPAINT:
-                            case TaskAction.SHOW:
-                            case TaskAction.SHORTEN:
-                            case TaskAction.SWAP_FACE:
-                            case TaskAction.SWAP_VIDEO_FACE:
-                            case TaskAction.VIDEO_EXTEND:
-                            default:
-                                {
-                                    Log.Error("不支持的消息类型: {@0}, {@1}", parseResult, content);
-                                }
-                                break;
-                        }
+                        case TaskAction.EDIT:
+                        case TaskAction.RETEXTURE:
+                        case TaskAction.PIC_READER:
+                        case TaskAction.REROLL:
+                        case TaskAction.DESCRIBE:
+                        case TaskAction.BLEND:
+                        case TaskAction.ACTION:
+                        case TaskAction.OUTPAINT:
+                        case TaskAction.INPAINT:
+                        case TaskAction.SHOW:
+                        case TaskAction.SHORTEN:
+                        case TaskAction.SWAP_FACE:
+                        case TaskAction.SWAP_VIDEO_FACE:
+                        case TaskAction.VIDEO_EXTEND:
+                        default:
+                            {
+                                Log.Error("不支持的消息类型: {@0}, {@1}", parseResult, content);
+                            }
+                            break;
                     }
                 }
-            }
-            finally
-            {
-                // 表示消息已经处理过了
-                RedisHelper.Instance.Set(key, 1, TimeSpan.FromHours(1));
             }
         }
 
@@ -2852,6 +2808,11 @@ namespace Midjourney.Infrastructure
         /// <param name="message"></param>
         private async Task FindAndFinishUTask(DiscordInstance instance, EventData message, MessageParseResult messageParseResult, MessageType messageType)
         {
+            if (messageType != MessageType.CREATE)
+            {
+                return;
+            }
+
             var index = messageParseResult.ImageIndex;
             if (index == null || index <= 0 || index > 4)
             {
@@ -2921,11 +2882,6 @@ namespace Midjourney.Infrastructure
                 return;
             }
 
-            if (messageType == Base.MessageType.UPDATE)
-            {
-                return;
-            }
-
             // 完善提示词
             if (task != null && string.IsNullOrWhiteSpace(task.PromptFull))
             {
@@ -2946,7 +2902,7 @@ namespace Midjourney.Infrastructure
             task.JobId = messageHash;
 
             // 普通放大任务，直接完成
-            await FinishTask(task, message);
+            await FinishTask(task, message, messageParseResult);
             task.Awake();
         }
 
@@ -2961,14 +2917,10 @@ namespace Midjourney.Infrastructure
         {
             var msgId = GetMessageId(message);
             var fullPrompt = GetFullPrompt(message);
-            var imageUrl = GetImageUrl(message);
 
-            if (string.IsNullOrWhiteSpace(msgId)
-                || string.IsNullOrWhiteSpace(fullPrompt)
-                || string.IsNullOrWhiteSpace(imageUrl))
+            if (string.IsNullOrWhiteSpace(msgId) || string.IsNullOrWhiteSpace(fullPrompt))
             {
-                Log.Warning("跳过无效的高清消息: MessageId={@0}, FullPrompt={@1}, ImageUrl={@2}",
-                    msgId, fullPrompt, imageUrl);
+                Log.Warning("跳过无效的高清消息: MessageId={@0}, FullPrompt={@1}", msgId, fullPrompt);
                 return;
             }
 
@@ -3018,6 +2970,8 @@ namespace Midjourney.Infrastructure
             {
                 return;
             }
+
+            var imageUrl = GetImageUrl(message);
 
             if (!task.MessageIds.Contains(msgId))
                 task.MessageIds.Add(msgId);
@@ -3079,7 +3033,7 @@ namespace Midjourney.Infrastructure
             task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_HASH, messageHash);
             task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_CONTENT, message.Content);
 
-            await FinishTask(task, message);
+            await FinishTask(task, message, messageParseResult);
             task.Awake();
         }
 
@@ -3094,14 +3048,10 @@ namespace Midjourney.Infrastructure
         {
             var msgId = GetMessageId(message);
             var fullPrompt = GetFullPrompt(message);
-            var imageUrl = GetImageUrl(message);
 
-            if (string.IsNullOrWhiteSpace(msgId)
-                || string.IsNullOrWhiteSpace(fullPrompt)
-                || string.IsNullOrWhiteSpace(imageUrl))
+            if (string.IsNullOrWhiteSpace(msgId) || string.IsNullOrWhiteSpace(fullPrompt))
             {
-                Log.Warning("跳过无效的平移消息: MessageId={@0}, FullPrompt={@1}, ImageUrl={@2}",
-                    msgId, fullPrompt, imageUrl);
+                Log.Warning("跳过无效的平移消息: MessageId={@0}, FullPrompt={@1}", msgId, fullPrompt);
                 return;
             }
 
@@ -3173,6 +3123,8 @@ namespace Midjourney.Infrastructure
                 return;
             }
 
+            var imageUrl = GetImageUrl(message);
+
             if (!task.MessageIds.Contains(msgId))
                 task.MessageIds.Add(msgId);
 
@@ -3234,7 +3186,7 @@ namespace Midjourney.Infrastructure
             task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_HASH, messageHash);
             task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_CONTENT, message.Content);
 
-            await FinishTask(task, message);
+            await FinishTask(task, message, messageParseResult);
             task.Awake();
         }
 
@@ -3249,14 +3201,10 @@ namespace Midjourney.Infrastructure
         {
             var msgId = GetMessageId(message);
             var fullPrompt = GetFullPrompt(message);
-            var imageUrl = GetImageUrl(message);
 
-            if (string.IsNullOrWhiteSpace(msgId)
-                || string.IsNullOrWhiteSpace(fullPrompt)
-                || string.IsNullOrWhiteSpace(imageUrl))
+            if (string.IsNullOrWhiteSpace(msgId) || string.IsNullOrWhiteSpace(fullPrompt))
             {
-                Log.Warning("跳过无效的变焦消息: MessageId={@0}, FullPrompt={@1}, ImageUrl={@2}",
-                    msgId, fullPrompt, imageUrl);
+                Log.Warning("跳过无效的变焦消息: MessageId={@0}, FullPrompt={@1}", msgId, fullPrompt);
                 return;
             }
 
@@ -3328,6 +3276,8 @@ namespace Midjourney.Infrastructure
                 return;
             }
 
+            var imageUrl = GetImageUrl(message);
+
             if (!task.MessageIds.Contains(msgId))
                 task.MessageIds.Add(msgId);
 
@@ -3389,7 +3339,7 @@ namespace Midjourney.Infrastructure
             task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_HASH, messageHash);
             task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_CONTENT, message.Content);
 
-            await FinishTask(task, message);
+            await FinishTask(task, message, messageParseResult);
             task.Awake();
         }
 
@@ -3404,14 +3354,10 @@ namespace Midjourney.Infrastructure
         {
             var msgId = GetMessageId(message);
             var fullPrompt = GetFullPrompt(message);
-            var imageUrl = GetImageUrl(message);
 
-            if (string.IsNullOrWhiteSpace(msgId)
-                || string.IsNullOrWhiteSpace(fullPrompt)
-                || string.IsNullOrWhiteSpace(imageUrl))
+            if (string.IsNullOrWhiteSpace(msgId) || string.IsNullOrWhiteSpace(fullPrompt))
             {
-                Log.Warning("跳过无效的变化消息: MessageId={@0}, FullPrompt={@1}, ImageUrl={@2}",
-                    msgId, fullPrompt, imageUrl);
+                Log.Warning("跳过无效的变化消息: MessageId={@0}, FullPrompt={@1}", msgId, fullPrompt);
                 return;
             }
 
@@ -3482,6 +3428,7 @@ namespace Midjourney.Infrastructure
             {
                 return;
             }
+            var imageUrl = GetImageUrl(message);
 
             if (!task.MessageIds.Contains(msgId))
                 task.MessageIds.Add(msgId);
@@ -3544,7 +3491,7 @@ namespace Midjourney.Infrastructure
             task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_HASH, messageHash);
             task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_CONTENT, message.Content);
 
-            await FinishTask(task, message);
+            await FinishTask(task, message, messageParseResult);
             task.Awake();
         }
 
@@ -3559,14 +3506,10 @@ namespace Midjourney.Infrastructure
         {
             var msgId = GetMessageId(message);
             var fullPrompt = GetFullPrompt(message);
-            var imageUrl = GetImageUrl(message);
 
-            if (string.IsNullOrWhiteSpace(msgId)
-                || string.IsNullOrWhiteSpace(fullPrompt)
-                || string.IsNullOrWhiteSpace(imageUrl))
+            if (string.IsNullOrWhiteSpace(msgId) || string.IsNullOrWhiteSpace(fullPrompt))
             {
-                Log.Warning("跳过无效的视频消息: MessageId={@0}, FullPrompt={@1}, ImageUrl={@2}",
-                    msgId, fullPrompt, imageUrl);
+                Log.Warning("跳过无效的视频消息: MessageId={@0}, FullPrompt={@1}", msgId, fullPrompt);
                 return;
             }
 
@@ -3671,6 +3614,8 @@ namespace Midjourney.Infrastructure
                 return;
             }
 
+            var imageUrl = GetImageUrl(message);
+
             if (!task.MessageIds.Contains(msgId))
                 task.MessageIds.Add(msgId);
 
@@ -3763,7 +3708,7 @@ namespace Midjourney.Infrastructure
             task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_HASH, messageHash);
             task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_CONTENT, message.Content);
 
-            await FinishTask(task, message);
+            await FinishTask(task, message, messageParseResult);
             task.Awake();
         }
 
@@ -3778,14 +3723,10 @@ namespace Midjourney.Infrastructure
         {
             var msgId = GetMessageId(message);
             var fullPrompt = GetFullPrompt(message);
-            var imageUrl = GetImageUrl(message);
 
-            if (string.IsNullOrWhiteSpace(msgId)
-                || string.IsNullOrWhiteSpace(fullPrompt)
-                || string.IsNullOrWhiteSpace(imageUrl))
+            if (string.IsNullOrWhiteSpace(msgId) || string.IsNullOrWhiteSpace(fullPrompt))
             {
-                Log.Warning("跳过无效的想象/混图消息: MessageId={@0}, FullPrompt={@1}, ImageUrl={@2}",
-                    msgId, fullPrompt, imageUrl);
+                Log.Warning("跳过无效的想象/混图消息: MessageId={@0}, FullPrompt={@1}", msgId, fullPrompt);
                 return;
             }
 
@@ -3885,6 +3826,8 @@ namespace Midjourney.Infrastructure
                 return;
             }
 
+            var imageUrl = GetImageUrl(message);
+
             if (!task.MessageIds.Contains(msgId))
                 task.MessageIds.Add(msgId);
 
@@ -3946,7 +3889,8 @@ namespace Midjourney.Infrastructure
             task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_HASH, messageHash);
             task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_CONTENT, message.Content);
 
-            await FinishTask(task, message);
+            await FinishTask(task, message, messageParseResult);
+
             task.Awake();
         }
 

@@ -613,24 +613,6 @@ namespace Midjourney.Base.Models
         // ------------------------------------- 方法 --------------------------------------
 
         /// <summary>
-        /// 任务成功。
-        /// </summary>
-        public void Success()
-        {
-            try
-            {
-                // 保存图片
-                StorageHelper.DownloadFile(this).ConfigureAwait(false).GetAwaiter().GetResult();
-            }
-            catch (Exception ex)
-            {
-                Log.Error(ex, "保存图片失败 {@0}", ImageUrl);
-            }
-
-            SuccessUpdate();
-        }
-
-        /// <summary>
         /// 异步保存成功（自动设置完成）
         /// </summary>
         /// <returns></returns>

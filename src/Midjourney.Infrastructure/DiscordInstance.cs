@@ -2424,7 +2424,10 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                 // 每 200 次执行一次同步，或 低于 12 次执行一次同步
                                 if (fastAvailable % 200 == 0 || fastAvailable <= 12)
                                 {
-                                    await SyncInfoSetting(true);
+                                    if (fastAvailable > 0)
+                                    {
+                                        await SyncInfoSetting(true);
+                                    }
                                 }
                             }
                         }

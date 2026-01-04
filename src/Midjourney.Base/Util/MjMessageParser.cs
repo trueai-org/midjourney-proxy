@@ -230,7 +230,8 @@ namespace Midjourney.Base.Util
                 Action = TaskAction.ZOOM,
                 Prompt = match.Groups[1].Value,
                 UserId = match.Groups[2].Value,
-                Mode = match.Groups[3].Value,
+                Progress = match.Groups[3].Success ? match.Groups[3].Value : null,
+                Mode = match.Groups[4].Value,
                 Status = "done"
             };
         }
