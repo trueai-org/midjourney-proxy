@@ -150,8 +150,7 @@ namespace Midjourney.Base.Util
         /// <summary>
         /// 等待并获取锁（带返回值）
         /// </summary>
-        public static async Task<(bool Success, T Result)> TryLockAsync<T>(string resource,
-            TimeSpan expirationTime, Func<Task<T>> func)
+        public static async Task<(bool Success, T Result)> TryLockAsync<T>(string resource, TimeSpan expirationTime, Func<Task<T>> func)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(resource);
             ArgumentNullException.ThrowIfNull(func);

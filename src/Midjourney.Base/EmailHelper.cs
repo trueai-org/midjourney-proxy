@@ -30,7 +30,7 @@ namespace Midjourney.Base
     /// 邮件发送通知
     /// https://help.aliyun.com/document_detail/29451.html?spm=a2c4g.11186623.6.607.383c2649OgIrok
     /// </summary>
-    public class EmailJob : SingletonBase<EmailJob>
+    public class EmailHelper : SingletonBase<EmailHelper>
     {
         /// <summary>
         /// 发送邮件通知

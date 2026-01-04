@@ -80,9 +80,6 @@ namespace Midjourney.API
             // Discord 账号助手
             services.AddSingleton<DiscordAccountHelper>();
 
-            // Discord 助手
-            services.AddSingleton<DiscordHelper>();
-
             // 任务服务
             services.AddSingleton<ITaskService, TaskService>();
 

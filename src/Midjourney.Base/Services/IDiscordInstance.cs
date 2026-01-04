@@ -17,10 +17,5 @@
         /// <param name="info"></param>
         /// <returns></returns>
         string GetPrompt(string promptEn, TaskInfo info);
-
-        /// <summary>
-        /// Discord 辅助
-        /// </summary>
-        DiscordHelper DiscordHelper { get; }
     }
 }

@@ -37,8 +37,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
         private readonly CancellationTokenSource _longToken;
         private readonly ManualResetEvent _mre;
 
-        public FaceSwapInstance(INotifyService notifyService, IMemoryCache memoryCache, DiscordHelper discordHelper)
-            : base(notifyService, memoryCache, discordHelper)
+        public FaceSwapInstance(INotifyService notifyService, IMemoryCache memoryCache) 
+            : base(notifyService, memoryCache)
         {
             var config = GlobalConfiguration.Setting;
 

@@ -5,6 +5,19 @@ namespace Midjourney.Base
     public static class CSRedisClientExtensions
     {
         /// <summary>
+        /// CSRedis 分布式锁前缀
+        /// </summary>
+        private const string LOCK_PREFIX = "CSRedisClientLock:";
+
+        /// <summary>
+        /// 判断锁是否存在
+        /// </summary>
+        /// <param name="client"></param>
+        /// <param name="key"></param>
+        /// <returns></returns>
+        public static bool ExistsLock(this CSRedisClient client, string key) => client.Exists(LOCK_PREFIX + key);
+
+        /// <summary>
         /// 获取或添加，如果不存在则添加
         /// </summary>
         /// <typeparam name="T"></typeparam>

@@ -175,7 +175,7 @@ namespace Midjourney.API.Controllers
             _freeSql.Add(user);
 
             // 发送邮件
-            await EmailJob.Instance.EmailSend(GlobalConfiguration.Setting.Smtp,
+            await EmailHelper.Instance.EmailSend(GlobalConfiguration.Setting.Smtp,
                    $"Midjourney Proxy 注册通知", $"您的登录密码为：{user.Token}",
                    user.Email);
 
@@ -311,7 +311,7 @@ namespace Midjourney.API.Controllers
                         if (!request.Success)
                         {
                             // 发送邮件
-                            await EmailJob.Instance.EmailSend(_properties.Smtp, $"CF自动真人验证失败-{item.ChannelId}", $"CF自动真人验证失败-{item.ChannelId}, 请手动验证");
+                            await EmailHelper.Instance.EmailSend(_properties.Smtp, $"CF自动真人验证失败-{item.ChannelId}", $"CF自动真人验证失败-{item.ChannelId}, 请手动验证");
                         }
                     }
                     else
@@ -694,7 +694,7 @@ namespace Midjourney.API.Controllers
                         if (!request.Success)
                         {
                             // 发送邮件
-                            await EmailJob.Instance.EmailSend(_properties.Smtp, $"自动登录失败-{item.ChannelId}", $"自动登录失败-{item.ChannelId}, {request.Message}, 请手动登录");
+                            await EmailHelper.Instance.EmailSend(_properties.Smtp, $"自动登录失败-{item.ChannelId}", $"自动登录失败-{item.ChannelId}, {request.Message}, 请手动登录");
                         }
                     }
                     else

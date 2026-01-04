@@ -40,13 +40,9 @@ namespace Midjourney.API
     /// </summary>
     public class DiscordAccountInitializer : IHostedService
     {
-        private readonly ITaskService _taskService;
         private readonly DiscordLoadBalancer _discordLoadBalancer;
         private readonly DiscordAccountHelper _discordAccountHelper;
-        private readonly Setting _properties;
-        private readonly DiscordHelper _discordHelper;
         private readonly IConfiguration _configuration;
-        private readonly IMemoryCache _memoryCache;
         private readonly ILogger _logger = Log.Logger;
         private readonly IHostApplicationLifetime _applicationLifetime;
         private readonly IUpgradeService _upgradeService;
@@ -61,9 +57,7 @@ namespace Midjourney.API
             DiscordLoadBalancer discordLoadBalancer,
             DiscordAccountHelper discordAccountHelper,
             IConfiguration configuration,
-            ITaskService taskService,
             IMemoryCache memoryCache,
-            DiscordHelper discordHelper,
             IHostApplicationLifetime applicationLifetime,
             IUpgradeService upgradeService,
             IConsulService consulService)
@@ -71,13 +65,9 @@ namespace Midjourney.API
             // 配置全局缓存
             GlobalConfiguration.MemoryCache = memoryCache;
 
-            _properties = GlobalConfiguration.Setting;
             _discordLoadBalancer = discordLoadBalancer;
             _discordAccountHelper = discordAccountHelper;
-            _taskService = taskService;
             _configuration = configuration;
-            _memoryCache = memoryCache;
-            _discordHelper = discordHelper;
             _applicationLifetime = applicationLifetime;
             _upgradeService = upgradeService;
             _consulService = consulService;
@@ -627,8 +617,19 @@ namespace Midjourney.API
         /// </summary>
         public async Task StartAccount(DiscordAccount account)
         {
-            if (account == null || account.Enable != true)
+            if (account == null)
             {
+                return;
+            }
+
+            if (account.Enable != true)
+            {
+                var discordInstance = _discordLoadBalancer.GetDiscordInstance(account.ChannelId);
+                if (discordInstance != null)
+                {
+                    _discordLoadBalancer.RemoveInstance(discordInstance);
+                    discordInstance.Dispose();
+                }
                 return;
             }
 
@@ -648,7 +649,6 @@ namespace Midjourney.API
             sw.Start();
 
             var info = new StringBuilder();
-
 
             try
             {
@@ -828,12 +828,18 @@ namespace Midjourney.API
                     // 无最大并行限制
                     if (GlobalConfiguration.GlobalMaxConcurrent != 0)
                     {
+                        // 用户 WebSocket 连接检查
+                        if (account.IsDiscord && disInstance != null && disInstance.Wss == null)
+                        {
+                            await Infrastructure.WebSocketManager.CreateAndStartAsync(disInstance);
+                        }
+
                         // 非强制同步获取成功
                         // 账号信息自动同步
-                        var success = await disInstance?.SyncInfoSetting();
-                        if (success == true)
+                        if (disInstance != null && disInstance.IsInit == false)
                         {
-                            if (disInstance != null && disInstance.IsInit == false)
+                            var success = await disInstance?.SyncInfoSetting();
+                            if (success == true)
                             {
                                 // 设置初始化完成
                                 disInstance.IsInit = true;

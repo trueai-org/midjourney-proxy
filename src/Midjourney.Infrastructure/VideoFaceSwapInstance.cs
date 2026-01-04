@@ -15,11 +15,11 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Additional Terms:
-// This software shall not be used for any illegal activities. 
+// This software shall not be used for any illegal activities.
 // Users must comply with all applicable laws and regulations,
-// particularly those related to image and video processing. 
+// particularly those related to image and video processing.
 // The use of this software for any form of illegal face swapping,
-// invasion of privacy, or any other unlawful purposes is strictly prohibited. 
+// invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
 using System.Diagnostics;
@@ -37,10 +37,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
         private readonly AsyncParallelLock _semaphoreSlimLock;
         private readonly CancellationTokenSource _longToken;
         private readonly ManualResetEvent _mre;
-        
 
-        public VideoFaceSwapInstance(INotifyService notifyService, IMemoryCache memoryCache, DiscordHelper discordHelper)
-            : base(notifyService, memoryCache, discordHelper)
+        public VideoFaceSwapInstance(INotifyService notifyService, IMemoryCache memoryCache)
+            : base(notifyService, memoryCache)
         {
             var config = GlobalConfiguration.Setting;
 
@@ -262,7 +261,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 }
                 catch
                 {
-
                 }
 
                 try
@@ -386,7 +384,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
                         //var ali = new AliyunOssStorageService();
                         var fileName = Path.GetFileName(source);
                         var key = $"pri/pbxt/{fileName}";
-
 
                         var upload = StorageHelper.Instance?.SaveAsync(File.OpenRead(source), key, ff.GetMimeType(fileName) ?? "image/jpeg");
                         if (!string.IsNullOrWhiteSpace(upload?.Url))

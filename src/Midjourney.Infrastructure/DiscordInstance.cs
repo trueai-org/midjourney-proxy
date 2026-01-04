@@ -63,7 +63,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
         private readonly CancellationTokenSource _longToken;
 
         private readonly HttpClient _httpClient;
-        private readonly DiscordHelper _discordHelper;
         private readonly Dictionary<string, string> _paramsMap;
 
         private readonly string _discordInteractionUrl;
@@ -126,16 +125,19 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// </summary>
         private readonly AsyncParallelLock _seekParallelLock = new(12);
 
-        public DiscordInstance(
-            DiscordAccount account,
-            INotifyService notifyService,
-            DiscordHelper discordHelper,
-            Dictionary<string, string> paramsMap,
-            IWebProxy webProxy,
-            IHttpClientFactory httpClientFactory)
+        public DiscordInstance(DiscordAccount account, INotifyService notifyService,
+            Dictionary<string, string> paramsMap, IHttpClientFactory httpClientFactory)
         {
             _httpClientFactory = httpClientFactory;
             _logger = Log.Logger;
+
+            // Bot 消息监听器
+            var setting = GlobalConfiguration.Setting;
+            WebProxy webProxy = null;
+            if (!string.IsNullOrEmpty(setting.Proxy?.Host))
+            {
+                webProxy = new WebProxy(setting.Proxy.Host, setting.Proxy.Port ?? 80);
+            }
 
             var hch = new HttpClientHandler
             {
@@ -149,14 +151,13 @@ namespace Midjourney.Infrastructure.LoadBalancer
             };
 
             _paramsMap = paramsMap;
-            _discordHelper = discordHelper;
 
             _account = account;
             SubscribeToAccount(_account);
 
             _notifyService = notifyService;
 
-            var discordServer = _discordHelper.GetServer();
+            var discordServer = DiscordHelper.GetServer();
 
             _discordInteractionUrl = $"{discordServer}/api/v9/interactions";
             _discordAttachmentUrl = $"{discordServer}/api/v9/channels/{account.ChannelId}/attachments";
@@ -245,11 +246,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
         public string DefaultSessionId { get; set; } = "f1a313a09ce079ce252459dc70231f30";
 
         /// <summary>
-        ///
+        /// WebSocket管理器。
         /// </summary>
-        public DiscordHelper DiscordHelper => _discordHelper;
-
-        public WebSocketManager WebSocketManager { get; set; }
+        public WebSocketManager Wss { get; set; }
 
         /// <summary>
         /// 获取Discord账号信息。
@@ -464,7 +463,10 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
                 if (acc.IsDiscord)
                 {
-                    return WebSocketManager != null && WebSocketManager.Running == true && acc.Lock == false;
+                    //return WebSocketManager != null && WebSocketManager.Running == true && acc.Lock == false;
+
+                    // 已经建立连接，且不是正在连接中，且没有被锁定
+                    return WebSocketManager.IsInitConnect(acc) && !WebSocketManager.IsInitConnecting(acc) && acc.Lock == false;
                 }
 
                 return false;
@@ -1081,6 +1083,15 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     while (!IsAlive)
                     {
                         await Task.Delay(1000 * 10, token);
+                    }
+
+                    // 如果是 disocrd 账号，判断是否当前服务器建立了 WS 连接，不建立 WS 连接不处理任务
+                    if (Account.IsDiscord)
+                    {
+                        while (Wss == null || !Wss.Running || !IsAlive)
+                        {
+                            await Task.Delay(1000 * 10, token);
+                        }
                     }
 
                     // 是否立即执行下一个任务
@@ -2516,7 +2527,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         {
             try
             {
-                WebSocketManager?.Dispose();
+                Wss?.Dispose();
 
                 // 任务取消
                 _longToken.Cancel();
@@ -3514,7 +3525,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
         private async Task PutFileAsync(string uploadUrl, DataUrl dataUrl)
         {
-            uploadUrl = _discordHelper.GetDiscordUploadUrl(uploadUrl);
+            uploadUrl = DiscordHelper.GetDiscordUploadUrl(uploadUrl);
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Put, uploadUrl)
             {
                 Content = new ByteArrayContent(dataUrl.Data)
@@ -3743,7 +3754,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 }
 
                 var success = false;
-                var cacheKey = $"info_setting_sync_cache:{acc.ChannelId}";
+                var cacheKey = $"SyncInfoCache:{acc.ChannelId}";
                 var cacheValue = AdaptiveCache.Get<bool?>(cacheKey);
 
                 // 不清理缓存，且有缓存时，直接返回成功
@@ -3755,16 +3766,13 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 // 清理缓存，或缓存不存在时，执行同步频率验证
                 if (isClearCache || cacheValue != true)
                 {
-                    AdaptiveCache.Remove(cacheKey);
-
                     // 只有强制同步时才需要添加限制规则
                     // 最新规则：
                     // 每 5 分钟最多同步 1 次
                     // 每 10 分钟最多同步 2 次
                     // 每 30 分钟最多同步 3 次
                     // 每 60 分钟最多同步 6 次
-
-                    var keyPrefix = $"syncinfo_limit_{DateTime.Now:yyyyMMdd}:";
+                    var keyPrefix = $"SyncInfoLimit:{DateTime.Now:yyyyMMdd}:";
 
                     if (!RateLimiter.Check(keyPrefix, acc.ChannelId, 5, 1) ||
                         !RateLimiter.Check(keyPrefix, acc.ChannelId, 10, 2) ||
@@ -3774,6 +3782,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
                         Log.Warning("同步信息调用过于频繁，ChannelId={0}", acc.ChannelId);
                         return false;
                     }
+
+                    // 检查通过后才清除
+                    AdaptiveCache.Remove(cacheKey);
                 }
 
                 if (acc.IsOfficial)

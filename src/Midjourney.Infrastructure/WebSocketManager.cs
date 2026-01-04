@@ -30,6 +30,7 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using CSRedis;
 using Midjourney.Infrastructure.LoadBalancer;
 using RestSharp;
 using Serilog;
@@ -43,6 +44,52 @@ namespace Midjourney.Infrastructure
     /// </summary>
     public class WebSocketManager : IDisposable
     {
+        /// <summary>
+        /// WS 初始化连接锁 key
+        /// </summary>
+        private static string InitConnectLockKey(DiscordAccount account) => $"DiscordAccountInitConnectLock:{account.ChannelId}";
+
+        /// <summary>
+        /// WS 判断是否初始化连接 - 如果存在说明正在连接/连接中
+        /// </summary>
+        public static bool IsInitConnect(DiscordAccount account) => RedisHelper.Instance.ExistsLock(InitConnectLockKey(account));
+
+        /// <summary>
+        /// 创建 WebSocketManager 并启动连接
+        /// </summary>
+        /// <param name="discordInstance"></param>
+        /// <returns></returns>
+        public static async Task CreateAndStartAsync(DiscordInstance discordInstance)
+        {
+            if (discordInstance == null || discordInstance.Account == null || discordInstance.Account.Enable == false)
+            {
+                return;
+            }
+
+            if (IsInitConnect(discordInstance.Account))
+            {
+                return;
+            }
+
+            var webSocketManager = new WebSocketManager(discordInstance);
+            var started = await webSocketManager.StartAsync();
+            if (!started)
+            {
+                webSocketManager?.Dispose();
+                discordInstance.Wss = null;
+            }
+        }
+
+        /// <summary>
+        /// WS 初始化连接中 key
+        /// </summary>
+        private static string InitConnectingKey(DiscordAccount account) => $"DiscordAccountInitConnecting:{account.ChannelId}";
+
+        /// <summary>
+        /// WS 判断是否初始化连接中
+        /// </summary>
+        public static bool IsInitConnecting(DiscordAccount account) => RedisHelper.Exists(InitConnectingKey(account));
+
         private readonly IFreeSql _freeSql = FreeSqlHelper.FreeSql;
 
         /// <summary>
@@ -62,7 +109,7 @@ namespace Midjourney.Infrastructure
 
         private readonly ILogger _logger = Log.Logger;
 
-        private readonly DiscordHelper _discordHelper;
+
         private readonly WebProxy _webProxy;
         private readonly DiscordInstance _discordInstance;
 
@@ -153,17 +200,49 @@ namespace Midjourney.Infrastructure
 
         private readonly Task _messageQueueTask;
 
-        public WebSocketManager(DiscordHelper discordHelper, WebProxy webProxy, DiscordInstance discordInstance)
+        public WebSocketManager(DiscordInstance discordInstance)
         {
-            _discordHelper = discordHelper;
+            // Bot 消息监听器
+            var setting = GlobalConfiguration.Setting;
+
+            WebProxy webProxy = null;
+            if (webProxy == null && !string.IsNullOrEmpty(setting.Proxy?.Host))
+            {
+                webProxy = new WebProxy(setting.Proxy.Host, setting.Proxy.Port ?? 80);
+            }
+
             _webProxy = webProxy;
             _discordInstance = discordInstance;
 
             _messageQueueTask = new Task(async () => { await MessageQueueDoWork(); }, TaskCreationOptions.LongRunning);
             _messageQueueTask.Start();
+
+            // 跟踪连接实例
+            discordInstance.Wss = this;
         }
 
         private DiscordAccount Account => _discordInstance?.Account;
+
+        /// <summary>
+        /// WS 初始化连接锁 key
+        /// </summary>
+        private CSRedisClientLock _initConnectLock;
+
+        /// <summary>
+        /// WS 设置初始化连接中
+        /// </summary>
+        public void SetInitConnecting()
+        {
+            RedisHelper.Set(InitConnectingKey(Account), DateTime.Now, TimeSpan.FromMinutes(5));
+        }
+
+        /// <summary>
+        /// WS 移除初始化连接中
+        /// </summary>
+        public void RemoveInitConnecting()
+        {
+            RedisHelper.Del(InitConnectingKey(Account));
+        }
 
         /// <summary>
         /// 异步启动 WebSocket 连接
@@ -182,58 +261,59 @@ namespace Midjourney.Infrastructure
                     return false;
                 }
 
-                var isLock = await AsyncLocalLock.TryLockAsync($"contact_{Account.Id}", TimeSpan.FromMinutes(1), async () =>
+                // 关闭现有连接并取消相关任务
+                CloseSocket(reconnect);
+
+                // 尝试获取
+                _initConnectLock = RedisHelper.Instance.TryLock(InitConnectLockKey(Account), 30, true);
+                if (_initConnectLock == null)
                 {
-                    // 关闭现有连接并取消相关任务
-                    CloseSocket(reconnect);
-
-                    // 重置 token
-                    _receiveTokenSource = new CancellationTokenSource();
-
-                    WebSocket = new ClientWebSocket();
-
-                    if (_webProxy != null)
-                    {
-                        WebSocket.Options.Proxy = _webProxy;
-                    }
-
-                    WebSocket.Options.SetRequestHeader("User-Agent", Account.UserAgent);
-                    WebSocket.Options.SetRequestHeader("Accept-Encoding", "gzip, deflate, br");
-                    WebSocket.Options.SetRequestHeader("Accept-Language", "zh-CN,zh;q=0.9");
-                    WebSocket.Options.SetRequestHeader("Cache-Control", "no-cache");
-                    WebSocket.Options.SetRequestHeader("Pragma", "no-cache");
-                    WebSocket.Options.SetRequestHeader("Sec-WebSocket-Extensions", "permessage-deflate; client_max_window_bits");
-
-                    // 获取网关地址
-                    var gatewayUrl = GetGatewayServer(reconnect ? _resumeGatewayUrl : null) + "/?encoding=json&v=9&compress=zlib-stream";
-
-                    // 重新连接
-                    if (reconnect && !string.IsNullOrWhiteSpace(_sessionId) && _sequence.HasValue)
-                    {
-                        // 恢复
-                        await WebSocket.ConnectAsync(new Uri(gatewayUrl), CancellationToken.None);
-
-                        // 尝试恢复会话
-                        await ResumeSessionAsync();
-                    }
-                    else
-                    {
-                        await WebSocket.ConnectAsync(new Uri(gatewayUrl), CancellationToken.None);
-
-                        // 新连接，发送身份验证消息
-                        await SendIdentifyMessageAsync();
-                    }
-
-                    _receiveTask = ReceiveMessagesAsync(_receiveTokenSource.Token);
-
-                    _logger.Information("用户 WebSocket 连接已建立 {@0}", Account.ChannelId);
-                });
-
-                if (!isLock)
-                {
-                    _logger.Information($"取消处理, 未获取到锁, 重连: {reconnect}, {Account.ChannelId}");
+                    _logger.Debug("用户连接处理中，跳过此次连接请求 {@0}", Account.ChannelId);
                     return false;
                 }
+
+                SetInitConnecting();
+
+                // 重置 token
+                _receiveTokenSource = new CancellationTokenSource();
+
+                WebSocket = new ClientWebSocket();
+
+                if (_webProxy != null)
+                {
+                    WebSocket.Options.Proxy = _webProxy;
+                }
+
+                WebSocket.Options.SetRequestHeader("User-Agent", Account.UserAgent);
+                WebSocket.Options.SetRequestHeader("Accept-Encoding", "gzip, deflate, br");
+                WebSocket.Options.SetRequestHeader("Accept-Language", "zh-CN,zh;q=0.9");
+                WebSocket.Options.SetRequestHeader("Cache-Control", "no-cache");
+                WebSocket.Options.SetRequestHeader("Pragma", "no-cache");
+                WebSocket.Options.SetRequestHeader("Sec-WebSocket-Extensions", "permessage-deflate; client_max_window_bits");
+
+                // 获取网关地址
+                var gatewayUrl = GetGatewayServer(reconnect ? _resumeGatewayUrl : null) + "/?encoding=json&v=9&compress=zlib-stream";
+
+                // 重新连接
+                if (reconnect && !string.IsNullOrWhiteSpace(_sessionId) && _sequence.HasValue)
+                {
+                    // 恢复
+                    await WebSocket.ConnectAsync(new Uri(gatewayUrl), CancellationToken.None);
+
+                    // 尝试恢复会话
+                    await ResumeSessionAsync();
+                }
+                else
+                {
+                    await WebSocket.ConnectAsync(new Uri(gatewayUrl), CancellationToken.None);
+
+                    // 新连接，发送身份验证消息
+                    await SendIdentifyMessageAsync();
+                }
+
+                _receiveTask = ReceiveMessagesAsync(_receiveTokenSource.Token);
+
+                _logger.Information("用户 WebSocket 连接已建立 {@0}", Account.ChannelId);
 
                 return true;
             }
@@ -241,7 +321,7 @@ namespace Midjourney.Infrastructure
             {
                 _logger.Error(ex, "用户 WebSocket 连接异常 {@0}", Account.ChannelId);
 
-                HandleFailure(CLOSE_CODE_EXCEPTION, "用户 WebSocket 连接异常");
+                await HandleFailure(CLOSE_CODE_EXCEPTION, "用户 WebSocket 连接异常");
             }
 
             return false;
@@ -254,7 +334,7 @@ namespace Midjourney.Infrastructure
         /// <returns></returns>
         private string GetGatewayServer(string resumeGatewayUrl = null)
         {
-            return !string.IsNullOrWhiteSpace(resumeGatewayUrl) ? resumeGatewayUrl : _discordHelper.GetWss();
+            return !string.IsNullOrWhiteSpace(resumeGatewayUrl) ? resumeGatewayUrl : DiscordHelper.GetWss();
         }
 
         /// <summary>
@@ -386,7 +466,7 @@ namespace Midjourney.Infrastructure
                                 _logger.Warning("用户 WebSocket 连接已关闭 {@0}", Account.ChannelId);
 
                                 await WebSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, string.Empty, cancellationToken);
-                                HandleFailure((int)result.CloseStatus, result.CloseStatusDescription);
+                                await HandleFailure((int)result.CloseStatus, result.CloseStatusDescription);
                             }
                             else
                             {
@@ -504,7 +584,7 @@ namespace Midjourney.Infrastructure
                     {
                         if (WebSocket.State == WebSocketState.Open)
                         {
-                            HandleFailure(CLOSE_CODE_RECONNECT, "服务器未响应上次的心跳，将进行重连");
+                            await HandleFailure(CLOSE_CODE_RECONNECT, "服务器未响应上次的心跳，将进行重连");
                             return;
                         }
                     }
@@ -544,7 +624,7 @@ namespace Midjourney.Infrastructure
             if (!_heartbeatAck)
             {
                 _logger.Warning("用户未收到心跳 ACK，正在尝试重连... {@0}", Account.ChannelId);
-                TryReconnect();
+                await TryReconnect();
                 return;
             }
 
@@ -635,7 +715,7 @@ namespace Midjourney.Infrastructure
                             _sequence = null;
                             _resumeGatewayUrl = null;
 
-                            HandleFailure(CLOSE_CODE_EXCEPTION, "无效授权，创建新的连接");
+                            await HandleFailure(CLOSE_CODE_EXCEPTION, "无效授权，创建新的连接");
                         }
                         break;
 
@@ -643,7 +723,7 @@ namespace Midjourney.Infrastructure
                         {
                             _logger.Warning("Received Reconnect {@0}", Account.ChannelId);
 
-                            HandleFailure(CLOSE_CODE_RECONNECT, "收到重连请求，将自动重连");
+                            await HandleFailure(CLOSE_CODE_RECONNECT, "收到重连请求，将自动重连");
                         }
                         break;
 
@@ -698,9 +778,9 @@ namespace Midjourney.Infrastructure
 
         private async Task MessageQueueDoWork()
         {
-            while (true)
+            while (!_isDispose)
             {
-                while (_messageQueue.TryDequeue(out var message))
+                while (!_isDispose && _messageQueue.TryDequeue(out var message))
                 {
                     try
                     {
@@ -708,13 +788,13 @@ namespace Midjourney.Infrastructure
                     }
                     catch (Exception ex)
                     {
-                        _logger.Error(ex, "处理消息队列时发生异常 {@0}", Account.ChannelId);
+                        _logger.Error(ex, "处理消息队列时发生异常 {@0}, {@1}", Account.ChannelId, message);
 
-                        Thread.Sleep(50);
+                        await Task.Delay(100);
                     }
                 }
 
-                Thread.Sleep(10);
+                await Task.Delay(10);
             }
         }
 
@@ -823,7 +903,7 @@ namespace Midjourney.Infrastructure
                                                 {
                                                     try
                                                     {
-                                                        await EmailJob.Instance.EmailSend(setting.Smtp, $"CF自动真人验证-{Account.ChannelId}", hashUrl);
+                                                        await EmailHelper.Instance.EmailSend(setting.Smtp, $"CF自动真人验证-{Account.ChannelId}", hashUrl);
                                                     }
                                                     catch (Exception ex)
                                                     {
@@ -876,7 +956,7 @@ namespace Midjourney.Infrastructure
                                                             {
                                                                 try
                                                                 {
-                                                                    await EmailJob.Instance.EmailSend(setting.Smtp, $"CF手动真人验证-{Account.ChannelId}", url);
+                                                                    await EmailHelper.Instance.EmailSend(setting.Smtp, $"CF手动真人验证-{Account.ChannelId}", url);
                                                                 }
                                                                 catch (Exception ex)
                                                                 {
@@ -1246,7 +1326,7 @@ namespace Midjourney.Infrastructure
                                         var imgUrl = url.GetString();
                                         if (!string.IsNullOrWhiteSpace(imgUrl))
                                         {
-                                            var hash = _discordHelper.GetMessageHash(imgUrl);
+                                            var hash = DiscordHelper.GetMessageHash(imgUrl);
                                             if (!string.IsNullOrWhiteSpace(hash))
                                             {
                                                 var task = _discordInstance.FindRunningTask(c => c.GetProperty<string>(Constants.TASK_PROPERTY_MESSAGE_HASH, default) == hash).FirstOrDefault();
@@ -1477,7 +1557,7 @@ namespace Midjourney.Infrastructure
 
                                                      _discordInstance?.Dispose();
 
-                                                     _ = EmailJob.Instance.EmailSend(setting.Smtp,
+                                                     _ = EmailHelper.Instance.EmailSend(setting.Smtp,
                                                                     $"MJ账号禁用通知-{Account.ChannelId}",
                                                                     $"{Account.ChannelId}, {Account.DisabledReason}");
                                                  }
@@ -1530,7 +1610,7 @@ namespace Midjourney.Infrastructure
                                                 {
                                                     try
                                                     {
-                                                        await EmailJob.Instance.EmailSend(setting.Smtp,
+                                                        await EmailHelper.Instance.EmailSend(setting.Smtp,
                                                             $"MJ账号禁用通知-{Account.ChannelId}",
                                                             $"{Account.ChannelId}, {Account.DisabledReason}");
                                                     }
@@ -1803,26 +1883,11 @@ namespace Midjourney.Infrastructure
                 // 则再次处理消息确认事件，确保消息的高可用
                 if (messageType == MessageType.CREATE)
                 {
-                    Thread.Sleep(10);
+                    await Task.Delay(10);
 
                     if (eventData != null && (eventData.ChannelId == Account.ChannelId || Account.SubChannelValues.ContainsKey(eventData.ChannelId)))
                     {
                         await HandleMessage(_discordInstance, messageType.Value, eventData);
-
-                        //foreach (var messageHandler in _userMessageHandlers.OrderBy(h => h.Order()))
-                        //{
-                        //    // 处理过了
-                        //    if (eventData.GetProperty<bool?>(Constants.MJ_MESSAGE_HANDLED, default) == true)
-                        //    {
-                        //        return;
-                        //    }
-
-                        //    // 消息加锁处理
-                        //    LocalLock.TryLock($"lock_{eventData.Id}", TimeSpan.FromSeconds(10), () =>
-                        //    {
-                        //        messageHandler.Handle(_discordInstance, messageType.Value, eventData);
-                        //    });
-                        //}
                     }
                 }
                 // describe 重新提交
@@ -1841,14 +1906,6 @@ namespace Midjourney.Infrastructure
                     if (!string.IsNullOrWhiteSpace(eventData.Content) && eventData.Content.Contains("%") && eventData.Author?.Bot == true)
                     {
                         await HandleMessage(_discordInstance, messageType.Value, eventData);
-
-                        // TODO 进度消息
-                        //// 消息加锁处理
-                        //LocalLock.TryLock($"lock_{eventData.Id}", TimeSpan.FromSeconds(10), () =>
-                        //{
-                        //    var handler = _userMessageHandlers.FirstOrDefault(x => x.GetType() == typeof(UserStartAndProgressHandler));
-                        //    handler?.Handle(_discordInstance, MessageType.UPDATE, eventData);
-                        //});
                     }
                     else if (eventData.InteractionMetadata?.Name == "describe")
                     {
@@ -1902,10 +1959,10 @@ namespace Midjourney.Infrastructure
                             // 如果当前不是慢速，则切换慢速，加锁切换
                             if (Account.MjFastModeOn || Account.NijiFastModeOn)
                             {
-                                Thread.Sleep(2500);
+                                await Task.Delay(2500);
                                 await _discordInstance?.RelaxAsync(SnowFlake.NextId(), EBotType.MID_JOURNEY);
 
-                                Thread.Sleep(2500);
+                                await Task.Delay(2500);
                                 await _discordInstance?.RelaxAsync(SnowFlake.NextId(), EBotType.NIJI_JOURNEY);
 
                                 _logger.Information("切换慢速成功 {@0}", Account.ChannelId);
@@ -1998,7 +2055,7 @@ namespace Midjourney.Infrastructure
         /// </summary>
         /// <param name="code"></param>
         /// <param name="reason"></param>
-        private void HandleFailure(int code, string reason)
+        private async Task HandleFailure(int code, string reason)
         {
             _logger.Error("用户 WebSocket 连接失败, 代码 {0}: {1}, {2}", code, reason, Account.ChannelId);
 
@@ -2012,24 +2069,24 @@ namespace Midjourney.Infrastructure
             if (code >= 4000)
             {
                 _logger.Warning("用户无法重新连接， 由 {0}({1}) 关闭 {2}, 尝试新连接... ", code, reason, Account.ChannelId);
-                TryNewConnect();
+                await TryNewConnect();
             }
             else if (code == 2001)
             {
                 _logger.Warning("用户由 {0}({1}) 关闭, 尝试重新连接... {2}", code, reason, Account.ChannelId);
-                TryReconnect();
+                await TryReconnect();
             }
             else
             {
                 _logger.Warning("用户由 {0}({1}) 关闭, 尝试新连接... {2}", code, reason, Account.ChannelId);
-                TryNewConnect();
+                await TryNewConnect();
             }
         }
 
         /// <summary>
         /// 重新连接
         /// </summary>
-        private void TryReconnect()
+        private async Task TryReconnect()
         {
             try
             {
@@ -2038,80 +2095,78 @@ namespace Midjourney.Infrastructure
                     return;
                 }
 
-                var success = StartAsync(true).ConfigureAwait(false).GetAwaiter().GetResult();
+                var success = await StartAsync(true);
                 if (!success)
                 {
                     _logger.Warning("用户重新连接失败 {@0}，尝试新连接", Account.ChannelId);
 
-                    Thread.Sleep(1000);
-                    TryNewConnect();
+                    await Task.Delay(1000);
+
+                    await TryNewConnect();
                 }
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                _logger.Warning(e, "用户重新连接异常 {@0}，尝试新连接", Account.ChannelId);
+                _logger.Warning(ex, "用户重新连接异常 {@0}，尝试新连接", Account.ChannelId);
 
-                Thread.Sleep(1000);
-                TryNewConnect();
+                await Task.Delay(1000);
+
+                await TryNewConnect();
             }
         }
 
         /// <summary>
         /// 新的连接
         /// </summary>
-        private void TryNewConnect()
+        private async Task TryNewConnect()
         {
             if (_isDispose)
             {
                 return;
             }
 
-            var isLock = LocalLock.TryLock("TryNewConnect", TimeSpan.FromSeconds(3), () =>
-            {
-                for (int i = 1; i <= CONNECT_RETRY_LIMIT; i++)
-                {
-                    try
-                    {
-                        // 如果 5 分钟内失败次数超过限制，则禁用账号
-                        var ncKey = $"TryNewConnect_{Account.ChannelId}";
-
-                        var count = AdaptiveCache.AddOrUpdate(ncKey, 1, (k, v) => ++v, TimeSpan.FromMinutes(5));
-
-                        //_memoryCache.TryGetValue(ncKey, out int count);
-                        //_memoryCache.Set(ncKey, count + 1, TimeSpan.FromMinutes(5));
-
-                        if (count > CONNECT_RETRY_LIMIT)
-                        {
-                            _logger.Warning("新的连接失败次数超过限制，禁用账号");
-                            DisableAccount("新的连接失败次数超过限制，禁用账号");
-                            return;
-                        }
-
-                        var success = StartAsync(false).ConfigureAwait(false).GetAwaiter().GetResult();
-                        if (success)
-                        {
-                            return;
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        _logger.Warning(e, "用户新连接失败, 第 {@0} 次, {@1}", i, Account.ChannelId);
-
-                        Thread.Sleep(5000);
-                    }
-                }
-
-                if (WebSocket == null || WebSocket.State != WebSocketState.Open)
-                {
-                    _logger.Error("由于无法重新连接，自动禁用账号");
-
-                    DisableAccount("由于无法重新连接，自动禁用账号");
-                }
-            });
-
-            if (!isLock)
+            await using var lockObj = await AdaptiveLock.LockAsync("TryNewConnect", 3);
+            if (lockObj.IsAcquired == false)
             {
                 _logger.Warning("新的连接作业正在执行中，禁止重复执行");
+                return;
+            }
+
+            for (int i = 1; i <= CONNECT_RETRY_LIMIT; i++)
+            {
+                try
+                {
+                    // 如果 5 分钟内失败次数超过限制，则禁用账号
+                    var ncKey = $"DiscordTryNewConnectCount:{Account.ChannelId}";
+                    var count = AdaptiveCache.AddOrUpdate(ncKey, 1, (k, v) => ++v, TimeSpan.FromMinutes(5));
+                    if (count > CONNECT_RETRY_LIMIT)
+                    {
+                        _logger.Warning("新的连接失败次数超过限制，禁用账号");
+
+                        DisableAccount("新的连接失败次数超过限制，禁用账号");
+
+                        return;
+                    }
+
+                    var success = await StartAsync();
+                    if (success)
+                    {
+                        return;
+                    }
+                }
+                catch (Exception e)
+                {
+                    _logger.Warning(e, "用户新连接失败, 第 {@0} 次, {@1}", i, Account.ChannelId);
+
+                    await Task.Delay(5000);
+                }
+            }
+
+            if (WebSocket == null || WebSocket.State != WebSocketState.Open)
+            {
+                _logger.Error("由于无法重新连接，自动禁用账号");
+
+                DisableAccount("由于无法重新连接，自动禁用账号");
             }
         }
 
@@ -2182,7 +2237,7 @@ namespace Midjourney.Infrastructure
                 {
                     try
                     {
-                        await EmailJob.Instance.EmailSend(smtp,
+                        await EmailHelper.Instance.EmailSend(smtp,
                             $"MJ账号禁用通知-{Account.ChannelId}",
                             $"{Account.ChannelId}, {Account.DisabledReason}");
                     }
@@ -2312,12 +2367,10 @@ namespace Midjourney.Infrastructure
                 _receiveTask = null;
                 _heartbeatTask = null;
 
+                _initConnectLock?.Dispose();
+
                 LogInfo("WebSocket 资源已释放");
             }
-
-            // 暂时不需要延迟
-            //// 延迟以确保所有资源正确释放
-            //Thread.Sleep(1000);
         }
 
         /// <summary>
@@ -2370,6 +2423,8 @@ namespace Midjourney.Infrastructure
         private void OnSocketSuccess()
         {
             Running = true;
+            RemoveInitConnecting();
+
             _discordInstance.DefaultSessionId = _sessionId;
 
             NotifyWss(ReturnCode.SUCCESS, "");
@@ -2426,7 +2481,7 @@ namespace Midjourney.Infrastructure
             if (string.IsNullOrWhiteSpace(imageUrl))
                 return imageUrl;
 
-            string cdn = _discordHelper.GetCdn();
+            string cdn = DiscordHelper.GetCdn();
             if (imageUrl.StartsWith(cdn))
                 return imageUrl;
 
@@ -2453,7 +2508,7 @@ namespace Midjourney.Infrastructure
             var messageHash = task.GetProperty(Constants.TASK_PROPERTY_MESSAGE_HASH, string.Empty);
             if (string.IsNullOrWhiteSpace(messageHash))
             {
-                messageHash = _discordHelper.GetMessageHash(task.ImageUrl);
+                messageHash = DiscordHelper.GetMessageHash(task.ImageUrl);
 
                 task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_HASH, messageHash);
                 task.JobId = messageHash;
@@ -2546,7 +2601,7 @@ namespace Midjourney.Infrastructure
                         }
 
                         var imageUrl = message.Embeds.First().Image?.Url;
-                        var messageHash = _discordHelper.GetMessageHash(imageUrl);
+                        var messageHash = DiscordHelper.GetMessageHash(imageUrl);
 
                         var finalPrompt = message.Embeds.First().Description;
 
@@ -2807,7 +2862,7 @@ namespace Midjourney.Infrastructure
             var msgId = GetMessageId(message);
             var fullPrompt = GetFullPrompt(message);
             var imageUrl = GetImageUrl(message);
-            var messageHash = _discordHelper.GetMessageHash(imageUrl);
+            var messageHash = DiscordHelper.GetMessageHash(imageUrl);
 
             if (string.IsNullOrWhiteSpace(msgId)
                 || string.IsNullOrWhiteSpace(fullPrompt)

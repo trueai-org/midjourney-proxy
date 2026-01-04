@@ -48,7 +48,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
         protected readonly ILogger _logger = Log.Logger;
         protected readonly INotifyService _notifyService;
 
-        protected readonly DiscordHelper _discordHelper;
         protected readonly HttpClient _httpClient;
         protected readonly IMemoryCache _cache;
 
@@ -59,7 +58,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
         protected readonly IFreeSql _freeSql = FreeSqlHelper.FreeSql;
 
-        public BaseFaceSwapInstance(INotifyService notifyService, IMemoryCache memoryCache, DiscordHelper discordHelper)
+        public BaseFaceSwapInstance(INotifyService notifyService, IMemoryCache memoryCache)
         {
             var config = GlobalConfiguration.Setting;
 
@@ -80,7 +79,6 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 Timeout = TimeSpan.FromMinutes(15),
             };
 
-            _discordHelper = discordHelper;
             _notifyService = notifyService;
             _cache = memoryCache;
         }
