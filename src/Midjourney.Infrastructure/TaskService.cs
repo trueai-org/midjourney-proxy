@@ -1460,6 +1460,12 @@ namespace Midjourney.Infrastructure.Services
                 return null;
             }
 
+            // 如果当前账号是固定模式
+            if (instance.Account.Mode != null)
+            {
+                mode = instance.Account.Mode;
+            }
+
             task.Mode = mode ?? GenerationSpeedMode.FAST;
 
             submitResult = SubmitResultVO.Of(ReturnCode.SUCCESS, "成功", "");
