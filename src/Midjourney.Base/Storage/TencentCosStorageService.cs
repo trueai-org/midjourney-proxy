@@ -176,7 +176,9 @@ namespace Midjourney.Base.Storage
                 HeadObjectRequest request = new HeadObjectRequest(_cosOptions.Bucket, key);
                 HeadObjectResult result = GetClient().HeadObject(request);
 
-                return result.httpCode == 200;
+                var any = result.httpCode == 200;
+
+                return await Task.FromResult(any);
             }
             catch
             {

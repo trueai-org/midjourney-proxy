@@ -22,6 +22,8 @@
 // invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
+using System.Text.RegularExpressions;
+
 namespace Midjourney.Base
 {
     /// <summary>
@@ -152,6 +154,9 @@ namespace Midjourney.Base
                 return null;
             }
 
+            // GUID 正则表达式模式
+            string pattern = @"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
+
             if (imageUrl.EndsWith("_grid_0.webp"))
             {
                 int hashStartIndex = imageUrl.LastIndexOf("/");
@@ -187,6 +192,17 @@ namespace Midjourney.Base
                     return null;
                 }
                 return imageUrl.Substring(hashStartIndex + 1, imageUrl.Length - hashStartIndex - 1 - "_0.mp4".Length);
+            }
+
+            // 通过 GUIID 获取
+            // string url = "https://cdn.discordapp.com/ephemeral-attachments/1457289299434148008/1457303109289251008/26ee489b-00d7-47da-9ee0-c6de4c93049c_3_step_7.jpeg?ex=695b82c8&is=695a3148&hm=5ff2bc5a89599067e3bcc51f5347cae80c498ff54fe4f4c60be8cdc055fa9f73&";
+            else if (Regex.Match(imageUrl, pattern).Success)
+            {
+                var guid = Regex.Match(imageUrl, pattern).Value;
+                if (!string.IsNullOrWhiteSpace(guid))
+                {
+                    return guid;
+                }
             }
 
             int startIndex = imageUrl.LastIndexOf("_");

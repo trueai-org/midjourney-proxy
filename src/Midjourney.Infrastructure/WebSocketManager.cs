@@ -2721,7 +2721,9 @@ namespace Midjourney.Infrastructure
             }
 
             var content = GetMessageContent(message);
-            if (!string.IsNullOrWhiteSpace(content) && content != "Displaying...")
+            if (!string.IsNullOrWhiteSpace(content)
+                && content != "Displaying..."
+                && content != "Animating...")
             {
                 var parseResult = MjMessageParser.Parse(content);
                 if (parseResult == null)
@@ -3513,12 +3515,23 @@ namespace Midjourney.Infrastructure
                 return;
             }
 
-            // MJ::JOB::animate_high_extend::3::f77c789c-7b3c-48cc-abef-a36cfef9b3cb
-            var isUpscale = message.Components.SelectMany(c => c.Components).Any(x => x.CustomId.Contains("extend", StringComparison.OrdinalIgnoreCase));
+            // 视频放大任务：MJ::JOB::animate_high_extend::4::2a284b14-2894-4d52-99b5-0d31b9ee0c1b
+            var isUpscale = message.Components.SelectMany(c => c.Components).Any(x => x.CustomId?.Contains("animate", StringComparison.OrdinalIgnoreCase) == true);
+
+            //// MJ::JOB::video_virtual_upscale::1::708fed1c-1358-41ce-8d3c-8ba20097b9b6
+            //var isExtend = message.Components.SelectMany(c => c.Components).Any(x => x.CustomId?.Contains("video_virtual_upscale", StringComparison.OrdinalIgnoreCase) == true);
 
             var list = instance.FindRunningTask(c => (c.Status == TaskStatus.IN_PROGRESS || c.Status == TaskStatus.SUBMITTED))
                 .WhereIf(isUpscale, c => c.Action == TaskAction.UPSCALE)
                 .WhereIf(!isUpscale, c => c.Action == TaskAction.VIDEO)
+
+                //// 如果当前任务是视频扩展、且完成时
+                //// MJ::JOB::animate_low_extend::1::89c5a507-2391-498f-9d42-4721794cdecb
+                //.WhereIf(messageType == MessageType.CREATE && messageParseResult.Action == TaskAction.VIDEO && isExtend == true,
+                //c => c.GetProperty(Constants.TASK_PROPERTY_CUSTOM_ID, "")?.Contains("extend") == true)
+                //.WhereIf(messageType == MessageType.CREATE && messageParseResult.Action == TaskAction.VIDEO && isExtend == false,
+                //c => c.GetProperty(Constants.TASK_PROPERTY_CUSTOM_ID, "")?.Contains("extend") != true)
+
                 .ToList();
 
             // 1. 优先通过 message id 精确匹配
@@ -3533,6 +3546,31 @@ namespace Midjourney.Infrastructure
                 {
                     Log.Information("通过 InteractionMetadataId 找到视频任务: TaskId={@0}, MessageId={@1}, InteractionMetadataId={@2}",
                         task.Id, msgId, message.InteractionMetadata.Id);
+                }
+            }
+
+            var messageHash = DiscordHelper.GetMessageHash(GetImageUrl(message));
+
+            if (!isUpscale)
+            {
+                // 非放大任务，如果通过 imageUrl 获取到 hash
+                // 则对当前任务赋值
+                if (task != null)
+                {
+                    if (messageType == MessageType.UPDATE && !string.IsNullOrWhiteSpace(messageHash))
+                    {
+                        task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_HASH, messageHash);
+                        task.JobId = messageHash;
+                    }
+                }
+
+                // 通过 jobId 匹配完成任务
+                if (task == null)
+                {
+                    if (messageType == MessageType.CREATE && !string.IsNullOrWhiteSpace(messageHash))
+                    {
+                        task = list.Where(c => c.JobId == messageHash).FirstOrDefault();
+                    }
                 }
             }
 
@@ -3657,7 +3695,6 @@ namespace Midjourney.Infrastructure
                 return;
             }
 
-            var messageHash = "";
             if (isUpscale)
             {
                 var customId = message.Components.SelectMany(c => c.Components)
@@ -3670,18 +3707,34 @@ namespace Midjourney.Infrastructure
 
                 // 视频 API 拓展任务类型
                 // 检查是否是视频扩展的第一步（放大）
-                var isVideoExtend = !string.IsNullOrWhiteSpace(task.GetProperty<string>(Constants.TASK_PROPERTY_VIDEO_EXTEND_TARGET_TASK_ID, default));
-                if (isVideoExtend)
+                var isApiVideoExtend = !string.IsNullOrWhiteSpace(task.GetProperty<string>(Constants.TASK_PROPERTY_VIDEO_EXTEND_TARGET_TASK_ID, default));
+                if (isApiVideoExtend)
                 {
                     // 视频扩展任务，不要完成，继续触发扩展操作
                     task.Status = TaskStatus.IN_PROGRESS;
                     task.Description = "/video extend";
                     task.Progress = "0%";
+                    task.MessageId = msgId;
+                    task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_ID, message.Id);
+                    task.SetProperty(Constants.TASK_PROPERTY_FLAGS, Convert.ToInt32(message.Flags));
 
-                    Log.Information("视频放大完成，准备触发扩展操作: TaskId={TaskId}", task.Id);
+                    Log.Information("视频 api 任务完成，准备自动触发扩展操作: TaskId={TaskId}", task.Id);
+
+                    var buttons = message.Components.SelectMany(x => x.Components)
+                        .Select(btn =>
+                        {
+                            return new CustomComponentModel
+                            {
+                                CustomId = btn.CustomId ?? string.Empty,
+                                Emoji = btn.Emoji?.Name ?? string.Empty,
+                                Label = btn.Label ?? string.Empty,
+                                Style = (int?)btn.Style ?? 0,
+                                Type = (int?)btn.Type ?? 0,
+                            };
+                        }).Where(c => c != null && !string.IsNullOrWhiteSpace(c.CustomId)).ToList();
 
                     // 触发第二步（扩展）
-                    CheckAndTriggerVideoExtend(instance, task, messageHash);
+                    await CheckAndTriggerVideoExtend(instance, task, messageHash, buttons);
 
                     return;
                 }
@@ -3897,7 +3950,7 @@ namespace Midjourney.Infrastructure
         /// <summary>
         /// 检查并触发视频扩展操作
         /// </summary>
-        protected void CheckAndTriggerVideoExtend(DiscordInstance instance, TaskInfo upscaleTask, string messageHash)
+        protected async Task CheckAndTriggerVideoExtend(DiscordInstance instance, TaskInfo upscaleTask, string messageHash, List<CustomComponentModel> buttons)
         {
             try
             {
@@ -3918,18 +3971,13 @@ namespace Midjourney.Infrastructure
                     extendMotion = "high";
                 }
 
-                Log.Information("视频放大完成，准备触发扩展操作: UpscaleTaskId={UpscaleTaskId}, TargetTaskId={TargetTaskId}, Motion={Motion}, Index={Index}, ButtonsCount={ButtonsCount}",
-                    upscaleTask.Id, videoExtendTargetTaskId, extendMotion, extendIndex, upscaleTask.Buttons?.Count ?? 0);
-
                 // 关键改进：从 Buttons 中查找正确的 extend customId，而不是自己构建
                 // 因为 upscale 后的 JobId 可能不是正确的 hash 值
-                var extendButton = upscaleTask.Buttons?.FirstOrDefault(x =>
-                    x.CustomId?.Contains($"animate_{extendMotion}_extend") == true);
-
+                var extendButton = buttons?.FirstOrDefault(x => x.CustomId?.Contains($"animate_{extendMotion}_extend") == true);
                 if (extendButton == null || string.IsNullOrWhiteSpace(extendButton.CustomId))
                 {
-                    Log.Warning("❌ 找不到 extend 按钮: UpscaleTaskId={TaskId}, Motion={Motion}, Buttons={@Buttons}",
-                        upscaleTask.Id, extendMotion, upscaleTask.Buttons);
+                    Log.Warning("找不到 extend 按钮: UpscaleTaskId={@0}, Motion={@1}, Buttons={@2}",
+                        upscaleTask.Id, extendMotion, buttons);
 
                     // 标记任务失败
                     upscaleTask.Status = TaskStatus.FAILURE;
@@ -3941,13 +3989,13 @@ namespace Midjourney.Infrastructure
 
                 var extendCustomId = extendButton.CustomId;
 
-                // 异步触发扩展操作
+                // 必须异步触发扩展操作，不能阻止当前消息处理
                 _ = Task.Run(async () =>
                 {
                     try
                     {
-                        // 等待 1.5 秒，确保消息已完全处理
-                        await Task.Delay(1500);
+                        // 等待 1.5 ~ 秒，确保消息已完全处理
+                        await Task.Delay(Random.Shared.Next(1500, 5000));
 
                         // 创建一个新的 nonce 用于 extend 操作
                         var extendNonce = SnowFlake.NextId();
@@ -3961,6 +4009,9 @@ namespace Midjourney.Infrastructure
                         upscaleTask.PromptEn = extendPrompt;
                         upscaleTask.RemixAutoSubmit = instance.Account.RemixAutoSubmit && (instance.Account.MjRemixOn || instance.Account.NijiRemixOn);
 
+                        // 必须开启 REMIX 模式才支持 API 视频拓展
+                  
+
                         upscaleTask.SetProperty(Constants.TASK_PROPERTY_CUSTOM_ID, extendCustomId);
                         upscaleTask.SetProperty(Constants.TASK_PROPERTY_NONCE, extendNonce);
                         upscaleTask.SetProperty(Constants.TASK_PROPERTY_MESSAGE_ID, upscaleTask.MessageId);
@@ -3971,26 +4022,67 @@ namespace Midjourney.Infrastructure
                         upscaleTask.SetProperty(Constants.TASK_PROPERTY_VIDEO_EXTEND_MOTION, null);
                         upscaleTask.SetProperty(Constants.TASK_PROPERTY_VIDEO_EXTEND_INDEX, null);
 
-                        // 如果开启了 remix 自动提交，标记任务状态
-                        if (upscaleTask.RemixAutoSubmit)
+                        // 弹窗确认
+                        var task = upscaleTask;
+                        task.RemixModaling = true;
+
+                        var res = await instance.ActionAsync(upscaleTask.MessageId, extendCustomId, upscaleTask.GetProperty<int>(Constants.TASK_PROPERTY_FLAGS, 0),
+                            extendNonce, task);
+                        if (res?.Code != ReturnCode.SUCCESS)
                         {
-                            upscaleTask.RemixModaling = true;
+                            task.Fail(res?.Description ?? "未知错误");
+                            return;
                         }
 
-                        // 调用 Action 接口触发扩展
-                        var result = await instance.ActionAsync(upscaleTask.MessageId, extendCustomId,
-                            upscaleTask.GetProperty<int>(Constants.TASK_PROPERTY_FLAGS, 0),
-                            extendNonce, upscaleTask);
+                        // 等待获取 messageId 和交互消息 id
+                        // 等待最大超时 5min
+                        var sw = new Stopwatch();
+                        sw.Start();
+                        do
+                        {
+                            // 等待 2.5s
+                            await Task.Delay(Random.Shared.Next(2500, 5000));
+                            task = instance.GetRunningTask(task.Id);
 
-                        if (result.Code == ReturnCode.SUCCESS)
+                            if (string.IsNullOrWhiteSpace(task.RemixModalMessageId) || string.IsNullOrWhiteSpace(task.InteractionMetadataId))
+                            {
+                                if (sw.ElapsedMilliseconds > 300000)
+                                {
+                                    task.Fail("超时，未找到消息");
+                                    return;
+                                }
+                            }
+                        } while (string.IsNullOrWhiteSpace(task.RemixModalMessageId) || string.IsNullOrWhiteSpace(task.InteractionMetadataId));
+
+                        // 等待 1.2s
+                        await Task.Delay(Random.Shared.Next(1200, 2500));
+
+                        task.RemixModaling = false;
+
+                        var modal = "MJ::AnimateModal::prompt";
+                        var customId = extendCustomId;
+                        var parts = customId.Split("::");
+                        var low = "low";
+                        if (!customId.Contains("low"))
                         {
-                            Log.Information("视频扩展 extend action 触发成功: TaskId={TaskId}", upscaleTask.Id);
+                            low = "high";
                         }
-                        else
+
+                        var convertedString = $"MJ::AnimateModal::{parts[4]}::{parts[3]}::{low}::1";
+                        customId = convertedString;
+                        task.SetProperty(Constants.TASK_PROPERTY_REMIX_CUSTOM_ID, customId);
+                        task.SetProperty(Constants.TASK_PROPERTY_REMIX_MODAL, modal);
+
+                        extendNonce = SnowFlake.NextId();
+                        task.Nonce = extendNonce;
+                        task.SetProperty(Constants.TASK_PROPERTY_NONCE, extendNonce);
+
+                        var result = await instance.RemixAsync(task, task.Action.Value, task.RemixModalMessageId, modal,
+                                          customId, task.PromptEn, extendNonce, task.RealBotType ?? task.BotType);
+                        if (result?.Code != ReturnCode.SUCCESS)
                         {
-                            Log.Error("视频扩展 extend action 触发失败: TaskId={TaskId}, Error={Error}",
-                                upscaleTask.Id, result.Description);
-                            upscaleTask.Fail(result.Description);
+                            task.Fail(result?.Description ?? "未知错误");
+                            return;
                         }
                     }
                     catch (Exception ex)
@@ -3998,6 +4090,8 @@ namespace Midjourney.Infrastructure
                         Log.Error(ex, "执行视频扩展操作时发生异常: UpscaleTaskId={UpscaleTaskId}", upscaleTask.Id);
                     }
                 });
+
+                await Task.CompletedTask;
             }
             catch (Exception ex)
             {

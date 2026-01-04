@@ -133,6 +133,12 @@ namespace Midjourney.Base.Dto
         public string Id { get; set; }
 
         /// <summary>
+        /// 引用消息
+        /// </summary>
+        [JsonPropertyName("message_reference")]
+        public MessageReference MessageReference { get; set; }
+
+        /// <summary>
         /// 标志位。
         /// </summary>
         [JsonPropertyName("flags")]
@@ -193,6 +199,35 @@ namespace Midjourney.Base.Dto
         public string GuildId { get; set; }
     }
 
+    /// <summary>
+    /// 引用消息
+    /// <![CDATA[
+    /// {
+    ///   "message_reference": {
+    ///     "type": 0,
+    ///     "message_id": "1457295808776114217",
+    ///     "guild_id": "1457289298880761939",
+    ///     "channel_id": "1457289299434148008"
+    ///   }
+    /// }
+    /// ]]>
+    /// </summary>
+    public class MessageReference
+    {
+        [JsonPropertyName("type")]
+        public int Type { get; set; }
+
+        [JsonPropertyName("message_id")]
+        public string MessageId { get; set; }
+
+        [JsonPropertyName("guild_id")]
+        public string GuildId { get; set; }
+
+        [JsonPropertyName("channel_id")]
+        public string ChannelId { get; set; }
+    }
+
+
     public class EventDataEmbed
     {
         [JsonPropertyName("type")]
@@ -213,7 +248,7 @@ namespace Midjourney.Base.Dto
         ///// <inheritdoc/>
         //public dynamic Color { get; set; }
 
-  
+
         [JsonPropertyName("image")]
         public EventDataEmbedImage Image { get; set; }
 

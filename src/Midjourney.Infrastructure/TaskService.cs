@@ -566,6 +566,18 @@ namespace Midjourney.Infrastructure.Services
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
 
+
+            // 必须开启 REMIX 模式才支持 API 视频拓展
+            var botType = info.RealBotType ?? info.BotType;
+            if (botType == EBotType.MID_JOURNEY && !instance.Account.MjRemixOn)
+            {
+                return SubmitResultVO.Fail(ReturnCode.FAILURE, "未开启 REMIX，无法使用视频扩展功能");
+            }
+            else if (botType == EBotType.NIJI_JOURNEY && !instance.Account.NijiRemixOn)
+            {
+                return SubmitResultVO.Fail(ReturnCode.FAILURE, "未开启 REMIX，无法使用视频扩展功能");
+            }
+
             // 如果要求 HD，但是没有 HD
             if (isHdVideo && !instance.Account.IsHdVideo)
             {
@@ -1464,7 +1476,6 @@ namespace Midjourney.Infrastructure.Services
         public async Task<SubmitResultVO> SubmitAction(TaskInfo task, SubmitActionDTO submitAction)
         {
             var setting = GlobalConfiguration.Setting;
-            GenerationSpeedMode? mode = null;
 
             var targetTask = _freeSql.Get<TaskInfo>(submitAction.TaskId)!;
             if (targetTask == null)
@@ -1490,8 +1501,6 @@ namespace Midjourney.Infrastructure.Services
 
             var messageFlags = targetTask.GetProperty<string>(Constants.TASK_PROPERTY_FLAGS, default)?.ToInt() ?? 0;
             var messageId = targetTask.GetProperty<string>(Constants.TASK_PROPERTY_MESSAGE_ID, default);
-
-            task.Mode = mode;
 
             task.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, instance.ChannelId);
             task.IsOfficial = targetTask.IsOfficial;
@@ -1870,7 +1879,6 @@ namespace Midjourney.Infrastructure.Services
         public async Task<SubmitResultVO> SubmitModal(TaskInfo task, SubmitModalDTO submitAction, DataUrl dataUrl = null)
         {
             var setting = GlobalConfiguration.Setting;
-            GenerationSpeedMode? mode = null;
 
             var parentTask = _freeSql.Get<TaskInfo>(task.ParentId);
 
@@ -1881,7 +1889,6 @@ namespace Midjourney.Infrastructure.Services
             }
 
             task.InstanceId = instance.ChannelId;
-            task.Mode = mode;
             task.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, instance.ChannelId);
 
             if (task.IsPartner || task.IsOfficial)
