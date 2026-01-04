@@ -85,8 +85,33 @@ namespace Midjourney.Base.Dto
         public SystemInfo SystemInfo { get; set; } = SystemInfo.GetCurrentSystemInfo();
 
         /// <summary>
-        /// 今日绘图计数
+        /// 今日成功绘图计数
         /// </summary>
         public Dictionary<GenerationSpeedMode, Dictionary<TaskAction, int>> TodayCounter { get; set; } = [];
+
+        /// <summary>
+        /// 今日成功任务总计数
+        /// </summary>
+        public int TodayCount => TodayCounter.Values.Sum(x => x.Values.Sum());
+
+        /// <summary>
+        /// 今日取消任务计数
+        /// </summary>
+        public Dictionary<TaskAction, int> TodayCancelCounter { get; set; } = [];
+
+        /// <summary>
+        /// 今日取消任务总计数
+        /// </summary>
+        public int TodayCancelCount => TodayCancelCounter.Values.Sum();
+
+        /// <summary>
+        /// 今日失败任务计数
+        /// </summary>
+        public Dictionary<TaskAction, int> TodayFailCounter { get; set; } = [];
+
+        /// <summary>
+        /// 今日失败任务总计数
+        /// </summary>
+        public int TodayFailCount => TodayFailCounter.Values.Sum();
     }
 }

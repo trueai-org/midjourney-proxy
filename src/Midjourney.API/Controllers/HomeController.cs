@@ -73,9 +73,9 @@ namespace Midjourney.API.Controllers
                 var now = new DateTimeOffset(DateTime.Now.Date).ToUnixTimeMilliseconds();
                 var yesterday = new DateTimeOffset(DateTime.Now.Date.AddDays(-1)).ToUnixTimeMilliseconds();
 
-                dto.TodayDraw = (int)_freeSql.Count<TaskInfo>(x => x.SubmitTime >= now);
-                dto.YesterdayDraw = (int)_freeSql.Count<TaskInfo>(x => x.SubmitTime >= yesterday && x.SubmitTime < now);
-                dto.TotalDraw = (int)_freeSql.Count<TaskInfo>();
+                dto.TodayDraw = _freeSql.Count<TaskInfo>(x => x.SubmitTime >= now);
+                dto.YesterdayDraw = _freeSql.Count<TaskInfo>(x => x.SubmitTime >= yesterday && x.SubmitTime < now);
+                dto.TotalDraw = _freeSql.Count<TaskInfo>();
 
                 // 今日绘图客户端 top 10
                 var setting = GlobalConfiguration.Setting;
@@ -172,26 +172,40 @@ namespace Midjourney.API.Controllers
                     dto.PrivateIp = localIp;
                 }
 
-                var fsql = FreeSqlHelper.FreeSql;
-                if (fsql != null)
+                // 今日成功任务速度操作统计
+                var todaySuccessGroups = _freeSql.Select<TaskInfo>()
+                .Where(c => c.SubmitTime >= now && c.Status == TaskStatus.SUCCESS)
+                .GroupBy(c => new { c.Mode, c.Action })
+                .ToList(c => new { c.Key, Count = c.Count() })
+                .ToDictionary(c => c.Key, c => c.Count);
+                var todaySuccessCounter = new Dictionary<GenerationSpeedMode, Dictionary<TaskAction, int>>();
+                foreach (var kvp in todaySuccessGroups)
                 {
-                    var taskInfos = fsql.Select<TaskInfo>()
-                          .Where(c => c.SubmitTime >= now && c.Status == TaskStatus.SUCCESS)
-                          .GroupBy(c => new { c.Mode, c.Action })
-                          .ToList(c => new { c.Key, Count = c.Count() })
-                          .ToDictionary(c => c.Key, c => c.Count);
-                    var homeCounter = new Dictionary<GenerationSpeedMode, Dictionary<TaskAction, int>>();
-                    foreach (var kvp in taskInfos)
+                    var mode = kvp.Key.Mode ?? GenerationSpeedMode.FAST;
+                    if (!todaySuccessCounter.ContainsKey(mode))
                     {
-                        var mode = kvp.Key.Mode ?? GenerationSpeedMode.FAST;
-                        if (!homeCounter.ContainsKey(mode))
-                        {
-                            homeCounter[mode] = [];
-                        }
-                        homeCounter[mode][kvp.Key.Action ?? TaskAction.IMAGINE] = kvp.Value;
+                        todaySuccessCounter[mode] = [];
                     }
-                    dto.TodayCounter = homeCounter.OrderBy(c => c.Key).ToDictionary(c => c.Key, c => c.Value.OrderBy(x => x.Key).ToDictionary(x => x.Key, x => x.Value));
+                    todaySuccessCounter[mode][kvp.Key.Action ?? TaskAction.IMAGINE] = kvp.Value;
                 }
+                dto.TodayCounter = todaySuccessCounter.OrderBy(c => c.Key).ToDictionary(c => c.Key, c => c.Value.OrderBy(x => x.Key).ToDictionary(x => x.Key, x => x.Value));
+
+                // 今日取消任务操作统计
+                var todayCancelGroups = _freeSql.Select<TaskInfo>()
+                .Where(c => c.SubmitTime >= now && c.Status == TaskStatus.CANCEL && c.Action != null)
+                .GroupBy(c => c.Action)
+                .ToList(c => new { Action = c.Key.Value, Count = c.Count() })
+                .ToDictionary(c => c.Action, c => c.Count);
+
+                // 今日失败任务操作统计
+                var todayFailGroups = _freeSql.Select<TaskInfo>()
+                .Where(c => c.SubmitTime >= now && c.Status == TaskStatus.FAILURE && c.Action != null)
+                .GroupBy(c => c.Action)
+                .ToList(c => new { Action = c.Key.Value, Count = c.Count() })
+                .ToDictionary(c => c.Action, c => c.Count);
+
+                dto.TodayCancelCounter = todayCancelGroups;
+                dto.TodayFailCounter = todayFailGroups;
 
                 return dto;
             });
