@@ -205,7 +205,7 @@ sh docker-upgrade.sh
 # 3.2 配置宿主私网 IP：-e HOST_IP=10.0.0.1，默认不配置
 ```
 
-> Docker Compose 脚本说明：[Docker Compose Doc](https://github.com/trueai-org/midjourney-proxy/wiki/Speed-mode-doc)
+> Docker Compose 脚本说明：[Docker Compose Doc](https://github.com/trueai-org/midjourney-proxy/wiki/Docker-Compose-Doc)
 
 ```bash
 # 通过 dokcker-compose 启动
