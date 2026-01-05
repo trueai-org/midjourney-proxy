@@ -205,6 +205,56 @@ sh docker-upgrade.sh
 # 3.2 配置宿主私网 IP：-e HOST_IP=10.0.0.1，默认不配置
 ```
 
+> Docker Compose 脚本说明：[Docker Compose Doc](https://github.com/trueai-org/midjourney-proxy/wiki/Speed-mode-doc)
+
+```bash
+# 通过 dokcker-compose 启动
+# 下载 docker-compose.yml 文件
+wget -O docker-compose.yml https://raw.githubusercontent.com/trueai-org/midjourney-proxy/main/scripts/docker-compose.yml
+
+# 启动容器和所有服务（启动前可编辑 docker-compose.yml 进行自定义配置，例如：路径、端口、内存、密码等配置，默认8086端口）
+# 默认：仅启动 MySQL
+docker compose up -d
+
+# 使用 PostgreSQL
+docker compose --profile postgres up -d
+
+# 使用 SQL Server（修改为强密码）
+docker compose --profile sqlserver up -d
+
+# 同时启动多个 profile
+docker compose --profile postgres --profile sqlserver up -d
+
+# 停止服务
+docker-compose down
+
+# 查看所有服务日志
+docker-compose logs -f
+
+# 查看特定服务日志
+docker-compose logs -f mjopen
+docker-compose logs -f mjopen-redis
+docker-compose logs -f mjopen-mysql
+
+# 重启所有服务
+docker-compose restart
+
+# 重启特定服务
+docker-compose restart mjopen
+
+# Redis 连接字符串：
+mjopen-redis:6379,password=123456,defaultDatabase=1,prefix=mjopen:
+
+# MySQL 连接字符串：
+Data Source=mjopen-mysql;Port=3306;User ID=root;Password=123456;Initial Catalog=mjopen;Charset=utf8mb4;SslMode=none;Min pool size=1
+
+# PostgreSQL 连接字符串：
+Host=mjopen-postgres;Port=5432;Username=mj;Password=123456;Database=mjopen;ArrayNullabilityMode=Always;Pooling=true;Minimum Pool Size=1
+
+# SQL Server 连接字符串
+Data Source=mjopen-sqlserver;User Id=sa;Password=Midjourney@123;Initial Catalog=mjopen;Encrypt=True;TrustServerCertificate=True;Pooling=true;Min Pool Size=1
+```
+
 ```bash
 # 基础镜像（轻量版，支持Discord、悠船绘图）
 docker pull registry.cn-guangzhou.aliyuncs.com/trueai-org/midjourney-proxy:lite

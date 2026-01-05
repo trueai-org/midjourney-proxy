@@ -1,11 +1,79 @@
-version: '3'
+version: '3.8'
+
 services:
-  mjopen:
+  # Redis 服务
+  mjopen-redis:  
+    image: redis:6. 2.11
+    container_name: mjopen-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - /root/mjopen/redis:/data
+    command: redis-server --appendonly yes --requirepass "123456"
+    networks:
+      - mjopen-network
+
+  # MySQL 服务
+  mjopen-mysql: 
+    image: mysql:8.0
+    container_name: mjopen-mysql
+    restart: always
+    ports:
+      - "3306:3306"
+    volumes:
+      - /root/mjopen/mysql:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+      TZ: Asia/Shanghai
+    networks:
+      - mjopen-network
+
+  # PostgreSQL 服务（可选，默认不启动）
+  mjopen-postgres: 
+    image: postgres:18-alpine
+    container_name: mjopen-postgres
+    restart: always
+    ports:
+      - "5432:5432"
+    volumes: 
+      - /root/mjopen/postgres:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: mj
+      POSTGRES_PASSWORD: 123456
+      POSTGRES_DB: mjopen
+      TZ: Asia/Shanghai
+    networks:
+      - mjopen-network
+    profiles:
+      - postgres  # 使用 profile，默认不启动 
+
+  # SQL Server 服务（可选，默认不启动）
+  mjopen-sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: mjopen-sqlserver
+    restart: always
+    ports:
+      - "1433:1433"
+    volumes:
+      - /root/mjopen/sqlserver:/var/opt/mssql
+    environment:
+      ACCEPT_EULA: "Y"  # 接受最终用户许可协议（必须）
+      SA_PASSWORD: "Midjourney@123"  # 管理员密码（必须强密码）
+      MSSQL_PID: Express  # 产品版本：Developer（开发）或 Express（生产小型项目）
+      # MSSQL_PID: "XXXXX-XXXXX-XXXXX-XXXXX-XXXXX"  # 你的产品密钥
+      TZ:  Asia/Shanghai  # 时区
+    networks:
+      - mjopen-network
+    profiles:
+      - sqlserver
+
+  # 主程序
+  mjopen:  
     image: registry.cn-guangzhou.aliyuncs.com/trueai-org/midjourney-proxy
     container_name: mjopen
     restart: always
-    environment:
-      - TZ=Asia/Shanghai
+    user: root
     ports:
       - "8086:8080"
     volumes:
@@ -14,4 +82,19 @@ services:
       - /root/mjopen/attachments:/app/wwwroot/attachments:rw
       - /root/mjopen/ephemeral-attachments:/app/wwwroot/ephemeral-attachments:rw
       - /etc/localtime:/etc/localtime:ro
-      - /etc/timezone:/etc/timezone:ro
+    environment:
+      TZ: Asia/Shanghai
+      # 节点最大任务并行数（可选）
+      # CONCURRENT:  10
+      # 配置宿主私网 IP（可选）
+      # HOST_IP: 10.0.0.1
+    networks:
+      - mjopen-network
+    depends_on:  
+      - mjopen-redis
+      - mjopen-mysql
+
+# 自动创建网络（无需手动操作）
+networks:
+  mjopen-network:
+    driver: bridge
