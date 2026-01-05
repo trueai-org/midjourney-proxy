@@ -23,7 +23,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\Midjourney.Base\Midjourney.Base.csproj" />
-		<ProjectReference Include="..\Midjourney.Infrastructure\Midjourney.Infrastructure.csproj" />
+		<ProjectReference Include="..\Midjourney.Services\Midjourney.Services.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

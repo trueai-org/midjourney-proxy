@@ -32,16 +32,6 @@ namespace Midjourney.API
     {
         public static void AddMidjourneyServices(this IServiceCollection services, Setting config)
         {
-            // 用户消息处理程序
-            //services.AddTransient<UserMessageHandler, UserImagineSuccessHandler>();
-            //services.AddTransient<UserMessageHandler, UserActionSuccessHandler>();
-            //services.AddTransient<UserMessageHandler, UserUpscaleSuccessHandler>();
-            //services.AddTransient<UserMessageHandler, UserDescribeSuccessHandler>();
-            //services.AddTransient<UserMessageHandler, UserVariationSuccessHandler>();
-            //services.AddTransient<UserMessageHandler, UserStartAndProgressHandler>();
-            //services.AddTransient<UserMessageHandler, UserRerollSuccessHandler>();
-            //services.AddTransient<UserMessageHandler, UserShortenSuccessHandler>();
-
             // 换脸服务
             services.AddSingleton<FaceSwapInstance>();
             services.AddSingleton<VideoFaceSwapInstance>();
@@ -49,7 +39,6 @@ namespace Midjourney.API
             // 通知服务
             services.AddSingleton<INotifyService, NotifyService>();
 
- 
             // 账号负载均衡服务
             switch (config.AccountChooseRule)
             {
