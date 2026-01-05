@@ -345,24 +345,10 @@ c. 启动方式1: sh run_app_osx.sh
 d. 启动方式2: chmod +x run_app_osx.sh && ./run_app_osx.sh
 ```
 
-> Linux 一键安装脚本（❤感谢 [@dbccccccc](https://github.com/dbccccccc)）
+## 路径说明
 
-```bash
-# 方式1
-wget -N --no-check-certificate https://raw.githubusercontent.com/trueai-org/midjourney-proxy/main/scripts/linux_install.sh && chmod +x linux_install.sh && bash linux_install.sh
-
-# 方式2
-curl -o linux_install.sh https://raw.githubusercontent.com/trueai-org/midjourney-proxy/main/scripts/linux_install.sh && chmod +x linux_install.sh && bash linux_install.sh
-```
-
-## 参数配置
-
-[更多配置参数文档](./docs/appsettings.md)
-
-- `appsettings.json` 默认配置
-- `appsettings.Production.json` 生产环境配置
 - `/app/data` 数据目录，存放账号、任务等数据
-    - `/app/data/mj.db` 数据库文件
+    - `/app/data/mj.json` 配置文件
 - `/app/logs` 日志目录
 - `/app/wwwroot` 静态文件目录
     - `/app/wwwroot/attachments` 绘图文件目录
@@ -381,11 +367,11 @@ curl -o linux_install.sh https://raw.githubusercontent.com/trueai-org/midjourney
 
 ```json
 {
-  "bucketName": "mjopen",//创建的OSS名称
-  "accessKeyId": "LTAIa***",//OSS的accesskeyID
-  "accessKeySecret": "QGqO7***",//OSS的密钥
-  "endpoint": "oss-cn-hongkong-internal.aliyuncs.com",//OSS的域名
-  "customCdn": null,
+  "bucketName": "mjopen",// 创建的OSS名称
+  "accessKeyId": "LTAIa***",// OSS的accesskeyID
+  "accessKeySecret": "QGqO7***",// OSS的密钥
+  "endpoint": "oss-cn-hongkong-internal.aliyuncs.com",// OSS的域名
+  "customCdn": "自定义加速域名",
   "imageStyle": null,
   "thumbnailImageStyle": null,
   "videoSnapshotStyle": null,
@@ -401,12 +387,10 @@ curl -o linux_install.sh https://raw.githubusercontent.com/trueai-org/midjourney
 
 > Redis 配置
 
-`推荐开启 Redis`
-
-- 开启 Redis 支持分布式部署。
-- 开启 Redis 支持实时调整队列数、并发数。
-- 开启 Redis 支持重启继续任务。
-- 开启 Redis 可以自动过官网 CloudFlare 验证。
+- 支持分布式部署。
+- 支持实时调整队列数、并发数。
+- 支持重启继续任务。
+- 可以自动过官网 CloudFlare 验证。
 
 > Docker Redis 一键启动脚本参考：
 
@@ -442,33 +426,6 @@ docker run --name mjopen-redis --network mjopen-network --restart always -p 6379
 
 # REDSI 连接字符串
 mjopen-redis:6379,password=***,defaultDatabase=1,prefix=mjopen:
-```
-
-### MongoDB 配置（v10已废弃）
-
-> 如果你的任务量未来可能超过 10 万，推荐 Docker 部署 MongoDB。
-
-> 注意：
-> 1.切换 MongoDB 历史任务可选择自动迁移。
-> 2.关于 IP 的填写方式有多种，内网 IP、外网 IP、容器互通等方式。
-
-1. 启动容器 `xxx` 为你的密码
-2. 打开系统设置 -> 输入 MongoDB 连接字符串 `mongodb://mongoadmin:xxx@ip` 即可
-3. 填写 MongoDB 数据库名称 -> `mj` -> 保存
-4. 重启服务
-
-```bash
-# 启动容器
-docker run -d \
-  --name mjopen-mongo \
-  -p 27017:27017 \
-  -v /root/mjopen/mongo/data:/data/db \
-  --restart always \
-  -e MONGO_INITDB_ROOT_USERNAME=mongoadmin \
-  -e MONGO_INITDB_ROOT_PASSWORD=xxx \
-  mongo
-
-# 创建数据库（也可以通过 BT 创建数据库）（可选）
 ```
 
 ### 换脸配置
@@ -549,13 +506,6 @@ docker run -d \
   "urls": "http://*:8081" // 默认端口
 }
 ```
-
-## 机器人 Token（可选配置）
-
-本项目利用 Discord 机器人 Token 连接 wss，可以获取错误信息和完整功能，确保消息的高可用性等问题。
-
-[机器人 Token 配置教程](./docs/api.md)
-
 ## 作图频繁预防警告
 
 - 任务间隔 30~180 秒，执行前间隔 3.6 秒以上
