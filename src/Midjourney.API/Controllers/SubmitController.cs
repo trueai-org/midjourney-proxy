@@ -523,14 +523,46 @@ namespace Midjourney.API.Controllers
             // MJ::JOB::reroll::0::898416ec-7c18-4762-bf03-8e428fee1860::SOLO
             else if (actionDTO.CustomId.StartsWith("MJ::JOB::reroll::"))
             {
-                //task.Action = TaskAction.REROLL;
-                if (targetTask.Action == TaskAction.UPSCALE)
+                switch (targetTask.Action)
                 {
-                    task.Action = TaskAction.IMAGINE;
-                }
-                else
-                {
-                    task.Action = targetTask.Action;
+                    case TaskAction.IMAGINE:
+                    case TaskAction.VARIATION:
+                    case TaskAction.DESCRIBE:
+                    case TaskAction.BLEND:
+                    case TaskAction.PAN:
+                    case TaskAction.ZOOM:
+                    case TaskAction.SHORTEN:
+                    case TaskAction.VIDEO:
+                    case TaskAction.EDIT:
+                    case TaskAction.UPSCALE_HD:
+                    case TaskAction.RETEXTURE:
+                        {
+                            // 允许重绘
+                            task.Action = targetTask.Action;
+                        }
+                        break;
+
+                    case TaskAction.UPSCALE:
+                        {
+                            // 重新提交
+                            task.Action = TaskAction.IMAGINE;
+                        }
+                        break;
+
+                    case TaskAction.REROLL:
+                    case TaskAction.ACTION:
+                    case TaskAction.OUTPAINT:
+                    case TaskAction.INPAINT:
+                    case TaskAction.SHOW:
+                    case TaskAction.SWAP_FACE:
+                    case TaskAction.SWAP_VIDEO_FACE:
+                    case TaskAction.VIDEO_EXTEND:
+                    case TaskAction.PIC_READER:
+                    default:
+                        {
+                            // 不允许重绘
+                            return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "该任务不支持重新生成"));
+                        }
                 }
             }
             // 强变化
@@ -632,7 +664,7 @@ namespace Midjourney.API.Controllers
             // 兼容 rix api
             if (string.IsNullOrWhiteSpace(prompt) && !string.IsNullOrWhiteSpace(task.ParentId))
             {
-                var parentTask =_freeSql.Get<TaskInfo>(task.ParentId);
+                var parentTask = _freeSql.Get<TaskInfo>(task.ParentId);
                 if (parentTask != null)
                 {
                     // 优先使用父级提示词
