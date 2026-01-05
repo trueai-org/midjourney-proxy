@@ -927,6 +927,11 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <returns></returns>
         private async Task AccountBeforeDelay()
         {
+            if (Account.IsYouChuan)
+            {
+                return;
+            }
+
             // 账号休眠
             var preSleep = Account.Interval;
             if (preSleep <= 0m)
@@ -949,6 +954,11 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <returns></returns>
         private async Task AccountAfterDelay(bool isPicReader = false)
         {
+            if (Account.IsYouChuan)
+            {
+                return;
+            }
+
             // 计算执行后的间隔
             var acc = Account;
 

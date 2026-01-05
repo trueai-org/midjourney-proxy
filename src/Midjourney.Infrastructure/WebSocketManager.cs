@@ -3074,6 +3074,33 @@ namespace Midjourney.Infrastructure
                 }
             }
 
+            var messageHash = DiscordHelper.GetMessageHash(GetImageUrl(message));
+
+            // 非放大任务，如果通过 imageUrl 获取到 hash
+            // 则对当前任务赋值
+            if (task != null)
+            {
+                if (messageType == MessageType.UPDATE && !string.IsNullOrWhiteSpace(messageHash))
+                {
+                    task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_HASH, messageHash);
+                    task.JobId = messageHash;
+
+                    if (!string.IsNullOrWhiteSpace(fullPrompt) && string.IsNullOrWhiteSpace(task.PromptFull))
+                    {
+                        task.PromptFull = fullPrompt;
+                    }
+                }
+            }
+
+            // 通过 jobId 匹配完成任务
+            if (task == null)
+            {
+                if (messageType == MessageType.CREATE && !string.IsNullOrWhiteSpace(messageHash))
+                {
+                    task = list.Where(c => c.JobId == messageHash).FirstOrDefault();
+                }
+            }
+
             // 3. 通过提示词查找任务
             if (task == null)
             {
@@ -3084,7 +3111,7 @@ namespace Midjourney.Infrastructure
                     return;
                 }
 
-                var filterList = list.Where(c => !string.IsNullOrWhiteSpace(c.PromptEn) && parseResult.CleanPrompt.Equals(MjPromptParser.Parse(c.PromptEn)?.CleanPrompt, StringComparison.OrdinalIgnoreCase)).ToList();
+                var filterList = list.Where(c => !string.IsNullOrWhiteSpace(c.PromptFull) && parseResult.CleanPrompt.Equals(MjPromptParser.Parse(c.PromptFull)?.CleanPrompt, StringComparison.OrdinalIgnoreCase)).ToList();
                 if (filterList.Count == 1)
                 {
                     task = filterList.FirstOrDefault();
@@ -3170,7 +3197,6 @@ namespace Midjourney.Infrastructure
 
             // https://www.midjourney.com/jobs/3e8ebcc8-cb3a-472b-a63b-8ef558dc9f48
             var url = message.Components.SelectMany(x => x.Components).Where(y => y.Url?.StartsWith("https://www.midjourney.com/jobs/") == true).FirstOrDefault()?.Url;
-            var messageHash = "";
             if (!string.IsNullOrWhiteSpace(url))
             {
                 messageHash = url.Substring(url.LastIndexOf('/') + 1);
@@ -3227,6 +3253,34 @@ namespace Midjourney.Infrastructure
                 }
             }
 
+
+            var messageHash = DiscordHelper.GetMessageHash(GetImageUrl(message));
+
+            // 非放大任务，如果通过 imageUrl 获取到 hash
+            // 则对当前任务赋值
+            if (task != null)
+            {
+                if (messageType == MessageType.UPDATE && !string.IsNullOrWhiteSpace(messageHash))
+                {
+                    task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_HASH, messageHash);
+                    task.JobId = messageHash;
+
+                    if (!string.IsNullOrWhiteSpace(fullPrompt) && string.IsNullOrWhiteSpace(task.PromptFull))
+                    {
+                        task.PromptFull = fullPrompt;
+                    }
+                }
+            }
+
+            // 通过 jobId 匹配完成任务
+            if (task == null)
+            {
+                if (messageType == MessageType.CREATE && !string.IsNullOrWhiteSpace(messageHash))
+                {
+                    task = list.Where(c => c.JobId == messageHash).FirstOrDefault();
+                }
+            }
+
             // 3. 通过提示词查找任务
             if (task == null)
             {
@@ -3237,7 +3291,7 @@ namespace Midjourney.Infrastructure
                     return;
                 }
 
-                var filterList = list.Where(c => !string.IsNullOrWhiteSpace(c.PromptEn) && parseResult.CleanPrompt.Equals(MjPromptParser.Parse(c.PromptEn)?.CleanPrompt, StringComparison.OrdinalIgnoreCase)).ToList();
+                var filterList = list.Where(c => !string.IsNullOrWhiteSpace(c.PromptFull) && parseResult.CleanPrompt.Equals(MjPromptParser.Parse(c.PromptFull)?.CleanPrompt, StringComparison.OrdinalIgnoreCase)).ToList();
                 if (filterList.Count == 1)
                 {
                     task = filterList.FirstOrDefault();
@@ -3323,7 +3377,6 @@ namespace Midjourney.Infrastructure
 
             // https://www.midjourney.com/jobs/3e8ebcc8-cb3a-472b-a63b-8ef558dc9f48
             var url = message.Components.SelectMany(x => x.Components).Where(y => y.Url?.StartsWith("https://www.midjourney.com/jobs/") == true).FirstOrDefault()?.Url;
-            var messageHash = "";
             if (!string.IsNullOrWhiteSpace(url))
             {
                 messageHash = url.Substring(url.LastIndexOf('/') + 1);
@@ -3380,6 +3433,33 @@ namespace Midjourney.Infrastructure
                 }
             }
 
+            var messageHash = DiscordHelper.GetMessageHash(GetImageUrl(message));
+
+            // 非放大任务，如果通过 imageUrl 获取到 hash
+            // 则对当前任务赋值
+            if (task != null)
+            {
+                if (messageType == MessageType.UPDATE && !string.IsNullOrWhiteSpace(messageHash))
+                {
+                    task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_HASH, messageHash);
+                    task.JobId = messageHash;
+
+                    if (!string.IsNullOrWhiteSpace(fullPrompt) && string.IsNullOrWhiteSpace(task.PromptFull))
+                    {
+                        task.PromptFull = fullPrompt;
+                    }
+                }
+            }
+
+            // 通过 jobId 匹配完成任务
+            if (task == null)
+            {
+                if (messageType == MessageType.CREATE && !string.IsNullOrWhiteSpace(messageHash))
+                {
+                    task = list.Where(c => c.JobId == messageHash).FirstOrDefault();
+                }
+            }
+
             // 3. 通过提示词查找任务
             if (task == null)
             {
@@ -3390,7 +3470,7 @@ namespace Midjourney.Infrastructure
                     return;
                 }
 
-                var filterList = list.Where(c => !string.IsNullOrWhiteSpace(c.PromptEn) && parseResult.CleanPrompt.Equals(MjPromptParser.Parse(c.PromptEn)?.CleanPrompt, StringComparison.OrdinalIgnoreCase)).ToList();
+                var filterList = list.Where(c => !string.IsNullOrWhiteSpace(c.PromptFull) && parseResult.CleanPrompt.Equals(MjPromptParser.Parse(c.PromptFull)?.CleanPrompt, StringComparison.OrdinalIgnoreCase)).ToList();
                 if (filterList.Count == 1)
                 {
                     task = filterList.FirstOrDefault();
@@ -3475,7 +3555,6 @@ namespace Midjourney.Infrastructure
 
             // https://www.midjourney.com/jobs/3e8ebcc8-cb3a-472b-a63b-8ef558dc9f48
             var url = message.Components.SelectMany(x => x.Components).Where(y => y.Url?.StartsWith("https://www.midjourney.com/jobs/") == true).FirstOrDefault()?.Url;
-            var messageHash = "";
             if (!string.IsNullOrWhiteSpace(url))
             {
                 messageHash = url.Substring(url.LastIndexOf('/') + 1);
@@ -3561,6 +3640,11 @@ namespace Midjourney.Infrastructure
                     {
                         task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_HASH, messageHash);
                         task.JobId = messageHash;
+
+                        if (!string.IsNullOrWhiteSpace(fullPrompt) && string.IsNullOrWhiteSpace(task.PromptFull))
+                        {
+                            task.PromptFull = fullPrompt;
+                        }
                     }
                 }
 
@@ -3578,7 +3662,7 @@ namespace Midjourney.Infrastructure
             if (task == null && fullPrompt.Contains("--seed", StringComparison.OrdinalIgnoreCase))
             {
                 var parseResult = MjPromptParser.Parse(fullPrompt);
-                if (parseResult == null || string.IsNullOrWhiteSpace(parseResult.CleanPromptNormalized))
+                if (parseResult == null || string.IsNullOrWhiteSpace(parseResult.CleanPrompt))
                 {
                     Log.Warning("跳过无效的提示词种子视频消息: FullPrompt={@0}", fullPrompt);
                     return;
@@ -3586,7 +3670,7 @@ namespace Midjourney.Infrastructure
 
                 var seed = parseResult.GetSeed()?.ToString();
                 var filterList = list
-                    .Where(c => !string.IsNullOrWhiteSpace(c.PromptEn) && parseResult.CleanPromptNormalized.Equals(MjPromptParser.Parse(c.PromptEn)?.CleanPromptNormalized, StringComparison.OrdinalIgnoreCase))
+                    .Where(c => !string.IsNullOrWhiteSpace(c.PromptFull) && parseResult.CleanPrompt.Equals(MjPromptParser.Parse(c.PromptFull)?.CleanPrompt, StringComparison.OrdinalIgnoreCase))
                     .WhereIf(!string.IsNullOrWhiteSpace(seed), c => c.Seed == seed)
                     .ToList();
                 if (filterList.Count == 1)
@@ -3801,11 +3885,38 @@ namespace Midjourney.Infrastructure
                 }
             }
 
+            var messageHash = DiscordHelper.GetMessageHash(GetImageUrl(message));
+
+            // 非放大任务，如果通过 imageUrl 获取到 hash
+            // 则对当前任务赋值
+            if (task != null)
+            {
+                if (messageType == MessageType.UPDATE && !string.IsNullOrWhiteSpace(messageHash))
+                {
+                    task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_HASH, messageHash);
+                    task.JobId = messageHash;
+
+                    if (!string.IsNullOrWhiteSpace(fullPrompt) && string.IsNullOrWhiteSpace(task.PromptFull))
+                    {
+                        task.PromptFull = fullPrompt;
+                    }
+                }
+            }
+
+            // 通过 jobId 匹配完成任务
+            if (task == null)
+            {
+                if (messageType == MessageType.CREATE && !string.IsNullOrWhiteSpace(messageHash))
+                {
+                    task = list.Where(c => c.JobId == messageHash).FirstOrDefault();
+                }
+            }
+
             // 3. 通过 seed + 干净的提示词 匹配任务
             if (task == null && fullPrompt.Contains("--seed", StringComparison.OrdinalIgnoreCase))
             {
                 var parseResult = MjPromptParser.Parse(fullPrompt);
-                if (parseResult == null || string.IsNullOrWhiteSpace(parseResult.CleanPromptNormalized))
+                if (parseResult == null || string.IsNullOrWhiteSpace(parseResult.CleanPrompt))
                 {
                     Log.Warning("跳过无效的提示词种子想象/混图消息: FullPrompt={@0}", fullPrompt);
                     return;
@@ -3813,7 +3924,7 @@ namespace Midjourney.Infrastructure
 
                 var seed = parseResult.GetSeed()?.ToString();
                 var filterList = list
-                    .Where(c => !string.IsNullOrWhiteSpace(c.PromptEn) && parseResult.CleanPromptNormalized.Equals(MjPromptParser.Parse(c.PromptEn)?.CleanPromptNormalized, StringComparison.OrdinalIgnoreCase))
+                    .Where(c => !string.IsNullOrWhiteSpace(c.PromptFull) && parseResult.CleanPrompt.Equals(MjPromptParser.Parse(c.PromptFull)?.CleanPrompt, StringComparison.OrdinalIgnoreCase))
                     .WhereIf(!string.IsNullOrWhiteSpace(seed), c => c.Seed == seed)
                     .ToList();
                 if (filterList.Count == 1)
@@ -3924,7 +4035,6 @@ namespace Midjourney.Infrastructure
 
             // https://www.midjourney.com/jobs/3e8ebcc8-cb3a-472b-a63b-8ef558dc9f48
             var url = message.Components.SelectMany(x => x.Components).Where(y => y.Url?.StartsWith("https://www.midjourney.com/jobs/") == true).FirstOrDefault()?.Url;
-            var messageHash = "";
             if (!string.IsNullOrWhiteSpace(url))
             {
                 messageHash = url.Substring(url.LastIndexOf('/') + 1);
@@ -4010,7 +4120,7 @@ namespace Midjourney.Infrastructure
                         upscaleTask.RemixAutoSubmit = instance.Account.RemixAutoSubmit && (instance.Account.MjRemixOn || instance.Account.NijiRemixOn);
 
                         // 必须开启 REMIX 模式才支持 API 视频拓展
-                  
+
 
                         upscaleTask.SetProperty(Constants.TASK_PROPERTY_CUSTOM_ID, extendCustomId);
                         upscaleTask.SetProperty(Constants.TASK_PROPERTY_NONCE, extendNonce);
