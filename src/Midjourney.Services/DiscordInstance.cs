@@ -2081,7 +2081,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                                 }
                                 else
                                 {
-                                    var result = await DescribeByLinkAsync(info.ImageUrl,
+                                    var result = await DescribeByLinkAsync(info.ImageUrl.ToGlobalCdn(),
                                         info.GetProperty<string>(Constants.TASK_PROPERTY_NONCE, default),
                                         info.RealBotType ?? info.BotType);
 
@@ -3058,7 +3058,29 @@ namespace Midjourney.Infrastructure.LoadBalancer
             //// 处理转义字符引号等
             //return prompt.Replace("\\\"", "\"").Replace("\\'", "'").Replace("\\\\", "\\");
 
+            // 转官方链接
             prompt = FormatUrls(prompt, info).ConfigureAwait(false).GetAwaiter().GetResult();
+
+
+            // 转全球加速地址
+            var storage = StorageHelper.Instance.GetBaseStorage();
+            if (!string.IsNullOrWhiteSpace(storage?.GlobalCustomCdn))
+            {
+                // 使用正则提取所有的 url
+                var urls = Regex.Matches(prompt, @"(https?|ftp|file)://[-A-Za-z0-9+&@#/%?=~_|!:,.;]+[-A-Za-z0-9+&@#/%=~_|]")
+                    .Select(c => c.Value).Distinct().ToList();
+                if (urls?.Count > 0)
+                {
+                    foreach (var url in urls)
+                    {
+                        var newUrl = url.ToGlobalCdn();
+                        if (newUrl != url)
+                        {
+                            prompt = prompt.Replace(url, newUrl);
+                        }
+                    }
+                }
+            }
 
             return prompt;
         }

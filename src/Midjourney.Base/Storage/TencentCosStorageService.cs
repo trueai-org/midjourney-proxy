@@ -237,5 +237,10 @@ namespace Midjourney.Base.Storage
         {
             return _cosOptions.CustomCdn;
         }
+
+        public BaseStorage GetBaseStorage()
+        {
+           return _cosOptions;
+        }
     }
 }

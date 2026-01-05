@@ -93,6 +93,12 @@ namespace Midjourney.Base.Storage
         string GetCustomCdn();
 
         /// <summary>
+        /// 获取基础存储配置
+        /// </summary>
+        /// <returns></returns>
+        BaseStorage GetBaseStorage();
+
+        /// <summary>
         /// 生成带签名的URL，设置过期时间为 1 小时
         /// </summary>
         /// <param name="key"></param>

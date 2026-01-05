@@ -549,6 +549,15 @@ namespace Midjourney.Base.Storage
         {
             return _ossOptions.CustomCdn;
         }
+
+        /// <summary>
+        /// 获取基础存储配置
+        /// </summary>
+        /// <returns></returns>
+        public BaseStorage GetBaseStorage()
+        {
+            return _ossOptions;
+        }
     }
 
     /// <summary>

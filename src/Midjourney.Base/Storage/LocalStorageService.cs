@@ -213,5 +213,10 @@ namespace Midjourney.Base.Storage
         {
             return GlobalConfiguration.Setting.LocalStorage.CustomCdn;
         }
+
+        public BaseStorage GetBaseStorage()
+        {
+            return GlobalConfiguration.Setting.LocalStorage;
+        }
     }
 }

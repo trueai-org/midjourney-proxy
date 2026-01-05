@@ -390,5 +390,10 @@ namespace Midjourney.Base.Storage
         {
             return $"{_s3Options.CustomCdn}/{_s3Options.Bucket}";
         }
+
+        public BaseStorage GetBaseStorage()
+        {
+            return _s3Options;
+        }
     }
 }

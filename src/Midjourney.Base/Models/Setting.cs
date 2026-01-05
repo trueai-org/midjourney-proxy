@@ -344,14 +344,15 @@ namespace Midjourney.Base.Models
         public S3StorageOptions S3Storage { get; set; } = new S3StorageOptions();
 
         /// <summary>
+        /// 本地存储配置
+        /// </summary>
+        public LocalStorageOptions LocalStorage { get; set; } = new LocalStorageOptions();
+
+        /// <summary>
         /// 换脸配置
         /// </summary>
         public ReplicateOptions Replicate { get; set; } = new ReplicateOptions();
 
-        /// <summary>
-        /// 本地存储配置
-        /// </summary>
-        public LocalStorageOptions LocalStorage { get; set; } = new LocalStorageOptions();
 
         /// <summary>
         /// 全局开启垂直领域
@@ -555,7 +556,7 @@ namespace Midjourney.Base.Models
     /// <summary>
     /// 本地存储配置
     /// </summary>
-    public class LocalStorageOptions
+    public class LocalStorageOptions : BaseStorage
     {
         /// <summary>
         /// 加速域名，可用于图片加速和图片审核使用
@@ -571,7 +572,7 @@ namespace Midjourney.Base.Models
     /// <summary>
     /// Cloudflare R2 存储配置
     /// </summary>
-    public class CloudflareR2Options
+    public class CloudflareR2Options : BaseStorage
     {
         /// <summary>
         /// 
@@ -630,7 +631,7 @@ namespace Midjourney.Base.Models
     /// <summary>
     /// S3 兼容存储配置 (支持 MinIO)
     /// </summary>
-    public class S3StorageOptions
+    public class S3StorageOptions : BaseStorage
     {
         /// <summary>
         /// 服务端点 (例如: http://localhost:9000 或 https://s3.amazonaws.com)
@@ -701,7 +702,7 @@ namespace Midjourney.Base.Models
     /// <summary>
     /// 腾讯云存储配置
     /// </summary>
-    public class TencentCosOptions
+    public class TencentCosOptions : BaseStorage
     {
         /// <summary>
         /// Tencent Cloud Account APPID
@@ -1193,10 +1194,26 @@ namespace Midjourney.Base.Models
     }
 
     /// <summary>
+    /// 基础存储配置
+    /// </summary>
+    public class BaseStorage
+    {
+        /// <summary>
+        /// 全球加速域名/国际加速域名，可用于境外服务拉取图片，例如：垫图、混图、参考图等
+        /// </summary>
+        public string GlobalCustomCdn { get; set; }
+
+        /// <summary>
+        /// 全球/国际自定义图片样式
+        /// </summary>
+        public string GlobalImageStyle { get; set; }
+    }
+
+    /// <summary>
     /// 阿里云 OSS 配置
     /// <see cref="https://help.aliyun.com/document_detail/31947.html"/>
     /// </summary>
-    public class AliyunOssOptions
+    public class AliyunOssOptions : BaseStorage
     {
         /// <summary>
         /// 存储空间是您用于存储对象（Object）的容器，所有的对象都必须隶属于某个存储空间。

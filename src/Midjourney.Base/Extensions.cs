@@ -29,6 +29,7 @@ using System.Net;
 using System.Text.RegularExpressions;
 using LiteDB;
 using Midjourney.Base.Data;
+using Midjourney.Base.Storage;
 using MongoDB.Driver.Linq;
 
 namespace Midjourney.Base
@@ -553,6 +554,33 @@ namespace Midjourney.Base
             }
 
             return url + "?" + style;
+        }
+
+        /// <summary>
+        /// 转为国际站地址
+        /// </summary>
+        /// <param name="url"></param>
+        /// <returns></returns>
+        public static string ToGlobalCdn(this string url)
+        {
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                return url;
+            }
+
+            var storage = StorageHelper.Instance.GetBaseStorage();
+            if (storage == null || string.IsNullOrWhiteSpace(storage.GlobalCustomCdn))
+            {
+                return url;
+            }
+
+            var cdn = StorageHelper.Instance.GetCustomCdn();
+            if (!url.StartsWith(cdn))
+            {
+                return url;
+            }
+
+            return url.Replace(cdn, storage.GlobalCustomCdn).ToStyle(storage.GlobalImageStyle);
         }
 
         /// <summary>
