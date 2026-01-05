@@ -182,6 +182,8 @@ The most powerful, complete, full-featured, completely free and open source Midj
 
 ### 快速启动
 
+> 帮助文档：[WIKI](https://github.com/trueai-org/midjourney-proxy/wiki)
+
 > Docker 版本
 
 - [Bilibili Midjourney API Docker 部署视频教程](https://www.bilibili.com/video/BV1NQpQezEu4/)
