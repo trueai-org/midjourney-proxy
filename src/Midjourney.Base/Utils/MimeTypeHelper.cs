@@ -37,6 +37,14 @@ namespace Midjourney.Base.Util
         /// <returns>MIME 类型</returns>
         public static string GetMimeType(string fileName, string defaultMimeType = "application/octet-stream")
         {
+            // 方法1
+            //var mime = MimeKit.MimeTypes.GetMimeType(fileName);
+            //if (string.IsNullOrWhiteSpace(mime))
+            //{
+            //    mime = defaultMimeType;
+            //}
+
+            // 方法2
             return Provider.TryGetContentType(fileName, out string mimeType)
                 ? mimeType
                 : defaultMimeType;

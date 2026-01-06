@@ -3421,14 +3421,10 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 {
                     var localPath = $"attachments/{DateTime.Now:yyyyMMdd}/{fileName}";
 
-                    var mt = MimeKit.MimeTypes.GetMimeType(Path.GetFileName(localPath));
-                    if (string.IsNullOrWhiteSpace(mt))
-                    {
-                        mt = "image/png";
-                    }
+                    var mm = MimeTypeHelper.GetMimeType(Path.GetFileName(localPath), "image/png");
 
                     var stream = new MemoryStream(dataUrl.Data);
-                    var res = StorageHelper.Instance?.SaveAsync(stream, localPath, dataUrl.MimeType ?? mt);
+                    var res = StorageHelper.Instance?.SaveAsync(stream, localPath, dataUrl.MimeType ?? mm);
                     if (string.IsNullOrWhiteSpace(res?.Url))
                     {
                         throw new Exception("上传图片到加速站点失败");

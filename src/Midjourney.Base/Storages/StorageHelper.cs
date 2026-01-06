@@ -144,7 +144,7 @@ namespace Midjourney.Base.Storage
 
             // 合作商加速链接不处理
             if (!string.IsNullOrWhiteSpace(setting.LocalStorage?.PartnerCdn))
-            { 
+            {
                 var partnerCdnUri = new Uri(setting.LocalStorage.PartnerCdn);
                 if (fileUri.Host.Equals(partnerCdnUri.Host, StringComparison.OrdinalIgnoreCase))
                 {
@@ -247,11 +247,7 @@ namespace Midjourney.Base.Storage
 
                 using var stream = new MemoryStream(imageBytes);
 
-                var mm = MimeKit.MimeTypes.GetMimeType(Path.GetFileName(localPath));
-                if (string.IsNullOrWhiteSpace(mm))
-                {
-                    mm = "image/png";
-                }
+                var mm = MimeTypeHelper.GetMimeType(Path.GetFileName(localPath), "image/png");
 
                 oss.SaveAsync(stream, localPath, mm);
 
@@ -290,11 +286,8 @@ namespace Midjourney.Base.Storage
                 var url = $"{cdn?.Trim()?.Trim('/')}/{localPath}{oldQuery}";
 
                 using var stream = new MemoryStream(imageBytes);
-                var mm = MimeKit.MimeTypes.GetMimeType(Path.GetFileName(localPath));
-                if (string.IsNullOrWhiteSpace(mm))
-                {
-                    mm = "image/png";
-                }
+
+                var mm = MimeTypeHelper.GetMimeType(Path.GetFileName(localPath), "image/png");
 
                 cos.SaveAsync(stream, localPath, mm);
 
@@ -331,15 +324,9 @@ namespace Midjourney.Base.Storage
                 // 替换 url
                 var url = $"{cdn?.Trim()?.Trim('/')}/{localPath}{oldQuery}";
 
-
                 using var stream = new MemoryStream(imageBytes);
 
-                // 下载图片并保存
-                var mm = MimeKit.MimeTypes.GetMimeType(Path.GetFileName(localPath));
-                if (string.IsNullOrWhiteSpace(mm))
-                {
-                    mm = "image/png";
-                }
+                var mm = MimeTypeHelper.GetMimeType(Path.GetFileName(localPath), "image/png");
 
                 r2.SaveAsync(stream, localPath, mm);
 
@@ -405,11 +392,7 @@ namespace Midjourney.Base.Storage
 
                 using var stream = new MemoryStream(imageBytes);
 
-                var mm = MimeKit.MimeTypes.GetMimeType(Path.GetFileName(localPath));
-                if (string.IsNullOrWhiteSpace(mm))
-                {
-                    mm = "image/png";
-                }
+                var mm = MimeTypeHelper.GetMimeType(Path.GetFileName(localPath), "image/png");
 
                 _instance.SaveAsync(stream, localPath, mm);
 

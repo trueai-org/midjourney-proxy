@@ -22,6 +22,7 @@
 // invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
+using Midjourney.Base.Util;
 using Serilog;
 
 namespace Midjourney.Base.Storage
@@ -125,11 +126,7 @@ namespace Midjourney.Base.Storage
                 throw new FileNotFoundException("文件不存在", key);
             }
 
-            contentType = MimeKit.MimeTypes.GetMimeType(Path.GetFileName(filePath));
-            if (string.IsNullOrWhiteSpace(contentType))
-            {
-                contentType = "image/png";
-            }
+            contentType = MimeTypeHelper.GetMimeType(Path.GetFileName(filePath), "image/png");
 
             return new FileStream(filePath, FileMode.Open, FileAccess.Read);
         }
