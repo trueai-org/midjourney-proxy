@@ -23,15 +23,25 @@
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
 using System.Text.RegularExpressions;
+using Midjourney.Base.Util;
 using Serilog;
 
 namespace Midjourney.Base
 {
+    /// <summary>
+    /// Data URL 信息
+    /// </summary>
     public class DataUrl
     {
-        public string MimeType { get; private set; }
+        /// <summary>
+        /// Mime 类型
+        /// </summary>
+        public string MimeType { get; set; }
 
-        public byte[] Data { get; private set; }
+        /// <summary>
+        /// 数据
+        /// </summary>
+        public byte[] Data { get; set; }
 
         /// <summary>
         /// 链接
@@ -42,12 +52,34 @@ namespace Midjourney.Base
         {
         }
 
+        /// <summary>
+        /// 通过 mimeType 和数据构造 DataUrl 实例
+        /// </summary>
+        /// <param name="mimeType"></param>
+        /// <param name="data"></param>
         public DataUrl(string mimeType, byte[] data)
         {
             MimeType = mimeType;
             Data = data;
         }
 
+        /// <summary>
+        /// 通过 DataUrl 信息生成唯一文件名
+        /// </summary>
+        /// <returns></returns>
+        public async Task<string> GenerateFileName()
+        {
+            var ext = await MjImageHelper.GuessFileSuffix(this);
+            return $"{Guid.NewGuid():N}{ext}";
+        }
+
+        /// <summary>
+        /// 解析 DataUrl 字符串
+        /// </summary>
+        /// <param name="dataUrl"></param>
+        /// <returns></returns>
+        /// <exception cref="LogicException"></exception>
+        /// <exception cref="FormatException"></exception>
         public static DataUrl Parse(string dataUrl)
         {
             if (string.IsNullOrWhiteSpace(dataUrl))
@@ -92,10 +124,28 @@ namespace Midjourney.Base
             return new DataUrl(mimeType, data);
         }
 
-        public override string ToString()
+        /// <summary>
+        /// 转换 Base64 字符串数组为 DataUrl 列表
+        /// </summary>
+        /// <param name="base64Array"></param>
+        /// <returns></returns>
+        public static List<DataUrl> ConvertBase64Array(List<string> base64Array)
         {
-            string base64Data = Convert.ToBase64String(Data);
-            return $"data:{MimeType};base64,{base64Data}";
+            if (base64Array == null || base64Array.Count == 0)
+            {
+                return new List<DataUrl>();
+            }
+
+            var dataUrlList = new List<DataUrl>();
+            foreach (var base64 in base64Array)
+            {
+                if (!string.IsNullOrWhiteSpace(base64))
+                {
+                    var dataUrl = DataUrl.Parse(base64);
+                    dataUrlList.Add(dataUrl);
+                }
+            }
+            return dataUrlList;
         }
     }
 }

@@ -3,10 +3,15 @@
 namespace Midjourney.Base.Util
 {
     /// <summary>
-    /// Midjourney Discord 消息正则表达式模式定义
+    /// Midjourney 消息解析器
     /// </summary>
-    public static class MjMessagePatterns
+    public static class MjMessageParser
     {
+        /// <summary>
+        /// 匹配完整的 prompt 内容
+        /// </summary>
+        public const string CONTENT_FULL = @"\*\*(.*)\*\*";
+
         /// <summary>
         /// 模式匹配 fast, relaxed, turbo 可选 stealth 模式
         /// </summary>
@@ -95,7 +100,6 @@ namespace Midjourney.Base.Util
         /// </example>
         public const string UPSCALE_U = @"\*\*(.+?)\*\* - Image #(\d+) <@(\d+)>";
 
-
         /// <summary>
         /// 通用图像生成 / 视频生成
         /// Imagine 基础消息格式: **prompt** - @user (extra info) (mode)
@@ -151,13 +155,25 @@ namespace Midjourney.Base.Util
         /// <para>或: message.Embeds[0].Footer?.Text.Contains("Click on a button to imagine")</para>
         /// </summary>
         public const string SHORTEN_SUCCESS = null;
-    }
 
-    /// <summary>
-    /// Midjourney 消息解析器
-    /// </summary>
-    public static class MjMessageParser
-    {
+        /// <summary>
+        /// 获取完整的 prompt 内容
+        /// </summary>
+        /// <param name="content"></param>
+        /// <returns></returns>
+        public static string GetFullPrompt(string content)
+        {
+            if (string.IsNullOrWhiteSpace(content))
+            {
+                return content;
+            }
+
+            // 获取 **...** 中的内容
+            var matcher = Regex.Match(content, CONTENT_FULL);
+
+            return matcher.Success ? matcher.Groups[1].Value : content;
+        }
+
         /// <summary>
         /// 解析消息内容，返回解析结果
         /// </summary>
@@ -180,7 +196,7 @@ namespace Midjourney.Base.Util
         /// </summary>
         public static MessageParseResult TryParseVariations(string content)
         {
-            var match = Regex.Match(content, MjMessagePatterns.VARIATIONS);
+            var match = Regex.Match(content, VARIATIONS);
             if (!match.Success)
                 return null;
 
@@ -202,7 +218,7 @@ namespace Midjourney.Base.Util
         /// </summary>
         public static MessageParseResult TryParsePan(string content)
         {
-            var match = Regex.Match(content, MjMessagePatterns.PAN);
+            var match = Regex.Match(content, PAN);
             if (!match.Success) return null;
 
             return new MessageParseResult
@@ -222,7 +238,7 @@ namespace Midjourney.Base.Util
         /// </summary>
         public static MessageParseResult TryParseZoom(string content)
         {
-            var match = Regex.Match(content, MjMessagePatterns.ZOOM);
+            var match = Regex.Match(content, ZOOM);
             if (!match.Success) return null;
 
             return new MessageParseResult
@@ -241,7 +257,7 @@ namespace Midjourney.Base.Util
         /// </summary>
         public static MessageParseResult TryParseUpscaleHD(string content)
         {
-            var match = Regex.Match(content, MjMessagePatterns.UPSCALE_HD);
+            var match = Regex.Match(content, UPSCALE_HD);
             if (!match.Success) return null;
 
             return new MessageParseResult
@@ -260,7 +276,7 @@ namespace Midjourney.Base.Util
         /// </summary>
         public static MessageParseResult TryParseUpscaleImageU(string content)
         {
-            var match = Regex.Match(content, MjMessagePatterns.UPSCALE_U);
+            var match = Regex.Match(content, UPSCALE_U);
             if (!match.Success) return null;
 
             return new MessageParseResult
@@ -278,7 +294,7 @@ namespace Midjourney.Base.Util
         /// </summary>
         public static MessageParseResult TryParseImagine(string content)
         {
-            var match = Regex.Match(content, MjMessagePatterns.IMAGINE_SUCCESS);
+            var match = Regex.Match(content, IMAGINE_SUCCESS);
             if (!match.Success)
                 return null;
 

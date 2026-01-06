@@ -187,7 +187,7 @@ namespace Midjourney.API.Controllers
 
             var task = new TaskInfo
             {
-                Id = $"{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}{RandomUtils.RandomNumbers(3)}",
+                Id = $"{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}{RandomHelper.RandomNumbers(3)}",
                 SubmitTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
                 State = baseDTO.State,
                 Status = TaskStatus.NOT_START,

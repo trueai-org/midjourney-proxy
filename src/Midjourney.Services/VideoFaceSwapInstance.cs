@@ -79,7 +79,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
             try
             {
-                var ff = new FileFetchHelper();
+                //var ff = new MjImageFetchHelper();
 
                 DataUrl source = null;
                 try
@@ -103,7 +103,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                             return SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "人脸图片URL格式错误");
                         }
 
-                        var len = await ff.GetFileSizeAsync(dto.SourceUrl);
+                        var len = await MjImageFetchHelper.GetFileSizeAsync(dto.SourceUrl);
                         if (len <= 0 || len > repl.MaxFileSize)
                         {
                             return SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "人脸图片大小超过最大限制");
@@ -135,10 +135,14 @@ namespace Midjourney.Infrastructure.LoadBalancer
                         }
 
                         // 保存 base64 到本地
-                        var ext = ff.DetermineFileExtension(dto.TargetFile.ContentType, uploadFileBytes, "");
-                        if (string.IsNullOrWhiteSpace(ext))
+                        var ext = await MjImageHelper.GuessFileSuffix(new DataUrl()
                         {
-                            ext = ".mp4";
+                            MimeType = dto.TargetFile.ContentType,
+                            Data = uploadFileBytes
+                        }, ".mp4");
+                        if (ext != ".mp4")
+                        {
+                            return SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "目标文件格式错误，必须是 mp4 格式");
                         }
 
                         // 保存 bytes 到本地
@@ -164,7 +168,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                             return SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "目标文件URL格式错误");
                         }
 
-                        var len = await ff.GetFileSizeAsync(dto.TargetUrl);
+                        var len = await MjImageFetchHelper.GetFileSizeAsync(dto.TargetUrl);
                         if (len <= 0 || len > repl.MaxFileSize)
                         {
                             return SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "目标文件大小超过最大限制");
@@ -186,15 +190,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 else
                 {
                     // 如果是 base64 则到本地
-                    var ext = ff.DetermineFileExtension(source.MimeType, source.Data, "");
-                    if (string.IsNullOrWhiteSpace(ext))
-                    {
-                        ext = ".jpg";
-                    }
-
                     // 保存 bytes 到本地
                     var directoryPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "temps");
-                    var fileName = $"{Guid.NewGuid().ToString("N")}{ext}";
+                    var fileName = await source.GenerateFileName();
                     var fullPath = Path.Combine(directoryPath, fileName);
 
                     lock (_lock)
@@ -367,7 +365,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     return;
                 }
 
-                var ff = new FileFetchHelper();
+                //var ff = new MjImageFetchHelper();
                 //var aliOpt = GlobalConfiguration.Setting.AliyunOss;
 
                 info.Status = TaskStatus.SUBMITTED;
@@ -385,7 +383,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
                         var fileName = Path.GetFileName(source);
                         var key = $"pri/pbxt/{fileName}";
 
-                        var upload = StorageHelper.Instance?.SaveAsync(File.OpenRead(source), key, ff.GetMimeType(fileName) ?? "image/jpeg");
+                        MimeTypeHelper.TryGetMimeType(fileName, out var contentType);
+
+                        var upload = StorageHelper.Instance.SaveAsync(File.OpenRead(source), key, contentType ?? "image/jpeg");
                         if (!string.IsNullOrWhiteSpace(upload?.Url))
                         {
                             source = upload?.Url;
@@ -431,7 +431,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
                         var fileName = Path.GetFileName(target);
                         var key = $"pri/pbxt/{fileName}";
 
-                        var res = StorageHelper.Instance?.SaveAsync(File.OpenRead(target), key, ff.GetMimeType(fileName) ?? "video/mp4");
+                        MimeTypeHelper.TryGetMimeType(fileName, out var contentType);
+
+                        var res = StorageHelper.Instance?.SaveAsync(File.OpenRead(target), key, contentType ?? "video/mp4");
                         if (!string.IsNullOrWhiteSpace(res?.Url))
                         {
                             target = res.Url;

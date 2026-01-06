@@ -44,7 +44,7 @@ namespace Midjourney.Infrastructure
             _notifyService = notifyService;
 
             var paramsMap = new Dictionary<string, string>();
-            var assembly = typeof(GlobalConfiguration).Assembly; // Assembly.GetExecutingAssembly();
+            var assembly = typeof(GlobalConfiguration).Assembly;
             var assemblyName = assembly.GetName().Name;
             var resourceNames = assembly.GetManifestResourceNames()
                 .Where(name => name.EndsWith(".json") && name.Contains("Resources.ApiParams"))
@@ -106,9 +106,6 @@ namespace Midjourney.Infrastructure
                 }
                 else
                 {
-                    //// 用户 WebSocket 连接
-                    //var webSocket = new WebSocketManager(_discordHelper, webProxy, discordInstance);
-                    //await webSocket.StartAsync();
                 }
             }
 
@@ -156,11 +153,6 @@ namespace Midjourney.Infrastructure
             {
                 return true;
             }
-
-            //{
-            //    "message": "执行此操作需要先验证您的账号。",
-            //    "code": 40002
-            //}
 
             var data = JsonDocument.Parse(json).RootElement;
             if (data.TryGetProperty("message", out var message))

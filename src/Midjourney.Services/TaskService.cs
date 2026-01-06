@@ -24,6 +24,8 @@
 
 using System.Globalization;
 using System.Text.RegularExpressions;
+using Midjourney.Base;
+using Midjourney.Base.Util;
 using Midjourney.Infrastructure.LoadBalancer;
 using Newtonsoft.Json.Linq;
 using RestSharp;
@@ -201,22 +203,22 @@ namespace Midjourney.Infrastructure.Services
                             if (setting.EnableYouChuanPromptLink && !link.Contains("youchuan"))
                             {
                                 // 悠船官网链接转换
-                                var ff = new FileFetchHelper();
-                                var res = await ff.FetchFileAsync(link);
+                                //var ff = new MjImageFetchHelper();
+                                var res = await MjImageFetchHelper.FetchFileAsync(link);
                                 if (res.Success && !string.IsNullOrWhiteSpace(res.Url))
                                 {
                                     link = res.Url;
                                 }
                                 else if (res.Success && res.FileBytes.Length > 0)
                                 {
-                                    var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
+                                    var taskFileName = await dataUrl.GenerateFileName();
                                     link = await instance.YmTaskService.UploadFile(info, res.FileBytes, taskFileName);
                                 }
                             }
                         }
                         else
                         {
-                            var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
+                            var taskFileName = await dataUrl.GenerateFileName();
                             link = await instance.YmTaskService.UploadFile(info, dataUrl.Data, taskFileName);
                         }
 
@@ -224,7 +226,7 @@ namespace Midjourney.Infrastructure.Services
                     }
                     else
                     {
-                        var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
+                        var taskFileName = await dataUrl.GenerateFileName();
                         var uploadResult = await instance.UploadAsync(taskFileName, dataUrl);
                         if (uploadResult.Code != ReturnCode.SUCCESS)
                         {
@@ -266,7 +268,7 @@ namespace Midjourney.Infrastructure.Services
                 var imageUrls = new List<string>();
                 foreach (var dataUrl in dataUrls)
                 {
-                    var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
+                    var taskFileName = await dataUrl.GenerateFileName();
                     var uploadResult = await instance.UploadAsync(taskFileName, dataUrl);
                     if (uploadResult.Code != ReturnCode.SUCCESS)
                     {
@@ -345,22 +347,22 @@ namespace Midjourney.Infrastructure.Services
                     if (setting.EnableYouChuanPromptLink && !link.Contains("youchuan"))
                     {
                         // 悠船官网链接转换
-                        var ff = new FileFetchHelper();
-                        var res = await ff.FetchFileAsync(link);
+                        //var ff = new MjImageFetchHelper();
+                        var res = await MjImageFetchHelper.FetchFileAsync(link);
                         if (res.Success && !string.IsNullOrWhiteSpace(res.Url))
                         {
                             link = res.Url;
                         }
                         else if (res.Success && res.FileBytes.Length > 0)
                         {
-                            var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
+                            var taskFileName = await dataUrl.GenerateFileName();
                             link = await instance.YmTaskService.UploadFile(info, res.FileBytes, taskFileName);
                         }
                     }
                 }
                 else
                 {
-                    var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
+                    var taskFileName = await dataUrl.GenerateFileName();
                     link = await instance.YmTaskService.UploadFile(info, dataUrl.Data, taskFileName);
                 }
 
@@ -374,7 +376,7 @@ namespace Midjourney.Infrastructure.Services
                 }
                 else
                 {
-                    var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
+                    var taskFileName = await dataUrl.GenerateFileName();
                     var uploadResult = await instance.UploadAsync(taskFileName, dataUrl);
                     if (uploadResult.Code != ReturnCode.SUCCESS)
                     {
@@ -450,22 +452,22 @@ namespace Midjourney.Infrastructure.Services
                     if (setting.EnableYouChuanPromptLink && !link.Contains("youchuan"))
                     {
                         // 悠船官网链接转换
-                        var ff = new FileFetchHelper();
-                        var res = await ff.FetchFileAsync(link);
+                        //var ff = new MjImageFetchHelper();
+                        var res = await MjImageFetchHelper.FetchFileAsync(link);
                         if (res.Success && !string.IsNullOrWhiteSpace(res.Url))
                         {
                             link = res.Url;
                         }
                         else if (res.Success && res.FileBytes.Length > 0)
                         {
-                            var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
+                            var taskFileName = await dataUrl.GenerateFileName();
                             link = await instance.YmTaskService.UploadFile(info, res.FileBytes, taskFileName);
                         }
                     }
                 }
                 else
                 {
-                    var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
+                    var taskFileName = await dataUrl.GenerateFileName();
                     link = await instance.YmTaskService.UploadFile(info, dataUrl.Data, taskFileName);
                 }
 
@@ -479,7 +481,7 @@ namespace Midjourney.Infrastructure.Services
                 }
                 else
                 {
-                    var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
+                    var taskFileName = await dataUrl.GenerateFileName();
                     var uploadResult = await instance.UploadAsync(taskFileName, dataUrl);
                     if (uploadResult.Code != ReturnCode.SUCCESS)
                     {
@@ -606,22 +608,21 @@ namespace Midjourney.Infrastructure.Services
 
                     if (setting.EnableYouChuanPromptLink && !startImageUrl.Contains("youchuan"))
                     {
-                        var ff = new FileFetchHelper();
-                        var res = await ff.FetchFileAsync(startImageUrl);
+                        var res = await MjImageFetchHelper.FetchFileAsync(startImageUrl);
                         if (res.Success && !string.IsNullOrWhiteSpace(res.Url))
                         {
                             startImageUrl = res.Url;
                         }
                         else if (res.Success && res.FileBytes.Length > 0)
                         {
-                            var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(startUrl.MimeType)}";
+                            var taskFileName = await startUrl.GenerateFileName();
                             startImageUrl = await instance.YmTaskService.UploadFile(info, res.FileBytes, taskFileName);
                         }
                     }
                 }
                 else if (startUrl?.Data != null && startUrl.Data.Length > 0)
                 {
-                    var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(startUrl.MimeType)}";
+                    var taskFileName = await startUrl.GenerateFileName();
                     startImageUrl = await instance.YmTaskService.UploadFile(info, startUrl.Data, taskFileName);
                 }
 
@@ -632,22 +633,22 @@ namespace Midjourney.Infrastructure.Services
 
                     if (setting.EnableYouChuanPromptLink && !endImageUrl.Contains("youchuan"))
                     {
-                        var ff = new FileFetchHelper();
-                        var res = await ff.FetchFileAsync(endImageUrl);
+                        //var ff = new MjImageFetchHelper();
+                        var res = await MjImageFetchHelper.FetchFileAsync(endImageUrl);
                         if (res.Success && !string.IsNullOrWhiteSpace(res.Url))
                         {
                             endImageUrl = res.Url;
                         }
                         else if (res.Success && res.FileBytes.Length > 0)
                         {
-                            var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(endUrl.MimeType)}";
+                            var taskFileName = await endUrl.GenerateFileName();
                             endImageUrl = await instance.YmTaskService.UploadFile(info, res.FileBytes, taskFileName);
                         }
                     }
                 }
                 else if (endUrl?.Data != null && endUrl.Data.Length > 0)
                 {
-                    var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(endUrl.MimeType)}";
+                    var taskFileName = await endUrl.GenerateFileName();
                     endImageUrl = await instance.YmTaskService.UploadFile(info, endUrl.Data, taskFileName);
                 }
             }
@@ -660,7 +661,7 @@ namespace Midjourney.Infrastructure.Services
                 }
                 else if (startUrl?.Data != null && startUrl.Data.Length > 0)
                 {
-                    var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(startUrl.MimeType)}";
+                    var taskFileName = await startUrl.GenerateFileName();
                     var uploadResult = await instance.UploadAsync(taskFileName, startUrl);
                     if (uploadResult.Code != ReturnCode.SUCCESS)
                     {
@@ -684,7 +685,7 @@ namespace Midjourney.Infrastructure.Services
                 }
                 else if (endUrl?.Data != null && endUrl.Data.Length > 0)
                 {
-                    var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(endUrl.MimeType)}";
+                    var taskFileName = await endUrl.GenerateFileName();
                     var uploadResult = await instance.UploadAsync(taskFileName, endUrl);
                     if (uploadResult.Code != ReturnCode.SUCCESS)
                     {
@@ -708,7 +709,7 @@ namespace Midjourney.Infrastructure.Services
                 }
                 else if (startUrl?.Data != null && startUrl.Data.Length > 0)
                 {
-                    var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(startUrl.MimeType)}";
+                    var taskFileName = await startUrl.GenerateFileName();
                     var uploadResult = await instance.UploadAsync(taskFileName, startUrl);
                     if (uploadResult.Code != ReturnCode.SUCCESS)
                     {
@@ -738,7 +739,7 @@ namespace Midjourney.Infrastructure.Services
                 }
                 else if (endUrl?.Data != null && endUrl.Data.Length > 0)
                 {
-                    var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(endUrl.MimeType)}";
+                    var taskFileName = await endUrl.GenerateFileName();
                     var uploadResult = await instance.UploadAsync(taskFileName, endUrl);
                     if (uploadResult.Code != ReturnCode.SUCCESS)
                     {
@@ -970,7 +971,7 @@ namespace Midjourney.Infrastructure.Services
                     }
                     else
                     {
-                        var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
+                        var taskFileName = await dataUrl.GenerateFileName();
                         link = await discordInstance.YmTaskService.UploadFile(task, dataUrl.Data, taskFileName);
                     }
                 }
@@ -983,7 +984,7 @@ namespace Midjourney.Infrastructure.Services
                     }
                     else
                     {
-                        var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
+                        var taskFileName = await dataUrl.GenerateFileName();
                         var uploadResult = await discordInstance.UploadAsync(taskFileName, dataUrl);
                         if (uploadResult.Code != ReturnCode.SUCCESS)
                         {
@@ -1019,8 +1020,8 @@ namespace Midjourney.Infrastructure.Services
                 // 如果转换用户链接到文件存储
                 if (GlobalConfiguration.Setting.EnableSaveUserUploadLink)
                 {
-                    var ff = new FileFetchHelper();
-                    var url = await ff.FetchFileToStorageAsync(link);
+                    //var ff = new MjImageFetchHelper();
+                    var url = await MjImageFetchHelper.FetchFileToStorageAsync(link);
                     if (!string.IsNullOrWhiteSpace(url))
                     {
                         link = url;
@@ -1029,7 +1030,7 @@ namespace Midjourney.Infrastructure.Services
             }
             else
             {
-                var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
+                var taskFileName = await dataUrl.GenerateFileName();
                 var uploadResult = await discordInstance.UploadAsync(taskFileName, dataUrl);
                 if (uploadResult.Code != ReturnCode.SUCCESS)
                 {
@@ -1127,7 +1128,7 @@ namespace Midjourney.Infrastructure.Services
                     }
                     else
                     {
-                        var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
+                        var taskFileName = await dataUrl.GenerateFileName();
                         link = await instance.YmTaskService.UploadFile(task, dataUrl.Data, taskFileName);
                     }
 
@@ -1152,7 +1153,7 @@ namespace Midjourney.Infrastructure.Services
                     }
                     else
                     {
-                        var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
+                        var taskFileName =  await dataUrl.GenerateFileName();
                         var uploadResult = await instance.UploadAsync(taskFileName, dataUrl);
                         if (uploadResult.Code != ReturnCode.SUCCESS)
                         {
@@ -1189,7 +1190,7 @@ namespace Midjourney.Infrastructure.Services
                     }
                     else
                     {
-                        var taskFileName = $"{Guid.NewGuid():N}.{MimeTypeUtils.GuessFileSuffix(dataUrl.MimeType)}";
+                        var taskFileName = await dataUrl.GenerateFileName();
                         var uploadResult = await instance.UploadAsync(taskFileName, dataUrl);
                         if (uploadResult.Code != ReturnCode.SUCCESS)
                         {
@@ -1661,7 +1662,7 @@ namespace Midjourney.Infrastructure.Services
 
                     var subTask = new TaskInfo()
                     {
-                        Id = $"{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}{RandomUtils.RandomNumbers(3)}",
+                        Id = $"{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}{RandomHelper.RandomNumbers(3)}",
                         SubmitTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
                         State = $"{task.State}::{i + 1}",
                         ParentId = targetTask.Id,

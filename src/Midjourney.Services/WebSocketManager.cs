@@ -1858,7 +1858,7 @@ namespace Midjourney.Infrastructure
                                         {
                                             if (string.IsNullOrWhiteSpace(task.PromptFull))
                                             {
-                                                task.PromptFull = ConvertUtils.GetFullPrompt(contentStr);
+                                                task.PromptFull = MjMessageParser.GetFullPrompt(contentStr);
                                             }
                                         }
                                     }
@@ -2448,7 +2448,7 @@ namespace Midjourney.Infrastructure
 
         protected string GetFullPrompt(EventData message)
         {
-            return ConvertUtils.GetFullPrompt(message.Content);
+            return MjMessageParser.GetFullPrompt(message.Content);
         }
 
         protected EBotType? GetBotType(EventData message)
@@ -2992,8 +2992,8 @@ namespace Midjourney.Infrastructure
                     // 如果启用保存过程图片
                     if (GlobalConfiguration.Setting.EnableSaveIntermediateImage && !string.IsNullOrWhiteSpace(imageUrl))
                     {
-                        var ff = new FileFetchHelper();
-                        var ffUrl = await ff.FetchFileToStorageAsync(imageUrl);
+                        //var ff = new MjImageFetchHelper();
+                        var ffUrl = await MjImageFetchHelper.FetchFileToStorageAsync(imageUrl);
                         if (!string.IsNullOrWhiteSpace(ffUrl))
                         {
                             imageUrl = ffUrl;
@@ -3171,8 +3171,8 @@ namespace Midjourney.Infrastructure
                     // 如果启用保存过程图片
                     if (GlobalConfiguration.Setting.EnableSaveIntermediateImage && !string.IsNullOrWhiteSpace(imageUrl))
                     {
-                        var ff = new FileFetchHelper();
-                        var ffUrl = await ff.FetchFileToStorageAsync(imageUrl);
+                        //var ff = new MjImageFetchHelper();
+                        var ffUrl = await MjImageFetchHelper.FetchFileToStorageAsync(imageUrl);
                         if (!string.IsNullOrWhiteSpace(ffUrl))
                         {
                             imageUrl = ffUrl;
@@ -3351,8 +3351,8 @@ namespace Midjourney.Infrastructure
                     // 如果启用保存过程图片
                     if (GlobalConfiguration.Setting.EnableSaveIntermediateImage && !string.IsNullOrWhiteSpace(imageUrl))
                     {
-                        var ff = new FileFetchHelper();
-                        var ffUrl = await ff.FetchFileToStorageAsync(imageUrl);
+                        //var ff = new MjImageFetchHelper();
+                        var ffUrl = await MjImageFetchHelper.FetchFileToStorageAsync(imageUrl);
                         if (!string.IsNullOrWhiteSpace(ffUrl))
                         {
                             imageUrl = ffUrl;
@@ -3529,8 +3529,8 @@ namespace Midjourney.Infrastructure
                     // 如果启用保存过程图片
                     if (GlobalConfiguration.Setting.EnableSaveIntermediateImage && !string.IsNullOrWhiteSpace(imageUrl))
                     {
-                        var ff = new FileFetchHelper();
-                        var ffUrl = await ff.FetchFileToStorageAsync(imageUrl);
+                        //var ff = new MjImageFetchHelper();
+                        var ffUrl = await MjImageFetchHelper.FetchFileToStorageAsync(imageUrl);
                         if (!string.IsNullOrWhiteSpace(ffUrl))
                         {
                             imageUrl = ffUrl;
@@ -3755,8 +3755,8 @@ namespace Midjourney.Infrastructure
                     // 如果启用保存过程图片
                     if (GlobalConfiguration.Setting.EnableSaveIntermediateImage && !string.IsNullOrWhiteSpace(imageUrl))
                     {
-                        var ff = new FileFetchHelper();
-                        var ffUrl = await ff.FetchFileToStorageAsync(imageUrl);
+                        //var ff = new MjImageFetchHelper();
+                        var ffUrl = await MjImageFetchHelper.FetchFileToStorageAsync(imageUrl);
                         if (!string.IsNullOrWhiteSpace(ffUrl))
                         {
                             imageUrl = ffUrl;
@@ -4009,8 +4009,8 @@ namespace Midjourney.Infrastructure
                     // 如果启用保存过程图片
                     if (GlobalConfiguration.Setting.EnableSaveIntermediateImage && !string.IsNullOrWhiteSpace(imageUrl))
                     {
-                        var ff = new FileFetchHelper();
-                        var ffUrl = await ff.FetchFileToStorageAsync(imageUrl);
+                        //var ff = new MjImageFetchHelper();
+                        var ffUrl = await MjImageFetchHelper.FetchFileToStorageAsync(imageUrl);
                         if (!string.IsNullOrWhiteSpace(ffUrl))
                         {
                             imageUrl = ffUrl;

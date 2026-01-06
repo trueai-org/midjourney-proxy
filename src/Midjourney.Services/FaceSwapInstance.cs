@@ -78,7 +78,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
             try
             {
-                var ff = new FileFetchHelper();
+                //var ff = new MjImageFetchHelper();
 
                 DataUrl source = null;
                 try
@@ -102,7 +102,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                             return SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "人脸图片URL格式错误");
                         }
 
-                        var len = await ff.GetFileSizeAsync(dto.SourceUrl);
+                        var len = await MjImageFetchHelper.GetFileSizeAsync(dto.SourceUrl);
                         if (len <= 0 || len > repl.MaxFileSize)
                         {
                             return SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "人脸图片大小超过最大限制");
@@ -137,7 +137,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                             return SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "目标图片URL格式错误");
                         }
 
-                        var len = await ff.GetFileSizeAsync(dto.TargetUrl);
+                        var len = await MjImageFetchHelper.GetFileSizeAsync(dto.TargetUrl);
                         if (len <= 0 || len > repl.MaxFileSize)
                         {
                             return SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "目标图片大小超过最大限制");
@@ -157,15 +157,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 else
                 {
                     // 如果是 base64 则到本地
-                    var ext = ff.DetermineFileExtension(source.MimeType, source.Data, "");
-                    if (string.IsNullOrWhiteSpace(ext))
-                    {
-                        ext = ".jpg";
-                    }
-
                     // 保存 bytes 到本地
                     var directoryPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "temps");
-                    var fileName = $"{Guid.NewGuid().ToString("N")}{ext}";
+                    var fileName = await source.GenerateFileName();
                     var fullPath = Path.Combine(directoryPath, fileName);
 
                     lock (_lock)
@@ -184,15 +178,9 @@ namespace Midjourney.Infrastructure.LoadBalancer
                 else
                 {
                     // 保存 base64 到本地
-                    var ext = ff.DetermineFileExtension(target.MimeType, target.Data, "");
-                    if (string.IsNullOrWhiteSpace(ext))
-                    {
-                        ext = ".jpg";
-                    }
-
                     // 保存 bytes 到本地
                     var directoryPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "temps");
-                    var fileName = $"{Guid.NewGuid().ToString("N")}{ext}";
+                    var fileName = await target.GenerateFileName();
                     var fullPath = Path.Combine(directoryPath, fileName);
 
                     lock (_lock)

@@ -3133,8 +3133,8 @@ namespace Midjourney.Infrastructure.LoadBalancer
                         // url 缓存默认 24 小时有效
                         var okUrl = await AdaptiveCache.GetOrCreateAsync($"fetch:{url}", async () =>
                         {
-                            var ff = new FileFetchHelper();
-                            var res = await ff.FetchFileAsync(url);
+                            //var ff = new MjImageFetchHelper();
+                            var res = await MjImageFetchHelper.FetchFileAsync(url);
                             if (res.Success && !string.IsNullOrWhiteSpace(res.Url))
                             {
                                 return res.Url;

@@ -172,38 +172,6 @@ namespace Midjourney.API
                             _freeSql.Add(user);
                         }
 
-                        // 初始化领域标签
-                        var defaultDomain = _freeSql.Get<DomainTag>(Constants.DEFAULT_DOMAIN_ID);
-                        if (defaultDomain == null)
-                        {
-                            defaultDomain = new DomainTag
-                            {
-                                Id = Constants.DEFAULT_DOMAIN_ID,
-                                Name = "默认标签",
-                                Description = "",
-                                Sort = 0,
-                                Enable = true,
-                                Keywords = WordsUtils.GetWords()
-                            };
-                            _freeSql.Add(defaultDomain);
-                        }
-
-                        // 完整标签
-                        var fullDomain = _freeSql.Get<DomainTag>(Constants.DEFAULT_DOMAIN_FULL_ID);
-                        if (fullDomain == null)
-                        {
-                            fullDomain = new DomainTag
-                            {
-                                Id = Constants.DEFAULT_DOMAIN_FULL_ID,
-                                Name = "默认完整标签",
-                                Description = "",
-                                Sort = 0,
-                                Enable = true,
-                                Keywords = WordsUtils.GetWordsFull()
-                            };
-                            _freeSql.Add(fullDomain);
-                        }
-
                         // 违规词
                         var bannedWord = _freeSql.Get<BannedWord>(Constants.DEFAULT_BANNED_WORD_ID);
                         if (bannedWord == null)
@@ -215,7 +183,7 @@ namespace Midjourney.API
                                 Description = "",
                                 Sort = 0,
                                 Enable = true,
-                                Keywords = BannedPromptUtils.GetStrings()
+                                Keywords = MjBannedWordsHelper.GetBannedWords()
                             };
                             _freeSql.Add(bannedWord);
                         }
