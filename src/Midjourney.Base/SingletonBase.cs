@@ -15,58 +15,39 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Additional Terms:
-// This software shall not be used for any illegal activities. 
+// This software shall not be used for any illegal activities.
 // Users must comply with all applicable laws and regulations,
-// particularly those related to image and video processing. 
+// particularly those related to image and video processing.
 // The use of this software for any form of illegal face swapping,
-// invasion of privacy, or any other unlawful purposes is strictly prohibited. 
+// invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
+
 namespace Midjourney.Base
 {
     /// <summary>
-    /// 泛型单例基类。
+    /// 泛型单例基类（使用 Lazy 实现）。
     /// </summary>
     /// <typeparam name="T">单例类的类型。</typeparam>
     public abstract class SingletonBase<T> where T : SingletonBase<T>, new()
     {
-        // 静态变量用于存储单例实例。
-        private static T instance;
-
-        // 用于锁定以避免在多线程环境中创建多个实例。
-        private static readonly object lockObject = new();
+        // 使用 Lazy<T> 确保线程安全和延迟初始化
+        private static readonly Lazy<T> instance = new(() => new T(), LazyThreadSafetyMode.ExecutionAndPublication);
 
         /// <summary>
-        /// 私有构造函数以防止外部实例化。
+        /// 受保护的构造函数以防止外部实例化。
         /// </summary>
         protected SingletonBase()
         {
-            // 防止通过反射创建实例。
-            if (instance != null)
+            // 防止通过反射创建多个实例
+            if (instance.IsValueCreated)
             {
-                throw new InvalidOperationException("只能创建一个实例。");
+                throw new InvalidOperationException($"类型 {typeof(T).Name} 的实例已存在。");
             }
         }
 
         /// <summary>
-        /// 获取单例实例的静态属性。
+        /// 获取单例实例。
         /// </summary>
-        public static T Instance
-        {
-            get
-            {
-                // 双重检查锁定以确保只创建一个实例。
-                if (instance == null)
-                {
-                    lock (lockObject)
-                    {
-                        if (instance == null)
-                        {
-                            instance = new T();
-                        }
-                    }
-                }
-                return instance;
-            }
-        }
+        public static T Instance => instance.Value;
     }
 }
