@@ -33,10 +33,10 @@ namespace Midjourney.Infrastructure.LoadBalancer
     /// </summary>
     public class DiscordLoadBalancer
     {
-        private readonly IDiscordInstanceRule _rule;
-        private readonly HashSet<DiscordInstance> _instances = [];
+        private readonly IDiscordRuleService _rule;
+        private readonly HashSet<DiscordService> _instances = [];
 
-        public DiscordLoadBalancer(IDiscordInstanceRule rule)
+        public DiscordLoadBalancer(IDiscordRuleService rule)
         {
             _rule = rule;
         }
@@ -45,13 +45,13 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// 获取所有实例。
         /// </summary>
         /// <returns>所有实例列表。</returns>
-        public List<DiscordInstance> GetAllInstances() => _instances.ToList();
+        public List<DiscordService> GetAllInstances() => _instances.ToList();
 
         /// <summary>
         /// 获取存活的实例。
         /// </summary>
         /// <returns>存活的实例列表。</returns>
-        public List<DiscordInstance> GetAliveInstances() => _instances.Where(c => c != null && c.IsAlive == true).ToList() ?? [];
+        public List<DiscordService> GetAliveInstances() => _instances.Where(c => c != null && c.IsAlive == true).ToList() ?? [];
 
         /// <summary>
         /// 选择一个实例。
@@ -75,7 +75,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <param name="notInstanceIds">排除的账号</param>
         /// <param name="isActionTask">是否允许变化任务，例如：变化、视频拓展、弹窗任务</param>
         /// <param name="isDiscord">过滤 discord 账号</param>
-        public (DiscordInstance instance, GenerationSpeedMode? confirmMode) ChooseInstance(
+        public (DiscordService instance, GenerationSpeedMode? confirmMode) ChooseInstance(
             AccountFilter accountFilter = null,
             bool? isNewTask = null,
             EBotType? botType = null,
@@ -97,7 +97,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
             var sw = Stopwatch.StartNew();
             try
             {
-                DiscordInstance inc = null;
+                DiscordService inc = null;
 
                 accountFilter ??= new AccountFilter();
                 accountFilter.Modes ??= [];
@@ -220,7 +220,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// </summary>
         /// <param name="preferredSpeedMode"></param>
         /// <returns></returns>
-        public DiscordInstance GetDescribeInstance(string instanceId = null)
+        public DiscordService GetDescribeInstance(string instanceId = null)
         {
             var list = GetAliveInstances()
                 .WhereIf(!string.IsNullOrWhiteSpace(instanceId), c => c.ChannelId == instanceId)
@@ -250,7 +250,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// </summary>
         /// <param name="channelId">实例ID/渠道ID</param>
         /// <returns>实例。</returns>
-        public DiscordInstance GetDiscordInstance(string channelId)
+        public DiscordService GetDiscordInstance(string channelId)
         {
             if (string.IsNullOrWhiteSpace(channelId))
             {
@@ -265,7 +265,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// </summary>
         /// <param name="channelId">实例ID/渠道ID</param>
         /// <returns>实例。</returns>
-        public DiscordInstance GetDiscordInstanceIsAlive(string channelId)
+        public DiscordService GetDiscordInstanceIsAlive(string channelId)
         {
             if (string.IsNullOrWhiteSpace(channelId))
             {
@@ -279,19 +279,19 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// 添加 Discord 实例
         /// </summary>
         /// <param name="instance"></param>
-        public void AddInstance(DiscordInstance instance) => _instances.Add(instance);
+        public void AddInstance(DiscordService instance) => _instances.Add(instance);
 
         /// <summary>
         /// 移除
         /// </summary>
         /// <param name="instance"></param>
-        public void RemoveInstance(DiscordInstance instance) => _instances.Remove(instance);
+        public void RemoveInstance(DiscordService instance) => _instances.Remove(instance);
 
         /// <summary>
         /// 获取一个启用官方个性化的存活的实例
         /// </summary>
         /// <returns></returns>
-        public DiscordInstance GetAliveOfficialPersonalizeInstance()
+        public DiscordService GetAliveOfficialPersonalizeInstance()
         {
             var list = GetAliveInstances().Where(c => c.Account.OfficialEnablePersonalize).ToList();
 

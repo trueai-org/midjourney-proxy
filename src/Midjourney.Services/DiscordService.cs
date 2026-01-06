@@ -39,7 +39,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
     /// Discord 实例
     /// 实现了IDiscordInstance接口，负责处理Discord相关的任务管理和执行。
     /// </summary>
-    public class DiscordInstance : IDiscordInstance
+    public class DiscordService : IDiscordService
     {
         /// <summary>
         /// 全局正在运行的任务列表
@@ -125,7 +125,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// </summary>
         private readonly AsyncParallelLock _seekParallelLock = new(12);
 
-        public DiscordInstance(DiscordAccount account, INotifyService notifyService,
+        public DiscordService(DiscordAccount account, INotifyService notifyService,
             Dictionary<string, string> paramsMap, IHttpClientFactory httpClientFactory)
         {
             _httpClientFactory = httpClientFactory;

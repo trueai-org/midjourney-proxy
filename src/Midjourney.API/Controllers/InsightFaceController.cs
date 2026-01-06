@@ -43,15 +43,15 @@ namespace Midjourney.API.Controllers
 
         private readonly GenerationSpeedMode? _mode;
         private readonly WorkContext _workContext;
-        private readonly FaceSwapInstance _faceSwapInstance;
-        private readonly VideoFaceSwapInstance _videoFaceSwapInstance;
+        private readonly FaceSwapService _faceSwapInstance;
+        private readonly VideoFaceSwapService _videoFaceSwapInstance;
         private readonly IFreeSql _freeSql = FreeSqlHelper.FreeSql;
 
         public InsightFaceController(
             IHttpContextAccessor httpContextAccessor,
             WorkContext workContext,
-            FaceSwapInstance faceSwapInstance,
-            VideoFaceSwapInstance videoFaceSwapInstance)
+            FaceSwapService faceSwapInstance,
+            VideoFaceSwapService videoFaceSwapInstance)
         {
             _workContext = workContext;
 

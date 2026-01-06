@@ -30,14 +30,14 @@ namespace Midjourney.Infrastructure.LoadBalancer
     /// <summary>
     /// 换脸服务
     /// </summary>
-    public class FaceSwapInstance : BaseFaceSwapInstance
+    public class FaceSwapService : BaseFaceSwapService
     {
         private readonly Task _longTask;
         private readonly AsyncParallelLock _semaphoreSlimLock;
         private readonly CancellationTokenSource _longToken;
         private readonly ManualResetEvent _mre;
 
-        public FaceSwapInstance(INotifyService notifyService, IMemoryCache memoryCache) 
+        public FaceSwapService(INotifyService notifyService, IMemoryCache memoryCache) 
             : base(notifyService, memoryCache)
         {
             var config = GlobalConfiguration.Setting;

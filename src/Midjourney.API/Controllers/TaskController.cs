@@ -101,7 +101,7 @@ namespace Midjourney.API.Controllers
                 {
                     if (!targetTask.IsCompleted)
                     {
-                        if (DiscordInstance.GlobalRunningTasks.TryGetValue(id, out var task) && task != null)
+                        if (DiscordService.GlobalRunningTasks.TryGetValue(id, out var task) && task != null)
                         {
                             task.Fail("取消任务");
                             _freeSql.Save(targetTask);

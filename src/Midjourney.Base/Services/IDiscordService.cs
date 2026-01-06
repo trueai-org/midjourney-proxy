@@ -3,7 +3,7 @@
     /// <summary>
     ///
     /// </summary>
-    public interface IDiscordInstance
+    public interface IDiscordService
     {
         /// <summary>
         /// 账号信息

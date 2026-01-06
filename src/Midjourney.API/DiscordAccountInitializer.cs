@@ -41,7 +41,7 @@ namespace Midjourney.API
     public class DiscordAccountInitializer : IHostedService
     {
         private readonly DiscordLoadBalancer _discordLoadBalancer;
-        private readonly DiscordAccountHelper _discordAccountHelper;
+        private readonly DiscordAccountService _discordAccountHelper;
         private readonly IConfiguration _configuration;
         private readonly ILogger _logger = Log.Logger;
         private readonly IHostApplicationLifetime _applicationLifetime;
@@ -55,7 +55,7 @@ namespace Midjourney.API
 
         public DiscordAccountInitializer(
             DiscordLoadBalancer discordLoadBalancer,
-            DiscordAccountHelper discordAccountHelper,
+            DiscordAccountService discordAccountHelper,
             IConfiguration configuration,
             IMemoryCache memoryCache,
             IHostApplicationLifetime applicationLifetime,
@@ -866,7 +866,7 @@ namespace Midjourney.API
                     try
                     {
                         // 开始尝试自动登录
-                        var suc = DiscordAccountHelper.AutoLogin(account, true);
+                        var suc = DiscordAccountService.AutoLogin(account, true);
 
                         if (suc)
                         {
@@ -1251,7 +1251,7 @@ namespace Midjourney.API
                                 return;
                             }
 
-                            if (DiscordInstance.GlobalRunningTasks.TryGetValue(notification.TaskInfoId, out var task) && task != null)
+                            if (DiscordService.GlobalRunningTasks.TryGetValue(notification.TaskInfoId, out var task) && task != null)
                             {
                                 task.Fail("取消任务");
                                 _freeSql.Update(task);
@@ -1267,7 +1267,7 @@ namespace Midjourney.API
                                 return;
                             }
 
-                            if (DiscordInstance.GlobalRunningTasks.TryGetValue(notification.TaskInfoId, out var task) && task != null)
+                            if (DiscordService.GlobalRunningTasks.TryGetValue(notification.TaskInfoId, out var task) && task != null)
                             {
                                 task.Fail("删除任务");
                                 _freeSql.DeleteById<TaskInfo>(task.Id);

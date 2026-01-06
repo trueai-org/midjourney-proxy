@@ -34,7 +34,7 @@ using MongoDB.Driver.Linq;
 
 namespace Midjourney.Base
 {
-    public static class Extensions
+    public static class CommonExtensions
     {
         private static readonly char[] PathSeparator = ['/'];
 

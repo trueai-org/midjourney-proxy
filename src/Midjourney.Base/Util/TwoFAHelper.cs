@@ -2,7 +2,7 @@
 using System.Security.Cryptography;
 using System.Text;
 
-namespace Midjourney.Infrastructure.Services
+namespace Midjourney.Base
 {
     /// <summary>
     /// 2fa 验证帮助类

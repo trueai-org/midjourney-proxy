@@ -41,7 +41,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
     /// https://www.picsi.ai/
     /// https://www.picsi.ai/faceswap
     /// </summary>
-    public class BaseFaceSwapInstance
+    public class BaseFaceSwapService
     {
         protected static readonly object _lock = new();
 
@@ -58,7 +58,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
 
         protected readonly IFreeSql _freeSql = FreeSqlHelper.FreeSql;
 
-        public BaseFaceSwapInstance(INotifyService notifyService, IMemoryCache memoryCache)
+        public BaseFaceSwapService(INotifyService notifyService, IMemoryCache memoryCache)
         {
             var config = GlobalConfiguration.Setting;
 

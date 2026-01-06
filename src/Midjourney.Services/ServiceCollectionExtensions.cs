@@ -31,21 +31,15 @@ global using Midjourney.Base.Services;
 global using Midjourney.Base.StandardTable;
 global using Midjourney.Base.Storage;
 global using Midjourney.Base.Util;
+
 global using ILogger = Serilog.ILogger;
 global using MessageType = Midjourney.Base.MessageType;
 global using TaskStatus = Midjourney.Base.TaskStatus;
-
-using System.Reflection;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Midjourney.Infrastructure
 {
     public static class ServiceCollectionExtensions
     {
-        public static void AddInfrastructureServices(this IServiceCollection services, Setting config)
-        {
-            // 注册 MediatR
-            services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
-        }
+
     }
 }

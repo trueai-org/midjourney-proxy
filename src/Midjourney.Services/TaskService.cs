@@ -530,7 +530,7 @@ namespace Midjourney.Infrastructure.Services
         {
             var setting = GlobalConfiguration.Setting;
 
-            DiscordInstance instance;
+            DiscordService instance;
             GenerationSpeedMode? mode = null;
 
             // 高清视频
@@ -1302,7 +1302,7 @@ namespace Midjourney.Infrastructure.Services
         /// <param name="parentTaskId"></param>
         /// <param name="submitResult"></param>
         /// <returns></returns>
-        public DiscordInstance GetInstanceByTask(TaskInfo task, TaskInfo targetTask, out SubmitResultVO submitResult)
+        public DiscordService GetInstanceByTask(TaskInfo task, TaskInfo targetTask, out SubmitResultVO submitResult)
         {
             GenerationSpeedMode? mode = null;
 

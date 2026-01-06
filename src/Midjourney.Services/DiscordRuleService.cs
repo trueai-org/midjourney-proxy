@@ -30,7 +30,7 @@ namespace Midjourney.Infrastructure.Services
     /// 最少等待空闲选择规则
     /// 单例场景，不需要包装 Random 实例
     /// </summary>
-    public class BestWaitIdleRule : IDiscordInstanceRule
+    public class BestWaitIdleRule : IDiscordRuleService
     {
         private static readonly Random random = new Random();
 
@@ -39,7 +39,7 @@ namespace Midjourney.Infrastructure.Services
         /// </summary>
         /// <param name="instances">可用的Discord实例列表</param>
         /// <returns>选择的Discord实例</returns>
-        public DiscordInstance Choose(List<DiscordInstance> instances)
+        public DiscordService Choose(List<DiscordService> instances)
         {
             if (instances == null || instances.Count == 0)
             {
@@ -88,7 +88,7 @@ namespace Midjourney.Infrastructure.Services
     /// <summary>
     /// 轮询选择规则。
     /// </summary>
-    public class RoundRobinRule : IDiscordInstanceRule
+    public class RoundRobinRule : IDiscordRuleService
     {
         private int _position = -1;
 
@@ -97,7 +97,7 @@ namespace Midjourney.Infrastructure.Services
         /// </summary>
         /// <param name="instances">可用的 Discord 实例列表。</param>
         /// <returns>选择的 Discord 实例。</returns>
-        public DiscordInstance Choose(List<DiscordInstance> instances)
+        public DiscordService Choose(List<DiscordService> instances)
         {
             if (instances.Count == 0)
             {
@@ -112,11 +112,11 @@ namespace Midjourney.Infrastructure.Services
     /// <summary>
     /// 随机规则
     /// </summary>
-    public class RandomRule : IDiscordInstanceRule
+    public class RandomRule : IDiscordRuleService
     {
         private static readonly Random _random = new Random();
 
-        public DiscordInstance Choose(List<DiscordInstance> instances)
+        public DiscordService Choose(List<DiscordService> instances)
         {
             if (instances.Count == 0)
             {
@@ -131,9 +131,9 @@ namespace Midjourney.Infrastructure.Services
     /// <summary>
     /// 权重规则
     /// </summary>
-    public class WeightRule : IDiscordInstanceRule
+    public class WeightRule : IDiscordRuleService
     {
-        public DiscordInstance Choose(List<DiscordInstance> instances)
+        public DiscordService Choose(List<DiscordService> instances)
         {
             if (instances.Count == 0)
             {

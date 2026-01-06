@@ -33,13 +33,13 @@ namespace Midjourney.Infrastructure
     /// <summary>
     /// Discord账号辅助类，用于创建和管理Discord实例。
     /// </summary>
-    public class DiscordAccountHelper
+    public class DiscordAccountService
     {
         private readonly INotifyService _notifyService;
         private readonly Dictionary<string, string> _paramsMap;
         private readonly IHttpClientFactory _httpClientFactory;
 
-        public DiscordAccountHelper(INotifyService notifyService, IHttpClientFactory httpClientFactory)
+        public DiscordAccountService(INotifyService notifyService, IHttpClientFactory httpClientFactory)
         {
             _notifyService = notifyService;
 
@@ -62,8 +62,6 @@ namespace Midjourney.Infrastructure
                 paramsMap[fileKey] = paramsContent;
             }
 
-            GlobalConfiguration.ResourcesParamsMap = paramsMap;
-
             _paramsMap = paramsMap;
 
             _httpClientFactory = httpClientFactory;
@@ -75,7 +73,7 @@ namespace Midjourney.Infrastructure
         /// <param name="account">Discord账号信息。</param>
         /// <returns>Discord实例。</returns>
         /// <exception cref="ArgumentException">当guildId, channelId或userToken为空时抛出。</exception>
-        public async Task<DiscordInstance> CreateDiscordInstance(DiscordAccount account)
+        public async Task<DiscordService> CreateDiscordInstance(DiscordAccount account)
         {
             if (!account.IsYouChuan && !account.IsOfficial)
             {
@@ -90,7 +88,7 @@ namespace Midjourney.Infrastructure
                 account.UserAgent = Constants.DEFAULT_DISCORD_USER_AGENT;
             }
 
-            var discordInstance = new DiscordInstance(account, _notifyService, _paramsMap, _httpClientFactory);
+            var discordInstance = new DiscordService(account, _notifyService, _paramsMap, _httpClientFactory);
 
             if (account.Enable == true)
             {

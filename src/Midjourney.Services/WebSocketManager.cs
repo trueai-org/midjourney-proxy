@@ -59,7 +59,7 @@ namespace Midjourney.Infrastructure
         /// </summary>
         /// <param name="discordInstance"></param>
         /// <returns></returns>
-        public static async Task CreateAndStartAsync(DiscordInstance discordInstance)
+        public static async Task CreateAndStartAsync(DiscordService discordInstance)
         {
             if (discordInstance == null || discordInstance.Account == null || discordInstance.Account.Enable == false)
             {
@@ -110,7 +110,7 @@ namespace Midjourney.Infrastructure
         private readonly ILogger _logger = Log.Logger;
 
         private readonly WebProxy _webProxy;
-        private readonly DiscordInstance _discordInstance;
+        private readonly DiscordService _discordInstance;
 
         /// <summary>
         /// 表示是否已释放资源
@@ -199,7 +199,7 @@ namespace Midjourney.Infrastructure
 
         private readonly Task _messageQueueTask;
 
-        public WebSocketManager(DiscordInstance discordInstance)
+        public WebSocketManager(DiscordService discordInstance)
         {
             // Bot 消息监听器
             var setting = GlobalConfiguration.Setting;
@@ -2205,7 +2205,7 @@ namespace Midjourney.Infrastructure
                     try
                     {
                         // 开始尝试自动登录
-                        var suc = DiscordAccountHelper.AutoLogin(account, true);
+                        var suc = DiscordAccountService.AutoLogin(account, true);
 
                         if (suc)
                         {
@@ -2576,7 +2576,7 @@ namespace Midjourney.Infrastructure
         /// <param name="instance"></param>
         /// <param name="messageType"></param>
         /// <param name="message"></param>
-        public async Task HandleDescribe(DiscordInstance instance, MessageType messageType, EventData message)
+        public async Task HandleDescribe(DiscordService instance, MessageType messageType, EventData message)
         {
             if (instance == null || message == null)
             {
@@ -2639,7 +2639,7 @@ namespace Midjourney.Infrastructure
         /// <param name="instance"></param>
         /// <param name="messageType"></param>
         /// <param name="message"></param>
-        public async Task HandleShorten(DiscordInstance instance, MessageType messageType, EventData message)
+        public async Task HandleShorten(DiscordService instance, MessageType messageType, EventData message)
         {
             if (instance == null || message == null)
             {
@@ -2703,7 +2703,7 @@ namespace Midjourney.Infrastructure
         /// <param name="instance"></param>
         /// <param name="messageType"></param>
         /// <param name="message"></param>
-        public async Task HandleMessage(DiscordInstance instance, MessageType messageType, EventData message)
+        public async Task HandleMessage(DiscordService instance, MessageType messageType, EventData message)
         {
             if (messageType != MessageType.UPDATE && messageType != MessageType.CREATE)
             {
@@ -2808,7 +2808,7 @@ namespace Midjourney.Infrastructure
         /// <param name="finalPrompt"></param>
         /// <param name="index">1 | 2 | 3 | 4</param>
         /// <param name="message"></param>
-        private async Task FindAndFinishUTask(DiscordInstance instance, EventData message, MessageParseResult messageParseResult, MessageType messageType)
+        private async Task FindAndFinishUTask(DiscordService instance, EventData message, MessageParseResult messageParseResult, MessageType messageType)
         {
             if (messageType != MessageType.CREATE)
             {
@@ -2915,7 +2915,7 @@ namespace Midjourney.Infrastructure
         /// <param name="action"></param>
         /// <param name="finalPrompt"></param>
         /// <param name="message"></param>
-        protected async Task FindAndFinishUpscaleHDTask(DiscordInstance instance, EventData message, MessageParseResult messageParseResult, MessageType messageType)
+        protected async Task FindAndFinishUpscaleHDTask(DiscordService instance, EventData message, MessageParseResult messageParseResult, MessageType messageType)
         {
             var msgId = GetMessageId(message);
             var fullPrompt = GetFullPrompt(message);
@@ -3046,7 +3046,7 @@ namespace Midjourney.Infrastructure
         /// <param name="message"></param>
         /// <param name="messageParseResult"></param>
         /// <returns></returns>
-        protected async Task FindAndFinishPanTask(DiscordInstance instance, EventData message, MessageParseResult messageParseResult, MessageType messageType)
+        protected async Task FindAndFinishPanTask(DiscordService instance, EventData message, MessageParseResult messageParseResult, MessageType messageType)
         {
             var msgId = GetMessageId(message);
             var fullPrompt = GetFullPrompt(message);
@@ -3225,7 +3225,7 @@ namespace Midjourney.Infrastructure
         /// <param name="message"></param>
         /// <param name="messageParseResult"></param>
         /// <returns></returns>
-        protected async Task FindAndFinishZoomTask(DiscordInstance instance, EventData message, MessageParseResult messageParseResult, MessageType messageType)
+        protected async Task FindAndFinishZoomTask(DiscordService instance, EventData message, MessageParseResult messageParseResult, MessageType messageType)
         {
             var msgId = GetMessageId(message);
             var fullPrompt = GetFullPrompt(message);
@@ -3405,7 +3405,7 @@ namespace Midjourney.Infrastructure
         /// <param name="message"></param>
         /// <param name="messageParseResult"></param>
         /// <returns></returns>
-        protected async Task FindAndFinishVaryTask(DiscordInstance instance, EventData message, MessageParseResult messageParseResult, MessageType messageType)
+        protected async Task FindAndFinishVaryTask(DiscordService instance, EventData message, MessageParseResult messageParseResult, MessageType messageType)
         {
             var msgId = GetMessageId(message);
             var fullPrompt = GetFullPrompt(message);
@@ -3583,7 +3583,7 @@ namespace Midjourney.Infrastructure
         /// <param name="message"></param>
         /// <param name="messageParseResult"></param>
         /// <returns></returns>
-        protected async Task FindAndFinishVideoTask(DiscordInstance instance, EventData message, MessageParseResult messageParseResult, MessageType messageType)
+        protected async Task FindAndFinishVideoTask(DiscordService instance, EventData message, MessageParseResult messageParseResult, MessageType messageType)
         {
             var msgId = GetMessageId(message);
             var fullPrompt = GetFullPrompt(message);
@@ -3856,7 +3856,7 @@ namespace Midjourney.Infrastructure
         /// <param name="message"></param>
         /// <param name="messageParseResult"></param>
         /// <returns></returns>
-        protected async Task FindAndFinishImageTask(DiscordInstance instance, EventData message, MessageParseResult messageParseResult, MessageType messageType)
+        protected async Task FindAndFinishImageTask(DiscordService instance, EventData message, MessageParseResult messageParseResult, MessageType messageType)
         {
             var msgId = GetMessageId(message);
             var fullPrompt = GetFullPrompt(message);
@@ -4060,7 +4060,7 @@ namespace Midjourney.Infrastructure
         /// <summary>
         /// 检查并触发视频扩展操作
         /// </summary>
-        protected async Task CheckAndTriggerVideoExtend(DiscordInstance instance, TaskInfo upscaleTask, string messageHash, List<CustomComponentModel> buttons)
+        protected async Task CheckAndTriggerVideoExtend(DiscordService instance, TaskInfo upscaleTask, string messageHash, List<CustomComponentModel> buttons)
         {
             try
             {

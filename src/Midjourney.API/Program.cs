@@ -254,9 +254,6 @@ namespace Midjourney.API
                 // 记录当前目录
                 Log.Information($"Current directory: {Directory.GetCurrentDirectory()}");
 
-                // 在这里把 ServiceProvider 传给静态门面（必须在 Build 之后）
-                MediatorProvider.SetServiceProvider(app.Services);
-
                 if (app.Environment.IsDevelopment())
                 {
                     app.UseDeveloperExceptionPage();

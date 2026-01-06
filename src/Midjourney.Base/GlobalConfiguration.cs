@@ -22,6 +22,8 @@
 // invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
+global using Midjourney.Base.Models;
+
 using System.Reflection;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Caching.Memory;
@@ -75,11 +77,6 @@ namespace Midjourney.Base
         /// 全局任务并行锁
         /// </summary>
         public static AsyncParallelLock GlobalLock { get; set; }
-
-        /// <summary>
-        /// 静态资源参数映射
-        /// </summary>
-        public static Dictionary<string, string> ResourcesParamsMap { get; set; } = new Dictionary<string, string>();
 
         /// <summary>
         /// 全局缓存项

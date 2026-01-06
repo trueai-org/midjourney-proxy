@@ -29,13 +29,13 @@ namespace Midjourney.Base.Services
         /// <param name="task"></param>
         /// <param name="instance"></param>
         /// <returns></returns>
-        Task<Message> SubmitTaskAsync(TaskInfo task, IDiscordInstance instance);
+        Task<Message> SubmitTaskAsync(TaskInfo task, IDiscordService instance);
 
         /// <summary>
         /// 变化任务
         /// </summary>
         /// <returns></returns>
-        Task<Message> SubmitActionAsync(TaskInfo task, SubmitActionDTO submitAction, TaskInfo targetTask, IDiscordInstance discordInstance, string newPrompt = null);
+        Task<Message> SubmitActionAsync(TaskInfo task, SubmitActionDTO submitAction, TaskInfo targetTask, IDiscordService discordInstance, string newPrompt = null);
 
         /// <summary>
         /// 获取并更新任务状态

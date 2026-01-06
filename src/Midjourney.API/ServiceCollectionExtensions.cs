@@ -33,8 +33,8 @@ namespace Midjourney.API
         public static void AddMidjourneyServices(this IServiceCollection services, Setting config)
         {
             // 换脸服务
-            services.AddSingleton<FaceSwapInstance>();
-            services.AddSingleton<VideoFaceSwapInstance>();
+            services.AddSingleton<FaceSwapService>();
+            services.AddSingleton<VideoFaceSwapService>();
 
             // 通知服务
             services.AddSingleton<INotifyService, NotifyService>();
@@ -43,23 +43,23 @@ namespace Midjourney.API
             switch (config.AccountChooseRule)
             {
                 case AccountChooseRule.BestWaitIdle:
-                    services.AddSingleton<IDiscordInstanceRule, BestWaitIdleRule>();
+                    services.AddSingleton<IDiscordRuleService, BestWaitIdleRule>();
                     break;
 
                 case AccountChooseRule.Random:
-                    services.AddSingleton<IDiscordInstanceRule, RandomRule>();
+                    services.AddSingleton<IDiscordRuleService, RandomRule>();
                     break;
 
                 case AccountChooseRule.Weight:
-                    services.AddSingleton<IDiscordInstanceRule, WeightRule>();
+                    services.AddSingleton<IDiscordRuleService, WeightRule>();
                     break;
 
                 case AccountChooseRule.Polling:
-                    services.AddSingleton<IDiscordInstanceRule, RoundRobinRule>();
+                    services.AddSingleton<IDiscordRuleService, RoundRobinRule>();
                     break;
 
                 default:
-                    services.AddSingleton<IDiscordInstanceRule, BestWaitIdleRule>();
+                    services.AddSingleton<IDiscordRuleService, BestWaitIdleRule>();
                     break;
             }
 
@@ -67,16 +67,10 @@ namespace Midjourney.API
             services.AddSingleton<DiscordLoadBalancer>();
 
             // Discord 账号助手
-            services.AddSingleton<DiscordAccountHelper>();
+            services.AddSingleton<DiscordAccountService>();
 
             // 任务服务
             services.AddSingleton<ITaskService, TaskService>();
-
-            // 注册 MediatR
-            services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
-
-            services.AddBaseServices(config);
-            services.AddInfrastructureServices(config);
         }
     }
 }

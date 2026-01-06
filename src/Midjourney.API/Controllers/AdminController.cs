@@ -628,7 +628,7 @@ namespace Midjourney.API.Controllers
                 return Result.Fail("账号、密码、2FA 不能为空");
             }
 
-            var ok = DiscordAccountHelper.AutoLogin(model, model.Enable ?? false);
+            var ok = DiscordAccountService.AutoLogin(model, model.Enable ?? false);
             if (ok)
             {
                 return Result.Ok("登录请求已发送，请稍后刷新列表！");
@@ -1340,7 +1340,7 @@ namespace Midjourney.API.Controllers
                 {
                     if (!targetTask.IsCompleted)
                     {
-                        if (DiscordInstance.GlobalRunningTasks.TryGetValue(id, out var task) && task != null)
+                        if (DiscordService.GlobalRunningTasks.TryGetValue(id, out var task) && task != null)
                         {
                             task.Fail("删除任务");
                         }
