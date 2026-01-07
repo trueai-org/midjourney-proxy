@@ -811,6 +811,11 @@ namespace Midjourney.API
                                 disInstance.IsInit = true;
                             }
                         }
+                        else
+                        {
+                            // 刷新账号信息
+                            await disInstance?.SyncInfoSetting();
+                        }
 
                         // 废弃
                         //// discord 随机延期 token
