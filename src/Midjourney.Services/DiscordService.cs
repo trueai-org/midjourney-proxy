@@ -449,6 +449,12 @@ namespace Midjourney.Services
                     return false;
                 }
 
+                var hasFast = CounterHelper.HasFastTaskAvailableCount(acc.ChannelId);
+                if (!hasFast)
+                {
+                    return false;
+                }
+
                 if (acc.IsYouChuan)
                 {
                     return !string.IsNullOrWhiteSpace(_ymTaskService?.YouChuanToken);
@@ -3757,6 +3763,13 @@ namespace Midjourney.Services
                     return await YmTaskService.SyncYouchuanInfo();
                 }
 
+                // 检查快速计数器是否存在，如果不存在则强制清理缓存并同步账号信息
+                var hasFast = CounterHelper.HasFastTaskAvailableCount(acc.ChannelId);
+                if (!hasFast)
+                {
+                    isClearCache = true;
+                }
+
                 var success = false;
                 var cacheKey = $"SyncInfoCache:{acc.ChannelId}";
                 var cacheValue = AdaptiveCache.Get<bool?>(cacheKey);
@@ -3784,7 +3797,9 @@ namespace Midjourney.Services
                         !RateLimiter.Check(keyPrefix, acc.ChannelId, 60, 6))
                     {
                         Log.Warning("同步信息调用过于频繁，ChannelId={0}", acc.ChannelId);
-                        return false;
+
+                        // 返回缓存的结果
+                        return cacheValue ?? false;
                     }
 
                     // 检查通过后才清除
@@ -3801,6 +3816,12 @@ namespace Midjourney.Services
 
                 if (acc.IsDiscord)
                 {
+                    // 判断 ws 连接是否在线
+                    if (Wss == null)
+                    {
+                        return false;
+                    }
+
                     // discord 60-180 分钟
                     var cacheMinutes = Random.Shared.Next(60, 180);
                     success = await AdaptiveCache.GetOrCreateAsync(cacheKey, async () =>

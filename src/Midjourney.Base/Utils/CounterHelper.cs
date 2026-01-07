@@ -109,10 +109,16 @@
                 return;
             }
 
+            // 同时设置今天和明天，因为要跨天使用
+            // 今天
             var hashKeyPrefix = $"FastTaskAvailableCount:{DateTime.Now:yyyyMMdd}";
             RedisHelper.HSet(hashKeyPrefix, instanceId, count);
-
             RedisHelper.ExpireAt(hashKeyPrefix, DateTime.Today.AddDays(7));
+
+            // 明天
+            var tomorrowHashKeyPrefix = $"FastTaskAvailableCount:{DateTime.Now.AddDays(1):yyyyMMdd}";
+            RedisHelper.HSet(tomorrowHashKeyPrefix, instanceId, count);
+            RedisHelper.ExpireAt(tomorrowHashKeyPrefix, DateTime.Today.AddDays(8));
         }
 
         /// <summary>
@@ -127,6 +133,7 @@
             {
                 return GetFastTaskAvailableCount(instanceId);
             }
+
             var hashKeyPrefix = $"FastTaskAvailableCount:{DateTime.Now:yyyyMMdd}";
             return (int)RedisHelper.HIncrBy(hashKeyPrefix, instanceId, -decrementBy);
         }
@@ -142,8 +149,27 @@
             {
                 return 0;
             }
+
             var hashKeyPrefix = $"FastTaskAvailableCount:{DateTime.Now:yyyyMMdd}";
-            return RedisHelper.HGet<int>(hashKeyPrefix, instanceId);
+
+            // 有可能没有这个 key
+            var value = RedisHelper.HGet<int?>(hashKeyPrefix, instanceId);
+            return value ?? 0;
+        }
+
+        /// <summary>
+        /// 判断是否存在快速任务可用计数
+        /// </summary>
+        /// <param name="instanceId"></param>
+        /// <returns></returns>
+        public static bool HasFastTaskAvailableCount(string instanceId)
+        {
+            if (string.IsNullOrWhiteSpace(instanceId))
+            {
+                return false;
+            }
+            var hashKeyPrefix = $"FastTaskAvailableCount:{DateTime.Now:yyyyMMdd}";
+            return RedisHelper.HExists(hashKeyPrefix, instanceId);
         }
 
         /// <summary>
@@ -252,8 +278,6 @@
             }
             return result;
         }
-
-
 
         /// <summary>
         /// 获取用户今日绘图总数

@@ -77,6 +77,11 @@ namespace Midjourney.Services
                 webSocketManager?.Dispose();
                 discordInstance.Wss = null;
             }
+            else
+            {
+                // 等一会让连接稳定让其他业务运行
+                await Task.Delay(2500);
+            }
         }
 
         /// <summary>

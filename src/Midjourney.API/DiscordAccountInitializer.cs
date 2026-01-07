@@ -758,29 +758,30 @@ namespace Midjourney.API
 
                         sw.Stop();
                         info.AppendLine($"{account.Id}初始化中... 创建实例耗时: {sw.ElapsedMilliseconds}ms");
-                        sw.Restart();
 
                         try
                         {
+                            // 用户 WebSocket 连接检查
+                            if (account.IsDiscord && disInstance != null && disInstance.Wss == null)
+                            {
+                                await DiscordWebSocketService.CreateAndStartAsync(disInstance);
+                            }
+
                             // 首次创建实例后同步账号信息
                             // 高频同步 info setting 一定会封号
                             // 这里应该等待初始化完成，并获取用户信息验证，获取用户成功后设置为可用状态
                             // 多账号启动时，等待一段时间再启动下一个账号
-                            if (account.IsDiscord || account.IsOfficial)
+                            if (account.IsDiscord)
                             {
-                                await Task.Delay(1000 * 5);
+                                await Task.Delay(2500);
                             }
 
                             // 启动后强制同步
-                            var success = await disInstance.SyncInfoSetting(true);
-                            if (success)
-                            {
-                                // 设置初始化完成
-                                disInstance.IsInit = true;
-                            }
-
+                            sw.Restart();
+                            await disInstance.SyncInfoSetting(true);
                             sw.Stop();
-                            info.AppendLine($"{account.Id}初始化中... 同步 info {(success ? "成功" : "失败")} 耗时: {sw.ElapsedMilliseconds}ms");
+                            info.AppendLine($"{account.Id}初始化中... 同步 info 耗时: {sw.ElapsedMilliseconds}ms");
+
                             sw.Restart();
                         }
                         catch (Exception ex)
@@ -800,21 +801,20 @@ namespace Midjourney.API
                             await DiscordWebSocketService.CreateAndStartAsync(disInstance);
                         }
 
+                        // 刷新账号信息
                         // 非强制同步获取成功
-                        // 账号信息自动同步
-                        if (disInstance != null && disInstance.IsInit == false)
+                        var success = await disInstance?.SyncInfoSetting();
+                        if (success == true)
                         {
-                            var success = await disInstance?.SyncInfoSetting();
-                            if (success == true)
+                            // 如果未初始化完成，判断是否存在快速计数器，如果存在则设置初始化完成
+                            if (disInstance.IsInit == false)
                             {
-                                // 设置初始化完成
-                                disInstance.IsInit = true;
+                                var hasFast = CounterHelper.HasFastTaskAvailableCount(account.ChannelId);
+                                if (hasFast)
+                                {
+                                    disInstance.IsInit = true;
+                                }
                             }
-                        }
-                        else
-                        {
-                            // 刷新账号信息
-                            await disInstance?.SyncInfoSetting();
                         }
 
                         // 废弃
@@ -830,8 +830,15 @@ namespace Midjourney.API
                     else
                     {
                         // 并行为 0 标记
-                        // 设置初始化完成
-                        disInstance.IsInit = true;
+                        // 如果未初始化完成，判断是否存在快速计数器，如果存在则设置初始化完成
+                        if (disInstance != null && disInstance.IsInit == false)
+                        {
+                            var hasFast = CounterHelper.HasFastTaskAvailableCount(account.ChannelId);
+                            if (hasFast)
+                            {
+                                disInstance.IsInit = true;
+                            }
+                        }
                     }
                 }
                 else
