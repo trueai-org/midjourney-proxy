@@ -488,18 +488,17 @@ namespace Midjourney.API
 
         /// <summary>
         /// 检查并删除旧文档
+        /// 如果超过 1000+ 条，删除最早插入的数据
         /// </summary>
-        public static void CheckAndDeleteOldDocuments()
+        public void CheckAndDeleteOldDocuments()
         {
             var setting = GlobalConfiguration.Setting;
-            if (setting.MaxCount <= 0)
+            var maxCount = setting.MaxCount;
+            if (maxCount <= 0)
             {
                 return;
             }
 
-            var maxCount = setting.MaxCount;
-
-            // 如果超过 x 条，删除最早插入的数据
             switch (setting.DatabaseType)
             {
                 case DatabaseType.SQLite:
@@ -507,24 +506,28 @@ namespace Midjourney.API
                 case DatabaseType.PostgreSQL:
                 case DatabaseType.SQLServer:
                     {
-                        var freeSql = FreeSqlHelper.FreeSql;
-                        if (freeSql != null)
+                        while (true)
                         {
-                            var documentCount = freeSql.Select<TaskInfo>().Count();
-                            if (documentCount > maxCount)
+                            // 每次至少删除 1000 条
+                            // 每次最多删除 3000 条
+                            var total = _freeSql.Select<TaskInfo>().Count();
+                            if (total > maxCount && total - maxCount >= 1000)
                             {
-                                // 每次最多删除 3000 条
-                                var documentsToDelete = int.Max(3000, (int)documentCount - maxCount);
+                                var delteCount = int.Max(3000, (int)total - maxCount);
 
-                                var ids = freeSql.Select<TaskInfo>()
+                                var ids = _freeSql.Select<TaskInfo>()
                                     .OrderBy(c => c.SubmitTime)
-                                    .Take(documentsToDelete)
-                                    .ToList()
-                                    .Select(c => c.Id);
-                                if (ids.Any())
+                                    .Take(delteCount)
+                                    .ToList(c => c.Id);
+
+                                if (ids.Count > 0)
                                 {
-                                    freeSql.Delete<TaskInfo>().Where(c => ids.Contains(c.Id)).ExecuteAffrows();
+                                    _freeSql.Delete<TaskInfo>().Where(c => ids.Contains(c.Id)).ExecuteAffrows();
                                 }
+                            }
+                            else
+                            {
+                                break;
                             }
                         }
                     }

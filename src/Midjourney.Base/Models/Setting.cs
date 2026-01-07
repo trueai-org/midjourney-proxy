@@ -353,7 +353,6 @@ namespace Midjourney.Base.Models
         /// </summary>
         public ReplicateOptions Replicate { get; set; } = new ReplicateOptions();
 
-
         /// <summary>
         /// 全局开启垂直领域
         /// </summary>
@@ -559,11 +558,6 @@ namespace Midjourney.Base.Models
     public class LocalStorageOptions : BaseStorage
     {
         /// <summary>
-        /// 加速域名，可用于图片加速和图片审核使用
-        /// </summary>
-        public string CustomCdn { get; set; }
-
-        /// <summary>
         /// 合作商加速域名
         /// </summary>
         public string PartnerCdn { get; set; }
@@ -575,17 +569,17 @@ namespace Midjourney.Base.Models
     public class CloudflareR2Options : BaseStorage
     {
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public string AccountId { get; set; }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public string AccessKey { get; set; }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public string SecretKey { get; set; }
 
@@ -593,11 +587,6 @@ namespace Midjourney.Base.Models
         /// Bucket
         /// </summary>
         public string Bucket { get; set; }
-
-        /// <summary>
-        /// 加速域名，可用于图片加速和图片审核使用
-        /// </summary>
-        public string CustomCdn { get; set; }
 
         /// <summary>
         /// 默认图片样式
@@ -669,11 +658,6 @@ namespace Midjourney.Base.Models
         public bool ForcePathStyle { get; set; } = true;
 
         /// <summary>
-        /// 自定义CDN域名，用于图片加速和图片审核
-        /// </summary>
-        public string CustomCdn { get; set; }
-
-        /// <summary>
         /// 默认图片样式参数
         /// </summary>
         public string ImageStyle { get; set; }
@@ -730,11 +714,6 @@ namespace Midjourney.Base.Models
         /// Bucket, format: BucketName-APPID
         /// </summary>
         public string Bucket { get; set; }
-
-        /// <summary>
-        /// 加速域名，可用于图片加速和图片审核使用
-        /// </summary>
-        public string CustomCdn { get; set; }
 
         /// <summary>
         /// 默认图片样式
@@ -953,7 +932,6 @@ namespace Midjourney.Base.Models
         /// 日绘图最大次数限制，默认 0 不限制
         /// </summary>
         public int DayDrawLimit { get; set; } = -1;
-
 
         /// <summary>
         /// 日绘图最大次数限制，默认 -1 不限制（慢速）
@@ -1199,6 +1177,11 @@ namespace Midjourney.Base.Models
     public class BaseStorage
     {
         /// <summary>
+        /// 自定义加速域名
+        /// </summary>
+        public string CustomCdn { get; set; }
+
+        /// <summary>
         /// 全球加速域名/国际加速域名，可用于境外服务拉取图片，例如：垫图、混图、参考图等
         /// </summary>
         public string GlobalCustomCdn { get; set; }
@@ -1211,7 +1194,9 @@ namespace Midjourney.Base.Models
 
     /// <summary>
     /// 阿里云 OSS 配置
-    /// <see cref="https://help.aliyun.com/document_detail/31947.html"/>
+    /// <![CDATA[
+    /// https://help.aliyun.com/document_detail/31947.html
+    /// ]]>
     /// </summary>
     public class AliyunOssOptions : BaseStorage
     {
@@ -1239,11 +1224,6 @@ namespace Midjourney.Base.Models
         /// Endpoint 表示OSS对外服务的访问域名。
         /// </summary>
         public string Endpoint { get; set; }
-
-        /// <summary>
-        /// 阿里云加速域名，可用于图片加速和图片审核使用
-        /// </summary>
-        public string CustomCdn { get; set; }
 
         /// <summary>
         /// 阿里云 OSS 默认图片样式

@@ -53,14 +53,6 @@ namespace Midjourney.Base.Storage
         /// <returns></returns>
         Stream GetObject(string key);
 
-        ///// <summary>
-        ///// 获取文件流数据,返回文件类型
-        ///// </summary>
-        ///// <param name="key"></param>
-        ///// <param name="contentType"></param>
-        ///// <returns></returns>
-        //Stream GetObject(string key, out string contentType);
-
         /// <summary>
         /// 移动文件
         /// </summary>

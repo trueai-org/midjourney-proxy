@@ -22,14 +22,10 @@
 // invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
+using System.Collections.Concurrent;
 using Aliyun.OSS;
 using IdGen;
-using Microsoft.AspNetCore.Cors.Infrastructure;
 using Serilog;
-using System.Collections.Concurrent;
-using System.Text;
-
-using ILogger = Serilog.ILogger;
 
 namespace Midjourney.Base.Storage
 {
@@ -53,7 +49,7 @@ namespace Midjourney.Base.Storage
         /// </summary>
         private static readonly ConcurrentDictionary<long, int> _counter = new();
 
-        private readonly ILogger _logger;
+        private readonly ILogger _logger = Log.Logger;
         private readonly AliyunOssOptions _ossOptions;
 
         private readonly string _bucketName;
@@ -63,8 +59,6 @@ namespace Midjourney.Base.Storage
 
         public AliyunOssStorageService()
         {
-            _logger = Log.Logger;
-
             var ossOptions = GlobalConfiguration.Setting.AliyunOss;
 
             _ossOptions = ossOptions;
@@ -72,109 +66,6 @@ namespace Midjourney.Base.Storage
             _accessKeyId = ossOptions.AccessKeyId!;
             _accessKeySecret = ossOptions.AccessKeySecret!;
             _endpoint = ossOptions.Endpoint!;
-        }
-
-        public AliyunOssOptions Options => _ossOptions;
-
-        /// <summary>
-        /// 水印 base64 编码
-        /// </summary>
-        /// <param name="content"></param>
-        /// <returns></returns>
-        public static string Base64Encode(string content)
-        {
-            byte[] bytes = Encoding.UTF8.GetBytes(content);
-            return Convert.ToBase64String(bytes).TrimEnd('=').Trim().Replace("+", "-").Replace("/", "_");
-        }
-
-        /// <summary>
-        /// 获取文件存储路径 key
-        /// 格式1：{prefix}/xxx/xxx/xxx/yyyyMMddHHmmssfff{suffix}.xxx
-        /// 格式2：{path}/yyyyMMddHHmmssfff{suffix}.xxx
-        /// </summary>
-        /// <param name="originalFileName">原文件名，不可为空</param>
-        /// <param name="pathPrefix">文件路径前缀</param>
-        /// <param name="path">如果外部传递了 path 则使用此路径值作为 key，并且忽略 prefix 参数</param>
-        /// <returns></returns>
-        private static string GetKey(string originalFileName, string pathPrefix = null, string path = null, string fileName = null, bool? isDateKeyPrefix = true)
-        {
-            // 生成后缀唯一随机数
-            var now = DateTime.Now;
-            var suffix = string.Empty;
-            do
-            {
-                now = DateTime.Now;
-
-                // 初始化 ID 计数器
-                var ms = new DateTimeOffset(now).ToUnixTimeMilliseconds();
-                if (!_counter.IsEmpty)
-                {
-                    var last = _counter.Last();
-                    if (last.Key < ms)
-                    {
-                        _counter.Clear();
-                    }
-                }
-
-                // 如果 1ms 超出 65536 条则进入等待
-                var max = _counter.AddOrUpdate(ms, 1, (k, v) => ++v);
-                if (max > 65536)
-                {
-                    Thread.Sleep(1);
-                    continue;
-                }
-
-                // 取最后 5 位作为随机数
-                var id = _idGenerator.CreateId().ToString();
-                if (id.Length > 5)
-                {
-                    suffix = id.Substring(id.Length - 5);
-                }
-            } while (string.IsNullOrWhiteSpace(suffix));
-
-            var key = string.Empty;
-
-            path = path?.TrimPath();
-            if (!string.IsNullOrWhiteSpace(path))
-            {
-                // 如果存在外部路径
-                key += $"{path}/";
-            }
-            else
-            {
-                // 如果不存在外部路径，则判断使用前缀
-                pathPrefix = pathPrefix?.TrimPath();
-                if (!string.IsNullOrWhiteSpace(pathPrefix))
-                {
-                    key += $"{pathPrefix}/";
-                }
-
-                // 计算路径，默认 3 级目录，如果每级 999 个文件夹，则最大支持 997,002,999 个文件
-                var guid = $"{Guid.NewGuid():N}";
-                for (int k = 0; k < 4; k++)
-                {
-                    key += Convert.ToInt32(guid.Substring(k * 2, 2), 16).ToString().PadLeft(3, '0') + "/";
-                }
-            }
-
-            // 计算扩展名
-            var exten = Path.GetExtension(originalFileName)?.Trim().ToLower();
-            if (exten?.IndexOf('?') > 0)
-            {
-                exten = exten.Substring(0, exten.IndexOf('?'));
-            }
-
-            if (!string.IsNullOrWhiteSpace(fileName))
-            {
-                var fname = fileName.Trim();
-                key += !string.IsNullOrWhiteSpace(exten) && fname.EndsWith(exten) ? fname : fname + exten;
-            }
-            else
-            {
-                key += $"{(isDateKeyPrefix == true ? now.ToString("yyyyMMddHHmmssfff") : now.ToString("HHmmssfff"))}{suffix}{exten}";
-            }
-
-            return key;
         }
 
         /// <summary>
@@ -272,12 +163,6 @@ namespace Midjourney.Base.Storage
                         return result;
                     }
 
-                    //var objectResult = client.PutObject(_bucketName, key, mediaBinaryStream, metadata);
-                    //if (objectResult?.HttpStatusCode == System.Net.HttpStatusCode.OK)
-                    //{
-                    //    // 上传成功，退出重试
-                    //    break;
-                    //}
                 }
                 catch (HttpRequestException ex)
                 {
@@ -355,6 +240,7 @@ namespace Midjourney.Base.Storage
         public Stream GetObject(string key)
         {
             _logger.Information("下载文件 {@key}", key);
+
             FormatKey(ref key);
 
             if (string.IsNullOrWhiteSpace(key))
@@ -375,9 +261,6 @@ namespace Midjourney.Base.Storage
                 throw new Exception("下载文件异常");
             }
 
-            // 不直接返回
-            //return obj.Content;
-
             // 使用 MemoryStream 作为缓冲
             var memoryStream = new MemoryStream();
             using (var responseStream = obj.Content)
@@ -388,56 +271,6 @@ namespace Midjourney.Base.Storage
             return memoryStream;
         }
 
-        /// <summary>
-        /// 获取阿里云文件流数据,返回文件类型
-        /// </summary>
-        /// <param name="key"></param>
-        /// <param name="contentType"></param>
-        /// <returns></returns>
-        /// <exception cref="Exception"></exception>
-        public Stream GetObject(string key, out string contentType)
-        {
-            _logger.Information("下载文件 {@key}", key);
-
-            FormatKey(ref key);
-
-            if (string.IsNullOrWhiteSpace(key))
-            {
-                contentType = string.Empty;
-                return Stream.Null;
-            }
-
-            if (key.StartsWith("http"))
-            {
-                key = new Uri(key).LocalPath.TrimPath()!;
-            }
-
-            // 创建OssClient实例。
-            var client = new OssClient(_endpoint, _accessKeyId, _accessKeySecret);
-
-            // 下载文件到流。OssObject 包含了文件的各种信息，如文件所在的存储空间、文件名、元信息以及一个输入流。
-            var obj = client.GetObject(_bucketName, key);
-
-            if (obj?.HttpStatusCode != System.Net.HttpStatusCode.OK)
-            {
-                _logger.Error("下载文件异常 {@obj}", obj);
-
-                throw new Exception("下载文件异常");
-            }
-            contentType = obj.Metadata.ContentType;
-
-            // 不直接返回
-            //return obj.Content;
-
-            // 使用 MemoryStream 作为缓冲
-            var memoryStream = new MemoryStream();
-            using (var responseStream = obj.Content)
-            {
-                responseStream.CopyTo(memoryStream);
-            }
-            memoryStream.Position = 0; // 重置流位置
-            return memoryStream;
-        }
 
         /// <summary>
         /// 移动文件
