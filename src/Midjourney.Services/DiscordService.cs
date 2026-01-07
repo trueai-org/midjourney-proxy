@@ -3776,7 +3776,7 @@ namespace Midjourney.Services
                     // 每 10 分钟最多同步 2 次
                     // 每 30 分钟最多同步 3 次
                     // 每 60 分钟最多同步 6 次
-                    var keyPrefix = $"SyncInfoLimit:{DateTime.Now:yyyyMMdd}:";
+                    var keyPrefix = $"SyncInfoLimit:{DateTime.Now:yyyyMMdd}";
 
                     if (!RateLimiter.Check(keyPrefix, acc.ChannelId, 5, 1) ||
                         !RateLimiter.Check(keyPrefix, acc.ChannelId, 10, 2) ||
