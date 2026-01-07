@@ -131,11 +131,17 @@
         {
             if (string.IsNullOrWhiteSpace(instanceId) || decrementBy <= 0)
             {
-                return GetFastTaskAvailableCount(instanceId);
+                return 0;
             }
 
             var hashKeyPrefix = $"FastTaskAvailableCount:{DateTime.Now:yyyyMMdd}";
-            return (int)RedisHelper.HIncrBy(hashKeyPrefix, instanceId, -decrementBy);
+            var value = (int)RedisHelper.HIncrBy(hashKeyPrefix, instanceId, -decrementBy);
+
+            // 同步值到明天
+            var tomorrowHashKeyPrefix = $"FastTaskAvailableCount:{DateTime.Now.AddDays(1):yyyyMMdd}";
+            RedisHelper.HSet(tomorrowHashKeyPrefix, instanceId, value);
+
+            return value;
         }
 
         /// <summary>
