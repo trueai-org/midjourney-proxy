@@ -89,6 +89,7 @@ namespace Midjourney.Base.Data
             // 自动同步实体结构到数据库
             if (autoSyncStructure)
             {
+
                 fsqlBuilder.UseAutoSyncStructure(true)
                       // 监视 SQL 命令对象
                       .UseMonitorCommand(cmd =>
@@ -165,11 +166,26 @@ namespace Midjourney.Base.Data
                 }
             };
 
+            fsql.Aop.CommandBefore += (s, e) =>
+            {
+                // 可以在这里对 SQL 命令进行统一处理
+                // 例如：添加多租户过滤器、审计字段等
+
+                // 同步表结构/索引 600 秒超时
+                if (autoSyncStructure)
+                {
+                    // 设置命令超时时间，单位：秒
+                    e.Command.CommandTimeout = 600;
+                }
+            };
+
             // 请务必定义成 Singleton 单例模式
             //services.AddSingleton(fsql);
 
             return fsql;
         }
+
+
 
         /// <summary>
         /// 验证并配置数据库连接
@@ -218,6 +234,23 @@ namespace Midjourney.Base.Data
                             var freeSql = Init(databaseType, databaseConnectionString, true);
                             if (freeSql != null)
                             {
+                                //// 测试超时拦截
+                                //try
+                                //{
+                                //    // 此 SQL 延迟 20 秒
+                                //    var i = freeSql.Ado.ExecuteScalar(
+                                //         cmdType: System.Data.CommandType.Text,
+                                //         cmdText: "SELECT SLEEP(20);",
+                                //         cmdParms: null
+                                //         );
+
+                                //    Console.WriteLine($"测试成功！");
+                                //}
+                                //catch (Exception ex)
+                                //{
+                                //    Console.WriteLine($"测试失败：{ex.Message}"); // 应抛出超时异常
+                                //}
+
                                 var obj = freeSql.Ado.ExecuteScalar("SELECT 1");
                                 var succees = obj != null && obj.ToString() == "1";
                                 if (succees)
