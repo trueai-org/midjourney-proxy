@@ -20,9 +20,9 @@ namespace Midjourney.Tests
 
         private async Task Init()
         {
-            await SettingHelper.Instance.InitAsync();
+            await SettingService.Instance.InitAsync();
 
-            var setting = SettingHelper.Instance.Current;
+            var setting = SettingService.Instance.Current;
 
             var freeSql = FreeSqlHelper.Init(setting.DatabaseType, setting.DatabaseConnectionString, true);
             if (freeSql != null)

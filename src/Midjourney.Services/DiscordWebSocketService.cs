@@ -200,7 +200,6 @@ namespace Midjourney.Services
 
         public DiscordWebSocketService(DiscordService discordInstance)
         {
-            // Bot 消息监听器
             var setting = GlobalConfiguration.Setting;
 
             WebProxy webProxy = null;

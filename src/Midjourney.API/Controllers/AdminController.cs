@@ -1911,7 +1911,7 @@ namespace Midjourney.API.Controllers
                 return Result.Fail<Setting>("演示模式，禁止操作");
             }
 
-            var consulSetting = await SettingHelper.LoadFromConsulAsync(consulOptions);
+            var consulSetting = await SettingService.LoadFromConsulAsync(consulOptions);
             if (consulSetting == null)
             {
                 return Result.Fail<Setting>("从 Consul 加载配置失败，请检查 Consul 地址/服务名称是否正确");
@@ -1971,7 +1971,7 @@ namespace Midjourney.API.Controllers
                 {
                     return Result.Fail("购买授权后，才允许使用 Consul 功能");
                 }
-                var success = await SettingHelper.Instance.IsConsulAvailableAsync(setting);
+                var success = await SettingService.Instance.IsConsulAvailableAsync(setting);
                 if (!success)
                 {
                     return Result.Fail("Consul 连接失败，请检查 Consul 地址/服务名称是否正确");
@@ -2011,10 +2011,10 @@ namespace Midjourney.API.Controllers
 
             setting.Id = Constants.DEFAULT_SETTING_ID;
 
-            await SettingHelper.Instance.SaveAsync(setting);
+            await SettingService.Instance.SaveAsync(setting);
 
             // 应用新配置
-            SettingHelper.Instance.ApplySettings();
+            SettingService.Instance.ApplySettings();
 
             // 首页缓存
             _memoryCache.Remove($"{DateTime.Now:yyyyMMdd}_home");

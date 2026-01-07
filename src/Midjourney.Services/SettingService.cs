@@ -30,22 +30,22 @@ using Serilog;
 namespace Midjourney.Services
 {
     /// <summary>
-    /// 系统配置存储（单例）
+    /// 系统配置服务（单例）
     /// 启动时：先读取本地 data/mj.json 里的 Consul 连接配置（如果有），检查能否连接 Consul。
     /// 如果能连接，则从 Consul 的 KV 中加载远程配置并覆盖本地配置。
     /// 保存时：同时写到本地 mj.json 与远程 Consul KV。
     /// </summary>
-    public class SettingHelper : IDisposable
+    public class SettingService : IDisposable
     {
         // 使用 Lazy<T> 确保线程安全和延迟初始化
         // 保证静态构造函数只执行一次
-        private static readonly Lazy<SettingHelper> _instance = new(() => new(),
+        private static readonly Lazy<SettingService> _instance = new(() => new(),
             LazyThreadSafetyMode.ExecutionAndPublication);
 
         /// <summary>
         /// 获取单例实例。
         /// </summary>
-        public static SettingHelper Instance => _instance.Value;
+        public static SettingService Instance => _instance.Value;
 
         /// <summary>
         /// 配置文件路径
@@ -60,7 +60,7 @@ namespace Midjourney.Services
         /// <summary>
         /// 受保护的构造函数以防止外部实例化
         /// </summary>
-        protected SettingHelper()
+        protected SettingService()
         {
             _configPath = Path.Combine(Directory.GetCurrentDirectory(), Path.Combine("data", "mj.json"));
 

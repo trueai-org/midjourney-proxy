@@ -1369,8 +1369,8 @@ namespace Midjourney.API
                                 return;
                             }
 
-                            await SettingHelper.Instance.LoadAsync();
-                            SettingHelper.Instance.ApplySettings();
+                            await SettingService.Instance.LoadAsync();
+                            SettingService.Instance.ApplySettings();
                         }
                         break;
 

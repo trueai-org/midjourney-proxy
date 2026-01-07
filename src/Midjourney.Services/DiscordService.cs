@@ -35,8 +35,7 @@ using Serilog;
 namespace Midjourney.Services
 {
     /// <summary>
-    /// Discord 实例
-    /// 实现了IDiscordInstance接口，负责处理Discord相关的任务管理和执行。
+    /// Discord 实例服务，负责处理 Discord 相关的任务管理和执行
     /// </summary>
     public class DiscordService : IDiscordService
     {

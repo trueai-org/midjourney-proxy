@@ -72,9 +72,9 @@ namespace Midjourney.API
                 // --- 服务注册与初始化 ---
 
                 // 初始化全局配置项（可能需要访问磁盘或 DB），必须在添加依赖前执行以确保 Setting 可用
-                await SettingHelper.Instance.InitAsync();
+                await SettingService.Instance.InitAsync();
 
-                var setting = SettingHelper.Instance.Current;
+                var setting = SettingService.Instance.Current;
 
                 // 是否需要重新保存配置
                 var isSaveSetting = false;
@@ -127,11 +127,11 @@ namespace Midjourney.API
                 // 需要重新保存配置，注意：如果版本过旧，重新保存配置可能会覆盖新的业务，需谨慎处理
                 if (isSaveSetting)
                 {
-                    await SettingHelper.Instance.SaveAsync(setting);
+                    await SettingService.Instance.SaveAsync(setting);
                 }
 
                 // 应用配置项
-                SettingHelper.Instance.ApplySettings();
+                SettingService.Instance.ApplySettings();
 
                 // 机器标识
                 LicenseKeyHelper.Startup();
