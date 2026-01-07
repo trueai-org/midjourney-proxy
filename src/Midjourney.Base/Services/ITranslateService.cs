@@ -24,12 +24,30 @@
 
 namespace Midjourney.Base.Services
 {
+    /// <summary>
+    /// 翻译服务
+    /// </summary>
     public interface ITranslateService
     {
+        /// <summary>
+        /// 翻译为英文
+        /// </summary>
+        /// <param name="prompt"></param>
+        /// <returns></returns>
         string TranslateToEnglish(string prompt);
 
+        /// <summary>
+        /// 翻译为中文
+        /// </summary>
+        /// <param name="prompt"></param>
+        /// <returns></returns>
         string TranslateToChinese(string prompt);
 
+        /// <summary>
+        /// 是否包含中文
+        /// </summary>
+        /// <param name="prompt"></param>
+        /// <returns></returns>
         bool ContainsChinese(string prompt);
     }
 }

@@ -29,7 +29,7 @@ using RestSharp;
 using Serilog;
 using WebProxy = System.Net.WebProxy;
 
-namespace Midjourney.Infrastructure.LoadBalancer
+namespace Midjourney.Services
 {
     /// <summary>
     /// 换脸服务

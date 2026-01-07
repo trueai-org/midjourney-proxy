@@ -35,7 +35,7 @@ using GetObjectMetadataRequest = Amazon.S3.Model.GetObjectMetadataRequest;
 using GetObjectRequest = Amazon.S3.Model.GetObjectRequest;
 using PutObjectRequest = Amazon.S3.Model.PutObjectRequest;
 
-namespace Midjourney.Base.Storage
+namespace Midjourney.Base.Storages
 {
     /// <summary>
     /// S3 兼容存储服务 (支持 MinIO)

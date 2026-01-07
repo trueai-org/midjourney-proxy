@@ -26,7 +26,7 @@ using System.Diagnostics;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Caching.Memory;
 
-namespace Midjourney.Infrastructure.LoadBalancer
+namespace Midjourney.Services
 {
     /// <summary>
     /// 视频换脸服务

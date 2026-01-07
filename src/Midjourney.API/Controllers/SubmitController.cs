@@ -26,7 +26,6 @@ using System.Net;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
-using Midjourney.Infrastructure.LoadBalancer;
 
 namespace Midjourney.API.Controllers
 {
@@ -45,7 +44,7 @@ namespace Midjourney.API.Controllers
         private readonly IMemoryCache _memoryCache;
         private readonly WorkContext _workContext;
         private readonly Setting _setting;
-        private readonly DiscordLoadBalancer _discordLoadBalancer;
+        private readonly DiscordAccountService _accountService;
         private readonly string _ip;
         private readonly IFreeSql _freeSql = FreeSqlHelper.FreeSql;
 
@@ -64,7 +63,7 @@ namespace Midjourney.API.Controllers
             ILogger<SubmitController> logger,
             IHttpContextAccessor httpContextAccessor,
             WorkContext workContext,
-            DiscordLoadBalancer discordLoadBalancer,
+            DiscordAccountService accountService,
             IMemoryCache memoryCache)
         {
             _setting = GlobalConfiguration.Setting;
@@ -72,7 +71,7 @@ namespace Midjourney.API.Controllers
             _taskService = taskService;
             _logger = logger;
             _workContext = workContext;
-            _discordLoadBalancer = discordLoadBalancer;
+            _accountService = accountService;
 
             var user = _workContext.GetUser();
 
@@ -237,7 +236,7 @@ namespace Midjourney.API.Controllers
                 return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "base64格式错误"));
             }
 
-            var (instance, mode) = _discordLoadBalancer.ChooseInstance(imagineDTO.AccountFilter);
+            var (instance, mode) = _accountService.ChooseInstance(imagineDTO.AccountFilter);
             if (instance == null)
             {
                 return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "实例不存在或不可用"));
@@ -1260,10 +1259,13 @@ namespace Midjourney.API.Controllers
         /// <returns>翻译后的提示词</returns>
         private string TranslatePrompt(string prompt, EBotType botType)
         {
-            var translateService = TranslateHelper.Instance;
+            var translateService = GlobalConfiguration.TranslateService;
             var setting = GlobalConfiguration.Setting;
+
             if (translateService == null ||
-                _setting.TranslateWay == TranslateWay.NULL || string.IsNullOrWhiteSpace(prompt) || !translateService.ContainsChinese(prompt))
+                _setting.TranslateWay == TranslateWay.NULL
+                || string.IsNullOrWhiteSpace(prompt)
+                || !translateService.ContainsChinese(prompt))
             {
                 return prompt;
             }

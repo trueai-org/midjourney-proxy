@@ -22,9 +22,7 @@
 // invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
-using Midjourney.Infrastructure.LoadBalancer;
-
-namespace Midjourney.Infrastructure.Services
+namespace Midjourney.Services
 {
     /// <summary>
     /// 最少等待空闲选择规则

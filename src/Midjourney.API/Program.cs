@@ -31,7 +31,7 @@ global using Midjourney.Base.Models;
 global using Midjourney.Base.Services;
 global using Midjourney.Base.StandardTable;
 global using Midjourney.Base.Util;
-global using Midjourney.Infrastructure;
+global using Midjourney.Services;
 
 global using ILogger = Serilog.ILogger;
 global using TaskStatus = Midjourney.Base.TaskStatus;
@@ -42,7 +42,6 @@ using CSRedis;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.OpenApi.Models;
-using Midjourney.Infrastructure.Services;
 using Midjourney.License;
 using Midjourney.License.YouChuan;
 using MongoDB.Driver;
@@ -73,7 +72,7 @@ namespace Midjourney.API
                 // --- 服务注册与初始化 ---
 
                 // 初始化全局配置项（可能需要访问磁盘或 DB），必须在添加依赖前执行以确保 Setting 可用
-                await SettingHelper.InitializeAsync();
+                await SettingHelper.Instance.InitAsync();
 
                 var setting = SettingHelper.Instance.Current;
 

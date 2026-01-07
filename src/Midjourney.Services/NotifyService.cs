@@ -30,7 +30,7 @@ using Microsoft.Extensions.Logging;
 using JsonException = System.Text.Json.JsonException;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 
-namespace Midjourney.Infrastructure.Services
+namespace Midjourney.Services
 {
     /// <summary>
     /// 通知服务实现类。
@@ -70,6 +70,7 @@ namespace Midjourney.Infrastructure.Services
 
             string taskId = task.Id;
             string statusStr = $"{task.Status}:{task.Progress}";
+
             _logger.LogTrace("Wait notify task change, task: {0}({1}), hook: {2}", taskId, statusStr, notifyHook);
 
             try

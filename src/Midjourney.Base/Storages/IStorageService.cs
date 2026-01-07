@@ -22,7 +22,7 @@
 // invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
-namespace Midjourney.Base.Storage
+namespace Midjourney.Base.Storages
 {
     /// <summary>
     /// 存储服务

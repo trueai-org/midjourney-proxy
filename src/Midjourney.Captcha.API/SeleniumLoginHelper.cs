@@ -23,7 +23,6 @@
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
 using System.Diagnostics;
-using Midjourney.Infrastructure.Services;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium.Support.UI;

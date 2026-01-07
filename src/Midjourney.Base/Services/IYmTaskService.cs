@@ -3,7 +3,7 @@
 namespace Midjourney.Base.Services
 {
     /// <summary>
-    ///
+    /// 悠船/官方服务接口
     /// </summary>
     public interface IYmTaskService
     {

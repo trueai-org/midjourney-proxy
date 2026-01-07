@@ -27,6 +27,7 @@ global using Midjourney.Base.Models;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Caching.Memory;
+using Midjourney.Base.Services;
 using Midjourney.Base.Util;
 using Serilog.Core;
 
@@ -82,6 +83,11 @@ namespace Midjourney.Base
         /// 全局缓存项
         /// </summary>
         public static IMemoryCache MemoryCache { get; set; }
+
+        /// <summary>
+        /// 全局翻译服务（使用前必须配置）
+        /// </summary>
+        public static ITranslateService TranslateService { get; set; }
 
         /// <summary>
         /// 站点根目录 wwwroot

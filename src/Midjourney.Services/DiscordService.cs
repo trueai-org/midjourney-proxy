@@ -28,12 +28,11 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.RegularExpressions;
-using Midjourney.Infrastructure.Services;
 using Midjourney.License;
 using Newtonsoft.Json.Linq;
 using Serilog;
 
-namespace Midjourney.Infrastructure.LoadBalancer
+namespace Midjourney.Services
 {
     /// <summary>
     /// Discord 实例
@@ -248,7 +247,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
         /// <summary>
         /// WebSocket管理器。
         /// </summary>
-        public WebSocketManager Wss { get; set; }
+        public DiscordWebSocketService Wss { get; set; }
 
         /// <summary>
         /// 获取Discord账号信息。
@@ -466,7 +465,7 @@ namespace Midjourney.Infrastructure.LoadBalancer
                     //return WebSocketManager != null && WebSocketManager.Running == true && acc.Lock == false;
 
                     // 已经建立连接，且不是正在连接中，且没有被锁定
-                    return WebSocketManager.IsInitConnect(acc) && !WebSocketManager.IsInitConnecting(acc) && acc.Lock == false;
+                    return DiscordWebSocketService.IsInitConnect(acc) && !DiscordWebSocketService.IsInitConnecting(acc) && acc.Lock == false;
                 }
 
                 return false;

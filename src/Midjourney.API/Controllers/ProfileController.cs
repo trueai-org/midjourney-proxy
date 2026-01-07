@@ -25,8 +25,6 @@
 using System.Net;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Midjourney.Base.Data;
-using Midjourney.Infrastructure.LoadBalancer;
 
 namespace Midjourney.API.Controllers
 {
@@ -39,12 +37,13 @@ namespace Midjourney.API.Controllers
     {
         // 是否匿名用户
         private readonly bool _isAnonymous;
-        private readonly DiscordLoadBalancer _loadBalancer;
+
+        private readonly DiscordAccountService _accountService;
         private readonly IFreeSql _freeSql = FreeSqlHelper.FreeSql;
 
-        public ProfileController(DiscordLoadBalancer loadBalancer, WorkContext workContext, IHttpContextAccessor context)
+        public ProfileController(DiscordAccountService accountService, WorkContext workContext, IHttpContextAccessor context)
         {
-            _loadBalancer = loadBalancer;
+            _accountService = accountService;
 
             // 如果不是管理员，并且是演示模式时，则是为匿名用户
             var user = workContext.GetUser();
@@ -94,7 +93,7 @@ namespace Midjourney.API.Controllers
                 return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "参数错误"));
             }
 
-            var instance = _loadBalancer.GetAliveOfficialPersonalizeInstance();
+            var instance = _accountService.GetAliveOfficialPersonalizeInstance();
             if (instance == null)
             {
                 return Ok(SubmitResultVO.Fail(ReturnCode.FAILURE, "无可用的账号实例"));
@@ -148,7 +147,7 @@ namespace Midjourney.API.Controllers
                 return Ok(SubmitResultVO.Fail(ReturnCode.FAILURE, "演示模式，禁止操作"));
             }
 
-            var instance = _loadBalancer.GetAliveOfficialPersonalizeInstance();
+            var instance = _accountService.GetAliveOfficialPersonalizeInstance();
             if (instance == null)
             {
                 return Ok(SubmitResultVO.Fail(ReturnCode.FAILURE, "无可用的账号实例"));
@@ -176,7 +175,7 @@ namespace Midjourney.API.Controllers
                 model.UpdateTime = DateTime.Now;
 
                 _freeSql.Update(model);
-            }   
+            }
 
             if (model.RandomPairs.Pairs?.Count > 0)
             {
@@ -212,7 +211,7 @@ namespace Midjourney.API.Controllers
 
             var id = skipDto.ProfileId;
 
-            var instance = _loadBalancer.GetAliveOfficialPersonalizeInstance();
+            var instance = _accountService.GetAliveOfficialPersonalizeInstance();
             if (instance == null)
             {
                 return Ok(SubmitResultVO.Fail(ReturnCode.FAILURE, "无可用的账号实例"));
@@ -282,7 +281,7 @@ namespace Midjourney.API.Controllers
 
             var id = req.ProfileId;
 
-            var instance = _loadBalancer.GetAliveOfficialPersonalizeInstance();
+            var instance = _accountService.GetAliveOfficialPersonalizeInstance();
             if (instance == null)
             {
                 return Ok(SubmitResultVO.Fail(ReturnCode.FAILURE, "无可用的账号实例"));

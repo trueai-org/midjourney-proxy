@@ -15,25 +15,25 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Additional Terms:
-// This software shall not be used for any illegal activities. 
+// This software shall not be used for any illegal activities.
 // Users must comply with all applicable laws and regulations,
-// particularly those related to image and video processing. 
+// particularly those related to image and video processing.
 // The use of this software for any form of illegal face swapping,
-// invasion of privacy, or any other unlawful purposes is strictly prohibited. 
+// invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
-using Serilog;
 using System.Net;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Serilog;
 
-namespace Midjourney.Infrastructure.Services
+namespace Midjourney.Services
 {
     /// <summary>
-    /// OpenAI GPT翻译服务
+    /// OpenAI GPT 翻译服务
     /// </summary>
-    public class GPTTranslateService : ITranslateService
+    public class GptTranslateService : ITranslateService
     {
         private const string TRANSLATE_API = "https://api.openai.com/v1/chat/completions";
         private readonly string _apiUrl;
@@ -44,7 +44,7 @@ namespace Midjourney.Infrastructure.Services
         private readonly double _temperature;
         private readonly HttpClient _httpClient;
 
-        public GPTTranslateService()
+        public GptTranslateService()
         {
             var config = GlobalConfiguration.Setting?.Openai;
 
@@ -185,8 +185,7 @@ namespace Midjourney.Infrastructure.Services
         public bool ContainsChinese(string prompt)
         {
             // 匹配基本汉字区、扩展A区和部分扩展B区
-            string chinesePattern = @"[\u4e00-\u9fa5\u3400-\u4DBF]";
-
+            var chinesePattern = @"[\u4e00-\u9fa5\u3400-\u4DBF]";
             return Regex.IsMatch(prompt, chinesePattern);
         }
     }

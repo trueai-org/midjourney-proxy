@@ -29,7 +29,6 @@ using FreeSql.DataAnnotations;
 using Microsoft.Extensions.Caching.Memory;
 using Midjourney.Base.Data;
 using Midjourney.Base.Dto;
-using Midjourney.Base.Storage;
 using MongoDB.Driver;
 using Serilog;
 
@@ -793,10 +792,12 @@ namespace Midjourney.Base.Models
             try
             {
                 // 如果 language 是 zh 或 zh_cn 且配置了翻译服务，则翻译结果
-                if ((Language == "zh" || Language == "zh_cn") && !string.IsNullOrWhiteSpace(finalPrompt)
-                    && TranslateHelper.Instance != null)
+                var translateService = GlobalConfiguration.TranslateService;
+                if ((Language == "zh" || Language == "zh_cn")
+                    && !string.IsNullOrWhiteSpace(finalPrompt)
+                    && translateService != null)
                 {
-                    var translatedPrompt = TranslateHelper.Instance.TranslateToChinese(finalPrompt);
+                    var translatedPrompt = translateService.TranslateToChinese(finalPrompt);
                     if (!string.IsNullOrWhiteSpace(translatedPrompt))
                     {
                         Prompt = translatedPrompt;

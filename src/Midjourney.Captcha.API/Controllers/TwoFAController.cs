@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Midjourney.Infrastructure.Services;
 
 namespace Midjourney.Captcha.API.Controllers
 {

@@ -31,7 +31,7 @@ namespace Midjourney.Base
     public abstract class SingletonBase<T> where T : SingletonBase<T>, new()
     {
         // 使用 Lazy<T> 确保线程安全和延迟初始化
-        private static readonly Lazy<T> instance = new(() => new T(), LazyThreadSafetyMode.ExecutionAndPublication);
+        private static readonly Lazy<T> _instance = new(() => new T(), LazyThreadSafetyMode.ExecutionAndPublication);
 
         /// <summary>
         /// 受保护的构造函数以防止外部实例化。
@@ -39,7 +39,7 @@ namespace Midjourney.Base
         protected SingletonBase()
         {
             // 防止通过反射创建多个实例
-            if (instance.IsValueCreated)
+            if (_instance.IsValueCreated)
             {
                 throw new InvalidOperationException($"类型 {typeof(T).Name} 的实例已存在。");
             }
@@ -48,6 +48,6 @@ namespace Midjourney.Base
         /// <summary>
         /// 获取单例实例。
         /// </summary>
-        public static T Instance => instance.Value;
+        public static T Instance => _instance.Value;
     }
 }

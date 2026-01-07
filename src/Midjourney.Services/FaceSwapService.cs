@@ -25,7 +25,7 @@
 using System.Diagnostics;
 using Microsoft.Extensions.Caching.Memory;
 
-namespace Midjourney.Infrastructure.LoadBalancer
+namespace Midjourney.Services
 {
     /// <summary>
     /// 换脸服务

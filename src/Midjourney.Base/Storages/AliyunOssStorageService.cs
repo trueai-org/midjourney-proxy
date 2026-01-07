@@ -27,7 +27,7 @@ using Aliyun.OSS;
 using IdGen;
 using Serilog;
 
-namespace Midjourney.Base.Storage
+namespace Midjourney.Base.Storages
 {
     /// <summary>
     /// 阿里云存储服务

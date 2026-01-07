@@ -22,13 +22,13 @@
 // invasion of privacy, or any other unlawful purposes is strictly prohibited. 
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
-using Serilog;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Serilog;
 
-namespace Midjourney.Infrastructure.Services
+namespace Midjourney.Services
 {
     /// <summary>
     /// 百度翻译服务

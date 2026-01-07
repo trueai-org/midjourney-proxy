@@ -24,7 +24,6 @@
 
 using System.Net;
 using Microsoft.AspNetCore.Mvc;
-using Midjourney.Infrastructure.LoadBalancer;
 
 namespace Midjourney.API.Controllers
 {

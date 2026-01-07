@@ -24,10 +24,11 @@
 
 using System.Net;
 using Microsoft.AspNetCore.WebUtilities;
+using Midjourney.Base.Storages;
 using Midjourney.Base.Util;
 using Serilog;
 
-namespace Midjourney.Base.Storage
+namespace Midjourney.Base
 {
     /// <summary>
     /// 全局单例存储服务
@@ -39,7 +40,7 @@ namespace Midjourney.Base.Storage
         /// <summary>
         /// 默认悠船不使用代理
         /// </summary>
-        private static HttpClient _youchuanHttpClient = new HttpClient
+        private static HttpClient _youchuanHttpClient = new()
         {
             Timeout = TimeSpan.FromMinutes(10)
         };
@@ -47,7 +48,7 @@ namespace Midjourney.Base.Storage
         /// <summary>
         /// 使用代理下载
         /// </summary>
-        private static HttpClient _proxyHttpClient = new HttpClient
+        private static HttpClient _proxyHttpClient = new()
         {
             Timeout = TimeSpan.FromMinutes(10)
         };

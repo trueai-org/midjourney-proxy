@@ -1,7 +1,7 @@
 using Midjourney.Base.Data;
 using Midjourney.Base.Models;
 using Midjourney.Base.Util;
-using Midjourney.Infrastructure;
+using Midjourney.Services;
 using Xunit.Abstractions;
 
 namespace Midjourney.Tests
@@ -17,7 +17,7 @@ namespace Midjourney.Tests
 
         private async Task Init()
         {
-            await SettingHelper.InitializeAsync();
+            await SettingHelper.Instance.InitAsync();
 
             var setting = SettingHelper.Instance.Current;
 

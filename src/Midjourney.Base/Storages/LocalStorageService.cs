@@ -25,7 +25,7 @@
 using Midjourney.Base.Util;
 using Serilog;
 
-namespace Midjourney.Base.Storage
+namespace Midjourney.Base.Storages
 {
     /// <summary>
     /// 本地存储服务

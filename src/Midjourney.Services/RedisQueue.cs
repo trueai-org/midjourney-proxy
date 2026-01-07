@@ -24,7 +24,7 @@
 
 using CSRedis;
 
-namespace Midjourney.Infrastructure.Services
+namespace Midjourney.Services
 {
     /// <summary>
     /// 安全的 Redis 队列实现（支持分布式锁和并发控制）

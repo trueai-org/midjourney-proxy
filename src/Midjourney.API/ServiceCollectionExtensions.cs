@@ -22,30 +22,21 @@
 // invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
-using System.Reflection;
-using Midjourney.Infrastructure.LoadBalancer;
-using Midjourney.Infrastructure.Services;
-
 namespace Midjourney.API
 {
     public static class ServiceCollectionExtensions
     {
         public static void AddMidjourneyServices(this IServiceCollection services, Setting config)
         {
-            // 换脸服务
-            services.AddSingleton<FaceSwapService>();
-            services.AddSingleton<VideoFaceSwapService>();
-
             // 通知服务
             services.AddSingleton<INotifyService, NotifyService>();
 
-            // 账号负载均衡服务
+            // 任务服务
+            services.AddSingleton<ITaskService, TaskService>();
+
+            // 账号规则服务
             switch (config.AccountChooseRule)
             {
-                case AccountChooseRule.BestWaitIdle:
-                    services.AddSingleton<IDiscordRuleService, BestWaitIdleRule>();
-                    break;
-
                 case AccountChooseRule.Random:
                     services.AddSingleton<IDiscordRuleService, RandomRule>();
                     break;
@@ -58,19 +49,18 @@ namespace Midjourney.API
                     services.AddSingleton<IDiscordRuleService, RoundRobinRule>();
                     break;
 
+                case AccountChooseRule.BestWaitIdle:
                 default:
                     services.AddSingleton<IDiscordRuleService, BestWaitIdleRule>();
                     break;
             }
 
-            // Discord 负载均衡器
-            services.AddSingleton<DiscordLoadBalancer>();
-
-            // Discord 账号助手
+            // 账号管理服务
             services.AddSingleton<DiscordAccountService>();
 
-            // 任务服务
-            services.AddSingleton<ITaskService, TaskService>();
+            // 换脸服务
+            services.AddSingleton<FaceSwapService>();
+            services.AddSingleton<VideoFaceSwapService>();
         }
     }
 }

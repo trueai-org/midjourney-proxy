@@ -34,7 +34,7 @@ using GetObjectMetadataRequest = Amazon.S3.Model.GetObjectMetadataRequest;
 using GetObjectRequest = Amazon.S3.Model.GetObjectRequest;
 using PutObjectRequest = Amazon.S3.Model.PutObjectRequest;
 
-namespace Midjourney.Base.Storage
+namespace Midjourney.Base.Storages
 {
     /// <summary>
     /// cloudflare s2 存储服务

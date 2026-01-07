@@ -31,18 +31,17 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using CSRedis;
-using Midjourney.Infrastructure.LoadBalancer;
 using RestSharp;
 using Serilog;
 using UAParser;
 
-namespace Midjourney.Infrastructure
+namespace Midjourney.Services
 {
     /// <summary>
     /// 处理与 Discord WebSocket 连接的类，并提供启动和消息监听功能
     /// https://discord.com/developers/docs/topics/gateway-events
     /// </summary>
-    public class WebSocketManager : IDisposable
+    public class DiscordWebSocketService : IDisposable
     {
         /// <summary>
         /// WS 初始化连接锁 key
@@ -71,7 +70,7 @@ namespace Midjourney.Infrastructure
                 return;
             }
 
-            var webSocketManager = new WebSocketManager(discordInstance);
+            var webSocketManager = new DiscordWebSocketService(discordInstance);
             var started = await webSocketManager.StartAsync();
             if (!started)
             {
@@ -199,7 +198,7 @@ namespace Midjourney.Infrastructure
 
         private readonly Task _messageQueueTask;
 
-        public WebSocketManager(DiscordService discordInstance)
+        public DiscordWebSocketService(DiscordService discordInstance)
         {
             // Bot 消息监听器
             var setting = GlobalConfiguration.Setting;

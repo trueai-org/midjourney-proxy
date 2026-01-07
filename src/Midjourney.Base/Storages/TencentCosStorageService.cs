@@ -27,7 +27,7 @@ using COSXML.Auth;
 using COSXML.Model.Object;
 using Serilog;
 
-namespace Midjourney.Base.Storage
+namespace Midjourney.Base.Storages
 {
     /// <summary>
     /// 腾讯云存储服务

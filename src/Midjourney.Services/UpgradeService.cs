@@ -1,48 +1,36 @@
-﻿using System.Diagnostics;
+﻿// Midjourney Proxy - Proxy for Midjourney's Discord, enabling AI drawings via API with one-click face swap. A free, non-profit drawing API project.
+// Copyright (C) 2024 trueai.org
+
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+// Additional Terms:
+// This software shall not be used for any illegal activities.
+// Users must comply with all applicable laws and regulations,
+// particularly those related to image and video processing.
+// The use of this software for any form of illegal face swapping,
+// invasion of privacy, or any other unlawful purposes is strictly prohibited.
+// Violation of these terms may result in termination of the license and may subject the violator to legal action.
+
+using System.Diagnostics;
 using System.IO.Compression;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Serilog;
 
-namespace Midjourney.Infrastructure.Services
+namespace Midjourney.Services
 {
-    /// <summary>
-    /// 升级服务接口
-    /// </summary>
-    public interface IUpgradeService
-    {
-        /// <summary>
-        /// 检查最新版本
-        /// </summary>
-        Task<UpgradeInfo> CheckForUpdatesAsync();
-
-        /// <summary>
-        /// 开始下载升级包
-        /// </summary>
-        Task<bool> StartDownloadAsync();
-
-        /// <summary>
-        /// 获取升级状态
-        /// </summary>
-        UpgradeInfo GetUpgradeStatus();
-
-        /// <summary>
-        /// 取消更新
-        /// </summary>
-        void CancelUpdate();
-
-        /// <summary>
-        /// 是否支持当前平台
-        /// </summary>
-        bool IsSupportedPlatform { get; }
-
-        /// <summary>
-        /// 获取升级信息
-        /// </summary>
-        UpgradeInfo UpgradeInfo { get; }
-    }
-
     /// <summary>
     /// 检查升级服务 - 适用于 docker linux-x64
     /// </summary>

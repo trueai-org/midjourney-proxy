@@ -25,7 +25,6 @@
 using System.Net;
 using System.Net.Http.Headers;
 using Microsoft.IdentityModel.Logging;
-using Midjourney.Base.Storage;
 using Serilog;
 
 namespace Midjourney.Base.Util

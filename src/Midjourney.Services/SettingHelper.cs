@@ -25,34 +25,42 @@
 using System.Text;
 using Consul;
 using CSRedis;
-using Midjourney.Infrastructure.Services;
 using Serilog;
 
-namespace Midjourney.Infrastructure
+namespace Midjourney.Services
 {
     /// <summary>
-    /// 系统配置存储（单例）。
-    /// 启动时：先读取本地 LiteDB（data/mj.db）里的 Consul 连接配置（如果有），检查能否连接 Consul。
+    /// 系统配置存储（单例）
+    /// 启动时：先读取本地 data/mj.json 里的 Consul 连接配置（如果有），检查能否连接 Consul。
     /// 如果能连接，则从 Consul 的 KV 中加载远程配置并覆盖本地配置。
-    /// 保存时：同时写到本地 LiteDB 与远程 Consul KV。
+    /// 保存时：同时写到本地 mj.json 与远程 Consul KV。
     /// </summary>
     public class SettingHelper : IDisposable
     {
+        // 使用 Lazy<T> 确保线程安全和延迟初始化
+        // 保证静态构造函数只执行一次
+        private static readonly Lazy<SettingHelper> _instance = new(() => new(),
+            LazyThreadSafetyMode.ExecutionAndPublication);
+
+        /// <summary>
+        /// 获取单例实例。
+        /// </summary>
+        public static SettingHelper Instance => _instance.Value;
+
+        /// <summary>
+        /// 配置文件路径
+        /// </summary>
         private readonly string _configPath;
 
+        /// <summary>
+        /// Consul 客户端
+        /// </summary>
         private ConsulClient _consulClient;
 
         /// <summary>
-        /// 单例实例（要先调用 InitializeAsync）
+        /// 受保护的构造函数以防止外部实例化
         /// </summary>
-        public static SettingHelper Instance { get; private set; }
-
-        /// <summary>
-        /// 当前生效配置缓存
-        /// </summary>
-        public Setting Current { get; private set; }
-
-        private SettingHelper()
+        protected SettingHelper()
         {
             _configPath = Path.Combine(Directory.GetCurrentDirectory(), Path.Combine("data", "mj.json"));
 
@@ -62,24 +70,22 @@ namespace Midjourney.Infrastructure
         }
 
         /// <summary>
+        /// 当前生效配置缓存
+        /// </summary>
+        public Setting Current { get; private set; }
+
+        /// <summary>
         /// 启动初始化（程序启动时调用一次）。
         /// 该方法会：
-        /// 1) 从本地 SQLite / LiteDB 读取配置；
+        /// 1) 从本地 mj.json / LiteDB 读取配置；
         /// 2) 如果本地配置包含 Consul 连接信息，尝试连接 Consul；
         /// 3) 如果 Consul 可用，尝试从远程 KV 加载设置并覆盖本地（然后保存到本地以保持同步）。
         /// </summary>
         /// <param name="logger">可选的 ILogger 实例</param>
         /// <param name="cancellation">取消令牌</param>
-        public static async Task InitializeAsync()
+        public async Task InitAsync()
         {
-            if (Instance != null)
-                return;
-
-            var inst = new SettingHelper();
-
-            await inst.LoadAsync();
-
-            Instance = inst;
+            await LoadAsync();
         }
 
         /// <summary>
@@ -100,15 +106,15 @@ namespace Midjourney.Infrastructure
             // 翻译服务
             if (setting.TranslateWay == TranslateWay.GPT && !string.IsNullOrWhiteSpace(setting.Openai?.GptApiKey))
             {
-                TranslateHelper.Initialize(new GPTTranslateService());
+                GlobalConfiguration.TranslateService = new GptTranslateService();
             }
             else if (setting.TranslateWay == TranslateWay.BAIDU && !string.IsNullOrWhiteSpace(setting.BaiduTranslate?.AppSecret))
             {
-                TranslateHelper.Initialize(new BaiduTranslateService());
+                GlobalConfiguration.TranslateService = new BaiduTranslateService();
             }
             else
             {
-                TranslateHelper.Initialize(null);
+                GlobalConfiguration.TranslateService = null;
             }
 
             // 缓存 / Redis / Reids 锁

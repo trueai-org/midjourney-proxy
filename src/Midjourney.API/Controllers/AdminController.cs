@@ -34,9 +34,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
 using Midjourney.Base.Options;
-using Midjourney.Infrastructure.LoadBalancer;
-using Midjourney.Infrastructure.Services;
 using Midjourney.License;
+using Midjourney.Services;
 using MongoDB.Driver;
 using Serilog;
 
@@ -56,7 +55,7 @@ namespace Midjourney.API.Controllers
         // 是否匿名用户
         private readonly bool _isAnonymous;
 
-        private readonly DiscordLoadBalancer _loadBalancer;
+        private readonly DiscordAccountService _accountService;
         private readonly DiscordAccountInitializer _discordAccountInitializer;
         private readonly Setting _properties;
         private readonly WorkContext _workContext;
@@ -66,7 +65,7 @@ namespace Midjourney.API.Controllers
 
         public AdminController(
             ITaskService taskService,
-            DiscordLoadBalancer loadBalancer,
+            DiscordAccountService accountService,
             DiscordAccountInitializer discordAccountInitializer,
             IMemoryCache memoryCache,
             WorkContext workContext,
@@ -76,7 +75,7 @@ namespace Midjourney.API.Controllers
             _freeSql = FreeSqlHelper.FreeSql;
             _upgradeService = upgradeService;
             _memoryCache = memoryCache;
-            _loadBalancer = loadBalancer;
+            _accountService = accountService;
             _taskService = taskService;
             _discordAccountInitializer = discordAccountInitializer;
             _workContext = workContext;
@@ -1065,7 +1064,7 @@ namespace Midjourney.API.Controllers
 
             foreach (var item in list)
             {
-                var inc = _loadBalancer.GetDiscordInstance(item.ChannelId);
+                var inc = _accountService.GetDiscordInstance(item.ChannelId);
 
                 //item.RunningCount = inc?.GetRunningTaskCount ?? 0;
                 //item.QueueCount = inc?.GetQueueTaskCount ?? 0;
@@ -1204,7 +1203,7 @@ namespace Midjourney.API.Controllers
 
             foreach (var item in list)
             {
-                var inc = _loadBalancer.GetDiscordInstance(item.ChannelId);
+                var inc = _accountService.GetDiscordInstance(item.ChannelId);
 
                 // 当前执行中的任务数
                 item.RunningCount = inc?.GetRunningTaskCount ?? 0;

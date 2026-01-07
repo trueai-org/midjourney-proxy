@@ -29,14 +29,13 @@ global using Midjourney.Base.Models;
 global using Midjourney.Base.Options;
 global using Midjourney.Base.Services;
 global using Midjourney.Base.StandardTable;
-global using Midjourney.Base.Storage;
 global using Midjourney.Base.Util;
 
 global using ILogger = Serilog.ILogger;
 global using MessageType = Midjourney.Base.MessageType;
 global using TaskStatus = Midjourney.Base.TaskStatus;
 
-namespace Midjourney.Infrastructure
+namespace Midjourney.Services
 {
     public static class ServiceCollectionExtensions
     {

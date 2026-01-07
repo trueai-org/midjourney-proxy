@@ -26,8 +26,6 @@ using System.Diagnostics;
 using System.Text;
 using LiteDB;
 using Microsoft.Extensions.Caching.Memory;
-using Midjourney.Infrastructure.LoadBalancer;
-using Midjourney.Infrastructure.Services;
 using Midjourney.License;
 using MongoDB.Driver;
 using RestSharp;
@@ -40,8 +38,7 @@ namespace Midjourney.API
     /// </summary>
     public class DiscordAccountInitializer : IHostedService
     {
-        private readonly DiscordLoadBalancer _discordLoadBalancer;
-        private readonly DiscordAccountService _discordAccountHelper;
+        private readonly DiscordAccountService _acountService;
         private readonly IConfiguration _configuration;
         private readonly ILogger _logger = Log.Logger;
         private readonly IHostApplicationLifetime _applicationLifetime;
@@ -54,8 +51,7 @@ namespace Midjourney.API
         private bool _isUpgrading = false; // 是否更新中，避免长时间运行更新
 
         public DiscordAccountInitializer(
-            DiscordLoadBalancer discordLoadBalancer,
-            DiscordAccountService discordAccountHelper,
+            DiscordAccountService acountService,
             IConfiguration configuration,
             IMemoryCache memoryCache,
             IHostApplicationLifetime applicationLifetime,
@@ -65,8 +61,7 @@ namespace Midjourney.API
             // 配置全局缓存
             GlobalConfiguration.MemoryCache = memoryCache;
 
-            _discordLoadBalancer = discordLoadBalancer;
-            _discordAccountHelper = discordAccountHelper;
+            _acountService = acountService;
             _configuration = configuration;
             _applicationLifetime = applicationLifetime;
             _upgradeService = upgradeService;
@@ -567,7 +562,7 @@ namespace Midjourney.API
                     }
                 }
 
-                var enableInstanceIds = _discordLoadBalancer.GetAllInstances()
+                var enableInstanceIds = _acountService.GetAllInstances()
                 .Where(instance => instance.IsAlive)
                 .Select(instance => instance.ChannelId)
                 .ToHashSet();
@@ -595,10 +590,10 @@ namespace Midjourney.API
 
             if (account.Enable != true)
             {
-                var discordInstance = _discordLoadBalancer.GetDiscordInstance(account.ChannelId);
+                var discordInstance = _acountService.GetDiscordInstance(account.ChannelId);
                 if (discordInstance != null)
                 {
-                    _discordLoadBalancer.RemoveInstance(discordInstance);
+                    _acountService.RemoveInstance(discordInstance);
                     discordInstance.Dispose();
                 }
                 return;
@@ -651,16 +646,16 @@ namespace Midjourney.API
                 // 未启用的账号，如果存在实例则释放
                 if (account.Enable != true)
                 {
-                    var discordInstance = _discordLoadBalancer.GetDiscordInstance(account.ChannelId);
+                    var discordInstance = _acountService.GetDiscordInstance(account.ChannelId);
                     if (discordInstance != null)
                     {
-                        _discordLoadBalancer.RemoveInstance(discordInstance);
+                        _acountService.RemoveInstance(discordInstance);
                         discordInstance.Dispose();
                     }
                     return;
                 }
 
-                var disInstance = _discordLoadBalancer.GetDiscordInstance(account.ChannelId);
+                var disInstance = _acountService.GetDiscordInstance(account.ChannelId);
                 var now = new DateTimeOffset(DateTime.Now.Date).ToUnixTimeMilliseconds();
 
                 // 只要在工作时间内或摸鱼时间内，就创建实例
@@ -695,7 +690,7 @@ namespace Midjourney.API
                             try
                             {
                                 Thread.Sleep(500);
-                                var id = await _discordAccountHelper.GetBotPrivateId(account, EBotType.MID_JOURNEY);
+                                var id = await _acountService.GetBotPrivateId(account, EBotType.MID_JOURNEY);
                                 if (!string.IsNullOrWhiteSpace(id))
                                 {
                                     account.PrivateChannelId = id;
@@ -715,7 +710,7 @@ namespace Midjourney.API
                             try
                             {
                                 Thread.Sleep(500);
-                                var id = await _discordAccountHelper.GetBotPrivateId(account, EBotType.NIJI_JOURNEY);
+                                var id = await _acountService.GetBotPrivateId(account, EBotType.NIJI_JOURNEY);
                                 if (!string.IsNullOrWhiteSpace(id))
                                 {
                                     account.NijiBotChannelId = id;
@@ -747,7 +742,7 @@ namespace Midjourney.API
                         // discord 启用自动验证账号功能, 连接前先判断账号是否正常
                         if (account.IsDiscord && setting.EnableAutoVerifyAccount)
                         {
-                            var success = await _discordAccountHelper.ValidateAccount(account);
+                            var success = await _acountService.ValidateAccount(account);
                             if (!success)
                             {
                                 throw new Exception("账号不可用");
@@ -758,8 +753,8 @@ namespace Midjourney.API
                             sw.Restart();
                         }
 
-                        disInstance = await _discordAccountHelper.CreateDiscordInstance(account)!;
-                        _discordLoadBalancer.AddInstance(disInstance);
+                        disInstance = await _acountService.CreateDiscordInstance(account)!;
+                        _acountService.AddInstance(disInstance);
 
                         sw.Stop();
                         info.AppendLine($"{account.Id}初始化中... 创建实例耗时: {sw.ElapsedMilliseconds}ms");
@@ -802,7 +797,7 @@ namespace Midjourney.API
                         // 用户 WebSocket 连接检查
                         if (account.IsDiscord && disInstance != null && disInstance.Wss == null)
                         {
-                            await Infrastructure.WebSocketManager.CreateAndStartAsync(disInstance);
+                            await DiscordWebSocketService.CreateAndStartAsync(disInstance);
                         }
 
                         // 非强制同步获取成功
@@ -843,7 +838,7 @@ namespace Midjourney.API
                     // 非工作/摸鱼时间内，如果存在实例则释放
                     if (disInstance != null)
                     {
-                        _discordLoadBalancer.RemoveInstance(disInstance);
+                        _acountService.RemoveInstance(disInstance);
                         disInstance.Dispose();
                     }
 
@@ -1125,13 +1120,13 @@ namespace Midjourney.API
                 if (account.Enable == true && (account.IsYouChuan || account.IsOfficial))
                 {
                     // 如果正在执行则释放
-                    var disInstance = _discordLoadBalancer.GetDiscordInstance(account.ChannelId);
+                    var disInstance = _acountService.GetDiscordInstance(account.ChannelId);
                     if (disInstance != null)
                     {
                         // 如果令牌修改了，则必须移除
                         if (account.UserToken != disInstance?.Account.UserToken)
                         {
-                            _discordLoadBalancer.RemoveInstance(disInstance);
+                            _acountService.RemoveInstance(disInstance);
                             disInstance.Dispose();
                         }
                     }
@@ -1139,10 +1134,10 @@ namespace Midjourney.API
                 else
                 {
                     // 如果正在执行则释放
-                    var disInstance = _discordLoadBalancer.GetDiscordInstance(account.ChannelId);
+                    var disInstance = _acountService.GetDiscordInstance(account.ChannelId);
                     if (disInstance != null)
                     {
-                        _discordLoadBalancer.RemoveInstance(disInstance);
+                        _acountService.RemoveInstance(disInstance);
                         disInstance.Dispose();
                     }
                 }
@@ -1164,10 +1159,10 @@ namespace Midjourney.API
             {
                 try
                 {
-                    var disInstance = _discordLoadBalancer.GetDiscordInstance(model.ChannelId);
+                    var disInstance = _acountService.GetDiscordInstance(model.ChannelId);
                     if (disInstance != null)
                     {
-                        _discordLoadBalancer.RemoveInstance(disInstance);
+                        _acountService.RemoveInstance(disInstance);
                         disInstance.Dispose();
                     }
                 }
@@ -1227,7 +1222,7 @@ namespace Midjourney.API
                     case ENotificationType.AccountCache:
                         {
                             // 清除账号缓存消息
-                            var instance = _discordLoadBalancer.GetDiscordInstance(notification.ChannelId);
+                            var instance = _acountService.GetDiscordInstance(notification.ChannelId);
                             if (instance != null)
                             {
                                 // 仅清理本地缓存
@@ -1294,7 +1289,7 @@ namespace Midjourney.API
                     case ENotificationType.EnqueueTaskInfo:
                         {
                             // 通知任务可以立即执行
-                            var instance = _discordLoadBalancer.GetDiscordInstance(notification.ChannelId);
+                            var instance = _acountService.GetDiscordInstance(notification.ChannelId);
                             instance?.NotifyRedisJob();
                         }
                         break;
@@ -1302,21 +1297,21 @@ namespace Midjourney.API
                     case ENotificationType.SeedTaskInfo:
                         {
                             // 收到获取种子任务请求
-                            var instance = _discordLoadBalancer.GetDiscordInstance(notification.ChannelId);
+                            var instance = _acountService.GetDiscordInstance(notification.ChannelId);
                             await instance?.GetSeed(notification.TaskInfo);
                         }
                         break;
 
                     case ENotificationType.DecreaseFastCount:
                         {
-                            var instance = _discordLoadBalancer.GetDiscordInstance(notification.ChannelId);
+                            var instance = _acountService.GetDiscordInstance(notification.ChannelId);
                             instance?.DecreaseFastAvailableCount(notification.DecreaseCount);
                         }
                         break;
 
                     case ENotificationType.DecreaseRelaxCount:
                         {
-                            var instance = _discordLoadBalancer.GetDiscordInstance(notification.ChannelId);
+                            var instance = _acountService.GetDiscordInstance(notification.ChannelId);
                             instance?.DecreaseYouchuanRelaxAvailableCount(notification.DecreaseCount);
                         }
                         break;
