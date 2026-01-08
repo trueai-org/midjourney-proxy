@@ -6,6 +6,11 @@
     public class CounterHelper
     {
         /// <summary>
+        /// 快速任务可用计数 Key
+        /// </summary>
+        private const string FastTaskAvailableCountHashKey = "FastTaskAvailableCount";
+
+        /// <summary>
         /// 增加图生文每日计数
         /// </summary>
         /// <param name="account"></param>
@@ -109,16 +114,8 @@
                 return;
             }
 
-            // 同时设置今天和明天，因为要跨天使用
-            // 今天
-            var hashKeyPrefix = $"FastTaskAvailableCount:{DateTime.Now:yyyyMMdd}";
-            RedisHelper.HSet(hashKeyPrefix, instanceId, count);
-            RedisHelper.ExpireAt(hashKeyPrefix, DateTime.Today.AddDays(7));
-
-            // 明天
-            var tomorrowHashKeyPrefix = $"FastTaskAvailableCount:{DateTime.Now.AddDays(1):yyyyMMdd}";
-            RedisHelper.HSet(tomorrowHashKeyPrefix, instanceId, count);
-            RedisHelper.ExpireAt(tomorrowHashKeyPrefix, DateTime.Today.AddDays(8));
+            RedisHelper.HSet(FastTaskAvailableCountHashKey, instanceId, count);
+            RedisHelper.ExpireAt(FastTaskAvailableCountHashKey, DateTime.Today.AddDays(1));
         }
 
         /// <summary>
@@ -133,15 +130,7 @@
             {
                 return 0;
             }
-
-            var hashKeyPrefix = $"FastTaskAvailableCount:{DateTime.Now:yyyyMMdd}";
-            var value = (int)RedisHelper.HIncrBy(hashKeyPrefix, instanceId, -decrementBy);
-
-            // 同步值到明天
-            var tomorrowHashKeyPrefix = $"FastTaskAvailableCount:{DateTime.Now.AddDays(1):yyyyMMdd}";
-            RedisHelper.HSet(tomorrowHashKeyPrefix, instanceId, value);
-
-            return value;
+            return (int)RedisHelper.HIncrBy(FastTaskAvailableCountHashKey, instanceId, -decrementBy);
         }
 
         /// <summary>
@@ -156,11 +145,8 @@
                 return 0;
             }
 
-            var hashKeyPrefix = $"FastTaskAvailableCount:{DateTime.Now:yyyyMMdd}";
-
             // 有可能没有这个 key
-            var value = RedisHelper.HGet<int?>(hashKeyPrefix, instanceId);
-            return value ?? 0;
+            return RedisHelper.HGet<int?>(FastTaskAvailableCountHashKey, instanceId) ?? 0;
         }
 
         /// <summary>
@@ -174,8 +160,25 @@
             {
                 return false;
             }
-            var hashKeyPrefix = $"FastTaskAvailableCount:{DateTime.Now:yyyyMMdd}";
-            return RedisHelper.HExists(hashKeyPrefix, instanceId);
+            return RedisHelper.HExists(FastTaskAvailableCountHashKey, instanceId);
+        }
+
+        /// <summary>
+        /// 获取所有快速任务可用计数字典
+        /// </summary>
+        /// <returns></returns>
+        public static Dictionary<string, int> GetAllFastTaskAvailableCountDict()
+        {
+            var result = new Dictionary<string, int>();
+            var hashAll = RedisHelper.HGetAll<int>(FastTaskAvailableCountHashKey);
+            if (hashAll?.Count > 0)
+            {
+                foreach (var kvp in hashAll)
+                {
+                    result[kvp.Key] = kvp.Value;
+                }
+            }
+            return result;
         }
 
         /// <summary>

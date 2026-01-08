@@ -15,11 +15,11 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // Additional Terms:
-// This software shall not be used for any illegal activities. 
+// This software shall not be used for any illegal activities.
 // Users must comply with all applicable laws and regulations,
-// particularly those related to image and video processing. 
+// particularly those related to image and video processing.
 // The use of this software for any form of illegal face swapping,
-// invasion of privacy, or any other unlawful purposes is strictly prohibited. 
+// invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
 namespace Midjourney.Base.Dto
@@ -113,5 +113,21 @@ namespace Midjourney.Base.Dto
         /// 今日失败任务总计数
         /// </summary>
         public int TodayFailCount => TodayFailCounter.Values.Sum();
+
+        /// <summary>
+        /// 快速模式剩余可用次数
+        /// </summary>
+        public int FastAvailableCount { get; set; } = 0;
+
+        /// <summary>
+        /// 放松模式剩余可用次数（官网/Discord）
+        /// -1：表示无限
+        /// </summary>
+        public int RelaxAvailableCount { get; set; } = 0;
+
+        /// <summary>
+        /// 悠船放松模式剩余可用次数
+        /// </summary>
+        public int YouChuanRelaxAvailableCount { get; set; } = 0;
     }
 }
