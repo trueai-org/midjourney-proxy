@@ -223,14 +223,14 @@ namespace Midjourney.API.Controllers
             var fastTotal = 0;
             foreach (var account in accounts)
             {
-                if (fastDict.TryGetValue(account.Id, out var count))
+                if (fastDict.TryGetValue(account.ChannelId, out var count))
                 {
                     // 判断快速日绘图限制
                     if (account.DayDrawLimit > 0)
                     {
                         // 判断快速今日剩余额度
                         var todayFastCount = 0;
-                        if (todayDict.TryGetValue(account.Id, out var dic))
+                        if (todayDict.TryGetValue(account.ChannelId, out var dic))
                         {
                             dic.TryGetValue(GenerationSpeedMode.FAST, out var fastCount);
                             dic.TryGetValue(GenerationSpeedMode.TURBO, out var turboCount);
@@ -269,7 +269,7 @@ namespace Midjourney.API.Controllers
                         var relaxTodayCount = Math.Min(account.YouChuanRelaxDailyLimit, account.DayRelaxDrawLimit);
 
                         // 获取今日已绘图
-                        if (ycRelaxDict.TryGetValue(account.Id, out var relaxCount))
+                        if (ycRelaxDict.TryGetValue(account.ChannelId, out var relaxCount))
                         {
                             relaxTodayCount -= relaxCount;
                             if (relaxTodayCount <= 0)
@@ -285,7 +285,7 @@ namespace Midjourney.API.Controllers
                         var relaxTodayCount = account.YouChuanRelaxDailyLimit;
 
                         // 获取今日已绘图
-                        if (ycRelaxDict.TryGetValue(account.Id, out var relaxCount))
+                        if (ycRelaxDict.TryGetValue(account.ChannelId, out var relaxCount))
                         {
                             relaxTodayCount -= relaxCount;
                             if (relaxTodayCount <= 0)
@@ -309,7 +309,7 @@ namespace Midjourney.API.Controllers
                 {
                     // 判断今日是否达到上限
                     var todayRelaxCount = 0;
-                    if (todayDict.TryGetValue(account.Id, out var dic))
+                    if (todayDict.TryGetValue(account.ChannelId, out var dic))
                     {
                         dic.TryGetValue(GenerationSpeedMode.RELAX, out var relaxCount);
                         todayRelaxCount += relaxCount;
