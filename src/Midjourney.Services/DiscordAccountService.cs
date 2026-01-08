@@ -224,7 +224,7 @@ namespace Midjourney.Services
             {
                 sw.Stop();
 
-                if (sw.ElapsedMilliseconds > 100)
+                if (sw.ElapsedMilliseconds > 200)
                 {
                     Log.Warning("选择实例耗时过长，请联系开发者优化：{ElapsedMilliseconds} ms，过滤参数：{@AccountFilter}, isNewTask={isNewTask}, botType={botType}, blend={blend}, describe={describe}, isDomain={isDomain}, domainIds={domainIds}, ids={ids}, shorten={shorten}, isYm={isYm}, isVideo={isVideo}, isHdVideo={isHdVideo}, isYouChuan={isYouChuan}, isUpscale={isUpscale}",
                         sw.ElapsedMilliseconds,
