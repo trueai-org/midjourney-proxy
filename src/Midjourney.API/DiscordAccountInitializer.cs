@@ -357,7 +357,7 @@ namespace Midjourney.API
                         // 初始化
                         await Initialize();
 
-                        // 检查未开始的任务，是否超过 30 分钟，且对应的账号是停止的，则标记为失败
+                        // 检查未开始的任务，是否超时，且对应的账号是停止的，则标记为失败
                         CheckPendingTasks();
 
                         // 检查并删除旧的文档
@@ -537,15 +537,15 @@ namespace Midjourney.API
         }
 
         /// <summary>
-        /// 检查未开始的任务，是否超过 30 分钟，且对应的账号是停止的，则标记为失败
+        /// 检查未开始的任务，是否超时，且对应的账号是停止的，则标记为失败
         /// </summary>
         public void CheckPendingTasks()
         {
             try
             {
-                // 6小时前 ~ 30 分钟前的未开始的任务
+                // 6小时前 ~ 1小时前 的未开始的任务
                 var time1 = DateTime.Now.AddHours(-6).ToUnixLong();
-                var time2 = DateTime.Now.AddMinutes(-30).ToUnixLong();
+                var time2 = DateTime.Now.AddHours(-1).ToUnixLong();
 
                 var instanceIdIds = _freeSql.Select<TaskInfo>()
                     .Where(c => c.Status == TaskStatus.NOT_START && c.SubmitTime >= time1 && c.SubmitTime < time2)
