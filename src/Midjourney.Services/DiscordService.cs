@@ -3040,9 +3040,10 @@ namespace Midjourney.Services
             }
 
             // 草稿处理
-            if (Account.IsDraft && !prompt.Contains("--draft", StringComparison.OrdinalIgnoreCase))
+            if (Account.IsDraft)
             {
-                prompt += " --draft";
+                // 追加草稿、移除版本
+                prompt = prompt.AppendDraftMode().RemoveVersionParams();
             }
 
             // 是否开启 Discord 防撞图机制，自动追加 --seed

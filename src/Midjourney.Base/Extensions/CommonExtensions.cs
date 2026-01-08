@@ -612,6 +612,27 @@ namespace Midjourney.Base
         }
 
         /// <summary>
+        /// 追加草稿模式
+        /// </summary>
+        /// <param name="prompt"></param>
+        /// <returns></returns>
+        public static string AppendDraftMode(this string prompt)
+        {
+            if (string.IsNullOrWhiteSpace(prompt))
+            {
+                return prompt;
+            }
+
+            // 如果已经包含草稿模式，则返回原始 prompt
+            if (!prompt.Contains("--draft", StringComparison.OrdinalIgnoreCase))
+            {
+                prompt += " --draft";
+            }
+
+            return prompt;
+        }
+
+        /// <summary>
         /// 移除 seed 参数
         /// </summary>
         /// <param name="prompt"></param>

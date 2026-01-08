@@ -751,5 +751,34 @@ namespace Midjourney.Base.Util
         public static IEnumerable<MjParamInfo> GetAllParams() => ParamDefinitions.Values;
 
         #endregion 核心方法
+
+        #region 扩展方法
+
+        /// <summary>
+        /// 移除提示词中的版本参数 (--v 或 --version)
+        /// </summary>
+        /// <param name="prompt"></param>
+        /// <returns></returns>
+        public static string RemoveVersionParams(this string prompt)
+        {
+            if (string.IsNullOrWhiteSpace(prompt))
+            {
+                return prompt;
+            }
+
+            if (prompt.Contains("--v", StringComparison.OrdinalIgnoreCase) || prompt.Contains("--version", StringComparison.OrdinalIgnoreCase))
+            {
+                var pattern = @"--(v|version)(?:\s+([^-]+?))?(?=\s+--|$)";
+
+                prompt = Regex.Replace(prompt, pattern, "", RegexOptions.IgnoreCase).Trim();
+
+                // 清理多余的空格并修剪首尾空格
+                prompt = Regex.Replace(prompt, @"\s+", " ").Trim();
+            }
+
+            return prompt;
+        }
+
+        #endregion 扩展方法
     }
 }
