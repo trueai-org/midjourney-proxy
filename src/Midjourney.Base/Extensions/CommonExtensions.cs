@@ -397,6 +397,16 @@ namespace Midjourney.Base
         }
 
         /// <summary>
+        /// DateTime 转为 unix long
+        /// </summary>
+        /// <param name="dateTime"></param>
+        /// <returns></returns>
+        public static long ToUnixLong(this DateTime dateTime)
+        {
+            return new DateTimeOffset(dateTime).ToUnixTimeMilliseconds();
+        }
+
+        /// <summary>
         /// String to long time unix
         /// </summary>
         /// <param name="value"></param>

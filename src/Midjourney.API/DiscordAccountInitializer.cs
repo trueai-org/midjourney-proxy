@@ -357,6 +357,9 @@ namespace Midjourney.API
                         // 初始化
                         await Initialize();
 
+                        // 检查未开始的任务，是否超过 30 分钟，且对应的账号是停止的，则标记为失败
+                        CheckPendingTasks();
+
                         // 检查并删除旧的文档
                         CheckAndDeleteOldDocuments();
                     }
@@ -530,6 +533,68 @@ namespace Midjourney.API
 
                 default:
                     break;
+            }
+        }
+
+        /// <summary>
+        /// 检查未开始的任务，是否超过 30 分钟，且对应的账号是停止的，则标记为失败
+        /// </summary>
+        public void CheckPendingTasks()
+        {
+            try
+            {
+                // 6小时前 ~ 30 分钟前的未开始的任务
+                var time1 = DateTime.Now.AddHours(-6).ToUnixLong();
+                var time2 = DateTime.Now.AddMinutes(-30).ToUnixLong();
+
+                var instanceIdIds = _freeSql.Select<TaskInfo>()
+                    .Where(c => c.Status == TaskStatus.NOT_START && c.SubmitTime >= time1 && c.SubmitTime < time2)
+                    .Distinct()
+                    .ToList(c => c.InstanceId)
+                    .ToTrimList();
+
+                if (instanceIdIds.Count > 0)
+                {
+                    _logger.Information("检查到未开始的任务，涉及账号数：{@0}", instanceIdIds.Count);
+
+                    foreach (var instanceId in instanceIdIds)
+                    {
+                        try
+                        {
+                            // 处理未开始的任务，判断当前账号实例是否正常
+                            var inc = _acountService.GetDiscordInstance(instanceId);
+                            if (inc == null || !inc.IsAlive)
+                            {
+                                // 账号实例不可用，标记未开始任务为取消
+                                var pendingTaskIds = _freeSql.Select<TaskInfo>()
+                                    .Where(c => c.Status == TaskStatus.NOT_START && c.InstanceId == instanceId)
+                                    .Limit(1000)
+                                    .ToList(c => c.Id);
+
+                                if (pendingTaskIds.Count > 0)
+                                {
+                                    _logger.Information("账号实例不可用，标记未开始任务为失败，账号：{@0}，任务数：{@1}", instanceId, pendingTaskIds.Count);
+
+                                    _freeSql.Update<TaskInfo>()
+                                        .Set(c => c.Status, TaskStatus.FAILURE)
+                                        .Set(c => c.FailReason, "任务超时，自动取消")
+                                        .Where(c => pendingTaskIds.Contains(c.Id) && c.Status == TaskStatus.NOT_START)
+                                        .ExecuteAffrows();
+                                }
+
+                                // 暂时不需要清除队列，未来可能会恢复
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.Error(ex, "检查未开始任务异常，账号：{@0}", instanceId);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "检查未开始任务异常");
             }
         }
 
