@@ -3065,7 +3065,6 @@ namespace Midjourney.Services
             // 转官方链接
             prompt = FormatUrls(prompt, info).ConfigureAwait(false).GetAwaiter().GetResult();
 
-
             // 转全球加速地址
             var storage = StorageHelper.Instance.GetBaseStorage();
             if (!string.IsNullOrWhiteSpace(storage?.GlobalCustomCdn))
@@ -3780,28 +3779,32 @@ namespace Midjourney.Services
                     return true;
                 }
 
+                var now = DateTime.Now;
+
+                var m05key = $"SyncInfoLimit:{now:yyyyMMddHH}_05m_{now.Minute / 5}:{acc.ChannelId}";
+                var m10key = $"SyncInfoLimit:{now:yyyyMMddHH}_10m_{now.Minute / 10}:{acc.ChannelId}";
+                var m30key = $"SyncInfoLimit:{now:yyyyMMddHH}_30m_{now.Minute / 30}:{acc.ChannelId}";
+                var m60key = $"SyncInfoLimit:{now:yyyyMMddHH}:{acc.ChannelId}";
+
+                var m05value = RedisHelper.Get<int>(m05key);
+                var m10value = RedisHelper.Get<int>(m10key);
+                var m30value = RedisHelper.Get<int>(m30key);
+                var m60value = RedisHelper.Get<int>(m60key);
+
+                if (m05value >= 1 ||
+                    m10value >= 2 ||
+                    m30value >= 3 ||
+                    m60value >= 6)
+                {
+                    Log.Warning("同步信息调用过于频繁，ChannelId={0}", acc.ChannelId);
+
+                    // 返回缓存的结果
+                    return cacheValue ?? false;
+                }
+
                 // 清理缓存，或缓存不存在时，执行同步频率验证
                 if (isClearCache || cacheValue != true)
                 {
-                    // 只有强制同步时才需要添加限制规则
-                    // 最新规则：
-                    // 每 5 分钟最多同步 1 次
-                    // 每 10 分钟最多同步 2 次
-                    // 每 30 分钟最多同步 3 次
-                    // 每 60 分钟最多同步 6 次
-                    var keyPrefix = $"SyncInfoLimit:{DateTime.Now:yyyyMMdd}";
-
-                    if (!RateLimiter.Check(keyPrefix, acc.ChannelId, 5, 1) ||
-                        !RateLimiter.Check(keyPrefix, acc.ChannelId, 10, 2) ||
-                        !RateLimiter.Check(keyPrefix, acc.ChannelId, 30, 3) ||
-                        !RateLimiter.Check(keyPrefix, acc.ChannelId, 60, 6))
-                    {
-                        Log.Warning("同步信息调用过于频繁，ChannelId={0}", acc.ChannelId);
-
-                        // 返回缓存的结果
-                        return cacheValue ?? false;
-                    }
-
                     // 检查通过后才清除
                     AdaptiveCache.Remove(cacheKey);
                 }
@@ -3888,6 +3891,15 @@ namespace Midjourney.Services
                     }, TimeSpan.FromMinutes(cacheMinutes));
                 }
 
+                RedisHelper.IncrBy(m05key, 1);
+                RedisHelper.Expire(m05key, TimeSpan.FromHours(1));
+                RedisHelper.IncrBy(m10key, 1);
+                RedisHelper.Expire(m10key, TimeSpan.FromHours(1));
+                RedisHelper.IncrBy(m30key, 1);
+                RedisHelper.Expire(m30key, TimeSpan.FromHours(1));
+                RedisHelper.IncrBy(m60key, 1);
+                RedisHelper.Expire(m60key, TimeSpan.FromHours(1));
+
                 return success;
             }
             catch (Exception ex)
@@ -3896,47 +3908,6 @@ namespace Midjourney.Services
             }
 
             return false;
-        }
-    }
-
-    /// <summary>
-    /// 速率限制器
-    /// </summary>
-    public static class RateLimiter
-    {
-        /// <summary>
-        /// 检查速率限制是否通过（通过则自动+1）
-        /// </summary>
-        /// <param name="prefix">键前缀</param>
-        /// <param name="identifier">标识符（如 ChannelId）</param>
-        /// <param name="windowMinutes">时间窗口（分钟）</param>
-        /// <param name="maxCount">最大允许次数</param>
-        /// <returns>true=允许执行，false=已超限</returns>
-        public static bool Check(string prefix, string identifier, int windowMinutes, int maxCount)
-        {
-            var key = $"{prefix}:{identifier}:{windowMinutes}m:{DateTime.Now.Ticks / TimeSpan.TicksPerMinute / windowMinutes}";
-            var count = AdaptiveCache.GetCounter(key);
-            if (count >= maxCount)
-            {
-                return false;
-            }
-            AdaptiveCache.Increment(key, 1, TimeSpan.FromMinutes(windowMinutes + 1));
-            return true;
-        }
-
-        /// <summary>
-        /// 异步检查速率限制是否通过
-        /// </summary>
-        public static async Task<bool> CheckAsync(string prefix, string identifier, int windowMinutes, int maxCount)
-        {
-            var key = $"{prefix}:{identifier}:{windowMinutes}m:{DateTime.Now.Ticks / TimeSpan.TicksPerMinute / windowMinutes}";
-            var count = await AdaptiveCache.GetCounterAsync(key);
-            if (count >= maxCount)
-            {
-                return false;
-            }
-            await AdaptiveCache.IncrementAsync(key, 1, TimeSpan.FromMinutes(windowMinutes + 1));
-            return true;
         }
     }
 
