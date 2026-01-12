@@ -3812,10 +3812,15 @@ namespace Midjourney.Services
 
                 if (acc.IsOfficial)
                 {
-                    // 官方 60-180 分钟
+                    // 默认缓存 60-180 分钟
+                    // 如果快速用完则为降低同步频率为 180 - 360 分钟
                     var cacheMinutes = Random.Shared.Next(60, 180);
-                    success = await AdaptiveCache.GetOrCreateAsync(cacheKey, YmTaskService.SyncOfficialInfo,
-                        TimeSpan.FromMinutes(cacheMinutes));
+                    if (acc.FastExhausted)
+                    {
+                        cacheMinutes = Random.Shared.Next(180, 360);
+                    }
+
+                    success = await AdaptiveCache.GetOrCreateAsync(cacheKey, YmTaskService.SyncOfficialInfo, TimeSpan.FromMinutes(cacheMinutes));
                 }
 
                 if (acc.IsDiscord)
@@ -3826,8 +3831,14 @@ namespace Midjourney.Services
                         return false;
                     }
 
-                    // discord 60-180 分钟
+                    // 默认缓存 60-180 分钟
+                    // 如果快速用完则为降低同步频率为 180 - 360 分钟
                     var cacheMinutes = Random.Shared.Next(60, 180);
+                    if (acc.FastExhausted)
+                    {
+                        cacheMinutes = Random.Shared.Next(180, 360);
+                    }
+
                     success = await AdaptiveCache.GetOrCreateAsync(cacheKey, async () =>
                     {
                         var sw = Stopwatch.StartNew();
