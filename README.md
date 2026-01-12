@@ -128,7 +128,7 @@ The most powerful, complete, full-featured, completely free and open source Midj
 - [x] 转换 Niji 为 MJ：启用后将 Niji · journey 任务自动转为 Midjourney 任务，并对任务添加 --niji 后缀（转换后出图效果是一致的），即：不添加 Niji 机器人也可以通过 Niji 机器人绘图
 - [x] 转换 --niji 为 Niji Bot：启用后当 prompt 中包含 --niji 时，将会自动转换为 Niji·journey Bot 任务
 - [x] 支持账号自动登录功能（Discord 账号开启 2FA <https://github.com/trueai-org/midjourney-proxy/wiki/2FAopen>，登陆器配置 YesCaptchaKey <https://yescaptcha.com/i/4pizLQ>）
-- [x] 新增 Sqlite、MySQL、SqlServer、PostgreSQL 数据库支持；感谢 `@如风` 赞助此功能！
+- [x] 新增 Sqlite、MySQL/MariaDB、SqlServer、PostgreSQL 数据库支持；感谢 `@如风` 赞助此功能！
 - [x] 新增 账号限制、并发、有效期等功能；感谢 `@TOOM` 赞助此功能！
 - [x] 支持生成视频。
 - [x] 支持 Midjourney 官网绘图。
@@ -380,8 +380,10 @@ d. 启动方式2: chmod +x run_app_osx.sh && ./run_app_osx.sh
 ```
 ### 数据库配置
 
+> 数据库性能评测请参考：<https://github.com/trueai-org/simple-database-benchmark>
+
 - `Sqlite`：本地默认数据库，默认存储位置：`data/mj_sqlite.db`
-- `MySQL`：版本 >= 8.0，数据库连接字符串，示例：`Data Source=192.168.3.241;Port=3306;User ID=root;Password=xxx; Initial Catalog=mj;Charset=utf8mb4; SslMode=none;Min pool size=1`
+- `MySQL8.4 / MariaDB11`：数据库连接字符串，示例：`Data Source=192.168.3.241;Port=3306;User ID=root;Password=xxx; Initial Catalog=mj;Charset=utf8mb4; SslMode=none;Min pool size=1`
 - `SQLServer`：数据库连接字符串，示例：`Data Source=192.168.3.241;User Id=sa;Password=xxx;Initial Catalog=mj;Encrypt=True;TrustServerCertificate=True;Pooling=true;Min Pool Size=1`
 - `PostgreSQL`：数据库连接字符串，示例：`Host=192.168.3.241;Port=5432;Username=mj;Password=xxx; Database=mj;ArrayNullabilityMode=Always;Pooling=true;Minimum Pool Size=1`，需要启动扩展支持字典类型 `CREATE EXTENSION hstore`
 
@@ -410,15 +412,27 @@ docker run --name mjopen-redis --restart always -p 6379:6379 -v /root/mjopen/red
 # 创建网络
 docker network create mjopen-network
 
-# 启动 MYSQL
+# 启动 MYSQL（<= 2G 内存无需配置 innodb 参数）
 docker run --name mjopen-mysql --network mjopen-network --restart always \
   -p 3306:3306 \
   -v /root/mjopen/mysql:/var/lib/mysql \
   -e MYSQL_ROOT_PASSWORD=*** \
   -e TZ=Asia/Shanghai \
-  -d mysql:8.0
+  -d mysql:8.4 \
+  --innodb_buffer_pool_size=1G \
+  --innodb_redo_log_capacity=512M
 
-# MYSQL 连接字符串
+# 启动 MariaDB（<= 2G 内存无需配置 innodb 参数）
+docker run --name mjopen-mariadb --network mjopen-network --restart always \
+  -p 3306:3306 \
+  -v /root/mjopen/mariadb:/var/lib/mysql \
+  -e MARIADB_ROOT_PASSWORD=*** \
+  -e TZ=Asia/Shanghai \
+  -d mariadb:11 \
+  --innodb_buffer_pool_size=1G \
+  --innodb_log_file_size=256M
+
+# MYSQL/MariaDB 连接字符串（配置容器互通或局域网IP）
 Data Source=mjopen-mysql;Port=3306;User ID=root;Password=***;Initial Catalog=mjopen;Charset=utf8mb4;SslMode=none;Min pool size=1
 
 # 启动 REDIS
