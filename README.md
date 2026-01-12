@@ -248,7 +248,7 @@ docker-compose restart mjopen
 mjopen-redis:6379,password=123456,defaultDatabase=1,prefix=mjopen:
 
 # MySQL 连接字符串：
-Data Source=mjopen-mysql;Port=3306;User ID=root;Password=123456;Initial Catalog=mjopen;Charset=utf8mb4;SslMode=none;Min pool size=1
+Data Source=mjopen-mysql;Port=3306;User ID=root;Password=123456;Initial Catalog=mjopen;SslMode=none;Min pool size=1
 
 # PostgreSQL 连接字符串：
 Host=mjopen-postgres;Port=5432;Username=mj;Password=123456;Database=mjopen;ArrayNullabilityMode=Always;Pooling=true;Minimum Pool Size=1
@@ -383,7 +383,7 @@ d. 启动方式2: chmod +x run_app_osx.sh && ./run_app_osx.sh
 > 数据库性能评测请参考：<https://github.com/trueai-org/simple-database-benchmark>
 
 - `Sqlite`：本地默认数据库，默认存储位置：`data/mj_sqlite.db`
-- `MySQL8.4 / MariaDB11`：数据库连接字符串，示例：`Data Source=192.168.3.241;Port=3306;User ID=root;Password=xxx; Initial Catalog=mj;Charset=utf8mb4; SslMode=none;Min pool size=1`
+- `MySQL8.4 / MariaDB11`：数据库连接字符串，示例：`Data Source=192.168.3.241;Port=3306;User ID=root;Password=xxx; Initial Catalog=mj;SslMode=none;Min pool size=1`
 - `SQLServer`：数据库连接字符串，示例：`Data Source=192.168.3.241;User Id=sa;Password=xxx;Initial Catalog=mj;Encrypt=True;TrustServerCertificate=True;Pooling=true;Min Pool Size=1`
 - `PostgreSQL`：数据库连接字符串，示例：`Host=192.168.3.241;Port=5432;Username=mj;Password=xxx; Database=mj;ArrayNullabilityMode=Always;Pooling=true;Minimum Pool Size=1`，需要启动扩展支持字典类型 `CREATE EXTENSION hstore`
 
@@ -412,7 +412,7 @@ docker run --name mjopen-redis --restart always -p 6379:6379 -v /root/mjopen/red
 # 创建网络
 docker network create mjopen-network
 
-# 启动 MYSQL（<= 2G 内存无需配置 innodb 参数）
+# 启动 MYSQL（内存 <= 2G 无需配置 innodb 参数）
 docker run --name mjopen-mysql --network mjopen-network --restart always \
   -p 3306:3306 \
   -v /root/mjopen/mysql:/var/lib/mysql \
@@ -422,7 +422,7 @@ docker run --name mjopen-mysql --network mjopen-network --restart always \
   --innodb_buffer_pool_size=1G \
   --innodb_redo_log_capacity=512M
 
-# 启动 MariaDB（<= 2G 内存无需配置 innodb 参数）
+# 启动 MariaDB（内存 <= 2G 无需配置 innodb 参数）
 docker run --name mjopen-mariadb --network mjopen-network --restart always \
   -p 3306:3306 \
   -v /root/mjopen/mariadb:/var/lib/mysql \
@@ -433,7 +433,7 @@ docker run --name mjopen-mariadb --network mjopen-network --restart always \
   --innodb_log_file_size=256M
 
 # MYSQL/MariaDB 连接字符串（配置容器互通或局域网IP）
-Data Source=mjopen-mysql;Port=3306;User ID=root;Password=***;Initial Catalog=mjopen;Charset=utf8mb4;SslMode=none;Min pool size=1
+Data Source=mjopen-mysql;Port=3306;User ID=root;Password=***;Initial Catalog=mjopen;SslMode=none;Min pool size=1
 
 # 启动 REDIS
 docker run --name mjopen-redis --network mjopen-network --restart always -p 6379:6379 -v /root/mjopen/redis:/data -d redis:6.2.11 redis-server --appendonly yes --requirepass "***"
