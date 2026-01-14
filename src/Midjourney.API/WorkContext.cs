@@ -71,10 +71,39 @@ namespace Midjourney.API
                     return FreeSqlHelper.FreeSql.Single<User>(c => c.Token == _token);
                 });
 
+                // 无效 token, 立即清空缓存
+                if (user == null)
+                {
+                    _memberCache.Remove($"USER_{_token}");
+                }
+
                 return user;
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// 清除用户缓存
+        /// </summary>
+        /// <param name="tokens"></param>
+        public void ClearUserCache(params string[] tokens)
+        {
+            if (!string.IsNullOrWhiteSpace(_token))
+            {
+                _memberCache.Remove($"USER_{_token}");
+            }
+
+            if (tokens != null)
+            {
+                foreach (var token in tokens)
+                {
+                    if (!string.IsNullOrWhiteSpace(token))
+                    {
+                        _memberCache.Remove($"USER_{token}");
+                    }
+                }
+            }
         }
     }
 }

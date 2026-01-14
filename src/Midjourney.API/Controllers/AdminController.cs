@@ -35,7 +35,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
 using Midjourney.Base.Options;
 using Midjourney.License;
-using Midjourney.Services;
 using MongoDB.Driver;
 using Serilog;
 
@@ -241,6 +240,8 @@ namespace Midjourney.API.Controllers
 
             _freeSql.Update(user);
 
+            _workContext.ClearUserCache(user.Token);
+
             return Ok(new
             {
                 code = 1,
@@ -256,6 +257,7 @@ namespace Midjourney.API.Controllers
         [HttpPost("logout")]
         public ActionResult Logout()
         {
+            _workContext.ClearUserCache();
             return Ok();
         }
 
@@ -1515,9 +1517,7 @@ namespace Midjourney.API.Controllers
 
             _freeSql.Save(user);
 
-            // 清除缓存
-            var key = $"USER_{oldToken}";
-            _memoryCache.Remove(key);
+            _workContext.ClearUserCache(oldToken, user.Token);
 
             return Result.Ok();
         }
@@ -1549,10 +1549,7 @@ namespace Midjourney.API.Controllers
                 throw new LogicException("不能删除默认账号");
             }
 
-            // 清除缓存
-            var key = $"USER_{model.Token}";
-            _memoryCache.Remove(key);
-
+            _workContext.ClearUserCache(model.Token);
             _freeSql.Delete(model);
 
             return Result.Ok();
@@ -2072,24 +2069,6 @@ namespace Midjourney.API.Controllers
             return Result.Ok();
         }
 
-        ///// <summary>
-        ///// MJ Plus 数据迁移（迁移账号数据和任务数据）
-        ///// </summary>
-        ///// <param name="dto"></param>
-        ///// <returns></returns>
-        //[HttpPost("mjplus-migration")]
-        //public async Task<Result> MjPlusMigration([FromBody] MjPlusMigrationDto dto)
-        //{
-        //    if (_isAnonymous)
-        //    {
-        //        return Result.Fail("演示模式，禁止操作");
-        //    }
-
-        //    await _taskService.MjPlusMigration(dto);
-
-        //    return Result.Ok();
-        //}
-
         /// <summary>
         /// 验证数据库连接
         /// </summary>
@@ -2231,6 +2210,10 @@ namespace Midjourney.API.Controllers
             }
         }
 
+        /// <summary>
+        /// 判断是否在 Docker 环境中运行
+        /// </summary>
+        /// <returns></returns>
         private bool IsDockerEnvironment()
         {
             try
