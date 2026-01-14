@@ -248,7 +248,7 @@ docker-compose restart mjopen
 mjopen-redis:6379,password=123456,defaultDatabase=1,prefix=mjopen:
 
 # MySQL 连接字符串：
-Data Source=mjopen-mysql;Port=3306;User ID=root;Password=123456;Initial Catalog=mjopen;SslMode=none;Min pool size=1
+Data Source=mjopen-mysql;Port=3306;User ID=root;Password=123456;Initial Catalog=mjopen;SslMode=none;AllowPublicKeyRetrieval=true;Min pool size=1
 
 # PostgreSQL 连接字符串：
 Host=mjopen-postgres;Port=5432;Username=mj;Password=123456;Database=mjopen;ArrayNullabilityMode=Always;Pooling=true;Minimum Pool Size=1
