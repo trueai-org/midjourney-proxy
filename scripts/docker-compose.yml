@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Redis 服务
   mjopen-redis:  
@@ -28,6 +26,27 @@ services:
       TZ: Asia/Shanghai
     networks:
       - mjopen-network
+    command: >
+      --innodb_buffer_pool_size=1G
+      --innodb_redo_log_capacity=512M
+
+  # MariaDB 服务
+  mjopen-mariadb: 
+    image: mariadb:11
+    container_name: mjopen-mariadb
+    restart: always
+    ports: 
+      - "3306:3306"
+    volumes:
+      - /root/mjopen/mariadb:/var/lib/mysql
+    environment: 
+      MARIADB_ROOT_PASSWORD: "***"
+      TZ: Asia/Shanghai
+    networks:
+      - mjopen-network
+    command: >
+      --innodb_buffer_pool_size=1G
+      --innodb_log_file_size=256M
 
   # PostgreSQL 服务（可选，默认不启动）
   mjopen-postgres: 
@@ -37,7 +56,7 @@ services:
     ports:
       - "5432:5432"
     volumes: 
-      - /root/mjopen/postgres:/var/lib/postgresql/data
+      - mjopen-pgdata:/var/lib/postgresql/data
     environment:
       POSTGRES_USER: mj
       POSTGRES_PASSWORD: 123456
@@ -45,6 +64,7 @@ services:
       TZ: Asia/Shanghai
     networks:
       - mjopen-network
+    command: postgres -c shared_buffers=1GB
     profiles:
       - postgres  # 使用 profile，默认不启动 
 
@@ -62,7 +82,7 @@ services:
       SA_PASSWORD: "Midjourney@123"  # 管理员密码（必须强密码）
       MSSQL_PID: Express  # 产品版本：Developer（开发）或 Express（生产小型项目）
       # MSSQL_PID: "XXXXX-XXXXX-XXXXX-XXXXX-XXXXX"  # 你的产品密钥
-      TZ:  Asia/Shanghai  # 时区
+      TZ: Asia/Shanghai  # 时区
     networks:
       - mjopen-network
     profiles:
@@ -85,7 +105,7 @@ services:
     environment:
       TZ: Asia/Shanghai
       # 节点最大任务并行数（可选）
-      # CONCURRENT:  10
+      # CONCURRENT: 10
       # 配置宿主私网 IP（可选）
       # HOST_IP: 10.0.0.1
     networks:
@@ -98,3 +118,13 @@ services:
 networks:
   mjopen-network:
     driver: bridge
+
+# 使用已有的外部网络
+# docker network create mjopen-network
+# networks:
+#   mjopen-network: 
+#     external: true
+
+volumes:
+  mjopen-pgdata: 
+    driver: local

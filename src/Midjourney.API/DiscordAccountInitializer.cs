@@ -729,10 +729,7 @@ namespace Midjourney.API
                     if (disInstance == null)
                     {
                         // 初始化子频道
-                        if (account.IsDiscord)
-                        {
-                            account.InitSubChannels();
-                        }
+                        account.InitSubChannels();
 
                         // 快速时长校验
                         // 如果 fastTime <= 0.2，则标记为快速用完
@@ -798,7 +795,6 @@ namespace Midjourney.API
                             .Set(c => c.PrivateChannelId, account.PrivateChannelId)
                             .Set(c => c.AllowModes, account.AllowModes)
                             .Set(c => c.SubChannels, account.SubChannels)
-                            .Set(c => c.SubChannelValues, account.SubChannelValues)
                             .Set(c => c.FastExhausted, account.FastExhausted)
                             .Where(c => c.Id == account.Id)
                             .ExecuteAffrows();

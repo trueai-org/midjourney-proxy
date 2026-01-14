@@ -24,6 +24,7 @@
 
 using FreeSql;
 using FreeSql.Aop;
+using FreeSql.DataAnnotations;
 using Serilog;
 
 namespace Midjourney.Base.Data
@@ -89,7 +90,6 @@ namespace Midjourney.Base.Data
             // 自动同步实体结构到数据库
             if (autoSyncStructure)
             {
-
                 fsqlBuilder.UseAutoSyncStructure(true)
                       // 监视 SQL 命令对象
                       .UseMonitorCommand(cmd =>
@@ -123,7 +123,7 @@ namespace Midjourney.Base.Data
 
                 case DatabaseType.MySQL:
                     {
-                        // Data Source=192.168.3.241;Port=3306;User ID=root;Password=root; Initial Catalog=mj;Charset=utf8mb4; SslMode=none;Min pool size=1
+                        // Data Source=192.168.3.241;Port=3306;User ID=root;Password=root; Initial Catalog=mj;SslMode=none;Min pool size=1
                         fsqlBuilder.UseConnectionString(DataType.MySql, databaseConnectionString);
                     }
                     break;
@@ -148,7 +148,8 @@ namespace Midjourney.Base.Data
 
             var fsql = fsqlBuilder.Build();
 
-            fsql.UseJsonMap(); // 开启功能
+            // 开启 json 功能
+            fsql.UseJsonMap();
 
             // 日志
             fsql.Aop.CurdAfter += (s, e) =>
@@ -184,8 +185,6 @@ namespace Midjourney.Base.Data
 
             return fsql;
         }
-
-
 
         /// <summary>
         /// 验证并配置数据库连接
@@ -266,10 +265,12 @@ namespace Midjourney.Base.Data
                                     // CREATE EXTENSION hstore;
 
                                     // 第一批
-                                    freeSql.CodeFirst.SyncStructure(typeof(User), typeof(BannedWord));
+                                    freeSql.CodeFirst.SyncStructure(typeof(User));
+                                    freeSql.CodeFirst.SyncStructure(typeof(BannedWord));
 
                                     // 第二批
-                                    freeSql.CodeFirst.SyncStructure(typeof(DiscordAccount), typeof(DomainTag));
+                                    freeSql.CodeFirst.SyncStructure(typeof(DiscordAccount));
+                                    freeSql.CodeFirst.SyncStructure(typeof(DomainTag));
 
                                     // 第三批
                                     freeSql.CodeFirst.SyncStructure(typeof(TaskInfo));

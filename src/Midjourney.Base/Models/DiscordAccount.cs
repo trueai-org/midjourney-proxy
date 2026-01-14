@@ -29,6 +29,7 @@ using LiteDB;
 using Midjourney.Base.Data;
 using Midjourney.Base.Dto;
 using MongoDB.Bson.Serialization.Attributes;
+using Newtonsoft.Json.Linq;
 using Serilog;
 
 namespace Midjourney.Base.Models
@@ -446,6 +447,7 @@ namespace Midjourney.Base.Models
         /// 允许速度模式，用于前台筛选账号
         /// </summary>
         [JsonMap]
+        [Column(MapType = typeof(JArray))]
         public List<GenerationSpeedMode> AllowModes { get; set; } = [];
 
         /// <summary>
@@ -458,6 +460,7 @@ namespace Midjourney.Base.Models
         /// MJ 组件列表。
         /// </summary>
         [JsonMap]
+        [Column(MapType = typeof(JArray))]
         public List<Component> Components { get; set; } = [];
 
         /// <summary>
@@ -469,6 +472,7 @@ namespace Midjourney.Base.Models
         /// NIJI 组件列表。
         /// </summary>
         [JsonMap]
+        [Column(MapType = typeof(JArray))]
         public List<Component> NijiComponents { get; set; } = new List<Component>();
 
         /// <summary>
@@ -569,20 +573,24 @@ namespace Midjourney.Base.Models
         /// 垂直领域 IDS
         /// </summary>
         [JsonMap]
+        [Column(MapType = typeof(JArray))]
         public List<string> VerticalDomainIds { get; set; } = new List<string>();
 
         /// <summary>
         /// 子频道列表
         /// </summary>
         [JsonMap]
+        [Column(MapType = typeof(JArray))]
         public List<string> SubChannels { get; set; } = new List<string>();
 
         /// <summary>
-        /// 子频道 ids 通过 SubChannels 计算得出
+        /// 子频道 ids 通过 SubChannels 计算得出（数据库不再持久化，而是获取时重新计算）
         /// key: 频道 id, value: 服务器 id
         /// </summary>
-        [JsonMap]
-        public Dictionary<string, string> SubChannelValues { get; set; } = new Dictionary<string, string>();
+        [LiteDB.BsonIgnore]
+        [MongoDB.Bson.Serialization.Attributes.BsonIgnore]
+        [Column(IsIgnore = true)]
+        public Dictionary<string, string> SubChannelValues { get; set; } = [];
 
         /// <summary>
         /// 执行中的任务数 - 用于前台显示
@@ -1035,8 +1043,7 @@ namespace Midjourney.Base.Models
         /// </summary>
         public void InitSubChannels()
         {
-            // 启动前校验
-            if (SubChannels.Count > 0)
+            if (IsDiscord && SubChannels.Count > 0)
             {
                 // https://discord.com/channels/1256526716130693201/1256526716130693204
                 // https://discord.com/channels/{guid}/{id}

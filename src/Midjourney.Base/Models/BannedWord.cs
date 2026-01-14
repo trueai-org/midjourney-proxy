@@ -48,6 +48,7 @@ namespace Midjourney.Base.Models
         /// 违规词
         /// </summary>
         [JsonMap]
+        [Column(MapType = typeof(JArray))]
         public List<string> Keywords { get; set; } = new List<string>();
 
         /// <summary>

@@ -209,6 +209,9 @@ namespace Midjourney.Services
                     var acc = _freeSql.Get<DiscordAccount>(localOld.Id);
                     if (acc != null && !ReferenceEquals(localOld, acc))
                     {
+                        // 初始化子频道
+                        acc.InitSubChannels();
+
                         // 在替换订阅之前，先从旧实例取消订阅
                         lock (_accountLock)
                         {
@@ -2952,6 +2955,9 @@ namespace Midjourney.Services
             {
                 return prompt;
             }
+
+            // 移除换行符
+            prompt = prompt.Replace("\r", " ").Replace("\n", " ").Replace("  ", " ");
 
             // 如果开启 niji 转 mj
             if (info.RealBotType == EBotType.MID_JOURNEY && info.BotType == EBotType.NIJI_JOURNEY)

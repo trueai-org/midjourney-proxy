@@ -383,9 +383,9 @@ d. 启动方式2: chmod +x run_app_osx.sh && ./run_app_osx.sh
 > 数据库性能评测请参考：<https://github.com/trueai-org/simple-database-benchmark>
 
 - `Sqlite`：本地默认数据库，默认存储位置：`data/mj_sqlite.db`
-- `MySQL8.4 / MariaDB11`：数据库连接字符串，示例：`Data Source=192.168.3.241;Port=3306;User ID=root;Password=xxx; Initial Catalog=mj;SslMode=none;Min pool size=1`
+- `MySQL8.4 / MariaDB11`：数据库连接字符串，示例：`Data Source=192.168.3.241;Port=3306;User ID=root;Password=xxx;Initial Catalog=mj;SslMode=none;Min pool size=1;AllowPublicKeyRetrieval=True`
 - `SQLServer`：数据库连接字符串，示例：`Data Source=192.168.3.241;User Id=sa;Password=xxx;Initial Catalog=mj;Encrypt=True;TrustServerCertificate=True;Pooling=true;Min Pool Size=1`
-- `PostgreSQL`：数据库连接字符串，示例：`Host=192.168.3.241;Port=5432;Username=mj;Password=xxx; Database=mj;ArrayNullabilityMode=Always;Pooling=true;Minimum Pool Size=1`，需要启动扩展支持字典类型 `CREATE EXTENSION hstore`
+- `PostgreSQL`：数据库连接字符串，示例：`Host=192.168.3.241;Port=5432;Username=mj;Password=xxx;Database=mj;ArrayNullabilityMode=Always;Pooling=true;Minimum Pool Size=1`
 
 > Redis 配置
 

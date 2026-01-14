@@ -24,6 +24,7 @@
 
 using FreeSql.DataAnnotations;
 using MongoDB.Bson.Serialization.Attributes;
+using Newtonsoft.Json.Linq;
 
 namespace Midjourney.Base.Models
 {
@@ -46,6 +47,7 @@ namespace Midjourney.Base.Models
         /// 关键词
         /// </summary>
         [JsonMap]
+        [Column(MapType = typeof(JArray))]
         public List<string> Keywords { get; set; } = new List<string>();
 
         /// <summary>
