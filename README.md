@@ -207,7 +207,17 @@ sh docker-upgrade.sh
 # 3.2 配置宿主私网 IP：-e HOST_IP=10.0.0.1，默认不配置
 ```
 
-> Docker Compose 脚本说明：[Docker Compose Doc](https://github.com/trueai-org/midjourney-proxy/wiki/Docker-Compose-Doc)
+> [Docker Compose 所有服务文档](https://github.com/trueai-org/midjourney-proxy/wiki/Docker-Compose-Doc)
+
+> [数据库/Redis部署教程/容器互通文档](https://github.com/trueai-org/midjourney-proxy/wiki/Docker-Doc)
+
+> [数据库性能评测文档](https://github.com/trueai-org/simple-database-benchmark)
+
+- `Redis`：必须配置，示例：`mjopen-redis:6379,password=***,defaultDatabase=1,prefix=mjopen:`。
+- `Sqlite3`：本地默认数据库，默认存储位置：`data/mj_sqlite.db`
+- `MySQL8.4/MariaDB11`：数据库连接字符串，示例：`Data Source=mjopen-mysql;Port=3306;User ID=root;Password=***;Initial Catalog=mjopen;SslMode=none;AllowPublicKeyRetrieval=true;Min pool size=1;Default Command Timeout=120;Connection Timeout=30`
+- `SQLServer2022/2025`：数据库连接字符串，示例：`Data Source=mjopen-sqlserver;User Id=sa;Password==***;Initial Catalog=mjopen;Encrypt=True;TrustServerCertificate=True;Pooling=true;Min Pool Size=1`
+- `PostgreSQL16/17/18`：数据库连接字符串，示例：`Host=mjopen-postgres;Port=5432;Username=mj;Password==***;Database=mjopen;ArrayNullabilityMode=Always;Pooling=true;Minimum Pool Size=1`
 
 ```bash
 # 通过 dokcker-compose 启动
@@ -243,18 +253,6 @@ docker-compose restart
 
 # 重启特定服务
 docker-compose restart mjopen
-
-# Redis 连接字符串：
-mjopen-redis:6379,password=123456,defaultDatabase=1,prefix=mjopen:
-
-# MySQL 连接字符串：
-Data Source=mjopen-mysql;Port=3306;User ID=root;Password=123456;Initial Catalog=mjopen;SslMode=none;AllowPublicKeyRetrieval=true;Min pool size=1
-
-# PostgreSQL 连接字符串：
-Host=mjopen-postgres;Port=5432;Username=mj;Password=123456;Database=mjopen;ArrayNullabilityMode=Always;Pooling=true;Minimum Pool Size=1
-
-# SQL Server 连接字符串
-Data Source=mjopen-sqlserver;User Id=sa;Password=Midjourney@123;Initial Catalog=mjopen;Encrypt=True;TrustServerCertificate=True;Pooling=true;Min Pool Size=1
 ```
 
 ```bash
@@ -377,69 +375,6 @@ d. 启动方式2: chmod +x run_app_osx.sh && ./run_app_osx.sh
   "videoSnapshotStyle": null,
   "expiredMinutes": 0
 }
-```
-### 数据库配置
-
-> 数据库性能评测请参考：<https://github.com/trueai-org/simple-database-benchmark>
-
-- `Sqlite`：本地默认数据库，默认存储位置：`data/mj_sqlite.db`
-- `MySQL8.4 / MariaDB11`：数据库连接字符串，示例：`Data Source=192.168.3.241;Port=3306;User ID=root;Password=xxx;Initial Catalog=mj;SslMode=none;Min pool size=1;AllowPublicKeyRetrieval=True`
-- `SQLServer`：数据库连接字符串，示例：`Data Source=192.168.3.241;User Id=sa;Password=xxx;Initial Catalog=mj;Encrypt=True;TrustServerCertificate=True;Pooling=true;Min Pool Size=1`
-- `PostgreSQL`：数据库连接字符串，示例：`Host=192.168.3.241;Port=5432;Username=mj;Password=xxx;Database=mj;ArrayNullabilityMode=Always;Pooling=true;Minimum Pool Size=1`
-
-> Redis 配置
-
-- 支持分布式部署。
-- 支持实时调整队列数、并发数。
-- 支持重启继续任务。
-- 可以自动过官网 CloudFlare 验证。
-
-> Docker Redis 一键启动脚本参考：
-
-```bash
-docker run --name mjopen-redis --restart always -p 6379:6379 -v /root/mjopen/redis:/data -d redis:6.2.11 redis-server --appendonly yes --requirepass "123456"
-```
-
-> Docker Redis 连接字符串参考：
-
-```bash
-172.17.1.1:6379,password=123456,defaultDatabase=1,prefix=mjopen:
-```
-
-> 容器互通参考脚本
-
-```bash
-# 创建网络
-docker network create mjopen-network
-
-# 启动 MYSQL（内存 <= 2G 无需配置 innodb 参数）
-docker run --name mjopen-mysql --network mjopen-network --restart always \
-  -p 3306:3306 \
-  -v /root/mjopen/mysql:/var/lib/mysql \
-  -e MYSQL_ROOT_PASSWORD=*** \
-  -e TZ=Asia/Shanghai \
-  -d mysql:8.4 \
-  --innodb_buffer_pool_size=1G \
-  --innodb_redo_log_capacity=512M
-
-# 启动 MariaDB（内存 <= 2G 无需配置 innodb 参数）
-docker run --name mjopen-mariadb --network mjopen-network --restart always \
-  -p 3306:3306 \
-  -v /root/mjopen/mariadb:/var/lib/mysql \
-  -e MARIADB_ROOT_PASSWORD=*** \
-  -e TZ=Asia/Shanghai \
-  -d mariadb:11 \
-  --innodb_buffer_pool_size=1G \
-  --innodb_log_file_size=256M
-
-# MYSQL/MariaDB 连接字符串（配置容器互通或局域网IP）
-Data Source=mjopen-mysql;Port=3306;User ID=root;Password=***;Initial Catalog=mjopen;SslMode=none;Min pool size=1
-
-# 启动 REDIS
-docker run --name mjopen-redis --network mjopen-network --restart always -p 6379:6379 -v /root/mjopen/redis:/data -d redis:6.2.11 redis-server --appendonly yes --requirepass "***"
-
-# REDSI 连接字符串
-mjopen-redis:6379,password=***,defaultDatabase=1,prefix=mjopen:
 ```
 
 ### 换脸配置

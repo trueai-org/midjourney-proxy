@@ -1,7 +1,7 @@
 services:
   # Redis 服务
   mjopen-redis:  
-    image: redis:6. 2.11
+    image: redis:6.2
     container_name: mjopen-redis
     restart: always
     ports:
@@ -14,7 +14,7 @@ services:
 
   # MySQL 服务
   mjopen-mysql: 
-    image: mysql:8.0
+    image: mysql:8.4
     container_name: mjopen-mysql
     restart: always
     ports:
@@ -40,7 +40,7 @@ services:
     volumes:
       - /root/mjopen/mariadb:/var/lib/mysql
     environment: 
-      MARIADB_ROOT_PASSWORD: "***"
+      MARIADB_ROOT_PASSWORD: "123456"
       TZ: Asia/Shanghai
     networks:
       - mjopen-network
