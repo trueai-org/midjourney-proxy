@@ -213,7 +213,7 @@ sh docker-upgrade.sh
 
 > [数据库性能评测文档](https://github.com/trueai-org/simple-database-benchmark)
 
-- `Redis`：必须配置，示例：`mjopen-redis:6379,password=***,defaultDatabase=1,prefix=mjopen:`。
+- `Redis`：必须配置，示例：`mjopen-redis:6379,password=***,defaultDatabase=1,prefix=mjopen:`
 - `Sqlite3`：本地默认数据库，默认存储位置：`data/mj_sqlite.db`
 - `MySQL8.4/MariaDB11`：数据库连接字符串，示例：`Data Source=mjopen-mysql;Port=3306;User ID=root;Password=***;Initial Catalog=mjopen;SslMode=none;AllowPublicKeyRetrieval=true;Min pool size=1;Default Command Timeout=120;Connection Timeout=30`
 - `SQLServer2022/2025`：数据库连接字符串，示例：`Data Source=mjopen-sqlserver;User Id=sa;Password==***;Initial Catalog=mjopen;Encrypt=True;TrustServerCertificate=True;Pooling=true;Min Pool Size=1`
