@@ -447,7 +447,6 @@ namespace Midjourney.Base.Models
         /// 允许速度模式，用于前台筛选账号
         /// </summary>
         [JsonMap]
-        [Column(MapType = typeof(JArray))]
         public List<GenerationSpeedMode> AllowModes { get; set; } = [];
 
         /// <summary>
@@ -460,7 +459,6 @@ namespace Midjourney.Base.Models
         /// MJ 组件列表。
         /// </summary>
         [JsonMap]
-        [Column(MapType = typeof(JArray))]
         public List<Component> Components { get; set; } = [];
 
         /// <summary>
@@ -472,7 +470,6 @@ namespace Midjourney.Base.Models
         /// NIJI 组件列表。
         /// </summary>
         [JsonMap]
-        [Column(MapType = typeof(JArray))]
         public List<Component> NijiComponents { get; set; } = new List<Component>();
 
         /// <summary>
@@ -573,14 +570,12 @@ namespace Midjourney.Base.Models
         /// 垂直领域 IDS
         /// </summary>
         [JsonMap]
-        [Column(MapType = typeof(JArray))]
         public List<string> VerticalDomainIds { get; set; } = new List<string>();
 
         /// <summary>
         /// 子频道列表
         /// </summary>
         [JsonMap]
-        [Column(MapType = typeof(JArray))]
         public List<string> SubChannels { get; set; } = new List<string>();
 
         /// <summary>

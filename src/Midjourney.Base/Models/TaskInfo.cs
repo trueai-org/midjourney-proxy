@@ -170,7 +170,6 @@ namespace Midjourney.Base.Models
         /// 创建消息 ID -> 进度消息 ID -> 完成消息 ID
         /// </summary>
         [JsonMap]
-        [Column(MapType = typeof(JArray))]
         public List<string> MessageIds { get; set; } = new List<string>();
 
         /// <summary>
@@ -258,7 +257,6 @@ namespace Midjourney.Base.Models
         /// 图像URL列表
         /// </summary>
         [JsonMap]
-        [Column(MapType = typeof(JArray))]
         public List<TaskInfoImageUrl> ImageUrls { get; set; }
 
         /// <summary>
@@ -332,7 +330,6 @@ namespace Midjourney.Base.Models
         /// 按钮
         /// </summary>
         [JsonMap]
-        [Column(MapType = typeof(JArray))]
         public List<CustomComponentModel> Buttons { get; set; } = new List<CustomComponentModel>();
 
         /// <summary>
@@ -561,7 +558,6 @@ namespace Midjourney.Base.Models
         /// 视频列表
         /// </summary>
         [JsonMap]
-        [Column(MapType = typeof(JArray))]
         public List<TaskInfoVideoUrl> VideoUrls { get; set; }
 
         /// <summary>

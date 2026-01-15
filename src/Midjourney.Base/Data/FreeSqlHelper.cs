@@ -25,6 +25,7 @@
 using FreeSql;
 using FreeSql.Aop;
 using FreeSql.DataAnnotations;
+using Newtonsoft.Json.Linq;
 using Serilog;
 
 namespace Midjourney.Base.Data
@@ -103,7 +104,7 @@ namespace Midjourney.Base.Data
                   // 监视 SQL 命令对象
                   .UseMonitorCommand(cmd =>
                   {
-                      //Log.Debug(cmd.CommandText);
+                      Log.Debug(cmd.CommandText);
                   });
 #endif
 
@@ -150,6 +151,31 @@ namespace Midjourney.Base.Data
 
             // 开启 json 功能
             fsql.UseJsonMap();
+
+            // 修复 mysql [JsonMap, Column(MapType = typeof(JArray))] 不生效问题
+            // 调整 pgsql 为 jsonb 类型
+            fsql.Aop.ConfigEntityProperty += (s, e) =>
+            {
+                if (e.Property.GetCustomAttributes(typeof(JsonMapAttribute), true).Length > 0)
+                {
+                    if (databaseType == DatabaseType.PostgreSQL)
+                    {
+                        // 判断类型是不是数组
+                        if (e.Property.PropertyType.IsArray ||
+                            (e.Property.PropertyType.IsGenericType &&
+                             (e.Property.PropertyType.GetGenericTypeDefinition() == typeof(List<>) ||
+                              e.Property.PropertyType.GetGenericTypeDefinition() == typeof(IEnumerable<>) ||
+                              e.Property.PropertyType.GetGenericTypeDefinition() == typeof(ICollection<>))))
+                        {
+                            e.ModifyResult.MapType = typeof(JArray);
+                        }
+                        else
+                        {
+                            e.ModifyResult.MapType = typeof(JObject);
+                        }
+                    }
+                }
+            };
 
             // 日志
             fsql.Aop.CurdAfter += (s, e) =>
