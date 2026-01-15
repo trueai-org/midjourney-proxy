@@ -48,6 +48,7 @@ namespace Midjourney.Services
         private readonly HttpClient _httpClient;
         private readonly SemaphoreSlim _semaphoreSlim;
         private readonly int _notifyPoolSize;
+        private readonly IFreeSql _freeSql = FreeSqlHelper.FreeSql;
 
         public NotifyService(ILogger<NotifyService> logger, HttpClient httpClient)
         {
@@ -170,6 +171,128 @@ namespace Midjourney.Services
             }
 
             return status.GetOrder();
+        }
+
+        /// <summary>
+        /// 获取今日账号剩余额度
+        /// </summary>
+        /// <returns></returns>
+        public (int fastTotal, int notYcRelaxTotal, int ycRelaxTotal) GetTodayAccountCount()
+        {
+            // 实时计算快速剩余额度
+            var accounts = _freeSql.Select<DiscordAccount>().Where(c => c.Enable == true).ToList();
+
+            // 今日总绘图
+            var todayDict = CounterHelper.GetAllAccountTodayTotalCountDict();
+
+            // 快速剩余额度
+            var fastDict = CounterHelper.GetAllFastTaskAvailableCountDict();
+            var fastTotal = 0;
+            foreach (var account in accounts)
+            {
+                if (fastDict.TryGetValue(account.ChannelId, out var count))
+                {
+                    // 判断快速日绘图限制
+                    if (account.DayDrawLimit > 0)
+                    {
+                        // 判断快速今日剩余额度
+                        var todayFastCount = 0;
+                        if (todayDict.TryGetValue(account.ChannelId, out var dic))
+                        {
+                            dic.TryGetValue(GenerationSpeedMode.FAST, out var fastCount);
+                            dic.TryGetValue(GenerationSpeedMode.TURBO, out var turboCount);
+
+                            todayFastCount += fastCount;
+                            todayFastCount += turboCount;
+                        }
+
+                        fastTotal += Math.Min(count, Math.Max(0, account.DayDrawLimit - todayFastCount));
+                    }
+                    else
+                    {
+                        fastTotal += count;
+                    }
+                }
+            }
+
+            // 慢速剩余额度，只有悠船账号才有慢速额度
+            var ycAcounts = accounts.Where(c => c.IsYouChuan).ToList();
+            var ycRelaxDict = CounterHelper.GetAllYouchuanRelaxCountDict();
+            var ycRelaxTotal = 0;
+            foreach (var account in ycAcounts)
+            {
+                // 判断今日是否达到上限
+                if (account.YouChuanPicreadReset > DateTime.Now.Date)
+                {
+                    continue;
+                }
+
+                // 悠船日绘图限制
+                if (account.YouChuanRelaxDailyLimit > 0)
+                {
+                    // 判断慢速日绘图限制
+                    if (account.DayRelaxDrawLimit > 0)
+                    {
+                        var relaxTodayCount = Math.Min(account.YouChuanRelaxDailyLimit, account.DayRelaxDrawLimit);
+
+                        // 获取今日已绘图
+                        if (ycRelaxDict.TryGetValue(account.ChannelId, out var relaxCount))
+                        {
+                            relaxTodayCount -= relaxCount;
+                            if (relaxTodayCount <= 0)
+                            {
+                                continue;
+                            }
+                        }
+
+                        ycRelaxTotal += relaxTodayCount;
+                    }
+                    else
+                    {
+                        var relaxTodayCount = account.YouChuanRelaxDailyLimit;
+
+                        // 获取今日已绘图
+                        if (ycRelaxDict.TryGetValue(account.ChannelId, out var relaxCount))
+                        {
+                            relaxTodayCount -= relaxCount;
+                            if (relaxTodayCount <= 0)
+                            {
+                                continue;
+                            }
+                        }
+
+                        ycRelaxTotal += relaxTodayCount;
+                    }
+                }
+            }
+
+            // 计算非悠船慢速可用额度
+            var notYcAccounts = accounts.Where(c => !c.IsYouChuan).ToList();
+            var notYcRelaxTotal = notYcAccounts.Count != 0 ? -1 : 0;
+            foreach (var account in notYcAccounts)
+            {
+                // 判断慢速日绘图限制
+                if (account.DayRelaxDrawLimit > 0)
+                {
+                    // 判断今日是否达到上限
+                    var todayRelaxCount = 0;
+                    if (todayDict.TryGetValue(account.ChannelId, out var dic))
+                    {
+                        dic.TryGetValue(GenerationSpeedMode.RELAX, out var relaxCount);
+                        todayRelaxCount += relaxCount;
+                    }
+
+                    // 重置非悠船慢速总额度
+                    if (notYcRelaxTotal == -1)
+                    {
+                        notYcRelaxTotal = 0;
+                    }
+
+                    notYcRelaxTotal += Math.Max(0, account.DayRelaxDrawLimit - todayRelaxCount);
+                }
+            }
+
+            return (fastTotal, notYcRelaxTotal, ycRelaxTotal);
         }
     }
 }

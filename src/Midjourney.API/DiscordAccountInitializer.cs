@@ -26,6 +26,7 @@ using System.Diagnostics;
 using System.Text;
 using LiteDB;
 using Microsoft.Extensions.Caching.Memory;
+using Midjourney.Base.Utils;
 using Midjourney.License;
 using MongoDB.Driver;
 using RestSharp;
@@ -45,6 +46,7 @@ namespace Midjourney.API
         private readonly IUpgradeService _upgradeService;
         private readonly IConsulService _consulService;
         private readonly IFreeSql _freeSql = FreeSqlHelper.FreeSql;
+        private readonly INotifyService _notifyService;
 
         private Timer _timer;
         private DateTime? _upgradeTime = null;
@@ -56,7 +58,8 @@ namespace Midjourney.API
             IMemoryCache memoryCache,
             IHostApplicationLifetime applicationLifetime,
             IUpgradeService upgradeService,
-            IConsulService consulService)
+            IConsulService consulService,
+            INotifyService notifyService)
         {
             // 配置全局缓存
             GlobalConfiguration.MemoryCache = memoryCache;
@@ -66,6 +69,7 @@ namespace Midjourney.API
             _applicationLifetime = applicationLifetime;
             _upgradeService = upgradeService;
             _consulService = consulService;
+            _notifyService = notifyService;
         }
 
         /// <summary>
@@ -362,6 +366,9 @@ namespace Midjourney.API
 
                         // 检查并删除旧的文档
                         CheckAndDeleteOldDocuments();
+
+                        // 预警通知服务
+                        await NotifyAlertService();
                     }
                     catch (Exception ex)
                     {
@@ -1507,6 +1514,112 @@ namespace Midjourney.API
 
             // 优雅关闭应用程序
             Environment.Exit(0);
+        }
+
+        /// <summary>
+        /// 预警通知服务
+        /// </summary>
+        private async Task NotifyAlertService()
+        {
+            try
+            {
+                var setting = GlobalConfiguration.Setting;
+                if (setting.AlertNotify != null && setting.AlertNotify.Enable)
+                {
+                    var alert = setting.AlertNotify;
+
+                    var accountCount = (int)_freeSql.Select<DiscordAccount>().Where(c => c.Enable == true).Count();
+                    var (fastTotal, notYcRelaxTotal, ycRelaxTotal) = _notifyService.GetTodayAccountCount();
+
+                    var result = new AlertNotifyService
+                    {
+                        AvailableAccountCount = accountCount,
+                        FastRemaining = fastTotal,
+                        ErrorCount = LogCountSink.ToHourErrorLogCount,
+                        WarningCount = LogCountSink.ToHourWarningLogCount,
+                    };
+
+                    if (notYcRelaxTotal == -1)
+                    {
+                        result.RelaxedRemaining = ycRelaxTotal;
+                    }
+                    else
+                    {
+                        result.RelaxedRemaining = notYcRelaxTotal + ycRelaxTotal;
+                    }
+
+                    // 1小时最多通知 10 次，1天最多通知 100 次
+                    var hourCountKey = $"alert_notify:hour_count{DateTime.Now:yyyyMMddHH}";
+                    var dayCountKey = $"alert_notify:day_count{DateTime.Now:yyyyMMdd}";
+
+                    var hourCount = RedisHelper.Get<int>(hourCountKey);
+                    var todayCount = RedisHelper.Get<int>(dayCountKey);
+
+                    if (hourCount > 10 || todayCount > 100)
+                    {
+                        return;
+                    }
+
+                    // 比较
+                    var isNotify = false;
+
+                    if (alert.FastRemaining >= 0 && result.FastRemaining <= alert.FastRemaining)
+                    {
+                        isNotify = true;
+                    }
+                    if (alert.RelaxedRemaining >= 0 && result.RelaxedRemaining <= alert.RelaxedRemaining)
+                    {
+                        isNotify = true;
+                    }
+                    if (alert.WarningCount > 0 && result.WarningCount >= alert.WarningCount)
+                    {
+                        isNotify = true;
+                    }
+                    if (alert.ErrorCount > 0 && result.ErrorCount >= alert.ErrorCount)
+                    {
+                        isNotify = true;
+                    }
+                    if (alert.AvailableAccountCount > 0 && result.AvailableAccountCount <= alert.AvailableAccountCount)
+                    {
+                        isNotify = true;
+                    }
+
+                    if (isNotify)
+                    {
+                        await EmailHelper.Instance.EmailSend(setting.Smtp, $"MJ 账号资源预警通知", $"当前可用账号数: {result.AvailableAccountCount}，快速剩余: {result.FastRemaining}，慢速剩余: {result.RelaxedRemaining}，错误日志数: {result.ErrorCount}，警告日志数: {result.WarningCount}");
+
+                        // hooks
+                        if (!string.IsNullOrWhiteSpace(alert.NotifyHook))
+                        {
+                            try
+                            {
+                                var client = new RestClient(new RestClientOptions(alert.NotifyHook)
+                                {
+                                    Timeout = TimeSpan.FromSeconds(10),
+                                });
+                                var request = new RestRequest();
+                                request.Method = Method.Post;
+                                request.AddHeader("Content-Type", "application/json");
+                                request.AddJsonBody(result);
+                                var res = await client.ExecuteAsync(request);
+                                res?.ThrowIfError();
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.Error(ex, "预警通知服务 Webhook 通知异常");
+                            }
+                        }
+
+                        // 记录次数
+                        RedisHelper.Set(hourCountKey, ++hourCount, TimeSpan.FromDays(1));
+                        RedisHelper.Set(dayCountKey, ++todayCount, TimeSpan.FromDays(1));
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "预警通知服务异常");
+            }
         }
     }
 }

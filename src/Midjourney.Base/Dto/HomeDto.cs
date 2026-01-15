@@ -129,5 +129,15 @@ namespace Midjourney.Base.Dto
         /// 悠船放松模式剩余可用次数
         /// </summary>
         public int YouChuanRelaxAvailableCount { get; set; } = 0;
+
+        /// <summary>
+        /// 警告数
+        /// </summary>
+        public int TodayWarningCount { get; set; } = 0;
+
+        /// <summary>
+        /// 错误数
+        /// </summary>
+        public int TodayErrorCount { get; set; } = 0;
     }
 }

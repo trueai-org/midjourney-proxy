@@ -42,6 +42,7 @@ using CSRedis;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.OpenApi.Models;
+using Midjourney.Base.Utils;
 using Midjourney.License;
 using Midjourney.License.YouChuan;
 using MongoDB.Driver;
@@ -364,6 +365,7 @@ namespace Midjourney.API
                 .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
                 .Enrich.FromLogContext()
                 .WriteTo.Console()
+                .WriteTo.Sink(new LogCountSink())
                 .WriteTo.File("logs/log.txt",
                     rollingInterval: RollingInterval.Day,
                     fileSizeLimitBytes: fileSizeLimitBytes,

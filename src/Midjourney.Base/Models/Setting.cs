@@ -534,6 +534,52 @@ namespace Midjourney.Base.Models
         /// 开启官方绘图功能
         /// </summary>
         public bool EnableOfficial { get; set; }
+
+        /// <summary>
+        /// 预警通知服务
+        /// </summary>
+        public AlertNotifyService AlertNotify { get; set; } = new();
+    }
+
+    /// <summary>
+    /// 预警通知服务
+    /// </summary>
+    public class AlertNotifyService
+    {
+        /// <summary>
+        /// 启用状态
+        /// </summary>
+        public bool Enable { get; set; }
+
+        /// <summary>
+        /// 通知钩子地址
+        /// </summary>
+        public string NotifyHook { get; set; }
+
+        /// <summary>
+        /// 快速剩余
+        /// </summary>
+        public int FastRemaining { get; set; } = -1;
+
+        /// <summary>
+        /// 慢速剩余
+        /// </summary>
+        public int RelaxedRemaining { get; set; } = -1;
+
+        /// <summary>
+        /// 警告数
+        /// </summary>
+        public int WarningCount { get; set; } = 0;
+
+        /// <summary>
+        /// 错误数
+        /// </summary>
+        public int ErrorCount { get; set; } = 0;
+
+        /// <summary>
+        /// 可用账号数
+        /// </summary>
+        public int AvailableAccountCount { get; set; } = 0;
     }
 
     /// <summary>
