@@ -1716,6 +1716,14 @@ namespace Midjourney.API.Controllers
                     .Skip((page.Current - 1) * page.PageSize)
                     .Take(page.PageSize)
                     .ToList();
+
+                foreach (var item in list)
+                {
+                    if (item.Keywords == null)
+                    {
+                        item.Keywords = [];
+                    }
+                }
             }
 
             var data = list?.ToTableResult(request.Pagination.Current, request.Pagination.PageSize, count);
