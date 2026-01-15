@@ -207,7 +207,7 @@ sh docker-upgrade.sh
 # 3.2 配置宿主私网 IP：-e HOST_IP=10.0.0.1，默认不配置
 ```
 
-> [Docker Compose 所有服务文档](https://github.com/trueai-org/midjourney-proxy/wiki/Docker-Compose-Doc)
+> [所有服务启动文档 Docker Compose](https://github.com/trueai-org/midjourney-proxy/wiki/Docker-Compose-Doc)
 
 > [数据库/Redis部署教程/容器互通文档](https://github.com/trueai-org/midjourney-proxy/wiki/Docker-Doc)
 
