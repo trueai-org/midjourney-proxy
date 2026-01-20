@@ -125,6 +125,136 @@ namespace Midjourney.API
                         }
                     }
 
+                    // 是否开启数据自动迁移
+                    if (setting.IsAutoMigrate && !string.IsNullOrWhiteSpace(setting.MigrateDatabaseConnectionString))
+                    {
+                        try
+                        {
+                            var migOK = FreeSqlHelper.Verify(setting.MigrateDatabaseType, setting.MigrateDatabaseConnectionString);
+                            if (migOK)
+                            {
+                                var _mgFreesql = FreeSqlHelper.Init(setting.MigrateDatabaseType, setting.MigrateDatabaseConnectionString);
+                                if (_mgFreesql != null)
+                                {
+                                    // account 迁移
+                                    var sourceAccountIds = _mgFreesql.Select<DiscordAccount>().ToList(c => c.Id);
+                                    var targetAccountIds = _freeSql.Select<DiscordAccount>().ToList(c => c.Id);
+                                    var accountIds = sourceAccountIds.Except(targetAccountIds).ToList();
+                                    if (accountIds.Count > 0)
+                                    {
+                                        var sourceAccounts = _mgFreesql.Select<DiscordAccount>().ToList();
+                                        foreach (var id in accountIds)
+                                        {
+                                            var model = sourceAccounts.FirstOrDefault(c => c.Id == id);
+                                            if (model != null)
+                                            {
+                                                _freeSql.Add(model);
+                                            }
+                                        }
+                                    }
+
+                                    // user 迁移
+                                    var sourceUserIds = _mgFreesql.Select<User>().ToList(c => c.Id);
+                                    var targetUserIds = _freeSql.Select<User>().ToList(c => c.Id);
+                                    var userIds = sourceUserIds.Except(targetUserIds).ToList();
+                                    if (userIds.Count > 0)
+                                    {
+                                        var sourceUsers = _mgFreesql.Select<User>().ToList();
+                                        foreach (var id in userIds)
+                                        {
+                                            var model = sourceUsers.FirstOrDefault(c => c.Id == id);
+                                            if (model != null)
+                                            {
+                                                _freeSql.Add(model);
+                                            }
+                                        }
+                                    }
+
+                                    // banded 迁移
+                                    var sourceBannedIds = _mgFreesql.Select<BannedWord>().ToList(c => c.Id);
+                                    var targetBannedIds = _freeSql.Select<BannedWord>().ToList(c => c.Id);
+                                    var bannedIds = sourceBannedIds.Except(targetBannedIds).ToList();
+                                    if (bannedIds.Count > 0)
+                                    {
+                                        var sourceBanneds = _mgFreesql.Select<BannedWord>().ToList();
+                                        foreach (var id in bannedIds)
+                                        {
+                                            var model = sourceBanneds.FirstOrDefault(c => c.Id == id);
+                                            if (model != null)
+                                            {
+                                                _freeSql.Add(model);
+                                            }
+                                        }
+                                    }
+
+                                    // 迁移 task
+                                    try
+                                    {
+                                        _ = Task.Run(async () =>
+                                        {
+                                            try
+                                            {
+                                                await AdaptiveLock.ExecuteWithLock("TaskInfoAutoMigrate", TimeSpan.FromSeconds(10), () =>
+                                                {
+                                                    // 判断最后一条是否存在
+                                                    var success = 0;
+                                                    var error = 0;
+                                                    var last = _mgFreesql.Select<TaskInfo>().OrderByDescending(c => c.SubmitTime).First();
+                                                    if (last != null)
+                                                    {
+                                                        var lastModel = _freeSql.Get<TaskInfo>(c => c.Id == last.Id);
+                                                        if (lastModel == null)
+                                                        {
+                                                            // 迁移数据
+                                                            var taskIds = _mgFreesql.Select<TaskInfo>().ToList(c => c.Id);
+                                                            foreach (var tid in taskIds)
+                                                            {
+                                                                try
+                                                                {
+                                                                    var info = _mgFreesql.Get<TaskInfo>(tid);
+                                                                    if (info != null)
+                                                                    {
+                                                                        // 判断是否存在
+                                                                        var exist = _freeSql.Any<TaskInfo>(c => c.Id == info.Id);
+                                                                        if (!exist)
+                                                                        {
+                                                                            _freeSql.Add(info);
+                                                                            success++;
+                                                                        }
+                                                                    }
+                                                                }
+                                                                catch (Exception ex)
+                                                                {
+                                                                    error++;
+
+                                                                    _logger.Error(ex, "自动迁移绘图任务数异常 TaskId: {@0}", tid);
+                                                                }
+                                                            }
+
+                                                            _logger.Information("自动迁移绘图任务数据 success: {@0}, error: {@1}", success, error);
+                                                        }
+                                                    }
+                                                });
+                                            }
+                                            catch (Exception ex)
+                                            {
+                                                _logger.Error(ex, "自动迁移绘图任务数据 error");
+                                            }
+                                        });
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        _logger.Error(ex, "数据迁移任务信息异常");
+                                    }
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.Error(ex, "数据迁移服务异常");
+                        }
+                    }
+
                     //// 初始化数据库索引
                     //DbHelper.Instance.IndexInit();
 

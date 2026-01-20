@@ -247,11 +247,21 @@ namespace Midjourney.Base.Models
         public string LicenseKey { get; set; } = "trueai.org";
 
         /// <summary>
-        /// LiteDB 自动迁移任务（废弃）
-        /// 启动时将 MongoDB 数据迁移到迁移到当前数据库
-        /// 本地数据库是否自动迁移到其他数据库
+        /// 自动迁移任务
+        /// 启动时将原数据迁移到迁移到当前数据库
         /// </summary>
         public bool IsAutoMigrate { get; set; }
+
+        /// <summary>
+        /// 迁移数据库类型
+        /// </summary>
+        public DatabaseType MigrateDatabaseType { get; set; }
+
+        /// <summary>
+        /// 迁移数据库连接字符串
+        /// </summary>
+        public string MigrateDatabaseConnectionString { get; set; }
+
 
         /// <summary>
         /// 保存最大数据
