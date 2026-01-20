@@ -1938,15 +1938,16 @@ namespace Midjourney.API.Controllers
                 return Result.Fail("演示模式，禁止操作");
             }
 
-            //// 如果是 mongodb 则验证数据库名称
-            //if (setting.DatabaseType == DatabaseType.MongoDB)
-            //{
-            //    if (string.IsNullOrWhiteSpace(setting.DatabaseName))
-            //    {
-            //        return Result.Fail("请输入数据库名称");
-            //    }
-            //}
+            // 数据迁移验证
+            if (setting.IsAutoMigrate)
+            {
+                if (setting.MigrateDatabaseType == setting.DatabaseType && setting.DatabaseConnectionString == setting.MigrateDatabaseConnectionString)
+                {
+                    return Result.Fail("迁移数据库不能与当前数据库相同");
+                }
+            }
 
+            // 数据库验证
             var dbSuccess = FreeSqlHelper.Verify(setting.DatabaseType, setting.DatabaseConnectionString);
             if (!dbSuccess)
             {
