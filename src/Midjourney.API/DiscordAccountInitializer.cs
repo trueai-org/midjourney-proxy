@@ -199,6 +199,7 @@ namespace Midjourney.API
                                                     // 判断最后一条是否存在
                                                     var success = 0;
                                                     var error = 0;
+                                                    var process = 0;
                                                     var last = _mgFreesql.Select<TaskInfo>().OrderByDescending(c => c.SubmitTime).First();
                                                     if (last != null)
                                                     {
@@ -207,16 +208,20 @@ namespace Midjourney.API
                                                         {
                                                             // 迁移数据
                                                             var taskIds = _mgFreesql.Select<TaskInfo>().ToList(c => c.Id);
+
+                                                            _logger.Information("开始自动迁移绘图任务数据，总数：{@0}", taskIds.Count);
+                                                             
+
                                                             foreach (var tid in taskIds)
                                                             {
                                                                 try
                                                                 {
-                                                                    var info = _mgFreesql.Get<TaskInfo>(tid);
-                                                                    if (info != null)
+                                                                    // 判断是否存在
+                                                                    var exist = _freeSql.Any<TaskInfo>(c => c.Id == tid);
+                                                                    if (!exist)
                                                                     {
-                                                                        // 判断是否存在
-                                                                        var exist = _freeSql.Any<TaskInfo>(c => c.Id == info.Id);
-                                                                        if (!exist)
+                                                                        var info = _mgFreesql.Get<TaskInfo>(tid);
+                                                                        if (info != null)
                                                                         {
                                                                             _freeSql.Add(info);
                                                                             success++;
@@ -228,6 +233,15 @@ namespace Midjourney.API
                                                                     error++;
 
                                                                     _logger.Error(ex, "自动迁移绘图任务数异常 TaskId: {@0}", tid);
+                                                                }
+                                                                finally
+                                                                {
+                                                                    process++;
+
+                                                                    if (process % 100 == 0)
+                                                                    {
+                                                                        _logger.Information("自动迁移绘图任务数据进度: {@0}/{@1}", process, taskIds.Count);
+                                                                    }
                                                                 }
                                                             }
 
