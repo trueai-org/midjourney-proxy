@@ -28,6 +28,7 @@ using FreeSql.DataAnnotations;
 using Microsoft.Extensions.Caching.Memory;
 using Midjourney.Base.Data;
 using Midjourney.Base.Dto;
+using Midjourney.Base.Util;
 using MongoDB.Driver;
 using Serilog;
 
@@ -78,15 +79,15 @@ namespace Midjourney.Base.Models
         /// </summary>
         public const string YOUCHUAN_CDN_PREFIX = "youchuan-imagine.oss-cn-shanghai";
 
-        /// <summary>
-        /// 版本号匹配正则表达式。
-        /// </summary>
-        private const string VERSION_PATTERN = @"--(?<flag>v|niji)\s*(?<version>\d+(?:\.\d+)?)";
+        ///// <summary>
+        ///// 版本号匹配正则表达式。
+        ///// </summary>
+        //private const string VERSION_PATTERN = @"--(?<flag>v|niji)\s*(?<version>\d+(?:\.\d+)?)";
 
-        /// <summary>
-        /// 版本号匹配正则表达式实例。
-        /// </summary>
-        private static readonly Regex VersionRegex = new Regex(VERSION_PATTERN, RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        ///// <summary>
+        ///// 版本号匹配正则表达式实例。
+        ///// </summary>
+        //private static readonly Regex VersionRegex = new Regex(VERSION_PATTERN, RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         public TaskInfo()
         {
@@ -1233,34 +1234,33 @@ namespace Midjourney.Base.Models
         /// 获取版本
         /// </summary>
         /// <param name="prompt"></param>
-        /// <returns>v 6.1, niji 6</returns>
+        /// <returns>v 6.1, niji 6, niji 7, v 7</returns>
         public string GetVersion(string prompt)
         {
             if (string.IsNullOrWhiteSpace(prompt))
             {
-                // 默认返回 v 7
-                return "v 7";
+                return $"v {MjParseResult.DEFALUT_MJ_VERSION}";
             }
 
-            var mat = VersionRegex.Match(prompt);
-            if (mat.Success)
+            var result = MjPromptParser.Parse(prompt);
+            if (BotType == EBotType.NIJI_JOURNEY || result.IsNijiMode)
             {
-                var version = mat.Groups["version"].Value;
-                var flag = mat.Groups["flag"].Value;
-                if (!string.IsNullOrWhiteSpace(version) && !string.IsNullOrWhiteSpace(flag))
+                var v = result.GetVersion();
+                if (!string.IsNullOrWhiteSpace(v))
                 {
-                    return $"{flag} {version}".Trim();
+                    return "niji " + v;
                 }
+                return $"niji {MjParseResult.DEFALUT_NIJI_VERSION}";
             }
-
-            // niji 默认 niji 6
-            if (BotType == EBotType.NIJI_JOURNEY || prompt.Contains("--niji"))
+            else
             {
-                return "niji 6";
+                var v = result.GetVersion();
+                if (!string.IsNullOrWhiteSpace(v))
+                {
+                    return "v " + v;
+                }
+                return $"v {MjParseResult.DEFALUT_MJ_VERSION}";
             }
-
-            // 默认返回 v 7
-            return "v 7";
         }
 
         /// <summary>

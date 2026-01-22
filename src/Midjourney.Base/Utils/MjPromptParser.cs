@@ -55,6 +55,16 @@ namespace Midjourney.Base.Util
     /// </summary>
     public class MjParseResult
     {
+        /// <summary>
+        /// 默认 MJ 版本
+        /// </summary>
+        public const string DEFALUT_MJ_VERSION = "7";
+
+        /// <summary>
+        /// 默认 NIJI 版本
+        /// </summary>
+        public const string DEFALUT_NIJI_VERSION = "7";
+
         /// <summary>干净的提示词（移除所有参数后的纯文本）</summary>
         public string CleanPrompt { get; set; } = string.Empty;
 
@@ -122,7 +132,28 @@ namespace Midjourney.Base.Util
 
         /// <summary>获取版本号</summary>
         /// <returns>版本号字符串，如 "7", "6.1"</returns>
-        public string GetVersion() => GetValue("version") ?? GetValue("v");
+        public string GetVersion()
+        {
+            var ver = GetValue("version");
+            var v = GetValue("v");
+
+            if (!string.IsNullOrWhiteSpace(ver))
+            {
+                return ver;
+            }
+
+            if (!string.IsNullOrWhiteSpace(v))
+            {
+                return v;
+            }
+
+            if (IsNijiMode)
+            {
+                return DEFALUT_NIJI_VERSION;
+            }
+
+            return DEFALUT_MJ_VERSION;
+        }
 
         /// <summary>获取宽高比</summary>
         /// <returns>宽高比字符串，如 "16:9"</returns>
@@ -219,7 +250,7 @@ namespace Midjourney.Base.Util
                 ShortName = "",
                 Description = "动漫/二次元模式 (Midjourney与Spellbrush合作开发)",
                 DescriptionEn = "Anime-style model co-developed with Spellbrush",
-                ValueRange = "4, 5, 6",
+                ValueRange = "4, 5, 6, 7",
                 DefaultValue = "",
                 SupportedVersions = "Niji专用"
             },

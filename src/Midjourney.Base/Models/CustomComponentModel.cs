@@ -111,6 +111,7 @@ namespace Midjourney.Base.Models
 
             // --v 6
             // --niji 6
+            // --niji 7
             // v6_2x_subtle
             // v6_2x_creative
 

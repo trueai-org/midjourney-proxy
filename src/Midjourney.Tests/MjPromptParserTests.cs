@@ -268,6 +268,28 @@ namespace Midjourney.Tests
             Assert.Equal("6", result.GetValue("niji"));
         }
 
+
+        [Fact]
+        public void Parse_Niji_ShouldRecognize7()
+        {
+            var result = MjPromptParser.Parse("anime girl --niji 7");
+            Assert.True(result.IsNijiMode);
+            Assert.Equal("7", result.GetValue("niji"));
+        }
+
+
+        [Fact]
+        public void Parse_Niji_ShouldRecognize7null()
+        {
+            var result = MjPromptParser.Parse("anime girl --niji");
+            var niji = result.GetValue("niji");
+            var v = result.GetVersion();
+
+            Assert.True(result.IsNijiMode);
+            Assert.Equal("7", v);
+        }
+
+
         [Fact]
         public void Parse_DraftMode_ShouldRecognize()
         {
