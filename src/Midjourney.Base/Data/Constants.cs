@@ -59,6 +59,11 @@ namespace Midjourney.Base.Data
         /// </summary>
         public const string DEFAULT_BANNED_WORD_ID = "default";
 
+        /// <summary>
+        /// 官方默认违规词  ID
+        /// </summary>
+        public const string OFFICIAL_DEFAULT_BANNED_WORD_ID = "official_default";
+
         // -----------------
 
         /// <summary>

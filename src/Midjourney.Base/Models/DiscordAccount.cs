@@ -719,6 +719,16 @@ namespace Midjourney.Base.Models
         public bool OfficialEnablePersonalize { get; set; } = false;
 
         /// <summary>
+        /// 官方账号奖励时长
+        /// </summary>
+        public int OfficialMinutesAwarded { get; set; } = 0;
+
+        /// <summary>
+        /// 官方账号是否已经进行问卷调查
+        /// </summary>
+        public bool OfficialHasSurveyed { get; set; } = false;
+
+        /// <summary>
         /// 服务运行中 - 用于前台显示
         /// </summary>
         [LiteDB.BsonIgnore]

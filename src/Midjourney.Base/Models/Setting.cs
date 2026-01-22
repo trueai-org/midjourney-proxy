@@ -155,6 +155,11 @@ namespace Midjourney.Base.Models
         public List<string> PrivateFeatures { get; set; } = [];
 
         /// <summary>
+        /// 私人定制开启官网账号问卷自动调查功能
+        /// </summary>
+        public bool PrivateEnableOfficialAccountSurvey { get; set; } = false;
+
+        /// <summary>
         /// 移除请求速度参数
         /// 所有操作提交前添加一个拦截和移除速度参数，当用户没有指定、没有提交、没有路径等包含速度模式时，移除最终提交任务的速度参数
         /// </summary>

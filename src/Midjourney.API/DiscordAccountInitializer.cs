@@ -210,7 +210,6 @@ namespace Midjourney.API
                                                             var taskIds = _mgFreesql.Select<TaskInfo>().ToList(c => c.Id);
 
                                                             _logger.Information("开始自动迁移绘图任务数据，总数：{@0}", taskIds.Count);
-                                                             
 
                                                             foreach (var tid in taskIds)
                                                             {
@@ -1011,6 +1010,16 @@ namespace Midjourney.API
                         if (account.IsDiscord && disInstance != null && disInstance.Wss == null)
                         {
                             await DiscordWebSocketService.CreateAndStartAsync(disInstance);
+                        }
+
+                        // 官方问卷调查，成功后强制同步一次
+                        if (account.IsOfficial && !account.OfficialHasSurveyed && disInstance != null)
+                        {
+                            var survey = await disInstance.YmTaskService?.EnableSurveyAutoProcessAsync();
+                            if (survey == true)
+                            {
+                                await disInstance?.SyncInfoSetting(true);
+                            }
                         }
 
                         // 刷新账号信息

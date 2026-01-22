@@ -112,5 +112,11 @@ namespace Midjourney.Base.Services
         /// <param name="isRight"></param>
         /// <returns></returns>
         Task<ProfileGetRandomPairsResponse> ProfileCreateRateAsync(PersonalizeTag personalize, bool? isRight = null);
+
+        /// <summary>
+        /// 开启问卷调查自动作业处理
+        /// </summary>
+        /// <returns></returns>
+        Task<bool> EnableSurveyAutoProcessAsync();
     }
 }

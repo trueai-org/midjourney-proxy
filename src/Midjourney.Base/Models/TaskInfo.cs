@@ -24,13 +24,11 @@
 
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using FreeSql.DataAnnotations;
 using Microsoft.Extensions.Caching.Memory;
 using Midjourney.Base.Data;
 using Midjourney.Base.Dto;
 using MongoDB.Driver;
-using Newtonsoft.Json.Linq;
 using Serilog;
 
 namespace Midjourney.Base.Models
@@ -675,7 +673,7 @@ namespace Midjourney.Base.Models
                 Prompt = Prompt?.RemoveSeed();
                 PromptEn = PromptEn?.RemoveSeed();
 
-                SetProperty(Constants.TASK_PROPERTY_MESSAGE_CONTENT, 
+                SetProperty(Constants.TASK_PROPERTY_MESSAGE_CONTENT,
                     GetProperty<string>(Constants.TASK_PROPERTY_MESSAGE_CONTENT, default)?.RemoveSeed());
             }
 
@@ -852,6 +850,65 @@ namespace Midjourney.Base.Models
             }
 
             return 4;
+        }
+
+        /// <summary>
+        /// 官方任务执行失败处理 - 自动处理违规词将违规词自动添加到词库
+        /// </summary>
+        /// <param name="reason"></param>
+        /// <param name="banWord"></param>
+        public void Fail(string reason, string banWord)
+        {
+            if (!string.IsNullOrWhiteSpace(banWord))
+            {
+                try
+                {
+                    var setting = GlobalConfiguration.Setting;
+                    if (setting.EnableAutoCollectOfficialBannedWords)
+                    {
+                        var fsql = FreeSqlHelper.FreeSql;
+                        if (fsql != null)
+                        {
+                            var bannedWords = fsql.Select<BannedWord>().ToList()
+                                .SelectMany(c => c.Keywords)
+                                .ToList() ?? [];
+
+                            if (!bannedWords.Contains(banWord))
+                            {
+                                var obw = fsql.Select<BannedWord>().Where(c => c.Id == Constants.OFFICIAL_DEFAULT_BANNED_WORD_ID).First();
+                                if (obw == null)
+                                {
+                                    obw = new BannedWord()
+                                    {
+                                        Id = Constants.OFFICIAL_DEFAULT_BANNED_WORD_ID,
+                                        Name = "官方默认违规词库",
+                                        Keywords = [banWord],
+                                        Enable = true,
+                                        Weight = 1,
+                                    };
+                                }
+                                else
+                                {
+                                    if (!obw.Keywords.Contains(banWord))
+                                    {
+                                        obw.Keywords.Add(banWord);
+                                    }
+                                }
+
+                                fsql.Save(obw);
+
+                                AdaptiveCache.Remove("bannedWords");
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex, "自动添加违规词失败: {@0}", banWord);
+                }
+            }
+
+            Fail(reason);
         }
 
         /// <summary>
