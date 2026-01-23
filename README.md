@@ -202,9 +202,14 @@ wget -O docker-upgrade.sh https://raw.githubusercontent.com/trueai-org/midjourne
 # 2.更新升级（以后升级只需要执行此脚本即可）
 sh docker-upgrade.sh
 
-# 3. Docker 环境变量
-# 3.1 节点最大任务并行数：-e CONCURRENT=10，默认不限制
-# 3.2 配置宿主私网 IP：-e HOST_IP=10.0.0.1，默认不配置
+# 3. Docker 环境变量（默认不需要配置）
+# 节点最大任务并行数：-e CONCURRENT=10
+# 配置宿主私网 IP：-e HOST_IP=10.0.0.1
+
+# 4. Kestrel 环境变量（默认不需要配置）
+# KESTREL_MIN_REQUEST_BODY_BYTES_PER_SECOND：最小请求体数据速率，单位字节/秒，默认：240，推荐：10 - 1000
+# KESTREL_SLOW_BUFFER_SECONDS：允许的缓冲时间，单位秒，默认：5，推荐：5 - 30
+# KESTREL_MAX_REQUEST_BODY_SIZE：最大请求体大小，单位 MB，默认：30，推荐：10 - 100
 ```
 
 > [所有服务启动文档 Docker Compose](https://github.com/trueai-org/midjourney-proxy/wiki/Docker-Compose-Doc)

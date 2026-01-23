@@ -61,6 +61,31 @@ namespace Midjourney.API
                 // 创建并运行主机
                 var builder = WebApplication.CreateBuilder(args);
 
+                // Kestrel 环境变量参数配置说明：
+                // KESTREL_MIN_REQUEST_BODY_BYTES_PER_SECOND：最小请求体数据速率，单位字节/秒，默认：240，推荐：10 - 1000
+                // KESTREL_SLOW_BUFFER_SECONDS：允许的缓冲时间，单位秒，默认：5，推荐：5 - 30
+                // KESTREL_MAX_REQUEST_BODY_SIZE：最大请求体大小，单位 MB，默认：30，推荐：10 - 100
+                var minBytesPerSecondEnv = Environment.GetEnvironmentVariable("KESTREL_MIN_REQUEST_BODY_BYTES_PER_SECOND");
+                var slowBufferSecondsEnv = Environment.GetEnvironmentVariable("KESTREL_SLOW_BUFFER_SECONDS");
+                var maxRequestBodySizeEnv = Environment.GetEnvironmentVariable("KESTREL_MAX_REQUEST_BODY_SIZE");
+
+                builder.WebHost.ConfigureKestrel(serverOptions =>
+                {
+                    if (!string.IsNullOrWhiteSpace(minBytesPerSecondEnv) && !string.IsNullOrWhiteSpace(slowBufferSecondsEnv)
+                    && int.TryParse(minBytesPerSecondEnv, out var minBytesPerSecond)
+                    && int.TryParse(slowBufferSecondsEnv, out var slowBufferSeconds))
+                    {
+                        serverOptions.Limits.MinRequestBodyDataRate = new Microsoft.AspNetCore.Server.Kestrel.Core.MinDataRate(
+                            bytesPerSecond: minBytesPerSecond,
+                            gracePeriod: TimeSpan.FromSeconds(slowBufferSeconds));
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(maxRequestBodySizeEnv) && int.TryParse(maxRequestBodySizeEnv, out var maxRequestBodySize))
+                    {
+                        serverOptions.Limits.MaxRequestBodySize = maxRequestBodySize * 1024 * 1024; // 转换为字节
+                    }
+                });
+
                 // 清除默认日志提供器，使用 Serilog 全面替代
                 builder.Logging.ClearProviders();
 
@@ -69,6 +94,13 @@ namespace Midjourney.API
 
                 // 让 Host 使用 Serilog
                 builder.Host.UseSerilog();
+
+                Log.Information("应用程序正在启动...");
+
+                // Kestrel
+                Log.Information("Kestrel 最小请求体数据速率：{0} 字节/秒", minBytesPerSecondEnv ?? "默认");
+                Log.Information("Kestrel 允许的缓冲时间：{0} 秒", slowBufferSecondsEnv ?? "默认");
+                Log.Information("Kestrel 最大请求体大小：{0} 字节", maxRequestBodySizeEnv ?? "默认");
 
                 // --- 服务注册与初始化 ---
 
