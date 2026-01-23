@@ -100,7 +100,7 @@ namespace Midjourney.API
                 // Kestrel
                 Log.Information("Kestrel 最小请求体数据速率：{0} 字节/秒", minBytesPerSecondEnv ?? "默认");
                 Log.Information("Kestrel 允许的缓冲时间：{0} 秒", slowBufferSecondsEnv ?? "默认");
-                Log.Information("Kestrel 最大请求体大小：{0} 字节", maxRequestBodySizeEnv ?? "默认");
+                Log.Information("Kestrel 最大请求体大小：{0} MB", maxRequestBodySizeEnv ?? "默认");
 
                 // --- 服务注册与初始化 ---
 

@@ -149,6 +149,12 @@ namespace Midjourney.Base.Util
 
             if (IsNijiMode)
             {
+                var nijiVer = GetValue("niji");
+                if (!string.IsNullOrWhiteSpace(nijiVer))
+                {
+                    return nijiVer;
+                }
+
                 return DEFALUT_NIJI_VERSION;
             }
 
