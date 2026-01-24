@@ -310,38 +310,31 @@ namespace Midjourney.Services
         }
 
         /// <summary>
-        /// 计数器验证，通过速度模式精确判断，判断是否快速/慢速次数是否足够
+        /// 判断是否允许生成视频
         /// </summary>
+        /// <param name="isVideo"></param>
         /// <returns></returns>
-        public bool IsValidAvailableCount(GenerationSpeedMode? mode)
+        public bool IsAllowGenerateVideo()
         {
-            // 如果是快速模式，判断快速是否足够次数
-            if (mode == GenerationSpeedMode.FAST)
+            // 如果是悠船账号
+            var acc = Account;
+            if (acc.IsYouChuan)
             {
-                // 如果超过 3 次快速
-                return FastAvailableCount > 3;
-            }
-            else if (mode == GenerationSpeedMode.TURBO)
-            {
-                // 如果超过 6 次快速
-                return FastAvailableCount > 6;
-            }
-            // 如果慢速模式，只有悠船才判断慢速次数
-            else if (mode == GenerationSpeedMode.RELAX && Account.IsYouChuan)
-            {
-                return IsYouChuanAllowRelax();
+                // 快速 > 480, 即: 60 * 8
+                return FastAvailableCount > 480;
             }
 
-            // 没有速度要求
-            if (mode == null)
+            // 如果是官方账号
+            if (acc.IsOfficial)
             {
-                // 有快速或或慢速
-                if (Account.IsYouChuan)
-                {
-                    return FastAvailableCount > 3 || IsYouChuanAllowRelax();
-                }
+                // 开启慢速，或者慢速 > 8 minutes
+                return FastAvailableCount > 480 || acc.IsRelaxVideo;
+            }
 
-                return true;
+            // Discord 账号
+            if (acc.IsDiscord)
+            {
+                return FastAvailableCount > 480 || acc.IsRelaxVideo;
             }
 
             return false;

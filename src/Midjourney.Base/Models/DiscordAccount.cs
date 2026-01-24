@@ -673,36 +673,6 @@ namespace Midjourney.Base.Models
         public DateTime? YouChuanPicreadReset { get; set; }
 
         /// <summary>
-        /// 判断是否允许生成视频
-        /// </summary>
-        /// <param name="isVideo"></param>
-        /// <returns></returns>
-        public bool IsAllowGenerateVideo()
-        {
-            // 如果是悠船账号
-            if (IsYouChuan)
-            {
-                // 快速 > 480, 即: 60 * 8
-                return YouChuanFastRemaining > 480;
-            }
-
-            // 如果是官方账号
-            if (IsOfficial)
-            {
-                // 开启慢速，或者慢速 > 8 minutes
-                return OfficialFastRemaining > 480 || IsRelaxVideo;
-            }
-
-            // Discord 账号
-            if (IsDiscord)
-            {
-                return FastExhausted == false || IsRelaxVideo;
-            }
-
-            return false;
-        }
-
-        /// <summary>
         /// 是否为官方账号
         /// </summary>
         public bool IsOfficial { get; set; }

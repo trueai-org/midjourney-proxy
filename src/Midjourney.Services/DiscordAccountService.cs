@@ -170,7 +170,7 @@ namespace Midjourney.Services
                        .WhereIf(isDiscord == true, c => c.Account.IsDiscord)
 
                        // 判断是否允许视频操作
-                       .WhereIf(isVideo == true, c => c.Account.IsAllowGenerateVideo())
+                       .WhereIf(isVideo == true, c => c.IsAllowGenerateVideo())
 
                        // 高清视频支持
                        .WhereIf(isHdVideo == true, c => c.Account.IsHdVideo)

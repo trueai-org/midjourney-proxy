@@ -1348,9 +1348,22 @@ namespace Midjourney.Services
                 {
                     if (instance != null && instance.IsAllowContinue(m) && instance.Account.IsAcceptActionTask())
                     {
-                        isContinue = true;
-                        mode = m;
-                        break;
+                        if(task.Action == TaskAction.VIDEO)
+                        {
+                            // 判断是否允许视频操作
+                            if (instance.IsAllowGenerateVideo())
+                            {
+                                isContinue = true;
+                                mode = m;
+                                break;
+                            }
+                        }
+                        else
+                        {
+                            isContinue = true;
+                            mode = m;
+                            break;
+                        }
                     }
                 }
             }
@@ -1391,6 +1404,7 @@ namespace Midjourney.Services
                              botType: task.RealBotType ?? task.BotType,
                              instanceIds: ids,
                              isUpscale: task.Action == TaskAction.UPSCALE,
+                             isVideo: task.Action == TaskAction.VIDEO,
                              notInstanceIds: [task.SubInstanceId ?? task.InstanceId]);
 
                         if (okInstance != null)
@@ -1416,6 +1430,7 @@ namespace Midjourney.Services
                         accountFilter: task.AccountFilter,
                         botType: task.RealBotType ?? task.BotType,
                         isUpscale: task.Action == TaskAction.UPSCALE,
+                        isVideo: task.Action == TaskAction.VIDEO,
                         notInstanceIds: [task.SubInstanceId ?? task.InstanceId]);
 
                     if (okInstance != null)
@@ -1435,9 +1450,22 @@ namespace Midjourney.Services
                     {
                         if (instance != null && instance.IsAllowContinue(m) && instance.Account.IsAcceptActionTask())
                         {
-                            isContinue = true;
-                            mode = m;
-                            break;
+                            if(task.Action == TaskAction.VIDEO)
+                            {
+                                // 判断是否允许视频操作
+                                if (instance.IsAllowGenerateVideo())
+                                {
+                                    isContinue = true;
+                                    mode = m;
+                                    break;
+                                }
+                            }
+                            else
+                            {
+                                isContinue = true;
+                                mode = m;
+                                break;
+                            }
                         }
                     }
                 }
@@ -1495,7 +1523,7 @@ namespace Midjourney.Services
             }
 
             // 判断是否允许视频操作
-            if (task.Action == TaskAction.VIDEO && !instance.Account.IsAllowGenerateVideo())
+            if (task.Action == TaskAction.VIDEO && !instance.IsAllowGenerateVideo())
             {
                 return SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "无可用的账号实例");
             }
@@ -1891,6 +1919,12 @@ namespace Midjourney.Services
             if (instance == null || submitResult.Code != ReturnCode.SUCCESS)
             {
                 return submitResult;
+            }
+
+            // 判断是否允许视频操作
+            if (task.Action == TaskAction.VIDEO && !instance.IsAllowGenerateVideo())
+            {
+                return SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "无可用的账号实例");
             }
 
             task.InstanceId = instance.ChannelId;
