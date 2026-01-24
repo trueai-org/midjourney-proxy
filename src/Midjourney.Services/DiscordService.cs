@@ -3778,7 +3778,7 @@ namespace Midjourney.Services
                 if (isClearCache || cacheValue != true)
                 {
                     // 检查通过后才清除
-                    AdaptiveCache.Remove(cacheKey);
+                    RedisHelper.Instance.Del(cacheKey);
                 }
 
                 if (acc.IsOfficial)
@@ -3791,7 +3791,7 @@ namespace Midjourney.Services
                         cacheMinutes = Random.Shared.Next(180, 360);
                     }
 
-                    success = await AdaptiveCache.GetOrCreateAsync(cacheKey, YmTaskService.SyncOfficialInfo, TimeSpan.FromMinutes(cacheMinutes));
+                    success = await RedisHelper.Instance.GetOrCreate(cacheKey, YmTaskService.SyncOfficialInfo, TimeSpan.FromMinutes(cacheMinutes));
                 }
 
                 if (acc.IsDiscord)
@@ -3810,7 +3810,7 @@ namespace Midjourney.Services
                         cacheMinutes = Random.Shared.Next(180, 360);
                     }
 
-                    success = await AdaptiveCache.GetOrCreateAsync(cacheKey, async () =>
+                    success = await RedisHelper.Instance.GetOrCreate(cacheKey, async () =>
                     {
                         var sw = Stopwatch.StartNew();
                         if (Account.EnableMj == true)
@@ -3891,6 +3891,30 @@ namespace Midjourney.Services
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// 清除同步缓存/同步频率 - 重连/停用/修改配置/修改令牌 时调用
+        /// </summary>
+        public void ClearSyncInfoCache()
+        {
+            var acc = Account;
+            if (acc != null)
+            {
+                var cacheKey = $"SyncInfoCache:{acc.ChannelId}";
+                RedisHelper.Del(cacheKey);
+
+                var now = DateTime.Now;
+                var m05key = $"SyncInfoLimit:{now:yyyyMMddHH}_05m_{now.Minute / 5}:{acc.ChannelId}";
+                var m10key = $"SyncInfoLimit:{now:yyyyMMddHH}_10m_{now.Minute / 10}:{acc.ChannelId}";
+                var m30key = $"SyncInfoLimit:{now:yyyyMMddHH}_30m_{now.Minute / 30}:{acc.ChannelId}";
+                var m60key = $"SyncInfoLimit:{now:yyyyMMddHH}:{acc.ChannelId}";
+
+                RedisHelper.Del(m05key);
+                RedisHelper.Del(m10key);
+                RedisHelper.Del(m30key);
+                RedisHelper.Del(m60key);
+            }
         }
     }
 

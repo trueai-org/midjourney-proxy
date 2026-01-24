@@ -1255,9 +1255,6 @@ namespace Midjourney.API
             model.CfHashUrl = null;
             model.CfUrl = null;
 
-            //// 清除风控状态
-            //model.RiskControlUnlockTime = null;
-
             // 验证 Interval
             if (param.Interval < 0m)
             {
@@ -1332,7 +1329,6 @@ namespace Midjourney.API
             model.TimeoutMinutes = param.TimeoutMinutes;
             model.Weight = param.Weight;
             model.Remark = param.Remark;
-            //model.BotToken = param.BotToken;
             model.UserToken = param.UserToken;
             model.Mode = param.Mode;
             model.Sponsor = param.Sponsor;
@@ -1352,7 +1348,7 @@ namespace Midjourney.API
         /// 释放账号连接
         /// </summary>
         /// <param name="account"></param>
-        public void DisposeAccount(DiscordAccount account)
+        public void DisposeAccount(DiscordAccount account, bool isClearCache)
         {
             try
             {
@@ -1363,6 +1359,11 @@ namespace Midjourney.API
                     var disInstance = _acountService.GetDiscordInstance(account.ChannelId);
                     if (disInstance != null)
                     {
+                        if(isClearCache)
+                        {
+                            disInstance.ClearSyncInfoCache();
+                        }
+
                         // 如果令牌修改了，则必须移除
                         if (account.UserToken != disInstance?.Account.UserToken)
                         {
@@ -1377,6 +1378,11 @@ namespace Midjourney.API
                     var disInstance = _acountService.GetDiscordInstance(account.ChannelId);
                     if (disInstance != null)
                     {
+                        if (isClearCache)
+                        {
+                            disInstance.ClearSyncInfoCache();
+                        }
+
                         _acountService.RemoveInstance(disInstance);
                         disInstance.Dispose();
                     }

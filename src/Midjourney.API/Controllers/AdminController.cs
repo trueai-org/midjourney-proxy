@@ -1003,11 +1003,13 @@ namespace Midjourney.API.Controllers
                 param.IsShorten = false;
             }
 
+            var isClearCache = param.Enable != model.Enable || param.UserToken != model.UserToken;
+
             // 更新账号信息
             var account = await _discordAccountInitializer.UpdateAccount(param);
 
             // 释放连接
-            _discordAccountInitializer.DisposeAccount(account);
+            _discordAccountInitializer.DisposeAccount(account, isClearCache);
 
             // 启动连接
             await _discordAccountInitializer.StartAccount(account);

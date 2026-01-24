@@ -2049,6 +2049,11 @@ namespace Midjourney.Services
                 throw new LogicException("无可用的账号实例");
             }
 
+            if(isClearCache)
+            {
+                discordInstance.ClearSyncInfoCache();
+            }
+
             return await discordInstance.SyncInfoSetting(isClearCache);
         }
 
