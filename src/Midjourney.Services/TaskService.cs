@@ -1310,16 +1310,17 @@ namespace Midjourney.Services
                 return null;
             }
 
-            // 如果没有设置模式，则使用目标任务的模式
-            if (task.Mode == null)
-            {
-                task.Mode = targetTask.Mode;
-            }
+            // 不需要配置，每个任务都是独立计算速度模式的
+            //// 如果没有设置模式，则使用目标任务的模式
+            //if (task.Mode == null)
+            //{
+            //    task.Mode = targetTask.Mode;
+            //}
 
-            if (task.RequestMode == null)
-            {
-                task.RequestMode = targetTask.RequestMode;
-            }
+            //if (task.RequestMode == null)
+            //{
+            //    task.RequestMode = targetTask.RequestMode;
+            //}
 
             task.IsPartner = targetTask.IsPartner;
             task.IsOfficial = targetTask.IsOfficial;
@@ -1397,6 +1398,7 @@ namespace Midjourney.Services
                     {
                         // 清除指定实例
                         task.AccountFilter.InstanceId = null;
+
                         var (okInstance, okMode) = _accountService.ChooseInstance(
                              isDiscord: true,
                              isActionTask: true,
