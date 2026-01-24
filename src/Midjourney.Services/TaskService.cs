@@ -1579,7 +1579,7 @@ namespace Midjourney.Services
             // 如果是 remix
             if (submitAction.EnableRemix == true)
             {
-                if (!instance.Account.IsOfficial && !instance.Account.IsYouChuan)
+                if (instance.Account.IsDiscord)
                 {
                     var bt = task.RealBotType ?? task.BotType;
 
@@ -1595,7 +1595,7 @@ namespace Midjourney.Services
                     }
                 }
 
-                // 悠船、管饭账号不判断 remix
+                // 悠船、官方账号不判断 remix
                 if (task.Action == TaskAction.PAN || task.Action == TaskAction.VARIATION || submitAction.CustomId.StartsWith("MJ::JOB::reroll") || task.Action == TaskAction.VIDEO)
                 {
                     task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_ID, targetTask.MessageId);
@@ -1822,7 +1822,10 @@ namespace Midjourney.Services
                 }
             }
             // REMIX 处理
-            else if (task.Action == TaskAction.PAN || task.Action == TaskAction.VARIATION || submitAction.CustomId.StartsWith("MJ::JOB::reroll"))
+            else if (task.Action == TaskAction.PAN 
+                || task.Action == TaskAction.VARIATION
+                || task.Action == TaskAction.VIDEO
+                || submitAction.CustomId.StartsWith("MJ::JOB::reroll"))
             {
                 task.SetProperty(Constants.TASK_PROPERTY_MESSAGE_ID, targetTask.MessageId);
                 task.SetProperty(Constants.TASK_PROPERTY_FLAGS, messageFlags);
