@@ -320,21 +320,19 @@ namespace Midjourney.Services
             var acc = Account;
             if (acc.IsYouChuan)
             {
-                // 快速 > 480, 即: 60 * 8
-                return FastAvailableCount > 480;
+                return FastAvailableCount > 8;
             }
 
             // 如果是官方账号
             if (acc.IsOfficial)
             {
-                // 开启慢速，或者慢速 > 8 minutes
-                return FastAvailableCount > 480 || acc.IsRelaxVideo;
+                return FastAvailableCount > 8 || acc.IsRelaxVideo;
             }
 
             // Discord 账号
             if (acc.IsDiscord)
             {
-                return FastAvailableCount > 480 || acc.IsRelaxVideo;
+                return FastAvailableCount > 8 || acc.IsRelaxVideo;
             }
 
             return false;
