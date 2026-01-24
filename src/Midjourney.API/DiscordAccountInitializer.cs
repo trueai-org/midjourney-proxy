@@ -884,9 +884,16 @@ namespace Midjourney.API
                         // 快速时长校验
                         // 如果 fastTime <= 0.2，则标记为快速用完
                         var fastTime = account.FastTimeRemaining?.ToString()?.Split('/')?.FirstOrDefault()?.Trim();
-                        if (!string.IsNullOrWhiteSpace(fastTime) && double.TryParse(fastTime, out var ftime) && ftime <= 0.2)
+                        if (!string.IsNullOrWhiteSpace(fastTime) && double.TryParse(fastTime, out var ftime))
                         {
-                            account.FastExhausted = true;
+                            if (ftime <= 0.2)
+                            {
+                                account.FastExhausted = true;
+                            }
+                            else
+                            {
+                                account.FastExhausted = false;
+                            }
                         }
 
                         // 自动设置慢速，如果快速用完

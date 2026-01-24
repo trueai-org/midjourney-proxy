@@ -490,7 +490,9 @@ namespace Midjourney.Services
 
                 if (acc.IsDiscord)
                 {
-                    //return WebSocketManager != null && WebSocketManager.Running == true && acc.Lock == false;
+                    //#if DEBUG
+                    //                    return true;
+                    //#endif
 
                     // 已经建立连接，且不是正在连接中，且没有被锁定
                     return DiscordWebSocketService.IsInitConnect(acc) && !DiscordWebSocketService.IsInitConnecting(acc) && acc.Lock == false;
@@ -543,31 +545,6 @@ namespace Midjourney.Services
             }
         }
 
-        ///// <summary>
-        ///// 获取队列中的任务列表。
-        ///// </summary>
-        ///// <returns>队列中的任务列表</returns>
-        //public List<TaskInfo> GetQueueTasks()
-        //{
-        //    var list = new List<TaskInfo>();
-        //    var defaultOrFastQueueTasks = _defaultOrFastQueue.Items();
-        //    if (defaultOrFastQueueTasks != null && defaultOrFastQueueTasks.Count > 0)
-        //    {
-        //        list.AddRange(defaultOrFastQueueTasks.Select(c => c.Info));
-        //    }
-
-        //    if (Account.IsYouChuan)
-        //    {
-        //        var relaxQueueTasks = _relaxQueue.Items();
-        //        if (relaxQueueTasks != null && relaxQueueTasks.Count > 0)
-        //        {
-        //            list.AddRange(relaxQueueTasks.Select(c => c.Info));
-        //        }
-        //    }
-
-        //    return list;
-        //}
-
         /// <summary>
         /// 获取队列中的任务数量。
         /// </summary>
@@ -587,29 +564,6 @@ namespace Midjourney.Services
                 return count;
             }
         }
-
-        ///// <summary>
-        ///// 是否存在空闲队列，即：队列是否已满，是否可加入新的任务
-        ///// </summary>
-        //public bool IsIdleQueue(GenerationSpeedMode? mode = null)
-        //{
-        //    mode ??= GenerationSpeedMode.FAST;
-
-        //    var acc = Account;
-
-        //    // 悠船慢速队列验证
-        //    if (acc.IsYouChuan && mode == GenerationSpeedMode.RELAX)
-        //    {
-        //        var queueCount = _relaxQueue.Count();
-
-        //        // 判断 RELAX 队列是否有空闲
-        //        return acc.RelaxQueueSize <= 0 || queueCount < acc.RelaxQueueSize;
-        //    }
-
-        //    // 快速队列验证
-        //    var defaultOrFastQueueCount = _defaultOrFastQueue.Count();
-        //    return acc.QueueSize <= 0 || defaultOrFastQueueCount < acc.QueueSize;
-        //}
 
         /// <summary>
         /// 根据速度模式判断是否允许继续绘图，不判断放大任务
@@ -656,37 +610,13 @@ namespace Midjourney.Services
 
                         case GenerationSpeedMode.FAST:
                             {
-                                if (acc.IsYouChuan)
-                                {
-                                    isContinue = acc.YouChuanFastRemaining > 360;
-                                }
-                                if (acc.IsOfficial)
-                                {
-                                    isContinue = acc.OfficialFastRemaining > 360;
-                                }
-                                if (acc.IsDiscord)
-                                {
-                                    isContinue = acc.FastExhausted == false;
-                                }
+                                isContinue = FastAvailableCount > 6;
                             }
                             break;
 
                         case GenerationSpeedMode.TURBO:
                             {
-                                if (acc.IsYouChuan)
-                                {
-                                    isContinue = acc.YouChuanFastRemaining > 720;
-                                }
-
-                                if (acc.IsOfficial)
-                                {
-                                    isContinue = acc.OfficialFastRemaining > 720;
-                                }
-
-                                if (acc.IsDiscord)
-                                {
-                                    isContinue = acc.FastExhausted == false;
-                                }
+                                isContinue = FastAvailableCount > 12;
                             }
                             break;
 

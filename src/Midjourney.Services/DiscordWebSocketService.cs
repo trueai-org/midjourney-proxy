@@ -1405,10 +1405,18 @@ namespace Midjourney.Services
 
                                                 // 0.2h = 12 分钟 = 12 次
                                                 var ftime = 0.0;
-                                                if (!string.IsNullOrWhiteSpace(fastTime) && double.TryParse(fastTime, out ftime) && ftime <= 0.2)
+                                                if (!string.IsNullOrWhiteSpace(fastTime) && double.TryParse(fastTime, out ftime))
                                                 {
-                                                    acc.FastExhausted = true;
+                                                    if (ftime <= 0.2)
+                                                    {
+                                                        acc.FastExhausted = true;
+                                                    }
+                                                    else
+                                                    {
+                                                        acc.FastExhausted = false;
+                                                    }
                                                 }
+
 
                                                 // 自动设置慢速，如果快速用完
                                                 if (acc.FastExhausted == true && acc.EnableAutoSetRelax == true && acc.Mode != GenerationSpeedMode.RELAX)
