@@ -1351,7 +1351,7 @@ namespace Midjourney.Services
                         if(task.Action == TaskAction.VIDEO)
                         {
                             // 判断是否允许视频操作
-                            if (instance.IsAllowGenerateVideo())
+                            if (instance.IsAllowGenerateVideo(m))
                             {
                                 isContinue = true;
                                 mode = m;
@@ -1453,7 +1453,7 @@ namespace Midjourney.Services
                             if(task.Action == TaskAction.VIDEO)
                             {
                                 // 判断是否允许视频操作
-                                if (instance.IsAllowGenerateVideo())
+                                if (instance.IsAllowGenerateVideo(m))
                                 {
                                     isContinue = true;
                                     mode = m;
@@ -1520,12 +1520,6 @@ namespace Midjourney.Services
             if (instance == null || submitResult.Code != ReturnCode.SUCCESS)
             {
                 return submitResult;
-            }
-
-            // 判断是否允许视频操作
-            if (task.Action == TaskAction.VIDEO && !instance.IsAllowGenerateVideo())
-            {
-                return SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "无可用的账号实例");
             }
 
             task.InstanceId = instance.ChannelId;
@@ -1919,12 +1913,6 @@ namespace Midjourney.Services
             if (instance == null || submitResult.Code != ReturnCode.SUCCESS)
             {
                 return submitResult;
-            }
-
-            // 判断是否允许视频操作
-            if (task.Action == TaskAction.VIDEO && !instance.IsAllowGenerateVideo())
-            {
-                return SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "无可用的账号实例");
             }
 
             task.InstanceId = instance.ChannelId;

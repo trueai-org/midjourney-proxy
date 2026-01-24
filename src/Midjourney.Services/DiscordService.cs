@@ -314,25 +314,54 @@ namespace Midjourney.Services
         /// </summary>
         /// <param name="isVideo"></param>
         /// <returns></returns>
-        public bool IsAllowGenerateVideo()
+        public bool IsAllowGenerateVideo(GenerationSpeedMode mode)
         {
+            var videoUseCount = 8;
+            if (mode == GenerationSpeedMode.TURBO)
+            {
+                videoUseCount *= 2;
+            }
+
             // 如果是悠船账号
             var acc = Account;
             if (acc.IsYouChuan)
             {
-                return FastAvailableCount > 8;
+                if (mode == GenerationSpeedMode.RELAX)
+                {
+                    return false;
+                }
+
+                return FastAvailableCount > videoUseCount;
             }
 
             // 如果是官方账号
             if (acc.IsOfficial)
             {
-                return FastAvailableCount > 8 || acc.IsRelaxVideo;
+                if (mode == GenerationSpeedMode.RELAX)
+                {
+                    if (!acc.IsRelaxVideo)
+                    {
+                        return false;
+                    }
+                }
+
+                return FastAvailableCount > videoUseCount || acc.IsRelaxVideo;
             }
 
             // Discord 账号
             if (acc.IsDiscord)
             {
-                return FastAvailableCount > 8 || acc.IsRelaxVideo;
+                if (mode == GenerationSpeedMode.RELAX)
+                {
+                    if (!acc.IsRelaxVideo)
+                    {
+                        return false;
+                    }
+
+                    return acc.IsRelaxVideo;
+                }
+
+                return FastAvailableCount > videoUseCount || acc.IsRelaxVideo;
             }
 
             return false;
