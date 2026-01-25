@@ -84,7 +84,7 @@ namespace Midjourney.Services
                 foreach (var item in list)
                 {
                     var keywords = item.Keywords?.Where(c => !string.IsNullOrWhiteSpace(c))
-                    .Select(c => c.Trim()).Distinct().ToList()?? [];
+                    .Select(c => c.Trim()).Distinct().ToList() ?? [];
 
                     dict[item.Id] = new HashSet<string>(keywords);
                 }
@@ -569,13 +569,17 @@ namespace Midjourney.Services
 
             // 必须开启 REMIX 模式才支持 API 视频拓展
             var botType = info.RealBotType ?? info.BotType;
-            if (botType == EBotType.MID_JOURNEY && !instance.Account.MjRemixOn)
+
+            if (instance.Account.IsDiscord)
             {
-                return SubmitResultVO.Fail(ReturnCode.FAILURE, "未开启 REMIX，无法使用视频扩展功能");
-            }
-            else if (botType == EBotType.NIJI_JOURNEY && !instance.Account.NijiRemixOn)
-            {
-                return SubmitResultVO.Fail(ReturnCode.FAILURE, "未开启 REMIX，无法使用视频扩展功能");
+                if (botType == EBotType.MID_JOURNEY && !instance.Account.MjRemixOn)
+                {
+                    return SubmitResultVO.Fail(ReturnCode.FAILURE, "未开启 REMIX，无法使用视频扩展功能");
+                }
+                else if (botType == EBotType.NIJI_JOURNEY && !instance.Account.NijiRemixOn)
+                {
+                    return SubmitResultVO.Fail(ReturnCode.FAILURE, "未开启 REMIX，无法使用视频扩展功能");
+                }
             }
 
             // 如果要求 HD，但是没有 HD
@@ -1151,7 +1155,7 @@ namespace Midjourney.Services
                     }
                     else
                     {
-                        var taskFileName =  await dataUrl.GenerateFileName();
+                        var taskFileName = await dataUrl.GenerateFileName();
                         var uploadResult = await instance.UploadAsync(taskFileName, dataUrl);
                         if (uploadResult.Code != ReturnCode.SUCCESS)
                         {
@@ -1349,7 +1353,7 @@ namespace Midjourney.Services
                 {
                     if (instance != null && instance.IsAllowContinue(m) && instance.Account.IsAcceptActionTask())
                     {
-                        if(task.Action == TaskAction.VIDEO)
+                        if (task.Action == TaskAction.VIDEO)
                         {
                             // 判断是否允许视频操作
                             if (instance.IsAllowGenerateVideo(m))
@@ -1452,7 +1456,7 @@ namespace Midjourney.Services
                     {
                         if (instance != null && instance.IsAllowContinue(m) && instance.Account.IsAcceptActionTask())
                         {
-                            if(task.Action == TaskAction.VIDEO)
+                            if (task.Action == TaskAction.VIDEO)
                             {
                                 // 判断是否允许视频操作
                                 if (instance.IsAllowGenerateVideo(m))
@@ -1822,7 +1826,7 @@ namespace Midjourney.Services
                 }
             }
             // REMIX 处理
-            else if (task.Action == TaskAction.PAN 
+            else if (task.Action == TaskAction.PAN
                 || task.Action == TaskAction.VARIATION
                 || task.Action == TaskAction.VIDEO
                 || submitAction.CustomId.StartsWith("MJ::JOB::reroll"))
@@ -2049,7 +2053,7 @@ namespace Midjourney.Services
                 throw new LogicException("无可用的账号实例");
             }
 
-            if(isClearCache)
+            if (isClearCache)
             {
                 discordInstance.ClearSyncInfoCache();
             }
