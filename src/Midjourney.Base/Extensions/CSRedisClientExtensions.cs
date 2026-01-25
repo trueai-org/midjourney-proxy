@@ -18,7 +18,7 @@ namespace Midjourney.Base
         public static bool ExistsLock(this CSRedisClient client, string key) => client.Exists(LOCK_PREFIX + key);
 
         /// <summary>
-        /// 获取或添加，如果不存在则添加
+        /// 获取或添加，如果不存在则添加 - 不支持异步
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="client"></param>
@@ -40,7 +40,29 @@ namespace Midjourney.Base
         }
 
         /// <summary>
-        /// 添加或更新，每次更新都会重新覆盖时间
+        /// 获取或添加，如果不存在则添加 - 支持异步
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="client"></param>
+        /// <param name="key"></param>
+        /// <param name="acquire"></param>
+        /// <param name="expiry"></param>
+        /// <returns></returns>
+        public static async Task<T> GetOrCreateAsync<T>(this CSRedisClient client, string key, Func<Task<T>> acquire, TimeSpan? expiry = null)
+        {
+            if (await client.ExistsAsync(key))
+                return await client.GetAsync<T>(key);
+
+            // or create it using passed function
+            var result = await acquire();
+            await client.SetAsync(key, result, (int)(expiry?.TotalSeconds ?? -1));
+
+            return result;
+        }
+
+
+        /// <summary>
+        /// 添加或更新，每次更新都会重新覆盖时间 - 不支持异步
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="key"></param>
@@ -62,6 +84,31 @@ namespace Midjourney.Base
             {
                 client.Set(key, addValue, (int)(expiry?.TotalSeconds ?? -1));
 
+                return addValue;
+            }
+        }
+
+        /// <summary>
+        /// 添加或更新，每次更新都会重新覆盖时间 - 支持异步
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="client"></param>
+        /// <param name="key"></param>
+        /// <param name="addValue"></param>
+        /// <param name="updateValueFactory"></param>
+        /// <param name="expiry"></param>
+        /// <returns></returns>
+        public static async Task<T> AddOrUpdateAsync<T>(this CSRedisClient client, string key, T addValue, Func<string, T, T> updateValueFactory, TimeSpan? expiry = null)
+        {
+            if (await client.ExistsAsync(key))
+            {
+                var result = updateValueFactory(key, await client.GetAsync<T>(key));
+                await client.SetAsync(key, result, (int)(expiry?.TotalSeconds ?? -1));
+                return result;
+            }
+            else
+            {
+                await client.SetAsync(key, addValue, (int)(expiry?.TotalSeconds ?? -1));
                 return addValue;
             }
         }

@@ -3743,7 +3743,7 @@ namespace Midjourney.Services
 
                 var success = false;
                 var cacheKey = $"SyncInfoCache:{acc.ChannelId}";
-                var cacheValue = AdaptiveCache.Get<bool?>(cacheKey);
+                var cacheValue = RedisHelper.Get<bool?>(cacheKey);
 
                 // 不清理缓存，且有缓存时，直接返回成功
                 if (!isClearCache && cacheValue == true)
@@ -3791,7 +3791,10 @@ namespace Midjourney.Services
                         cacheMinutes = Random.Shared.Next(180, 360);
                     }
 
-                    success = await RedisHelper.Instance.GetOrCreate(cacheKey, YmTaskService.SyncOfficialInfo, TimeSpan.FromMinutes(cacheMinutes));
+                    success = await RedisHelper.Instance.GetOrCreateAsync(cacheKey, async () =>
+                    {
+                        return await YmTaskService.SyncOfficialInfo();
+                    }, TimeSpan.FromMinutes(cacheMinutes));
                 }
 
                 if (acc.IsDiscord)
@@ -3810,7 +3813,7 @@ namespace Midjourney.Services
                         cacheMinutes = Random.Shared.Next(180, 360);
                     }
 
-                    success = await RedisHelper.Instance.GetOrCreate(cacheKey, async () =>
+                    success = await RedisHelper.Instance.GetOrCreateAsync(cacheKey, async () =>
                     {
                         var sw = Stopwatch.StartNew();
                         if (Account.EnableMj == true)
