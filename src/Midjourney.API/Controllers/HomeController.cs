@@ -41,11 +41,13 @@ namespace Midjourney.API.Controllers
         private readonly IMemoryCache _memoryCache;
         private readonly IFreeSql _freeSql;
         private readonly INotifyService _notifyService;
+        private readonly IConsulService _consulService;
 
-        public HomeController(IMemoryCache memoryCache, INotifyService notifyService)
+        public HomeController(IMemoryCache memoryCache, INotifyService notifyService,IConsulService consulService)
         {
             _memoryCache = memoryCache;
             _notifyService = notifyService;
+            _consulService = consulService;
             _freeSql = FreeSqlHelper.FreeSql;
         }
 
@@ -222,6 +224,8 @@ namespace Midjourney.API.Controllers
             data.YouChuanRelaxAvailableCount = ycRelaxTotal;
             data.TodayErrorCount = LogCountSink.ToDayErrorLogCount;
             data.TodayWarningCount = LogCountSink.ToDayWarningLogCount;
+
+            data.Nodes = await _consulService.GetAllRegisteredServicesAsync();
 
             return Result.Ok(data);
         }

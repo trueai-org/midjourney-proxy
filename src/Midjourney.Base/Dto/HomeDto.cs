@@ -139,5 +139,10 @@ namespace Midjourney.Base.Dto
         /// 错误数
         /// </summary>
         public int TodayErrorCount { get; set; } = 0;
+
+        /// <summary>
+        /// 所有节点
+        /// </summary>
+        public List<string> Nodes { get; set; } = [];
     }
 }

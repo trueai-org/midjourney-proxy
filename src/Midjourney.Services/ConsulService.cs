@@ -294,6 +294,42 @@ namespace Midjourney.Services
             }
         }
 
+        /// <summary>
+        /// 获取所有已注册健康的服务实例
+        /// </summary>
+        /// <returns></returns>
+        public async Task<List<string>> GetAllRegisteredServicesAsync()
+        {
+            try
+            {
+                var setting = GlobalConfiguration.Setting;
+                if (setting.ConsulOptions == null || !setting.ConsulOptions.Enable)
+                {
+                    return [];
+                }
+
+                // 从 Consul 获取服务信息
+                var servicesResult = await _consulClient.Agent.Services();
+
+                // 获取健康检查状态
+                var healthChecks = await _consulClient.Health.State(HealthStatus.Any);
+                var checksDict = healthChecks.Response.ToDictionary(c => c.ServiceID);
+
+                // 过滤出目标服务，并且必须是健康的服务
+                var midjourneyServices = servicesResult.Response.Values
+                    .Where(s => s.Service == _consulOptions.ServiceName)
+                    .Where(s => !checksDict.TryGetValue(s.ID, out var check) || check.Status == HealthStatus.Passing)
+                    .ToList();
+
+                return midjourneyServices.Select(c => c.Address).Distinct().ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "获取已注册服务列表失败");
+            }
+            return [];
+        }
+
         private string GetLocalIPAddress()
         {
             try

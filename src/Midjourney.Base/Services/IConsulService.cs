@@ -35,5 +35,11 @@ namespace Midjourney.Base.Services
         Task RegisterServiceAsync();
 
         Task DeregisterServiceAsync();
+
+        /// <summary>
+        /// 获取所有已注册健康的服务实例
+        /// </summary>
+        /// <returns></returns>
+        Task<List<string>> GetAllRegisteredServicesAsync();
     }
 }
