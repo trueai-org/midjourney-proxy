@@ -3728,7 +3728,7 @@ namespace Midjourney.Services
 
                 // 官方账号且未调查过问卷时，检查快速任务数
                 // 如果快速任务数小于等于 100，则开启问卷自动处理
-                if (acc.IsOfficial && !acc.OfficialHasSurveyed)
+                if (acc.IsOfficial && hasFast && !acc.OfficialHasSurveyed)
                 {
                     var fastCount = CounterHelper.GetFastTaskAvailableCount(acc.ChannelId);
                     if (fastCount <= 100)
