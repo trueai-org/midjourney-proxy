@@ -279,6 +279,8 @@ namespace Midjourney.API.Controllers
                     var secret = GlobalConfiguration.Setting.CaptchaNotifySecret;
                     if (string.IsNullOrWhiteSpace(secret) || secret == request.Secret)
                     {
+                        Log.Information("收到 CF 验证通知 {@0}", request);
+
                         // 10 分钟之内有效
                         if (item.CfHashCreated != null && (DateTime.Now - item.CfHashCreated.Value).TotalMinutes > 10)
                         {
