@@ -443,13 +443,16 @@ namespace Midjourney.Base
             // 每个账号 1 个 hash 记录触发的值和时间
             var key = $"AccountFastUsedSyncInfo:{channelId}-{DateTime.Now:yyyyMMdd}";
 
+            // 每 200 次触发一次同步
             var keyN = fastAvailable % 200 == 0 ? $"{key}-{fastAvailable}" : null;
 
-            if (fastAvailable <= 0)
-            {
-                keyN = $"{key}-0";
-            }
-            else if (fastAvailable <= 12)
+            // 不需要处理，避免频繁同步
+            //if (fastAvailable <= 0)
+            //{
+            //    keyN = $"{key}-0";
+            //}
+
+            if (fastAvailable <= 12)
             {
                 keyN = $"{key}-12";
             }
