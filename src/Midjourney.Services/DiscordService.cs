@@ -2362,15 +2362,11 @@ namespace Midjourney.Services
                                 Log.Information("任务完成，扣减 fast 次数: TaskId={@0}, InstanceId={@1}, 扣除={@2}, 预估快速剩余次数={@3}, 今日总绘图计数={@4}",
                                     info.Id, info.InstanceId, value, fastAvailable, totalCount);
 
-                                // 如果是快速模式，且触发最低阈值，则立即同步一次 info
-                                // 每 200 次执行一次同步，或 低于 12 次执行一次同步
-                                if (fastAvailable % 200 == 0 || fastAvailable <= 12)
+                                // FAST 消耗时尝试同步信息
+                                await CounterHelper.FastUsedTrySyncInfo(Account.ChannelId, fastAvailable, async () =>
                                 {
-                                    if (fastAvailable > 0)
-                                    {
-                                        await SyncInfoSetting(true);
-                                    }
-                                }
+                                    await SyncInfoSetting(true);
+                                });
                             }
                         }
                     }
@@ -3702,10 +3698,11 @@ namespace Midjourney.Services
         /// <exception cref="LogicException"></exception>
         public async Task<bool> SyncInfoSetting(bool isClearCache = false)
         {
+            var success = false;
+            var acc = Account;
+
             try
             {
-                var acc = Account;
-
                 await using var lockHandle = await AdaptiveLock.LockAsync(acc.InfoLockKey, 30);
                 if (!lockHandle.IsAcquired)
                 {
@@ -3716,7 +3713,8 @@ namespace Midjourney.Services
                 // 悠船立即同步，不缓存
                 if (acc.IsYouChuan)
                 {
-                    return await YmTaskService.SyncYouchuanInfo();
+                    success = await YmTaskService.SyncYouchuanInfo();
+                    return success;
                 }
 
                 // 检查快速计数器是否存在，如果不存在则强制清理缓存并同步账号信息
@@ -3741,22 +3739,19 @@ namespace Midjourney.Services
                     }
                 }
 
-                var success = false;
-                var cacheKey = $"SyncInfoCache:{acc.ChannelId}";
+                var cacheKey = GetClearSyncInfoCacheKey(acc.ChannelId);
                 var cacheValue = RedisHelper.Get<bool?>(cacheKey);
 
                 // 不清理缓存，且有缓存时，直接返回成功
                 if (!isClearCache && cacheValue == true)
                 {
+                    // 返回缓存数据
                     return true;
                 }
 
                 var now = DateTime.Now;
 
-                var m05key = $"SyncInfoLimit:{now:yyyyMMddHH}_05m_{now.Minute / 5}:{acc.ChannelId}";
-                var m10key = $"SyncInfoLimit:{now:yyyyMMddHH}_10m_{now.Minute / 10}:{acc.ChannelId}";
-                var m30key = $"SyncInfoLimit:{now:yyyyMMddHH}_30m_{now.Minute / 30}:{acc.ChannelId}";
-                var m60key = $"SyncInfoLimit:{now:yyyyMMddHH}:{acc.ChannelId}";
+                var (m05key, m10key, m30key, m60key) = GetClearSyncInfoLimitKeys(acc.ChannelId);
 
                 var m05value = RedisHelper.Get<int>(m05key);
                 var m10value = RedisHelper.Get<int>(m10key);
@@ -3766,11 +3761,11 @@ namespace Midjourney.Services
                 if (m05value >= 1 ||
                     m10value >= 2 ||
                     m30value >= 3 ||
-                    m60value >= 6)
+                    m60value >= 5)
                 {
                     Log.Warning("同步信息调用过于频繁，ChannelId={0}", acc.ChannelId);
 
-                    // 返回缓存的结果
+                    // 返回缓存的结果或失败
                     return cacheValue ?? false;
                 }
 
@@ -3783,12 +3778,11 @@ namespace Midjourney.Services
 
                 if (acc.IsOfficial)
                 {
-                    // 默认缓存 60-180 分钟
-                    // 如果快速用完则为降低同步频率为 180 - 360 分钟
-                    var cacheMinutes = Random.Shared.Next(60, 180);
-                    if (acc.FastExhausted)
+                    // 默认缓存 M-N, 如果快速用完则为降低同步频率为 X-Y
+                    var cacheMinutes = Random.Shared.Next(180, 360);
+                    if (hasFast && acc.FastExhausted)
                     {
-                        cacheMinutes = Random.Shared.Next(180, 360);
+                        cacheMinutes = Random.Shared.Next(360, 720);
                     }
 
                     success = await RedisHelper.Instance.GetOrCreateAsync(cacheKey, async () =>
@@ -3805,12 +3799,11 @@ namespace Midjourney.Services
                         return false;
                     }
 
-                    // 默认缓存 60-180 分钟
-                    // 如果快速用完则为降低同步频率为 180 - 360 分钟
-                    var cacheMinutes = Random.Shared.Next(60, 180);
-                    if (acc.FastExhausted)
+                    // 默认缓存 M-N, 如果快速用完则为降低同步频率为 X-Y
+                    var cacheMinutes = Random.Shared.Next(180, 360);
+                    if (hasFast && acc.FastExhausted)
                     {
-                        cacheMinutes = Random.Shared.Next(180, 360);
+                        cacheMinutes = Random.Shared.Next(360, 720);
                     }
 
                     success = await RedisHelper.Instance.GetOrCreateAsync(cacheKey, async () =>
@@ -3891,9 +3884,38 @@ namespace Midjourney.Services
             catch (Exception ex)
             {
                 _logger.Error(ex, "同步账号信息异常 {@0}", ChannelId);
-            }
 
-            return false;
+                // 计数器累计失败次数，1小时超过 10 次禁用账号
+                var limit = CounterHelper.IncrementAccountSyncFailure(acc.ChannelId);
+                if (limit > 10)
+                {
+                    acc.Enable = false;
+                    acc.DisabledReason = "同步失败超过限制";
+
+                    _freeSql.Update<DiscordAccount>()
+                        .Set(c => c.Enable, acc.Enable)
+                        .Set(c => c.DisabledReason, acc.DisabledReason)
+                        .Where(c => c.Id == acc.Id)
+                        .ExecuteAffrows();
+                    acc.ClearCache();
+
+                    Log.Warning("账号 {@0} 同步失败超过限制，已自动禁用", acc.ChannelId);
+                }
+
+                Log.Error(ex, "同步账号信息异常 {@0}", acc.ChannelId);
+
+                return false;
+            }
+            finally
+            {
+                // 记录今日最后同步时间和同步次数，count
+                if (success)
+                {
+                    var count = CounterHelper.IncrementAccountSyncSuccess(ChannelId);
+
+                    Log.Information("账号 {@0} 同步信息成功，今日同步次数 {@1}", ChannelId, count);
+                }
+            }
         }
 
         /// <summary>
@@ -3904,20 +3926,42 @@ namespace Midjourney.Services
             var acc = Account;
             if (acc != null)
             {
-                var cacheKey = $"SyncInfoCache:{acc.ChannelId}";
+                var cacheKey = GetClearSyncInfoCacheKey(acc.ChannelId);
                 RedisHelper.Del(cacheKey);
 
-                var now = DateTime.Now;
-                var m05key = $"SyncInfoLimit:{now:yyyyMMddHH}_05m_{now.Minute / 5}:{acc.ChannelId}";
-                var m10key = $"SyncInfoLimit:{now:yyyyMMddHH}_10m_{now.Minute / 10}:{acc.ChannelId}";
-                var m30key = $"SyncInfoLimit:{now:yyyyMMddHH}_30m_{now.Minute / 30}:{acc.ChannelId}";
-                var m60key = $"SyncInfoLimit:{now:yyyyMMddHH}:{acc.ChannelId}";
-
+                var (m05key, m10key, m30key, m60key) = GetClearSyncInfoLimitKeys(acc.ChannelId);
                 RedisHelper.Del(m05key);
                 RedisHelper.Del(m10key);
                 RedisHelper.Del(m30key);
                 RedisHelper.Del(m60key);
+
+                CounterHelper.FastUsedClearSyncInfoFlag(acc.ChannelId);
             }
+        }
+
+        /// <summary>
+        /// 获取清除同步缓存的 Key
+        /// </summary>
+        /// <param name="channelId"></param>
+        /// <returns></returns>
+        public static string GetClearSyncInfoCacheKey(string channelId)
+        {
+            return $"AccountSyncInfoCache:{channelId}";
+        }
+
+        /// <summary>
+        /// 获取清除同步频率的 Key
+        /// </summary>
+        /// <param name="channelId"></param>
+        /// <returns></returns>
+        public static (string m05key, string m10key, string m30key, string m60key) GetClearSyncInfoLimitKeys(string channelId)
+        {
+            var now = DateTime.Now;
+            var m05key = $"AccountSyncLimit:{now:yyyyMMddHH}_05m_{now.Minute / 5}:{channelId}";
+            var m10key = $"AccountSyncLimit:{now:yyyyMMddHH}_10m_{now.Minute / 10}:{channelId}";
+            var m30key = $"AccountSyncLimit:{now:yyyyMMddHH}_30m_{now.Minute / 30}:{channelId}";
+            var m60key = $"AccountSyncLimit:{now:yyyyMMddHH}:{channelId}";
+            return (m05key, m10key, m30key, m60key);
         }
     }
 

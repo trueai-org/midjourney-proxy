@@ -707,6 +707,14 @@ namespace Midjourney.Base.Models
         public bool Running { get; set; }
 
         /// <summary>
+        /// 今日同步信息成功次数 - 用于前台显示
+        /// </summary>
+        [LiteDB.BsonIgnore]
+        [MongoDB.Bson.Serialization.Attributes.BsonIgnore]
+        [Column(IsIgnore = true)]
+        public int TodaySyncCount { get; set; } = 0;
+
+        /// <summary>
         /// Mj 按钮
         /// </summary>
         [LiteDB.BsonIgnore]

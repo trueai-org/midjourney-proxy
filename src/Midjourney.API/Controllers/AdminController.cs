@@ -1205,9 +1205,14 @@ namespace Midjourney.API.Controllers
                     .ToList();
             }
 
+            // 今天成功同步次数
+            var syncToday = CounterHelper.GetAllAccountSyncSuccessCountDict();
+
             foreach (var item in list)
             {
                 var inc = _accountService.GetDiscordInstance(item.ChannelId);
+
+                item.TodaySyncCount = syncToday.TryGetValue(item.ChannelId, out int value) ? value : -1;
 
                 // 当前执行中的任务数
                 item.RunningCount = inc?.GetRunningTaskCount ?? 0;

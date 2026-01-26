@@ -1,4 +1,6 @@
-﻿namespace Midjourney.Base
+﻿using Serilog;
+
+namespace Midjourney.Base
 {
     /// <summary>
     /// 计数器
@@ -24,10 +26,7 @@
                 return RedisHelper.HGet<int>(hashKeyPrefix, account.ChannelId);
             }
             var count = (int)RedisHelper.HIncrBy(hashKeyPrefix, account.ChannelId, incrementBy);
-            if (count % 10 == 1)
-            {
-                RedisHelper.ExpireAt(hashKeyPrefix, DateTime.Today.AddDays(7));
-            }
+            RedisHelper.ExpireAt(hashKeyPrefix, DateTime.Today.AddDays(7));
 
             return count;
         }
@@ -61,10 +60,8 @@
                 return RedisHelper.HGet<int>(hashKeyPrefix, account.ChannelId);
             }
             var count = (int)RedisHelper.HIncrBy(hashKeyPrefix, account.ChannelId, incrementBy);
-            if (count % 10 == 1)
-            {
-                RedisHelper.ExpireAt(hashKeyPrefix, DateTime.Today.AddDays(7));
-            }
+            RedisHelper.ExpireAt(hashKeyPrefix, DateTime.Today.AddDays(7));
+
             return count;
         }
 
@@ -200,10 +197,7 @@
             {
                 var allHashPrefix = $"TaskAccountAll:{DateTime.Now:yyyyMMdd}";
                 var allTodayAllCount = (int)RedisHelper.HIncrBy(allHashPrefix, $"{mode}_{info.InstanceId}", 1);
-                if (allTodayAllCount % 10 == 1)
-                {
-                    RedisHelper.ExpireAt(allHashPrefix, DateTime.Today.AddDays(7));
-                }
+                RedisHelper.ExpireAt(allHashPrefix, DateTime.Today.AddDays(7));
             }
 
             // 统计账号成功 - 用于列表显示
@@ -211,10 +205,7 @@
             {
                 var successHashPrefix = $"TaskAccountSuccess:{DateTime.Now:yyyyMMdd}:{info.InstanceId}";
                 var accountTodaySuccessCount = (int)RedisHelper.HIncrBy(successHashPrefix, $"{mode}_{info.Action.Value}", 1);
-                if (accountTodaySuccessCount % 10 == 1)
-                {
-                    RedisHelper.ExpireAt(successHashPrefix, DateTime.Today.AddDays(7));
-                }
+                RedisHelper.ExpireAt(successHashPrefix, DateTime.Today.AddDays(7));
             }
 
             // 统计个人成功 - 用于列表显示
@@ -222,10 +213,7 @@
             {
                 var userSuccessHashPrefix = $"TaskUserSuccess:{DateTime.Now:yyyyMMdd}:{info.UserId}";
                 var userTodaySuccessCount = (int)RedisHelper.HIncrBy(userSuccessHashPrefix, $"{mode}_{info.Action.Value}", 1);
-                if (userTodaySuccessCount % 10 == 1)
-                {
-                    RedisHelper.ExpireAt(userSuccessHashPrefix, DateTime.Today.AddDays(7));
-                }
+                RedisHelper.ExpireAt(userSuccessHashPrefix, DateTime.Today.AddDays(7));
             }
         }
 
@@ -408,8 +396,86 @@
 
             // 设置过期时间为1小时
             RedisHelper.Expire(key, TimeSpan.FromHours(1));
-
             return count;
+        }
+
+        /// <summary>
+        /// 记录账号今日同步成功的次数，每次+1
+        /// </summary>
+        /// <param name="instanceId"></param>
+        /// <param name="incrementBy"></param>
+        /// <returns></returns>
+        public static int IncrementAccountSyncSuccess(string instanceId, int incrementBy = 1)
+        {
+            var hashKey = $"AccountSyncSuccessCount:{DateTime.Now:yyyyMMdd}";
+            var count = (int)RedisHelper.HIncrBy(hashKey, instanceId, incrementBy);
+            RedisHelper.ExpireAt(hashKey, DateTime.Today.AddDays(7));
+            return count;
+        }
+
+        /// <summary>
+        /// 获取所有账号今日同步成功的次数字典
+        /// </summary>
+        /// <returns></returns>
+        public static Dictionary<string, int> GetAllAccountSyncSuccessCountDict()
+        {
+            var result = new Dictionary<string, int>();
+            var hashKey = $"AccountSyncSuccessCount:{DateTime.Now:yyyyMMdd}";
+            var hashAll = RedisHelper.HGetAll<int>(hashKey);
+            if (hashAll?.Count > 0)
+            {
+                foreach (var kvp in hashAll)
+                {
+                    result[kvp.Key] = kvp.Value;
+                }
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// 快速消耗时， 如果是快速模式，且触发最低阈值，则立即同步一次 info
+        /// </summary>
+        /// <param name="fastAvailable"></param>
+        /// <returns></returns>
+        public static async Task FastUsedTrySyncInfo(string channelId, int fastAvailable, Func<Task> func)
+        {
+            // 注意每次的值只处理一次，避免下次更新后重复执行，例如： =200 后，执行同步，执行完成后，值还是 200，则下次又会执行
+            // 每个账号 1 个 hash 记录触发的值和时间
+            var key = $"AccountFastUsedSyncInfo:{channelId}-{DateTime.Now:yyyyMMdd}";
+
+            var keyN = fastAvailable % 200 == 0 ? $"{key}-{fastAvailable}" : null;
+
+            if (fastAvailable <= 0)
+            {
+                keyN = $"{key}-0";
+            }
+            else if (fastAvailable <= 12)
+            {
+                keyN = $"{key}-12";
+            }
+
+            if (!string.IsNullOrWhiteSpace(keyN))
+            {
+                var exists = RedisHelper.HExists(key, keyN);
+                if (exists != true)
+                {
+                    await func();
+
+                    RedisHelper.HSet(key, keyN, DateTime.Now);
+
+                    RedisHelper.Expire(key, TimeSpan.FromDays(7));
+                }
+            }
+        }
+
+        /// <summary>
+        /// 清除快速消耗同步标记
+        /// </summary>
+        /// <param name="channelId"></param>
+        public static void FastUsedClearSyncInfoFlag(string channelId)
+        {
+            var key = $"AccountFastUsedSyncInfo:{channelId}-{DateTime.Now:yyyyMMdd}";
+            RedisHelper.Del(key);
         }
     }
 }
