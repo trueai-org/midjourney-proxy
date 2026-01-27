@@ -1925,13 +1925,13 @@ namespace Midjourney.API.Controllers
                 return Result.Fail<Setting>("演示模式，禁止操作");
             }
 
-            var consulSetting = await SettingService.LoadFromConsulAsync(consulOptions);
-            if (consulSetting == null)
+            var (success, setting) = await SettingService.LoadFromConsulAsync(consulOptions);
+            if (success)
             {
-                return Result.Fail<Setting>("从 Consul 加载配置失败，请检查 Consul 地址/服务名称是否正确");
+                return Result.Ok(setting);
             }
 
-            return Result.Ok(consulSetting);
+            return Result.Fail<Setting>("从 Consul 加载配置失败，请检查 Consul 地址/服务名称是否正确");
         }
 
         /// <summary>

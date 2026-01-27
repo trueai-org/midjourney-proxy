@@ -292,13 +292,13 @@ namespace Midjourney.Services
         /// <param name="consul"></param>
         /// <param name="cancellation"></param>
         /// <returns></returns>
-        public static async Task<Setting> LoadFromConsulAsync(ConsulOptions consul, CancellationToken cancellation = default)
+        public static async Task<(bool success, Setting setting)> LoadFromConsulAsync(ConsulOptions consul, CancellationToken cancellation = default)
         {
             try
             {
                 if (consul == null || !consul.IsValid)
                 {
-                    return null;
+                    return (false, null);
                 }
 
                 var consulConfigAddress = consul.ConsulUrl;
@@ -330,7 +330,7 @@ namespace Midjourney.Services
                             var remoteSetting = json.ToObject<Setting>();
                             if (remoteSetting != null)
                             {
-                                return remoteSetting;
+                                return (true, remoteSetting);
                             }
                             else
                             {
@@ -345,6 +345,7 @@ namespace Midjourney.Services
                     else
                     {
                         Log.Information("No remote setting found in Consul KV.");
+                        return (true, null);
                     }
                 }
                 else
@@ -357,7 +358,7 @@ namespace Midjourney.Services
                 Log.Warning(ex, "Failed to connect to Consul using local consul configuration. Continue with local settings.");
             }
 
-            return null;
+            return (false, null);
         }
 
         /// <summary>
