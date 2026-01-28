@@ -49,6 +49,10 @@ namespace Midjourney.API
                     services.AddSingleton<IDiscordRuleService, RoundRobinRule>();
                     break;
 
+                case AccountChooseRule.AccountFill:
+                    services.AddSingleton<IDiscordRuleService, AccountFillRule>();
+                    break;
+
                 case AccountChooseRule.BestWaitIdle:
                 default:
                     services.AddSingleton<IDiscordRuleService, BestWaitIdleRule>();

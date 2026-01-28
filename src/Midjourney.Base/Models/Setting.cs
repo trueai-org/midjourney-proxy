@@ -155,6 +155,11 @@ namespace Midjourney.Base.Models
         public List<string> PrivateFeatures { get; set; } = [];
 
         /// <summary>
+        /// 账号填充模式，优先打满最早的账号号的并发数，依次判断时间 + 并发数 + 队列数。私人定制
+        /// </summary>
+        public bool PrivateAccountFillRule { get; set; } = false;
+
+        /// <summary>
         /// 私人定制开启官网账号问卷自动调查功能
         /// </summary>
         public bool PrivateEnableOfficialAccountSurvey { get; set; } = false;

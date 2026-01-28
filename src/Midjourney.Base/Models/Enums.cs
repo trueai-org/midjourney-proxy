@@ -116,7 +116,12 @@ namespace Midjourney.Base
         /// <summary>
         /// 轮询模式
         /// </summary>
-        Polling = 3
+        Polling = 3,
+
+        /// <summary>
+        /// 账号填充模式，优先打满最早的账号号的并发数，依次判断时间 + 并发数 + 队列数
+        /// </summary>
+        AccountFill = 4,
     }
 
     public enum TranslateWay

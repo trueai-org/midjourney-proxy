@@ -22,6 +22,8 @@
 // invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
+using System;
+
 namespace Midjourney.Services
 {
     /// <summary>
@@ -104,6 +106,105 @@ namespace Midjourney.Services
 
             int pos = Interlocked.Increment(ref _position);
             return instances[pos % instances.Count];
+        }
+    }
+
+    /// <summary>
+    /// 账号填充模式，优先打满最早的账号号的并发数，依次判断时间 + 并发数 + 队列数
+    /// </summary>
+    public class AccountFillRule : IDiscordRuleService
+    {
+        private static readonly Random random = new Random();
+
+        /// <summary>
+        /// 账号填充模式，优先打满最早的账号号的并发数，依次判断时间 + 并发数 + 队列数
+        /// </summary>
+        /// <param name="instances"></param>
+        /// <returns></returns>
+        public DiscordService Choose(List<DiscordService> instances)
+        {
+            if (instances.Count == 0)
+            {
+                return null;
+            }
+
+            // 计算每个实例的队列利用情况
+            var instanceMetrics = instances.Select(instance =>
+            {
+                var acc = instance.Account;
+
+                var queuedCount = instance.GetQueueTaskCount;
+                var coreCount = instance.GetRunningTaskCount;
+
+                var queueSize = acc.QueueSize;
+                var coreSize = acc.CoreSize;
+
+                // 计算队列利用率
+                double queueUtilization = queueSize > 0 ? (double)queuedCount / queueSize : 1.0;
+
+                // 计算队列剩余空间
+                int remainingQueueSpace = Math.Max(0, queueSize - queuedCount);
+
+
+                return new
+                {
+                    // 可用的并发数
+                    AvailableCore = Math.Max(0, coreSize - coreCount),
+
+                    // 可用的队列数
+                    AvailableQueue = remainingQueueSpace,
+
+                    // 添加时间
+                    AddTime = instance.Account.DateCreated,
+
+                    Instance = instance,
+
+                    QueueUtilization = queueUtilization,
+                    RemainingQueueSpace = remainingQueueSpace
+                };
+            }).OrderBy(c => c.AddTime).ThenByDescending(c => c.AvailableCore).ThenByDescending(c => c.AvailableQueue)
+            .ToList();
+
+            // 第一遍找并发数且队列数未满的
+            foreach (var item in instanceMetrics)
+            {
+                // 判断并发是否已满
+                if (item.AvailableCore > 0)
+                {
+                    // 判断队列是否已满
+                    if (item.AvailableQueue > 0)
+                    {
+                        return item.Instance;
+                    }
+                }
+            }
+
+            // 暂时不使用此策略 - 因为这样会导致最旧的号压力非常大（并发数满+队列数满）
+            //// 如果并发全部已满了
+            //// 第二遍找并发已满，但队列未满的
+            //foreach (var item in instanceMetrics)
+            //{
+            //    // 判断并发是否已满
+            //    if (item.AvailableCore <= 0)
+            //    {
+            //        // 判断队列是否已满
+            //        if (item.AvailableQueue > 0)
+            //        {
+            //            return item.Instance;
+            //        }
+            //    }
+            //}
+
+            // 使用默认最优策略
+            // 按队列利用率分组，选择利用率最低的组
+            var bestGroup = instanceMetrics
+                .GroupBy(m => m.QueueUtilization)
+                .OrderBy(g => g.Key)  // 队列利用率越低越好
+                .First();
+
+            // 如果有多个实例具有相同的最低队列利用率，随机选择一个
+            int randomIndex = random.Next(bestGroup.Count());
+            return bestGroup.ElementAt(randomIndex).Instance;
         }
     }
 
