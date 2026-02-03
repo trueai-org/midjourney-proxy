@@ -10,16 +10,16 @@
 		<NoWarn>1701;1702;1591;1572;1573;</NoWarn>
 	</PropertyGroup>
 
-	<!--<ItemGroup>
+	<ItemGroup>
 		<Reference Include="Midjourney.License">
 			<HintPath>..\lib\Midjourney.License.dll</HintPath>
 		</Reference>
 		<ProjectReference Include="..\Midjourney.Base\Midjourney.Base.csproj" />
-	</ItemGroup>-->
+	</ItemGroup>
 
 	<!-- 开发时引用项目 -->
 	<!-- 发布时引用 DLL -->
-	<ItemGroup Condition="'$(Configuration)' == 'Debug'">
+	<!--<ItemGroup Condition="'$(Configuration)' == 'Debug'">
 		<ProjectReference Include="..\..\..\src\Midjourney.License\Midjourney.License.csproj" />
 		<ProjectReference Include="..\Midjourney.Base\Midjourney.Base.csproj" />
 	</ItemGroup>
@@ -28,5 +28,5 @@
 			<HintPath>..\lib\Midjourney.License.dll</HintPath>
 		</Reference>
 		<ProjectReference Include="..\Midjourney.Base\Midjourney.Base.csproj" />
-	</ItemGroup>
+	</ItemGroup>-->
 </Project>
