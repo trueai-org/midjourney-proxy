@@ -3724,12 +3724,11 @@ namespace Midjourney.Services
                     isClearCache = true;
                 }
 
-                // 官方账号且未调查过问卷时，检查快速任务数
-                // 如果快速任务数小于等于 100，则开启问卷自动处理
-                if (acc.IsOfficial && hasFast && !acc.OfficialHasSurveyed)
+                // 官方账号且未调查过问卷时，则开启问卷自动处理
+                // 或 dicord 账号有 cookie
+                if (acc.IsOfficial || (acc.IsDiscord && !string.IsNullOrWhiteSpace(acc.Cookie)))
                 {
-                    var fastCount = CounterHelper.GetFastTaskAvailableCount(acc.ChannelId);
-                    if (fastCount <= 100)
+                    if (!acc.OfficialHasSurveyed)
                     {
                         var survey = await YmTaskService.EnableSurveyAutoProcessAsync();
                         if (survey)

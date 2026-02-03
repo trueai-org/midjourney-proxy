@@ -1082,6 +1082,7 @@ namespace Midjourney.API.Controllers
                     // Token 加密
                     item.UserToken = "****";
                     //item.BotToken = "****";
+                    item.Cookie = "****";
 
                     item.CfUrl = "****";
                     item.CfHashUrl = "****";
@@ -1240,6 +1241,7 @@ namespace Midjourney.API.Controllers
                     // Token 加密
                     item.UserToken = "****";
                     //item.BotToken = "****";
+                    item.Cookie = "****";
 
                     item.CfUrl = "****";
                     item.CfHashUrl = "****";

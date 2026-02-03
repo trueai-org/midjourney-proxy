@@ -143,6 +143,12 @@ namespace Midjourney.Base.Models
         public string UserToken { get; set; }
 
         /// <summary>
+        /// 官网 cookie
+        /// </summary>
+        [Column(StringLength = -1)]
+        public string Cookie { get; set; }
+
+        /// <summary>
         /// 机器人 Token（废弃）
         /// </summary>
         [Display(Name = "机器人Token")]
@@ -977,6 +983,7 @@ namespace Midjourney.Base.Models
                 RelaxCoreSize = configAccount.RelaxCoreSize,
                 RelaxQueueSize = configAccount.RelaxQueueSize,
                 //BotToken = configAccount.BotToken,
+                Cookie = configAccount.Cookie,
                 TimeoutMinutes = configAccount.TimeoutMinutes,
                 PrivateChannelId = configAccount.PrivateChannelId,
                 NijiBotChannelId = configAccount.NijiBotChannelId,

@@ -24,6 +24,7 @@
 
 using System.Diagnostics;
 using System.Text;
+using Consul;
 using LiteDB;
 using Microsoft.Extensions.Caching.Memory;
 using Midjourney.Base.Utils;
@@ -1020,12 +1021,15 @@ namespace Midjourney.API
                         }
 
                         // 官方问卷调查，成功后强制同步一次
-                        if (account.IsOfficial && !account.OfficialHasSurveyed && disInstance != null)
+                        if (account.IsOfficial || (account.IsDiscord && !string.IsNullOrWhiteSpace(account.Cookie)))
                         {
-                            var survey = await disInstance.YmTaskService?.EnableSurveyAutoProcessAsync();
-                            if (survey == true)
+                            if (!account.OfficialHasSurveyed && disInstance != null)
                             {
-                                await disInstance?.SyncInfoSetting(true);
+                                var survey = await disInstance.YmTaskService?.EnableSurveyAutoProcessAsync();
+                                if (survey == true)
+                                {
+                                    await disInstance?.SyncInfoSetting(true);
+                                }
                             }
                         }
 
@@ -1337,6 +1341,12 @@ namespace Midjourney.API
             model.OfficialEnablePersonalize = param.OfficialEnablePersonalize;
             model.YouChuanEnablePreferRelax = param.YouChuanEnablePreferRelax;
 
+            // 官方 cookie 设置
+            if (param.Cookie != null)
+            {
+                model.Cookie = param.Cookie;
+            }
+
             _freeSql.Update(model);
 
             model.ClearCache();
@@ -1359,7 +1369,7 @@ namespace Midjourney.API
                     var disInstance = _acountService.GetDiscordInstance(account.ChannelId);
                     if (disInstance != null)
                     {
-                        if(isClearCache)
+                        if (isClearCache)
                         {
                             disInstance.ClearSyncInfoCache();
                         }

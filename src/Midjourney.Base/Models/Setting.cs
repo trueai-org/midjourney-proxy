@@ -909,6 +909,11 @@ namespace Midjourney.Base.Models
         //public string BotToken { get; set; }
 
         /// <summary>
+        /// 官网 cookie
+        /// </summary>
+        public string Cookie { get; set; }
+
+        /// <summary>
         /// 用户UserAgent.
         /// </summary>
         public string UserAgent { get; set; } = Constants.DEFAULT_DISCORD_USER_AGENT;
