@@ -118,5 +118,14 @@ namespace Midjourney.Base.Services
         /// </summary>
         /// <returns></returns>
         Task<bool> EnableSurveyAutoProcessAsync();
+
+        /// <summary>
+        /// 下载图片到存储，如果开启了文件存储
+        /// </summary>
+        /// <param name="url"></param>
+        /// <param name="id"></param>
+        /// <returns>返回存储链接</returns>
+        /// <exception cref="Exception"></exception>
+        Task<string> DownloadImageToStorage(string url, string id);
     }
 }

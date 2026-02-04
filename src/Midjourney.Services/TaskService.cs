@@ -25,6 +25,7 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
 using RestSharp;
+using Serilog;
 
 namespace Midjourney.Services
 {
@@ -565,7 +566,6 @@ namespace Midjourney.Services
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
             }
-
 
             // 必须开启 REMIX 模式才支持 API 视频拓展
             var botType = info.RealBotType ?? info.BotType;
@@ -1521,23 +1521,12 @@ namespace Midjourney.Services
             {
                 return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "目标任务不存在");
             }
-
-            var instance = GetInstanceByTask(task, targetTask, out var submitResult);
-            if (instance == null || submitResult.Code != ReturnCode.SUCCESS)
-            {
-                return submitResult;
-            }
-
-            task.InstanceId = instance.ChannelId;
-            task.IsPartner = instance.Account.IsYouChuan;
-            task.IsOfficial = instance.Account.IsOfficial;
+            task.IsOfficial = targetTask.IsOfficial;
+            task.IsPartner = targetTask.IsPartner;
 
             var messageFlags = targetTask.GetProperty<string>(Constants.TASK_PROPERTY_FLAGS, default)?.ToInt() ?? 0;
             var messageId = targetTask.GetProperty<string>(Constants.TASK_PROPERTY_MESSAGE_ID, default);
 
-            task.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, instance.ChannelId);
-            task.IsOfficial = targetTask.IsOfficial;
-            task.IsPartner = targetTask.IsPartner;
             task.BotType = targetTask.BotType;
             task.RealBotType = targetTask.RealBotType;
 
@@ -1556,6 +1545,162 @@ namespace Midjourney.Services
             {
                 task.PromptEn = targetTask.PromptEn;
             }
+
+            var instance = GetInstanceByTask(task, targetTask, out var submitResult);
+            if (instance == null || submitResult.Code != ReturnCode.SUCCESS)
+            {
+                // 如果是放大任务，且账号不可用时
+                // 如果悠船、官方
+                if (task.Action == TaskAction.UPSCALE)
+                {
+                    if (task.IsOfficial || task.IsPartner)
+                    {
+                        task.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, targetTask.GetProperty<string>(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, ""));
+                        task.InstanceId = targetTask.InstanceId;
+                        task.IsPartner = targetTask.IsPartner;
+                        task.IsOfficial = targetTask.IsOfficial;
+
+                        var info = task;
+                        var index = info.GetProperty(Constants.TASK_PROPERTY_ACTION_INDEX, -1) - 1;
+
+                        if (task.IsPartner)
+                        {
+                            if (index >= 0 && targetTask.PartnerTaskInfo != null && targetTask.PartnerTaskInfo.ImgUrls.Count >= index + 1)
+                            {
+                                var image = targetTask.PartnerTaskInfo.ImgUrls[index];
+
+                                // 链接转换
+                                image.Url = info.TransformUrl(image.Url);
+
+                                info.SetProperty(Constants.MJ_MESSAGE_HANDLED, true);
+                                info.SetProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, targetTask.GetProperty<string>(Constants.TASK_PROPERTY_FINAL_PROMPT, default));
+                                info.SetProperty(Constants.TASK_PROPERTY_MESSAGE_HASH, targetTask.GetProperty<string>(Constants.TASK_PROPERTY_MESSAGE_HASH, default));
+                                info.SetProperty(Constants.TASK_PROPERTY_MESSAGE_CONTENT, targetTask.GetProperty<string>(Constants.TASK_PROPERTY_MESSAGE_CONTENT, default));
+                                info.SetProperty(Constants.TASK_PROPERTY_ACTION_INDEX, index + 1);
+
+                                var prompt = targetTask.PartnerTaskInfo.FullCommand;
+
+                                info.PartnerTaskId = targetTask.PartnerTaskId;
+                                info.PartnerTaskInfo = targetTask.PartnerTaskInfo;
+                                info.ImageUrl = image.Url;
+                                info.JobId = targetTask.JobId;
+                                info.Width = targetTask.Width;
+                                info.Height = targetTask.Height;
+
+                                // 非高级任务，添加变化操作按钮
+                                if (targetTask.Action != TaskAction.EDIT && targetTask.Action != TaskAction.RETEXTURE && targetTask.Action != TaskAction.VIDEO)
+                                {
+                                    // 设置放大操作按钮
+                                    info.OnUpscaleButtons(targetTask.PartnerTaskId, index + 1, prompt);
+                                }
+
+                                // 如果是视频放大
+                                if (targetTask.Action == TaskAction.VIDEO)
+                                {
+                                    info.VideoDuration = targetTask.VideoDuration;
+                                    info.VideoGenOriginImageUrl = targetTask.VideoGenOriginImageUrl;
+                                    info.ContentType = "video/mp4";
+                                    info.FrameCount = targetTask.FrameCount;
+                                    info.ImageUrls = targetTask.ImageUrls;
+                                    info.VideoUrls = targetTask.VideoUrls;
+
+                                    info.SetVideoExtendButtons(targetTask.PartnerTaskId);
+                                }
+
+                                await info.SuccessAsync();
+
+                                _freeSql.Save(info);
+
+                                return SubmitResultVO.Of(ReturnCode.SUCCESS, "提交成功", info.Id)
+                                    .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, info.InstanceId);
+                            }
+                        }
+                        else if (task.IsOfficial)
+                        {
+                            if (index >= 0 && targetTask.OfficialTaskInfo != null && targetTask.OfficialTaskInfo.ImgUrls.Count >= index + 1)
+                            {
+                                var image = targetTask.OfficialTaskInfo.ImgUrls[index];
+
+                                // 链接转换
+                                image.Url = info.TransformUrl(image.Url);
+
+                                try
+                                {
+                                    // 没有转换存储方式，则抓取
+                                    if (info.StorageOption == null)
+                                    {
+                                        // 随便获取一个官方账号实例来下载图片
+                                        var firInc = _accountService.GetAliveInstances().Where(c => c.Account.IsOfficial && c.IsAlive).OrderBy(c => Guid.NewGuid()).FirstOrDefault();
+                                        if (firInc != null)
+                                        {
+                                            var resultUrl = await firInc.YmTaskService?.DownloadImageToStorage(image.Url, targetTask.OfficialTaskId);
+                                            if (!string.IsNullOrWhiteSpace(resultUrl))
+                                            {
+                                                image.Url = resultUrl;
+                                            }
+                                        }
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    // 允许失败，使用原始链接
+                                    Log.Error(ex, "下载图片失败 {@0}", image.Url);
+                                }
+
+                                info.SetProperty(Constants.MJ_MESSAGE_HANDLED, true);
+                                info.SetProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, targetTask.GetProperty<string>(Constants.TASK_PROPERTY_FINAL_PROMPT, default));
+                                info.SetProperty(Constants.TASK_PROPERTY_MESSAGE_HASH, targetTask.GetProperty<string>(Constants.TASK_PROPERTY_MESSAGE_HASH, default));
+                                info.SetProperty(Constants.TASK_PROPERTY_MESSAGE_CONTENT, targetTask.GetProperty<string>(Constants.TASK_PROPERTY_MESSAGE_CONTENT, default));
+                                info.SetProperty(Constants.TASK_PROPERTY_ACTION_INDEX, index + 1);
+
+                                var prompt = targetTask.OfficialTaskInfo.FullCommand;
+
+                                info.OfficialTaskId = targetTask.OfficialTaskId;
+                                info.OfficialTaskInfo = targetTask.OfficialTaskInfo;
+                                info.ImageUrl = image.Url;
+                                info.JobId = targetTask.JobId;
+                                info.Width = targetTask.Width;
+                                info.Height = targetTask.Height;
+
+                                // 非高级任务，添加变化操作按钮
+                                if (targetTask.Action != TaskAction.EDIT && targetTask.Action != TaskAction.RETEXTURE && targetTask.Action != TaskAction.VIDEO)
+                                {
+                                    // 设置放大操作按钮
+                                    info.OnUpscaleButtons(targetTask.OfficialTaskId, index + 1, prompt);
+                                }
+
+                                // 如果是视频放大
+                                if (targetTask.Action == TaskAction.VIDEO)
+                                {
+                                    info.VideoDuration = targetTask.VideoDuration;
+                                    info.VideoGenOriginImageUrl = targetTask.VideoGenOriginImageUrl;
+                                    info.ContentType = "video/mp4";
+                                    info.FrameCount = targetTask.FrameCount;
+                                    info.ImageUrls = targetTask.ImageUrls;
+                                    info.VideoUrls = targetTask.VideoUrls;
+
+                                    info.SetVideoExtendButtons(targetTask.OfficialTaskId);
+                                }
+
+                                await info.SuccessAsync();
+
+                                _freeSql.Save(info);
+
+                                return SubmitResultVO.Of(ReturnCode.SUCCESS, "提交成功", info.Id)
+                                    .SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, info.InstanceId);
+                            }
+                        }
+                    }
+                }
+
+                return submitResult;
+            }
+
+            task.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, instance.ChannelId);
+
+            task.InstanceId = instance.ChannelId;
+            task.IsPartner = instance.Account.IsYouChuan;
+            task.IsOfficial = instance.Account.IsOfficial;
 
             // 如果是 Modal 作业，则直接返回
             if (submitAction.CustomId.StartsWith("MJ::CustomZoom::") || submitAction.CustomId.StartsWith("MJ::Inpaint::"))
@@ -1634,7 +1779,6 @@ namespace Midjourney.Services
                     return SubmitResultVO.Of(ReturnCode.VALIDATION_ERROR, res.Description, task.ParentId);
                 }
             }
-
 
             // 手动视频
             else if (submitAction.CustomId.StartsWith("MJ::JOB::video::") && submitAction.CustomId.Contains("::manual"))
