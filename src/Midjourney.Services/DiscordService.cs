@@ -192,6 +192,11 @@ namespace Midjourney.Services
             {
                 _ymTaskService = new YmTaskService(account, this, _httpClientFactory);
             }
+            else if (account.IsDiscord && !string.IsNullOrWhiteSpace(account.Cookie))
+            {
+                // 当 discord 账号有 cookie 时
+                _ymTaskService = new YmTaskService(account, this, _httpClientFactory);
+            }
         }
 
         private void SubscribeToAccount(DiscordAccount account)
