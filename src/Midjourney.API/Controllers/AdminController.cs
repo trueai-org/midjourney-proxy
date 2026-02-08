@@ -1307,11 +1307,32 @@ namespace Midjourney.API.Controllers
 
                 var count = (int)query.Count();
 
-                var list = query
+                // MYSQL 分页性能优化：先查 Id，再回表
+                // PQSQL 无分页性能问题
+                // 每一行都要 回表 读取完整行数据，当数据量大时性能会很差，尤其是文本字段（如 Prompt、FailReason）较大时
+                // SELECT a.*
+                // FROM `TaskInfo` a
+                // ORDER BY a.`SubmitTime` DESC
+                // limit 133030,10
+                //var list = query
+                //    .OrderByDescending(c => c.SubmitTime)
+                //    .Skip((page.Current - 1) * page.PageSize)
+                //    .Take(page.PageSize)
+                //    .ToList();
+
+                // 延迟关联优化：先查 Id，再回表
+                var ids = query
                     .OrderByDescending(c => c.SubmitTime)
                     .Skip((page.Current - 1) * page.PageSize)
                     .Take(page.PageSize)
-                    .ToList();
+                    .ToList(c => c.Id);
+
+                var list = ids.Count > 0
+                    ? freeSql.Select<TaskInfo>()
+                        .Where(c => ids.Contains(c.Id))
+                        .OrderByDescending(c => c.SubmitTime)
+                        .ToList()
+                    : [];
 
                 var data = list.ToTableResult(request.Pagination.Current, request.Pagination.PageSize, count);
 
