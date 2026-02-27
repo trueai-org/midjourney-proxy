@@ -745,7 +745,7 @@ namespace Midjourney.Base.Models
         [LiteDB.BsonIgnore]
         [MongoDB.Bson.Serialization.Attributes.BsonIgnore]
         [Column(IsIgnore = true)]
-        public bool MjRemixOn => Buttons.Any(x => x.Label == "Remix mode" && x.Style == 3);
+        public bool MjRemixOn => Buttons.Any(x => x.Label.Contains("Remix mode", StringComparison.OrdinalIgnoreCase) && x.Style == 3);
 
         /// <summary>
         /// MJ 是否开启 fast mode
@@ -754,7 +754,7 @@ namespace Midjourney.Base.Models
         [MongoDB.Bson.Serialization.Attributes.BsonIgnore]
         [Column(IsIgnore = true)]
         public bool MjFastModeOn =>
-            Buttons.Any(x => (x.Label == "Fast mode" || x.Label == "Turbo mode") && x.Style == 3);
+            Buttons.Any(x => (x.Label.Contains("Fast mode", StringComparison.OrdinalIgnoreCase) || x.Label.Contains("Turbo mode", StringComparison.OrdinalIgnoreCase)) && x.Style == 3);
 
         /// <summary>
         /// Niji 按钮
@@ -781,13 +781,13 @@ namespace Midjourney.Base.Models
         [LiteDB.BsonIgnore]
         [MongoDB.Bson.Serialization.Attributes.BsonIgnore]
         [Column(IsIgnore = true)]
-        public bool NijiRemixOn => NijiButtons.Any(x => x.Label == "Remix mode" && x.Style == 3);
+        public bool NijiRemixOn => NijiButtons.Any(x => x.Label.Contains("Remix mode", StringComparison.OrdinalIgnoreCase) && x.Style == 3);
 
         /// <summary>
         /// Niji 是否开启 fast mode
         /// </summary>
         public bool NijiFastModeOn =>
-            NijiButtons.Any(x => (x.Label == "Fast mode" || x.Label == "Turbo mode") && x.Style == 3);
+            NijiButtons.Any(x => (x.Label.Contains("Fast mode", StringComparison.OrdinalIgnoreCase) || x.Label.Contains("Turbo mode", StringComparison.OrdinalIgnoreCase)) && x.Style == 3);
 
         /// <summary>
         /// Mj 下拉框
