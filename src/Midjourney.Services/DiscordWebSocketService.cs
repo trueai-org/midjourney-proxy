@@ -1426,7 +1426,13 @@ namespace Midjourney.Services
                                                 }
 
                                                 // 计算快速可用次数
-                                                var fastAvailableCount = (int)Math.Ceiling(ftime * 60);
+                                                var fastDua = GlobalConfiguration.Setting.FastDrawDuration;
+                                                if (fastDua < 45 || fastDua > 60)
+                                                {
+                                                    fastDua = 60;
+                                                }
+
+                                                var fastAvailableCount = (int)(Math.Ceiling(ftime * 60) * 60 / fastDua);
                                                 CounterHelper.SetFastTaskAvailableCount(acc.ChannelId, fastAvailableCount);
 
                                                 _freeSql.Update<DiscordAccount>()

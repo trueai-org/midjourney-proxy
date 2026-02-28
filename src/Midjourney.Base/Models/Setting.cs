@@ -474,9 +474,16 @@ namespace Midjourney.Base.Models
         public bool EnableAutoVerifyAccount { get; set; }
 
         /// <summary>
-        /// 启用自动同步信息和设置（废弃）
+        /// 启用 Discord 定时自动同步信息和设置
+        /// 启用后随机每 3~12 小时自动同步一次账号信息和设置，默认：true
         /// </summary>
-        public bool EnableAutoSyncInfoSetting { get; set; }
+        public bool EnableAutoSyncInfoSetting { get; set; } = true;
+
+        /// <summary>
+        /// 快速绘图消耗时长
+        /// 一次快速绘图大概使用的时间，用于计算快速时长剩余次数，默认：60s，取值范围：45-60s，如果默认60s，则15小时约900次快速；如果45s就是约1200次快速
+        /// </summary>
+        public int FastDrawDuration { get; set; } = 60;
 
         /// <summary>
         /// 启用 token 自动延期（废弃）

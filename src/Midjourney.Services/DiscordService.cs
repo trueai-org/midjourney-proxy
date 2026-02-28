@@ -2370,7 +2370,11 @@ namespace Midjourney.Services
                                 // FAST 消耗时尝试同步信息
                                 await CounterHelper.FastUsedTrySyncInfo(Account.ChannelId, fastAvailable, async () =>
                                 {
-                                    await SyncInfoSetting(true);
+                                    // 开启自动同步才强制刷新快速剩余次数
+                                    if (GlobalConfiguration.Setting.EnableAutoSyncInfoSetting)
+                                    {
+                                        await SyncInfoSetting(true);
+                                    }
                                 });
                             }
                         }
@@ -3789,6 +3793,12 @@ namespace Midjourney.Services
                         cacheMinutes = Random.Shared.Next(360, 720);
                     }
 
+                    // 未开启自动同步则缓存 1-2天
+                    if (!GlobalConfiguration.Setting.EnableAutoSyncInfoSetting)
+                    {
+                        cacheMinutes = Random.Shared.Next(1440, 2880);
+                    }
+
                     success = await RedisHelper.Instance.GetOrCreateAsync(cacheKey, async () =>
                     {
                         return await YmTaskService.SyncOfficialInfo();
@@ -3808,6 +3818,12 @@ namespace Midjourney.Services
                     if (hasFast && acc.FastExhausted)
                     {
                         cacheMinutes = Random.Shared.Next(360, 720);
+                    }
+
+                    // 未开启自动同步则缓存 1-2天
+                    if (!GlobalConfiguration.Setting.EnableAutoSyncInfoSetting)
+                    {
+                        cacheMinutes = Random.Shared.Next(1440, 2880);
                     }
 
                     success = await RedisHelper.Instance.GetOrCreateAsync(cacheKey, async () =>
