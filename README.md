@@ -14,6 +14,17 @@ The most powerful, complete, full-featured, completely free and open source Midj
 
 ⭐ 如果觉得项目不错，请一定帮忙点个 `Star`，万分感谢！
 
+## 👍👍 Midjourney 企业级 API
+
+**极速响应 · 快速出图 · 价格实惠 · 高并发 · 不封号 · 不删图。**
+
+- https://huanwangai.com
+- https://api.huanwangai.com
+
+<img src="./docs/screenshots/api.huanwangai.com.png" alt="trueai.org" width="500"/>
+<img src="./docs/screenshots/huanwangai.com.png" alt="trueai.org" width="500"/>
+
+
 ## 👍👍 ChatGPT · Discord · Midjourney 官方镜像站，官方 1 折优惠！
 
 - 🍎 支持 Discord ChatGPT 所有指令！
