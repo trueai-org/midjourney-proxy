@@ -838,6 +838,15 @@ namespace Midjourney.Base.Models
                 promptSource = !string.IsNullOrWhiteSpace(PromptEn) ? PromptEn : Prompt;
             }
 
+            return GetVideoBatchSize(promptSource);
+        }
+
+        /// <summary>
+        /// 获取视频批量处理数量
+        /// </summary>
+        /// <returns></returns>
+        public static int GetVideoBatchSize(string promptSource)
+        {
             if (!string.IsNullOrWhiteSpace(promptSource))
             {
                 var match = Regex.Match(promptSource, @"--bs\s+(\d+)", RegexOptions.IgnoreCase);
