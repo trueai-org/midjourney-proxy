@@ -657,16 +657,15 @@ namespace Midjourney.API
                     {
                         while (true)
                         {
-                            // 每次至少删除 1000 条
-                            // 每次最多删除 3000 条
                             var total = _freeSql.Select<TaskInfo>().Count();
                             if (total > maxCount && total - maxCount >= 1000)
                             {
-                                var delteCount = int.Max(3000, (int)total - maxCount);
+                                // 每次最大删除 1000
+                                var delCount = Math.Min(1000, (int)total - maxCount);
 
                                 var ids = _freeSql.Select<TaskInfo>()
                                     .OrderBy(c => c.SubmitTime)
-                                    .Take(delteCount)
+                                    .Take(delCount)
                                     .ToList(c => c.Id);
 
                                 if (ids.Count > 0)
