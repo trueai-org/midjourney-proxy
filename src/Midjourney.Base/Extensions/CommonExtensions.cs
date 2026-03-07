@@ -417,6 +417,22 @@ namespace Midjourney.Base
         }
 
         /// <summary>
+        /// string 转 dateTime?
+        /// </summary>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        public static DateTime? ToDateTime(this string value)
+        {
+            if (!string.IsNullOrWhiteSpace(value) && DateTime.TryParse(value?.Trim(), out DateTime v)
+                && v > DateTime.MinValue
+                && v < DateTime.MaxValue)
+            {
+                return v;
+            }
+            return null;
+        }
+
+        /// <summary>
         /// 时间段输入解析
         /// 格式为 "HH:mm-HH:mm, HH:mm-HH:mm, ..."，例如 "09:00-17:00, 18:00-22:00"
         /// </summary>

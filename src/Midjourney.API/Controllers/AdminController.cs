@@ -29,6 +29,7 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using CSRedis;
+using FreeSql;
 using LiteDB;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -1266,11 +1267,38 @@ namespace Midjourney.API.Controllers
         }
 
         /// <summary>
+        /// 获取任务查询
+        /// </summary>
+        /// <param name="param"></param>
+        /// <returns></returns>
+        private ISelect<TaskInfo> GetTasksQuery(TaskInfoQueryRequest param)
+        {
+            var stTime = param.SubmitTimeStart?.ToDateTime()?.Date.ToUnixLong();
+            var edTime = param.SubmitTimeEnd?.ToDateTime()?.Date.AddDays(1).ToUnixLong();
+
+            var query = _freeSql.Select<TaskInfo>()
+                .WhereIf(param.Mode == GenerationSpeedMode.FAST, c => c.Mode == param.Mode || c.Mode == null)
+                .WhereIf(param.Mode == GenerationSpeedMode.TURBO, c => c.Mode == param.Mode)
+                .WhereIf(param.Mode == GenerationSpeedMode.RELAX, c => c.Mode == param.Mode)
+                .WhereIf(!string.IsNullOrWhiteSpace(param.Id), c => c.Id == param.Id || c.State == param.Id)
+                .WhereIf(!string.IsNullOrWhiteSpace(param.InstanceId), c => c.InstanceId == param.InstanceId)
+                .WhereIf(param.Status.HasValue, c => c.Status == param.Status)
+                .WhereIf(param.Action.HasValue, c => c.Action == param.Action)
+                .WhereIf(stTime > 0, c => c.SubmitTime >= stTime)
+                .WhereIf(edTime > 0, c => c.SubmitTime < edTime)
+                .WhereIf(!string.IsNullOrWhiteSpace(param.UserId), c => c.UserId == param.UserId)
+                .WhereIf(!string.IsNullOrWhiteSpace(param.FailReason), c => c.FailReason.Contains(param.FailReason))
+                .WhereIf(!string.IsNullOrWhiteSpace(param.Description), c => c.Prompt.Contains(param.Description));
+
+            return query;
+        }
+
+        /// <summary>
         /// 获取所有任务信息
         /// </summary>
         /// <returns>所有任务信息</returns>
         [HttpPost("tasks")]
-        public ActionResult<StandardTableResult<TaskInfo>> Tasks([FromBody] StandardTableParam<TaskInfo> request)
+        public ActionResult<StandardTableResult<TaskInfo, TaskInfoQueryStatResult>> Tasks([FromBody] StandardTableParam<TaskInfoQueryRequest> request)
         {
             var page = request.Pagination;
             if (page.PageSize > 100)
@@ -1290,65 +1318,60 @@ namespace Midjourney.API.Controllers
             }
 
             var param = request.Search;
+            var query = GetTasksQuery(param);
 
-            var freeSql = FreeSqlHelper.FreeSql;
-            if (freeSql != null)
-            {
-                var query = freeSql.Select<TaskInfo>()
-                    .WhereIf(param.Mode == GenerationSpeedMode.FAST, c => c.Mode == param.Mode || c.Mode == null)
-                    .WhereIf(param.Mode == GenerationSpeedMode.TURBO, c => c.Mode == param.Mode)
-                    .WhereIf(param.Mode == GenerationSpeedMode.RELAX, c => c.Mode == param.Mode)
-                    .WhereIf(!string.IsNullOrWhiteSpace(param.Id), c => c.Id == param.Id || c.State == param.Id)
-                    .WhereIf(!string.IsNullOrWhiteSpace(param.InstanceId), c => c.InstanceId == param.InstanceId)
-                    .WhereIf(param.Status.HasValue, c => c.Status == param.Status)
-                    .WhereIf(param.Action.HasValue, c => c.Action == param.Action)
-                    .WhereIf(!string.IsNullOrWhiteSpace(param.FailReason), c => c.FailReason.Contains(param.FailReason))
-                    .WhereIf(!string.IsNullOrWhiteSpace(param.Description), c => c.Prompt.Contains(param.Description));
+            // MYSQL 分页性能优化：先查 Id，再回表
+            // PQSQL 无分页性能问题
+            // 每一行都要 回表 读取完整行数据，当数据量大时性能会很差，尤其是文本字段（如 Prompt、FailReason）较大时
+            // SELECT a.*
+            // FROM `TaskInfo` a
+            // ORDER BY a.`SubmitTime` DESC
+            // limit 133030,10
+            //var list = query
+            //    .OrderByDescending(c => c.SubmitTime)
+            //    .Skip((page.Current - 1) * page.PageSize)
+            //    .Take(page.PageSize)
+            //    .ToList();
 
-                var count = (int)query.Count();
+            // 延迟关联优化：先查 Id，再回表
+            var ids = query
+                .OrderByDescending(c => c.SubmitTime)
+                .Count(out var total)
+                .Page(page.Current, page.PageSize)
+                .ToList(c => c.Id);
 
-                // MYSQL 分页性能优化：先查 Id，再回表
-                // PQSQL 无分页性能问题
-                // 每一行都要 回表 读取完整行数据，当数据量大时性能会很差，尤其是文本字段（如 Prompt、FailReason）较大时
-                // SELECT a.*
-                // FROM `TaskInfo` a
-                // ORDER BY a.`SubmitTime` DESC
-                // limit 133030,10
-                //var list = query
-                //    .OrderByDescending(c => c.SubmitTime)
-                //    .Skip((page.Current - 1) * page.PageSize)
-                //    .Take(page.PageSize)
-                //    .ToList();
-
-                // 延迟关联优化：先查 Id，再回表
-                var ids = query
+            var list = ids.Count > 0
+                ? _freeSql.Select<TaskInfo>()
+                    .Where(c => ids.Contains(c.Id))
                     .OrderByDescending(c => c.SubmitTime)
-                    .Skip((page.Current - 1) * page.PageSize)
-                    .Take(page.PageSize)
-                    .ToList(c => c.Id);
+                    .ToList()
+                : [];
 
-                var list = ids.Count > 0
-                    ? freeSql.Select<TaskInfo>()
-                        .Where(c => ids.Contains(c.Id))
-                        .OrderByDescending(c => c.SubmitTime)
-                        .ToList()
-                    : [];
+            var count = (int)total;
 
-                var data = list.ToTableResult(request.Pagination.Current, request.Pagination.PageSize, count);
+            var sta = new TaskInfoQueryStatResult()
+            {
+                Total = count
+            };
+            var data = list.ToTableResult(request.Pagination.Current,
+                request.Pagination.PageSize, count, sta);
 
-                return Ok(data);
+            // 用户统计
+            if (!string.IsNullOrWhiteSpace(param.UserId))
+            {
+                // 统计视频类型绘图数量、统计
+                var statQuery = GetTasksQuery(param);
+                var stats = statQuery.GroupBy(c => c.Action)
+                    .Select(c => new
+                    {
+                        Action = c.Key,
+                        Count = c.Count()
+                    }).ToList();
+
+                sta.ActionStats = stats.Where(c => c.Action != null).ToDictionary(c => c.Action.Value!, c => c.Count);
             }
 
-            return Ok(new StandardTableResult<TaskInfo>()
-            {
-                List = new List<TaskInfo>(),
-                Pagination = new StandardTablePagination()
-                {
-                    Current = page.Current,
-                    PageSize = page.PageSize,
-                    Total = 0
-                }
-            });
+            return Ok(data);
         }
 
         /// <summary>
