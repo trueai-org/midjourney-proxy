@@ -1318,6 +1318,23 @@ namespace Midjourney.API.Controllers
             }
 
             var param = request.Search;
+
+            // 指定用户查询统计
+            if (!string.IsNullOrWhiteSpace(param.UserId))
+            {
+                var user = _freeSql.Select<User>()
+                    .Where(c => c.Id == param.UserId || c.Name == param.UserId || c.Phone == param.UserId || c.Email == param.UserId)
+                    .First();
+                if (user != null)
+                {
+                    param.UserId = user.Id;
+                }
+                else
+                {
+                    throw new LogicException("用户不存在");
+                }
+            }
+
             var query = GetTasksQuery(param);
 
             // MYSQL 分页性能优化：先查 Id，再回表

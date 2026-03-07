@@ -16,8 +16,8 @@
         public Dictionary<TaskAction, int> ActionStats { get; set; }
 
         /// <summary>
-        /// 用户操作计数，暂定（后面精确计算）：视频 = 8，非视频 = 1
+        /// 用户操作计数，排除放大，暂定（后面精确计算）：视频 = 8，非视频 = 1
         /// </summary>
-        public int ActionUseCount => ActionStats?.Select(c => (c.Key == TaskAction.VIDEO ? 8 : 1) * c.Value).Sum() ?? 0;
+        public int ActionUseCount => ActionStats?.Where(c => c.Key != TaskAction.UPSCALE).Select(c => (c.Key == TaskAction.VIDEO ? 8 : 1) * c.Value).Sum() ?? 0;
     }
 }
