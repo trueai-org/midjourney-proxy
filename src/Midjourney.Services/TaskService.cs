@@ -1705,10 +1705,12 @@ namespace Midjourney.Services
             // 如果是 Modal 作业，则直接返回
             if (submitAction.CustomId.StartsWith("MJ::CustomZoom::") || submitAction.CustomId.StartsWith("MJ::Inpaint::"))
             {
+                // fix: 这里应该始终为 modal 状态，等待前端弹窗确认后再真正提交任务，避免用户误操作导致任务错误
+                task.Status = TaskStatus.MODAL;
+
                 // 如果是局部重绘，则设置任务状态为 modal
                 if (submitAction.CustomId.StartsWith("MJ::Inpaint::"))
                 {
-                    task.Status = TaskStatus.MODAL;
                     task.Prompt = "";
                     task.PromptEn = "";
                 }
