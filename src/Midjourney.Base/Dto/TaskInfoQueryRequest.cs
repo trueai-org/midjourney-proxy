@@ -59,5 +59,10 @@ namespace Midjourney.Base.Dto
         /// 用户 ID
         /// </summary>
         public string UserId { get; set; }
+
+        /// <summary>
+        /// 是否为第三方任务
+        /// </summary>
+        public bool? IsThirdParty { get; set; }
     }
 }

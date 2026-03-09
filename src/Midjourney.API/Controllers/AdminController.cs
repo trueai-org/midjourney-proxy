@@ -1284,6 +1284,7 @@ namespace Midjourney.API.Controllers
                 .WhereIf(!string.IsNullOrWhiteSpace(param.InstanceId), c => c.InstanceId == param.InstanceId)
                 .WhereIf(param.Status.HasValue, c => c.Status == param.Status)
                 .WhereIf(param.Action.HasValue, c => c.Action == param.Action)
+                .WhereIf(param.IsThirdParty.HasValue, c => c.IsThirdParty == param.IsThirdParty)
                 .WhereIf(stTime > 0, c => c.SubmitTime >= stTime)
                 .WhereIf(edTime > 0, c => c.SubmitTime < edTime)
                 .WhereIf(!string.IsNullOrWhiteSpace(param.UserId), c => c.UserId == param.UserId)

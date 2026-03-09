@@ -438,8 +438,52 @@ namespace Midjourney.API.Controllers
             {
                 return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "参数错误"));
             }
-
             var targetTask = _freeSql.Get<TaskInfo>(actionDTO.TaskId);
+
+            // 上游任务不存在时，如果工具函数中有回调信息，则执行回调函数进行信息获取
+            if (targetTask == null)
+            {
+                try
+                {
+                    if (actionDTO?.Tools?.Count > 0)
+                    {
+                        foreach (var tool in actionDTO.Tools)
+                        {
+                            if (tool.Name == "get_parent_task")
+                            {
+                                if (tool.InputSchema is System.Text.Json.JsonElement parentEle && parentEle.ValueKind == System.Text.Json.JsonValueKind.String)
+                                {
+                                    var parentTaskUrl = parentEle.GetString();
+                                    if (!string.IsNullOrWhiteSpace(parentTaskUrl))
+                                    {
+                                        using var client = new HttpClient() { Timeout = TimeSpan.FromMinutes(1) };
+                                        var response = await client.GetAsync(parentTaskUrl);
+                                        if (response.IsSuccessStatusCode)
+                                        {
+                                            var content = await response.Content.ReadAsStringAsync();
+                                            var parentTask = content.ToObject<TaskInfo>();
+                                            if (parentTask != null && parentTask.Status == TaskStatus.SUCCESS)
+                                            {
+                                                // 标记为第三方任务
+                                                parentTask.IsThirdParty = true;
+
+                                                _freeSql.Add(parentTask);
+                                                targetTask = parentTask;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                catch
+                {
+                    // 忽略回调函数执行异常，继续往下走正常的 not found 逻辑
+                }
+            }
+
             if (targetTask == null)
             {
                 return NotFound(SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "关联任务不存在或已失效"));

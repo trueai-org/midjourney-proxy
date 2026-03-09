@@ -54,5 +54,36 @@ namespace Midjourney.Base.Dto
         /// 默认：低变化，true：高变化
         /// </summary>
         public bool? Strong { get; set; }
+
+        /// <summary>
+        /// 工具列表
+        /// </summary>
+        [JsonPropertyName("tools")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public List<FunctionTool> Tools { get; set; }
+    }
+
+    /// <summary>
+    /// 函数工具
+    /// </summary>
+    public class FunctionTool
+    {
+        /// <summary>
+        /// 工具名称，如 "get_weather" "get_parent_task"
+        /// </summary>
+        [JsonPropertyName("name")]
+        public string Name { get; set; }
+
+        /// <summary>
+        /// 工具描述，帮助模型理解何时调用
+        /// </summary>
+        [JsonPropertyName("description")]
+        public string Description { get; set; }
+
+        /// <summary>
+        /// 输入参数的 JSON Schema | string
+        /// </summary>
+        [JsonPropertyName("input_schema")]
+        public object InputSchema { get; set; } = new();
     }
 }

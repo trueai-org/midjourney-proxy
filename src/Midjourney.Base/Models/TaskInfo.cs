@@ -281,6 +281,11 @@ namespace Midjourney.Base.Models
         public bool HasAIReviewRetried { get; set; }
 
         /// <summary>
+        /// 是否为第三方任务
+        /// </summary>
+        public bool IsThirdParty { get; set; }
+
+        /// <summary>
         /// 是否为悠船任务
         /// </summary>
         public bool IsPartner { get; set; }
