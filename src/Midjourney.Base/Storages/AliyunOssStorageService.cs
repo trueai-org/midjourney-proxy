@@ -57,9 +57,9 @@ namespace Midjourney.Base.Storages
         private readonly string _accessKeySecret;
         private readonly string _endpoint;
 
-        public AliyunOssStorageService()
+        public AliyunOssStorageService(AliyunOssOptions aliyunOss = null)
         {
-            var ossOptions = GlobalConfiguration.Setting.AliyunOss;
+            var ossOptions = aliyunOss ?? GlobalConfiguration.Setting.AliyunOss;
 
             _ossOptions = ossOptions;
             _bucketName = ossOptions.BucketName!;
@@ -141,7 +141,6 @@ namespace Midjourney.Base.Storages
             {
                 try
                 {
-                    var opt = GlobalConfiguration.Setting.AliyunOss;
 
                     var objectResult = client.PutObject(_bucketName, key, mediaBinaryStream, metadata);
                     if (objectResult?.HttpStatusCode == System.Net.HttpStatusCode.OK)
@@ -155,7 +154,7 @@ namespace Midjourney.Base.Storages
                             Md5 = objectResult.ResponseMetadata["Content-MD5"],
                             Id = objectResult.ETag,
                             ContentType = mimeType,
-                            Url = GetSignKey(key, opt.ExpiredMinutes).ToString()
+                            Url = GetSignKey(key, _ossOptions.ExpiredMinutes).ToString()
                         };
 
                         _logger.Information("上传成功 {@0}", key);
@@ -191,9 +190,7 @@ namespace Midjourney.Base.Storages
         {
             if (minutes <= 0)
             {
-                var ossOptions = GlobalConfiguration.Setting.AliyunOss;
-
-                return new Uri($"{ossOptions.CustomCdn}/{key}");
+                return new Uri($"{_ossOptions.CustomCdn}/{key}");
             }
 
             var client = new OssClient(_endpoint, _accessKeyId, _accessKeySecret);

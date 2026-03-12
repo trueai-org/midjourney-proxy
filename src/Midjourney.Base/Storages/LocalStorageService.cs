@@ -33,10 +33,12 @@ namespace Midjourney.Base.Storages
     public class LocalStorageService : IStorageService
     {
         private readonly ILogger _logger;
+        private readonly LocalStorageOptions _opt;
 
-        public LocalStorageService()
+        public LocalStorageService(LocalStorageOptions opt = null)
         {
             _logger = Log.Logger;
+            _opt = opt ?? GlobalConfiguration.Setting.LocalStorage;
         }
 
         /// <summary>
@@ -65,7 +67,6 @@ namespace Midjourney.Base.Storages
             _logger.Information("文件已保存到本地存储: {FilePath}", filePath);
 
 
-            var opt = GlobalConfiguration.Setting.LocalStorage;
 
             return new UploadResult
             {
@@ -74,7 +75,7 @@ namespace Midjourney.Base.Storages
                 Path = filePath,
                 Size = mediaBinaryStream.Length,
                 ContentType = mimeType,
-                Url = $"{opt.CustomCdn}/{key}"
+                Url = $"{_opt.CustomCdn}/{key}"
             };
         }
 
@@ -208,12 +209,12 @@ namespace Midjourney.Base.Storages
 
         public string GetCustomCdn()
         {
-            return GlobalConfiguration.Setting.LocalStorage.CustomCdn;
+            return _opt.CustomCdn;
         }
 
         public BaseStorage GetBaseStorage()
         {
-            return GlobalConfiguration.Setting.LocalStorage;
+            return _opt;
         }
     }
 }

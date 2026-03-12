@@ -216,7 +216,6 @@ namespace Midjourney.Base
                 Proxy = webProxy,
             };
 
-
             // 换脸放到私有附件中
             if (isReplicate)
             {
@@ -653,6 +652,237 @@ namespace Midjourney.Base
                     var localPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", path.Trim('/'));
 
                     _instance.SaveAsync(stream, localPath, contentType);
+
+                    // 构建访问URL
+                    resultUrl = $"{cdn.Trim().TrimEnd('/')}/{path.Trim('/')}";
+                }
+            }
+            catch (Exception ex)
+            {
+                // 记录错误但不抛出
+                Log.Error(ex, "保存文件到存储服务失败: {Filename}, {ContentType}", filename, contentType);
+
+                resultUrl = null;
+            }
+
+            if (string.IsNullOrWhiteSpace(resultUrl))
+            {
+                return null;
+            }
+
+            // 重新格式化 URL
+            var resultUri = new Uri(resultUrl);
+
+            // 如果有端口
+            if (resultUri.IsDefaultPort)
+            {
+                return $"{resultUri.Scheme}://{resultUri.Host}{resultUri.PathAndQuery}";
+            }
+            else
+            {
+                return $"{resultUri.Scheme}://{resultUri.Host}:{resultUri.Port}{resultUri.PathAndQuery}";
+            }
+        }
+
+        /// <summary>
+        /// 保存内存中的文件到存储服务并返回访问URL
+        /// </summary>
+        /// <param name="stream"></param>
+        /// <param name="filename"></param>
+        /// <param name="contentType"></param>
+        /// <param name="path"></param>
+        /// <param name="storageService"></param>
+        /// <returns></returns>
+        public static string SaveFileV2Async(Stream stream,
+            string filename,
+            string contentType,
+            string path,
+            ImageStorageType storageType,
+            AliyunOssOptions aliyunOss,
+            TencentCosOptions tencentCos,
+            CloudflareR2Options cloudflareR2,
+            S3StorageOptions s3Storage,
+            LocalStorageOptions localStorage)
+        {
+            if (stream == null
+                || string.IsNullOrWhiteSpace(filename)
+                || string.IsNullOrWhiteSpace(path)
+                || storageType == ImageStorageType.NONE)
+            {
+                return null;
+            }
+
+            IStorageService storageService = null;
+            switch (storageType)
+            {
+                case ImageStorageType.LOCAL:
+                    storageService = new LocalStorageService(localStorage);
+                    break;
+
+                case ImageStorageType.OSS:
+                    storageService = new AliyunOssStorageService(aliyunOss);
+                    break;
+
+                case ImageStorageType.COS:
+                    storageService = new TencentCosStorageService(tencentCos);
+                    break;
+
+                case ImageStorageType.R2:
+                    storageService = new CloudflareR2StorageService(cloudflareR2);
+                    break;
+
+                case ImageStorageType.S3:
+                    storageService = new S3StorageService(s3Storage);
+                    break;
+
+                default:
+                    break;
+            }
+
+            if (storageService == null)
+            {
+                return null;
+            }
+
+            string resultUrl = null;
+
+            try
+            {
+                // 视频保持原路径
+                if (contentType == "video/mp4")
+                {
+                    path = $"attachments/{filename.Trim().Trim('/')}";
+                }
+
+                // 格式化 path 为 url path
+                path = path.Replace('\\', '/').TrimStart('/').Trim();
+
+                // 阿里云 OSS
+                if (storageType == ImageStorageType.OSS)
+                {
+                    var opt = aliyunOss;
+                    var cdn = opt?.CustomCdn;
+                    if (string.IsNullOrWhiteSpace(cdn))
+                    {
+                        return null;
+                    }
+
+                    storageService.SaveAsync(stream, path, contentType);
+
+                    // 构建访问URL
+                    resultUrl = $"{cdn.Trim().TrimEnd('/')}/{path}";
+
+                    // 如果配置了链接有效期，则生成带签名的链接
+                    if (opt.ExpiredMinutes > 0)
+                    {
+                        var priUri = storageService.GetSignKey(path, opt.ExpiredMinutes);
+                        resultUrl = $"{cdn.Trim().TrimEnd('/')}/{priUri.PathAndQuery.TrimStart('/')}";
+                    }
+
+                    // 根据内容类型应用不同的样式
+                    if (contentType == "image/webp" || contentType.StartsWith("image/"))
+                    {
+                        resultUrl = resultUrl.ToStyle(opt.ImageStyle);
+                    }
+                }
+                // 腾讯云 COS
+                else if (storageType == ImageStorageType.COS)
+                {
+                    var opt = tencentCos;
+                    var cdn = opt?.CustomCdn;
+                    if (string.IsNullOrWhiteSpace(cdn))
+                    {
+                        return null;
+                    }
+
+                    storageService.SaveAsync(stream, path, contentType);
+
+                    // 构建访问URL
+                    resultUrl = $"{cdn.Trim().TrimEnd('/')}/{path}";
+
+                    // 如果配置了链接有效期，则生成带签名的链接
+                    if (opt.ExpiredMinutes > 0)
+                    {
+                        var priUri = storageService.GetSignKey(path, opt.ExpiredMinutes);
+                        resultUrl = $"{cdn.Trim().TrimEnd('/')}/{priUri.PathAndQuery.TrimStart('/')}";
+                    }
+
+                    // 根据内容类型应用不同的样式
+                    if (contentType == "image/webp" || contentType.StartsWith("image/"))
+                    {
+                        resultUrl = resultUrl.ToStyle(opt.ImageStyle);
+                    }
+                }
+                // Cloudflare R2
+                else if (storageType == ImageStorageType.R2)
+                {
+                    var opt = cloudflareR2;
+                    var cdn = opt?.CustomCdn;
+                    if (string.IsNullOrWhiteSpace(cdn))
+                    {
+                        return null;
+                    }
+
+                    storageService.SaveAsync(stream, path, contentType);
+
+                    // 构建访问URL
+                    resultUrl = $"{cdn.Trim().TrimEnd('/')}/{path}";
+
+                    // 如果配置了链接有效期，则生成带签名的链接
+                    if (opt.ExpiredMinutes > 0)
+                    {
+                        var priUri = storageService.GetSignKey(path, opt.ExpiredMinutes);
+                        resultUrl = $"{cdn.Trim().TrimEnd('/')}/{priUri.PathAndQuery.TrimStart('/')}";
+                    }
+
+                    // 根据内容类型应用不同的样式
+                    if (contentType == "image/webp" || contentType.StartsWith("image/"))
+                    {
+                        resultUrl = resultUrl.ToStyle(opt.ImageStyle);
+                    }
+                }
+                // S3
+                else if (storageType == ImageStorageType.S3)
+                {
+                    var opt = s3Storage;
+                    var cdn = opt?.CustomCdn;
+                    if (string.IsNullOrWhiteSpace(cdn))
+                    {
+                        return null;
+                    }
+
+                    cdn = $"{cdn.TrimEnd('/')}/{opt.Bucket}";
+
+                    storageService.SaveAsync(stream, path, contentType);
+
+                    // 构建访问URL
+                    resultUrl = $"{cdn.Trim().TrimEnd('/')}/{path}";
+
+                    // 如果配置了链接有效期，则生成带签名的链接
+                    if (opt.ExpiredMinutes > 0)
+                    {
+                        resultUrl = storageService.GetSignKey(path, opt.ExpiredMinutes).ToString();
+                    }
+
+                    // 根据内容类型应用不同的样式
+                    if (contentType == "image/webp" || contentType.StartsWith("image/"))
+                    {
+                        resultUrl = resultUrl.ToStyle(opt.ImageStyle);
+                    }
+                }
+                // 本地存储
+                else if (storageType == ImageStorageType.LOCAL)
+                {
+                    var opt = localStorage;
+                    var cdn = opt?.CustomCdn;
+                    if (string.IsNullOrWhiteSpace(cdn))
+                    {
+                        return null;
+                    }
+
+                    var localPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", path.Trim('/'));
+
+                    storageService.SaveAsync(stream, localPath, contentType);
 
                     // 构建访问URL
                     resultUrl = $"{cdn.Trim().TrimEnd('/')}/{path.Trim('/')}";

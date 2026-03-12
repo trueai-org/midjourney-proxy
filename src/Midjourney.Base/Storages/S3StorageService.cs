@@ -45,9 +45,9 @@ namespace Midjourney.Base.Storages
         private readonly S3StorageOptions _s3Options;
         private readonly ILogger _logger;
 
-        public S3StorageService()
+        public S3StorageService(S3StorageOptions s3Options = null)
         {
-            _s3Options = GlobalConfiguration.Setting.S3Storage;
+            _s3Options = s3Options ?? GlobalConfiguration.Setting.S3Storage;
             _logger = Log.Logger;
         }
 

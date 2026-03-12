@@ -44,10 +44,9 @@ namespace Midjourney.Base.Storages
         private readonly CloudflareR2Options _r2Options;
         private readonly ILogger _logger;
 
-        public CloudflareR2StorageService()
+        public CloudflareR2StorageService(CloudflareR2Options r2Options = null)
         {
-            _r2Options = GlobalConfiguration.Setting.CloudflareR2;
-
+            _r2Options = r2Options ?? GlobalConfiguration.Setting.CloudflareR2;
             _logger = Log.Logger;
         }
 

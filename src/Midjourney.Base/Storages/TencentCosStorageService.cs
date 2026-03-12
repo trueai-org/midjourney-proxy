@@ -37,10 +37,9 @@ namespace Midjourney.Base.Storages
         private readonly TencentCosOptions _cosOptions;
         private readonly ILogger _logger;
 
-        public TencentCosStorageService()
+        public TencentCosStorageService(TencentCosOptions cosOptions = null)
         {
-            _cosOptions = GlobalConfiguration.Setting.TencentCos;
-
+            _cosOptions = cosOptions ?? GlobalConfiguration.Setting.TencentCos;
             _logger = Log.Logger;
         }
 
@@ -240,7 +239,7 @@ namespace Midjourney.Base.Storages
 
         public BaseStorage GetBaseStorage()
         {
-           return _cosOptions;
+            return _cosOptions;
         }
     }
 }
