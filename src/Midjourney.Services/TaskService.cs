@@ -1072,21 +1072,26 @@ namespace Midjourney.Services
         /// <returns></returns>
         public async Task<SubmitResultVO> ShortenAsync(TaskInfo task)
         {
-            var (instance, mode) = _accountService.ChooseInstance(task.AccountFilter,
+            var (discordInstance, mode) = _accountService.ChooseInstance(task.AccountFilter,
                 isNewTask: true,
                 botType: task.RealBotType ?? task.BotType,
                 shorten: true);
 
+            if (discordInstance == null)
+            {
+                return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
+            }
+
             task.Mode = mode;
-            task.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, instance.ChannelId);
-            task.InstanceId = instance.ChannelId;
+            task.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, discordInstance.ChannelId);
+            task.InstanceId = discordInstance.ChannelId;
 
             task.Status = TaskStatus.NOT_START;
 
             // 入队前不保存
             //_taskStoreService.Save(task);
 
-            return await instance.RedisEnqueue(new TaskInfoQueue()
+            return await discordInstance.RedisEnqueue(new TaskInfoQueue()
             {
                 Info = task,
                 Function = TaskInfoQueueFunction.SHORTEN
@@ -1104,16 +1109,21 @@ namespace Midjourney.Services
         {
             var setting = GlobalConfiguration.Setting;
 
-            var (instance, mode) = _accountService.ChooseInstance(task.AccountFilter,
+            var (discordInstance, mode) = _accountService.ChooseInstance(task.AccountFilter,
                 isNewTask: true,
                 botType: task.RealBotType ?? task.BotType,
                 blend: true);
 
+            if (discordInstance == null)
+            {
+                return SubmitResultVO.Fail(ReturnCode.NOT_FOUND, "无可用的账号实例");
+            }
+
             task.Mode = mode;
-            task.IsPartner = instance.Account.IsYouChuan;
-            task.IsOfficial = instance.Account.IsOfficial;
-            task.InstanceId = instance.ChannelId;
-            task.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, instance.ChannelId);
+            task.IsPartner = discordInstance.Account.IsYouChuan;
+            task.IsOfficial = discordInstance.Account.IsOfficial;
+            task.InstanceId = discordInstance.ChannelId;
+            task.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, discordInstance.ChannelId);
 
             var finalFileNames = new List<string>();
 
@@ -1131,7 +1141,7 @@ namespace Midjourney.Services
                     else
                     {
                         var taskFileName = await dataUrl.GenerateFileName();
-                        link = await instance.YmTaskService.UploadFile(task, dataUrl.Data, taskFileName);
+                        link = await discordInstance.YmTaskService.UploadFile(task, dataUrl.Data, taskFileName);
                     }
 
                     if (string.IsNullOrWhiteSpace(link))
@@ -1156,7 +1166,7 @@ namespace Midjourney.Services
                     else
                     {
                         var taskFileName = await dataUrl.GenerateFileName();
-                        var uploadResult = await instance.UploadAsync(taskFileName, dataUrl);
+                        var uploadResult = await discordInstance.UploadAsync(taskFileName, dataUrl);
                         if (uploadResult.Code != ReturnCode.SUCCESS)
                         {
                             return SubmitResultVO.Fail(ReturnCode.FAILURE, uploadResult.Description);
@@ -1193,7 +1203,7 @@ namespace Midjourney.Services
                     else
                     {
                         var taskFileName = await dataUrl.GenerateFileName();
-                        var uploadResult = await instance.UploadAsync(taskFileName, dataUrl);
+                        var uploadResult = await discordInstance.UploadAsync(taskFileName, dataUrl);
                         if (uploadResult.Code != ReturnCode.SUCCESS)
                         {
                             return SubmitResultVO.Fail(ReturnCode.FAILURE, uploadResult.Description);
@@ -1238,7 +1248,7 @@ namespace Midjourney.Services
                 }
             }
 
-            return await instance.RedisEnqueue(new TaskInfoQueue()
+            return await discordInstance.RedisEnqueue(new TaskInfoQueue()
             {
                 Info = task,
                 Function = TaskInfoQueueFunction.BLEND
