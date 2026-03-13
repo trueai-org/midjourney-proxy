@@ -57,6 +57,7 @@ namespace Midjourney.Base.Models
     [Index("i_IsOfficial", "IsOfficial")]
     [Index("i_OfficialTaskId", "OfficialTaskId")]
     [Index("i_Status_SubmitTime_Mode_Action", "Status, SubmitTime, Mode, Action")]
+    [Index("i_IsThirdParty", "IsThirdParty")]
     public class TaskInfo : DomainObject
     {
         /// <summary>
