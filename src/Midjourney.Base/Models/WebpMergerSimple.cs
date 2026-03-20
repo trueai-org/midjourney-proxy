@@ -22,10 +22,15 @@
 // invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
+using System.Diagnostics;
 using System.Net;
+using Midjourney.Base.StandardTable;
+using Serilog;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Webp;
+using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
+using SkiaSharp;
 
 namespace Midjourney.Base.Models
 {
@@ -83,6 +88,8 @@ namespace Midjourney.Base.Models
                 return null;
             }
 
+            var sw = Stopwatch.StartNew();
+
             var url1 = ycInfo.ImgUrls[0].Webp;
             var url2 = ycInfo.ImgUrls[1].Webp;
             var url3 = ycInfo.ImgUrls[2].Webp;
@@ -101,6 +108,13 @@ namespace Midjourney.Base.Models
             };
 
             await Task.WhenAll(downloadTasks);
+
+            sw.Stop();
+
+            Log.Information("下载图片完成, 耗时 {@0} ms, 链接: {@1},{@2},{@3},{@4} - 内网: {@5}",
+                sw.ElapsedMilliseconds, url1, url2, url3, url4, youChuanInternalDownload);
+
+            sw.Restart();
 
             // 使用MemoryStream加载图片
             var images = new Image[4];
@@ -124,86 +138,186 @@ namespace Midjourney.Base.Models
             int outputWidth = maxWidth * 2;
             int outputHeight = maxHeight * 2;
 
-            using var outputImage = new Image<SixLabors.ImageSharp.PixelFormats.Rgba32>(outputWidth, outputHeight);
+            //using var outputImage = new Image<SixLabors.ImageSharp.PixelFormats.Rgba32>(outputWidth, outputHeight);
 
-            // 按照指定的排列顺序放置图片
-            // 左上 (1)
+            //// 按照指定的排列顺序放置图片
+            //// 左上 (1)
+            //outputImage.Mutate(ctx =>
+            //{
+            //    if (images[0] == null)
+            //    {
+            //        return;
+            //    }
+
+            //    ctx.DrawImage(images[0], new Point(0, 0), 1.0f);
+            //});
+
+            //// 右上 (2)
+            //outputImage.Mutate(ctx =>
+            //{
+            //    if (images[1] == null)
+            //    {
+            //        return;
+            //    }
+
+            //    ctx.DrawImage(images[1], new Point(maxWidth, 0), 1.0f);
+            //});
+
+            //// 左下 (3)
+            //outputImage.Mutate(ctx =>
+            //{
+            //    if (images[2] == null)
+            //    {
+            //        return;
+            //    }
+
+            //    ctx.DrawImage(images[2], new Point(0, maxHeight), 1.0f);
+            //});
+
+            //// 右下 (4)
+            //outputImage.Mutate(ctx =>
+            //{
+            //    if (images[3] == null)
+            //    {
+            //        return;
+            //    }
+
+            //    ctx.DrawImage(images[3], new Point(maxWidth, maxHeight), 1.0f);
+            //});
+
+            //// 创建内存流来存储合并后的图片
+            //using var resultStream = new MemoryStream();
+
+            //if (suffix == "webp")
+            //{
+            //    // 保存为WebP
+            //    var encoder = new WebpEncoder
+            //    {
+            //        Quality = 90 // 75 // 可以根据需要调整WebP质量
+            //    };
+
+            //    outputImage.Save(resultStream, encoder);
+            //}
+            //else
+            //{
+            //    // png
+            //    outputImage.SaveAsPng(resultStream);
+            //}
+
+            //// 清理资源
+            //for (int i = 0; i < 4; i++)
+            //{
+            //    images[i]?.Dispose();
+            //}
+
+            using var outputImage = new Image<Rgba32>(outputWidth, outputHeight);
+
+            // 优化 1: 合并为单次 Mutate
             outputImage.Mutate(ctx =>
             {
-                if (images[0] == null)
-                {
-                    return;
-                }
-
-                ctx.DrawImage(images[0], new Point(0, 0), 1.0f);
+                if (images[0] != null) ctx.DrawImage(images[0], new Point(0, 0), 1.0f);
+                if (images[1] != null) ctx.DrawImage(images[1], new Point(maxWidth, 0), 1.0f);
+                if (images[2] != null) ctx.DrawImage(images[2], new Point(0, maxHeight), 1.0f);
+                if (images[3] != null) ctx.DrawImage(images[3], new Point(maxWidth, maxHeight), 1.0f);
             });
 
-            // 右上 (2)
-            outputImage.Mutate(ctx =>
-            {
-                if (images[1] == null)
-                {
-                    return;
-                }
-
-                ctx.DrawImage(images[1], new Point(maxWidth, 0), 1.0f);
-            });
-
-            // 左下 (3)
-            outputImage.Mutate(ctx =>
-            {
-                if (images[2] == null)
-                {
-                    return;
-                }
-
-                ctx.DrawImage(images[2], new Point(0, maxHeight), 1.0f);
-            });
-
-            // 右下 (4)
-            outputImage.Mutate(ctx =>
-            {
-                if (images[3] == null)
-                {
-                    return;
-                }
-
-                ctx.DrawImage(images[3], new Point(maxWidth, maxHeight), 1.0f);
-            });
-
-            // 创建内存流来存储合并后的图片
             using var resultStream = new MemoryStream();
 
-            if (suffix == "webp")
+            // 优化 2: BestSpeed 编码 + 降低 Quality
+            // 提升  5 - 10 倍编码速度
+            var encoder = new WebpEncoder
             {
-                // 保存为WebP
-                var encoder = new WebpEncoder
-                {
-                    Quality = 90 // 75 // 可以根据需要调整WebP质量
-                };
+                Quality = 75,
+                FileFormat = WebpFileFormatType.Lossy,
+                Method = WebpEncodingMethod.Fastest,
+            };
+            outputImage.Save(resultStream, encoder);
 
-                outputImage.Save(resultStream, encoder);
-            }
-            else
-            {
-                // png
-                outputImage.SaveAsPng(resultStream);
-            }
-
-            // 清理资源
-            for (int i = 0; i < 4; i++)
-            {
-                images[i]?.Dispose();
-            }
+            for (int i = 0; i < 4; i++) images[i]?.Dispose();
 
             // 上传到存储服务
             resultStream.Position = 0; // 重置流位置
 
             var path = $"attachments/merges/{DateTime.UtcNow:yyyy/MM/dd}/{filename}";
 
+            sw.Stop();
+
+            Log.Information("合并图片完成, 耗时 {@0} ms, 文件: {@1}, 链接: {@2},{@3},{@4},{@5} - 内网: {@6}, 大小: {@7}",
+                sw.ElapsedMilliseconds, path, url1, url2, url3, url4,
+                youChuanInternalDownload, resultStream.Length.FormatSize());
+
+            sw.Restart();
             var imageUrl = StorageHelper.SaveFileV2Async(resultStream, filename, $"image/{suffix}", path, storageType, aliyunOss, tencentCos, cloudflareR2, s3Storage, localStorage);
+            sw.Stop();
+
+            Log.Information("上传合并图片完成, 耗时 {@0} ms, URL: {@1}", sw.ElapsedMilliseconds, imageUrl);
 
             return imageUrl;
+        }
+
+        /// <summary>
+        /// 方案                              平均耗时         最快         最慢       输出大小
+        /// ----------------------------------------------------------------------
+        /// A  ImageSharp原始               1075ms      927ms     1173ms      521KB
+        /// A+ ImageSharp优化                156ms      155ms      157ms      280KB
+        /// B  SkiaSharp                   253ms      252ms      254ms      235KB
+        /// 
+        /// A+ 相比 A  提速: 6.9x
+        /// B  相比 A  提速: 4.2x
+        /// B  相比 A+ 提速: 0.6x 
+        /// </summary>
+        /// <param name="imageBytes"></param>
+        /// <returns></returns>
+        public static Task<byte[]> MergeWithSkiaSharp(byte[][] imageBytes)
+        {
+            // 解码图片
+            var bitmaps = new SKBitmap[4];
+            int maxWidth = 512, maxHeight = 512;
+
+            for (int i = 0; i < 4; i++)
+            {
+                if (imageBytes[i] == null || imageBytes[i].Length == 0) continue;
+                bitmaps[i] = SKBitmap.Decode(imageBytes[i]);
+                if (bitmaps[i] != null)
+                {
+                    maxWidth = Math.Max(maxWidth, bitmaps[i].Width);
+                    maxHeight = Math.Max(maxHeight, bitmaps[i].Height);
+                }
+            }
+
+            int outputWidth = maxWidth * 2;
+            int outputHeight = maxHeight * 2;
+
+            using var surface = SKSurface.Create(new SKImageInfo(outputWidth, outputHeight));
+            var canvas = surface.Canvas;
+            canvas.Clear(SKColors.Transparent);
+
+            // 直接绘制，Skia 内部用 GPU/SIMD 加速
+            var positions = new (int x, int y)[]
+            {
+                (0, 0),
+                (maxWidth, 0),
+                (0, maxHeight),
+                (maxWidth, maxHeight)
+            };
+
+            for (int i = 0; i < 4; i++)
+            {
+                if (bitmaps[i] == null) continue;
+                canvas.DrawBitmap(bitmaps[i], positions[i].x, positions[i].y);
+            }
+
+            canvas.Flush();
+
+            // 编码为 WebP
+            using var image = surface.Snapshot();
+            using var data = image.Encode(SKEncodedImageFormat.Webp, 75);
+
+            var result = data.ToArray();
+
+            for (int i = 0; i < 4; i++) bitmaps[i]?.Dispose();
+
+            return Task.FromResult(result);
         }
 
         /// <summary>
