@@ -649,7 +649,7 @@ namespace Midjourney.API.Controllers
             // MJ::Inpaint::1::da2b1fda-0455-4952-9f0e-d4cb891f8b1e::SOLO
             else if (actionDTO.CustomId.StartsWith("MJ::Inpaint::"))
             {
-                task.Action = TaskAction.INPAINT;
+                task.Action = TaskAction.VARIATION;
             }
             // 视频操作
             // MJ::JOB::animate_low::1::a6b09718-e1f6-4f31-9a42-c6dd7d8f1c83::SOLO
