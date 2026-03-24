@@ -24,6 +24,7 @@
 
 using System.Globalization;
 using System.Text.RegularExpressions;
+using Midjourney.Base;
 using RestSharp;
 using Serilog;
 
@@ -43,110 +44,11 @@ namespace Midjourney.Services
         }
 
         /// <summary>
-        /// 获取领域缓存
-        /// </summary>
-        /// <returns></returns>
-        public Dictionary<string, HashSet<string>> GetDomainCache()
-        {
-            return AdaptiveCache.GetOrCreate("domains", () =>
-            {
-                var list = _freeSql.Select<DomainTag>().Where(c => c.Enable).ToList();
-
-                var dict = new Dictionary<string, HashSet<string>>();
-                foreach (var item in list)
-                {
-                    var keywords = item.Keywords.Where(c => !string.IsNullOrWhiteSpace(c)).Select(c => c.Trim()).Distinct().ToList();
-                    dict[item.Id] = new HashSet<string>(keywords);
-                }
-
-                return dict;
-            }, TimeSpan.FromMinutes(30));
-        }
-
-        /// <summary>
-        /// 清除领域缓存
-        /// </summary>
-        public void ClearDomainCache()
-        {
-            AdaptiveCache.Remove("domains");
-        }
-
-        /// <summary>
-        /// 违规词缓存
-        /// </summary>
-        /// <returns></returns>
-        public Dictionary<string, HashSet<string>> GetBannedWordsCache()
-        {
-            return AdaptiveCache.GetOrCreate("bannedWords", () =>
-            {
-                var list = _freeSql.Select<BannedWord>().Where(c => c.Enable).ToList();
-
-                var dict = new Dictionary<string, HashSet<string>>();
-                foreach (var item in list)
-                {
-                    var keywords = item.Keywords?.Where(c => !string.IsNullOrWhiteSpace(c))
-                    .Select(c => c.Trim()).Distinct().ToList() ?? [];
-
-                    dict[item.Id] = new HashSet<string>(keywords);
-                }
-
-                return dict;
-            }, TimeSpan.FromMinutes(30));
-        }
-
-        /// <summary>
         /// 清除违规词缓存
         /// </summary>
         public void ClearBannedWordsCache()
         {
-            AdaptiveCache.Remove("bannedWords");
-        }
-
-        /// <summary>
-        /// 验证违规词
-        /// </summary>
-        /// <param name="promptEn"></param>
-        /// <exception cref="BannedPromptException"></exception>
-        public string CheckBanned(string promptEn)
-        {
-            // 如果开启了自动清除用户违规词，则通过正则替换忽略违词，并忽略大小写
-            var setting = GlobalConfiguration.Setting;
-            if (setting.EnableAutoClearUserBannedWords)
-            {
-                var dic = GetBannedWordsCache();
-                var finalPromptEn = promptEn;
-                foreach (var item in dic)
-                {
-                    foreach (string word in item.Value)
-                    {
-                        var regex = new Regex($"\\b{Regex.Escape(word)}\\b", RegexOptions.IgnoreCase);
-                        finalPromptEn = regex.Replace(finalPromptEn, "");
-                    }
-                }
-                // 去除多余的空格
-                finalPromptEn = Regex.Replace(finalPromptEn, @"\s+", " ").Trim();
-                return finalPromptEn;
-            }
-            else
-            {
-                var dic = GetBannedWordsCache();
-                var finalPromptEn = promptEn.ToLower(CultureInfo.InvariantCulture);
-                foreach (var item in dic)
-                {
-                    foreach (string word in item.Value)
-                    {
-                        var regex = new Regex($"\\b{Regex.Escape(word)}\\b", RegexOptions.IgnoreCase);
-                        var match = regex.Match(finalPromptEn);
-                        if (match.Success)
-                        {
-                            int index = finalPromptEn.IndexOf(word, StringComparison.OrdinalIgnoreCase);
-                            throw new BannedPromptException(promptEn.Substring(index, word.Length));
-                        }
-                    }
-                }
-
-                return promptEn;
-            }
+            RedisHelper.Instance.Del(BannedWord.CacheKey);
         }
 
         /// <summary>

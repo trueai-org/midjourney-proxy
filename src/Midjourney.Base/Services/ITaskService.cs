@@ -23,7 +23,6 @@
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
 using Midjourney.Base.Dto;
-using Midjourney.Base.Util;
 
 namespace Midjourney.Base.Services
 {
@@ -33,33 +32,9 @@ namespace Midjourney.Base.Services
     public interface ITaskService
     {
         /// <summary>
-        /// 获取领域缓存
-        /// </summary>
-        /// <returns></returns>
-        public Dictionary<string, HashSet<string>> GetDomainCache();
-
-        /// <summary>
-        /// 清除领域缓存
-        /// </summary>
-        void ClearDomainCache();
-
-        /// <summary>
-        /// 违规词缓存
-        /// </summary>
-        /// <returns></returns>
-        Dictionary<string, HashSet<string>> GetBannedWordsCache();
-
-        /// <summary>
         /// 清除违规词缓存
         /// </summary>
         void ClearBannedWordsCache();
-
-        /// <summary>
-        /// 验证违规词
-        /// </summary>
-        /// <param name="promptEn"></param>
-        /// <exception cref="BannedPromptException"></exception>
-        string CheckBanned(string promptEn);
 
         /// <summary>
         /// 提交 Imagine 任务。

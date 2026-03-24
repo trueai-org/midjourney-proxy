@@ -161,18 +161,17 @@ namespace Midjourney.API.Controllers
                     task.BotType = EBotType.NIJI_JOURNEY;
                 }
 
-                string promptEn = TranslatePrompt(prompt, task.RealBotType ?? task.BotType);
-
-                try
-                {
-                    promptEn = _taskService.CheckBanned(promptEn);
-                }
-                catch (BannedPromptException e)
-                {
-                    return Ok(SubmitResultVO.Fail(ReturnCode.BANNED_PROMPT, "可能包含敏感词")
-                        .SetProperty("promptEn", promptEn)
-                        .SetProperty("bannedWord", e.Message));
-                }
+                //var promptEn = TranslatePrompt(prompt, task.RealBotType ?? task.BotType);
+                //try
+                //{
+                //    promptEn = _taskService.CheckBanned(promptEn);
+                //}
+                //catch (BannedPromptException e)
+                //{
+                //    return Ok(SubmitResultVO.Fail(ReturnCode.BANNED_PROMPT, "可能包含敏感词")
+                //        .SetProperty("promptEn", promptEn)
+                //        .SetProperty("bannedWord", e.Message));
+                //}
 
                 List<DataUrl> dataUrls = new List<DataUrl>();
                 try
@@ -185,7 +184,7 @@ namespace Midjourney.API.Controllers
                     return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "base64格式错误"));
                 }
 
-                task.PromptEn = promptEn;
+                task.PromptEn = string.Empty;
                 task.Description = $"/imagine {prompt}";
 
                 NewTaskDoFilter(task, imagineDTO.AccountFilter);
@@ -353,19 +352,19 @@ namespace Midjourney.API.Controllers
             var prompt = dto.Prompt;
             task.Prompt = prompt;
 
-            var promptEn = TranslatePrompt(prompt, task.RealBotType ?? task.BotType);
-            try
-            {
-                promptEn = _taskService.CheckBanned(promptEn);
-            }
-            catch (BannedPromptException e)
-            {
-                return Ok(SubmitResultVO.Fail(ReturnCode.BANNED_PROMPT, "可能包含敏感词")
-                    .SetProperty("promptEn", promptEn)
-                    .SetProperty("bannedWord", e.Message));
-            }
+            //var promptEn = TranslatePrompt(prompt, task.RealBotType ?? task.BotType);
+            //try
+            //{
+            //    promptEn = _taskService.CheckBanned(promptEn);
+            //}
+            //catch (BannedPromptException e)
+            //{
+            //    return Ok(SubmitResultVO.Fail(ReturnCode.BANNED_PROMPT, "可能包含敏感词")
+            //        .SetProperty("promptEn", promptEn)
+            //        .SetProperty("bannedWord", e.Message));
+            //}
 
-            task.PromptEn = promptEn;
+            task.PromptEn = string.Empty;
             task.Description = $"/shorten {prompt}";
 
             NewTaskDoFilter(task, dto.AccountFilter);
@@ -725,17 +724,17 @@ namespace Midjourney.API.Controllers
                 return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "prompt不能为空"));
             }
 
-            var promptEn = TranslatePrompt(prompt, task.RealBotType ?? task.BotType);
-            try
-            {
-                promptEn = _taskService.CheckBanned(promptEn);
-            }
-            catch (BannedPromptException e)
-            {
-                return Ok(SubmitResultVO.Fail(ReturnCode.BANNED_PROMPT, "可能包含敏感词")
-                    .SetProperty("promptEn", promptEn)
-                    .SetProperty("bannedWord", e.Message));
-            }
+            //var promptEn = TranslatePrompt(prompt, task.RealBotType ?? task.BotType);
+            //try
+            //{
+            //    promptEn = _taskService.CheckBanned(promptEn);
+            //}
+            //catch (BannedPromptException e)
+            //{
+            //    return Ok(SubmitResultVO.Fail(ReturnCode.BANNED_PROMPT, "可能包含敏感词")
+            //        .SetProperty("promptEn", promptEn)
+            //        .SetProperty("bannedWord", e.Message));
+            //}
 
             // 不检查
             DataUrl dataUrl = null;
@@ -751,7 +750,7 @@ namespace Midjourney.API.Controllers
             }
 
             task.Prompt = prompt;
-            task.PromptEn = promptEn;
+            task.PromptEn = string.Empty;
 
             // 提交 modal 指示为 true
             task.RemixAutoSubmit = true;
@@ -808,24 +807,24 @@ namespace Midjourney.API.Controllers
             }
 
             var task = NewTask(editsDTO);
-            var promptEn = TranslatePrompt(editsDTO.Prompt, task.RealBotType ?? task.BotType);
 
-            try
-            {
-                promptEn = _taskService.CheckBanned(promptEn);
-            }
-            catch (BannedPromptException e)
-            {
-                return Ok(SubmitResultVO.Fail(ReturnCode.BANNED_PROMPT, "可能包含敏感词")
-                    .SetProperty("promptEn", promptEn)
-                    .SetProperty("bannedWord", e.Message));
-            }
+            //var promptEn = TranslatePrompt(editsDTO.Prompt, task.RealBotType ?? task.BotType);
+            //try
+            //{
+            //    promptEn = _taskService.CheckBanned(promptEn);
+            //}
+            //catch (BannedPromptException e)
+            //{
+            //    return Ok(SubmitResultVO.Fail(ReturnCode.BANNED_PROMPT, "可能包含敏感词")
+            //        .SetProperty("promptEn", promptEn)
+            //        .SetProperty("bannedWord", e.Message));
+            //}
 
             task.BotType = EBotType.MID_JOURNEY;
             task.Action = TaskAction.EDIT;
-            task.Description = $"/edit {promptEn}";
+            task.Description = $"/edit {editsDTO.Prompt}";
             task.Prompt = editsDTO.Prompt;
-            task.PromptEn = promptEn;
+            task.PromptEn = string.Empty;
 
             NewTaskDoFilter(task, editsDTO.AccountFilter);
 
@@ -878,24 +877,24 @@ namespace Midjourney.API.Controllers
             }
 
             var task = NewTask(editsDTO);
-            var promptEn = TranslatePrompt(editsDTO.Prompt, task.RealBotType ?? task.BotType);
 
-            try
-            {
-                promptEn = _taskService.CheckBanned(promptEn);
-            }
-            catch (BannedPromptException e)
-            {
-                return Ok(SubmitResultVO.Fail(ReturnCode.BANNED_PROMPT, "可能包含敏感词")
-                    .SetProperty("promptEn", promptEn)
-                    .SetProperty("bannedWord", e.Message));
-            }
+            //var promptEn = TranslatePrompt(editsDTO.Prompt, task.RealBotType ?? task.BotType);
+            //try
+            //{
+            //    promptEn = _taskService.CheckBanned(promptEn);
+            //}
+            //catch (BannedPromptException e)
+            //{
+            //    return Ok(SubmitResultVO.Fail(ReturnCode.BANNED_PROMPT, "可能包含敏感词")
+            //        .SetProperty("promptEn", promptEn)
+            //        .SetProperty("bannedWord", e.Message));
+            //}
 
             task.BotType = EBotType.MID_JOURNEY;
             task.Action = TaskAction.RETEXTURE;
-            task.Description = $"/retexture {promptEn}";
+            task.Description = $"/retexture {editsDTO.Prompt}";
             task.Prompt = editsDTO.Prompt;
-            task.PromptEn = promptEn;
+            task.PromptEn = string.Empty;
 
             NewTaskDoFilter(task, editsDTO.AccountFilter);
 
@@ -943,18 +942,18 @@ namespace Midjourney.API.Controllers
             task.SetProperty(Constants.TASK_PROPERTY_BOT_TYPE, task.BotType.GetDescription());
             task.AccountFilter = new AccountFilter();
 
-            var promptEn = TranslatePrompt(videoDTO.Prompt, task.RealBotType ?? task.BotType);
+            //var promptEn = TranslatePrompt(videoDTO.Prompt, task.RealBotType ?? task.BotType);
 
-            try
-            {
-                promptEn = _taskService.CheckBanned(promptEn);
-            }
-            catch (BannedPromptException e)
-            {
-                return Ok(SubmitResultVO.Fail(ReturnCode.BANNED_PROMPT, "可能包含敏感词")
-                    .SetProperty("promptEn", promptEn)
-                    .SetProperty("bannedWord", e.Message));
-            }
+            //try
+            //{
+            //    promptEn = _taskService.CheckBanned(promptEn);
+            //}
+            //catch (BannedPromptException e)
+            //{
+            //    return Ok(SubmitResultVO.Fail(ReturnCode.BANNED_PROMPT, "可能包含敏感词")
+            //        .SetProperty("promptEn", promptEn)
+            //        .SetProperty("bannedWord", e.Message));
+            //}
 
             // 如果没有路径速度，并且没有过滤速度，解析提示词，生成指定模式过滤
             if (task.Mode == null)
@@ -1003,9 +1002,9 @@ namespace Midjourney.API.Controllers
                 task.SubInstanceId = targetTask.SubInstanceId;
             }
 
-            task.Description = $"/video {promptEn}";
+            task.Description = $"/video {videoDTO.Prompt}";
             task.Prompt = videoDTO.Prompt;
-            task.PromptEn = promptEn;
+            task.PromptEn = string.Empty;
 
             var data = await _taskService.SubmitVideo(task, targetTask, startUrl, endUrl, videoDTO);
 
@@ -1293,82 +1292,6 @@ namespace Midjourney.API.Controllers
 
             task.Mode = firstMode;
             task.RequestMode = firstMode;
-        }
-
-        /// <summary>
-        /// 翻译提示词
-        /// </summary>
-        /// <param name="prompt">提示词</param>
-        /// <param name="botType"></param>
-        /// <returns>翻译后的提示词</returns>
-        private string TranslatePrompt(string prompt, EBotType botType)
-        {
-            var translateService = GlobalConfiguration.TranslateService;
-            var setting = GlobalConfiguration.Setting;
-
-            if (translateService == null ||
-                _setting.TranslateWay == TranslateWay.NULL
-                || string.IsNullOrWhiteSpace(prompt)
-                || !translateService.ContainsChinese(prompt))
-            {
-                return prompt;
-            }
-
-            // 未开启 mj 翻译
-            if (botType == EBotType.MID_JOURNEY && !setting.EnableMjTranslate)
-            {
-                return prompt;
-            }
-            // 未开启 niji 翻译
-            else if (botType == EBotType.NIJI_JOURNEY && !setting.EnableNijiTranslate)
-            {
-                return prompt;
-            }
-            else if (botType == EBotType.INSIGHT_FACE)
-            {
-                return prompt;
-            }
-
-            string paramStr = "";
-            var paramMatcher = Regex.Match(prompt, "\\x20+--[a-z]+.*$", RegexOptions.IgnoreCase);
-            if (paramMatcher.Success)
-            {
-                paramStr = paramMatcher.Value;
-            }
-            string promptWithoutParam = prompt.Substring(0, prompt.Length - paramStr.Length);
-            List<string> imageUrls = new List<string>();
-            var imageMatcher = Regex.Matches(promptWithoutParam, "https?://[a-z0-9-_:@&?=+,.!/~*'%$]+\\x20+", RegexOptions.IgnoreCase);
-            foreach (Match match in imageMatcher)
-            {
-                imageUrls.Add(match.Value);
-            }
-            string text = promptWithoutParam;
-            foreach (string imageUrl in imageUrls)
-            {
-                text = text.Replace(imageUrl, "");
-            }
-            if (!string.IsNullOrWhiteSpace(text))
-            {
-                text = translateService.TranslateToEnglish(text).Trim();
-            }
-            if (!string.IsNullOrWhiteSpace(paramStr))
-            {
-                // 当有 --no 参数时, 翻译 --no 参数, 并替换原参数
-                // --sref https://mjcdn.googlec.cc/1.jpg --no aa, bb, cc
-                var paramNomatcher = Regex.Match(paramStr, "--no\\s+(.*?)(?=--|$)");
-                if (paramNomatcher.Success)
-                {
-                    string paramNoStr = paramNomatcher.Groups[1].Value.Trim();
-                    string paramNoStrEn = translateService.TranslateToEnglish(paramNoStr).Trim();
-
-                    // 提取 --no 之前的参数
-                    paramStr = paramStr.Substring(0, paramNomatcher.Index);
-
-                    // 替换 --no 参数
-                    paramStr = paramStr + paramNomatcher.Result("--no " + paramNoStrEn + " ");
-                }
-            }
-            return string.Concat(imageUrls) + text + paramStr;
         }
 
         /// <summary>

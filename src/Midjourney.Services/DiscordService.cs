@@ -24,6 +24,7 @@
 
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
@@ -1524,6 +1525,152 @@ namespace Midjourney.Services
         }
 
         /// <summary>
+        /// 翻译提示词
+        /// </summary>
+        /// <param name="prompt">提示词</param>
+        /// <param name="botType"></param>
+        /// <returns>翻译后的提示词</returns>
+        private string TranslatePrompt(string prompt, EBotType botType)
+        {
+            var translateService = GlobalConfiguration.TranslateService;
+            var setting = GlobalConfiguration.Setting;
+
+            if (translateService == null ||
+                setting.TranslateWay == TranslateWay.NULL
+                || string.IsNullOrWhiteSpace(prompt)
+                || !translateService.ContainsChinese(prompt))
+            {
+                return prompt;
+            }
+
+            // 未开启 mj 翻译
+            if (botType == EBotType.MID_JOURNEY && !setting.EnableMjTranslate)
+            {
+                return prompt;
+            }
+            // 未开启 niji 翻译
+            else if (botType == EBotType.NIJI_JOURNEY && !setting.EnableNijiTranslate)
+            {
+                return prompt;
+            }
+            else if (botType == EBotType.INSIGHT_FACE)
+            {
+                return prompt;
+            }
+
+            string paramStr = "";
+            var paramMatcher = Regex.Match(prompt, "\\x20+--[a-z]+.*$", RegexOptions.IgnoreCase);
+            if (paramMatcher.Success)
+            {
+                paramStr = paramMatcher.Value;
+            }
+            string promptWithoutParam = prompt.Substring(0, prompt.Length - paramStr.Length);
+            List<string> imageUrls = new List<string>();
+            var imageMatcher = Regex.Matches(promptWithoutParam, "https?://[a-z0-9-_:@&?=+,.!/~*'%$]+\\x20+", RegexOptions.IgnoreCase);
+            foreach (Match match in imageMatcher)
+            {
+                imageUrls.Add(match.Value);
+            }
+            string text = promptWithoutParam;
+            foreach (string imageUrl in imageUrls)
+            {
+                text = text.Replace(imageUrl, "");
+            }
+            if (!string.IsNullOrWhiteSpace(text))
+            {
+                text = translateService.TranslateToEnglish(text).Trim();
+            }
+            if (!string.IsNullOrWhiteSpace(paramStr))
+            {
+                // 当有 --no 参数时, 翻译 --no 参数, 并替换原参数
+                // --sref https://mjcdn.googlec.cc/1.jpg --no aa, bb, cc
+                var paramNomatcher = Regex.Match(paramStr, "--no\\s+(.*?)(?=--|$)");
+                if (paramNomatcher.Success)
+                {
+                    string paramNoStr = paramNomatcher.Groups[1].Value.Trim();
+                    string paramNoStrEn = translateService.TranslateToEnglish(paramNoStr).Trim();
+
+                    // 提取 --no 之前的参数
+                    paramStr = paramStr.Substring(0, paramNomatcher.Index);
+
+                    // 替换 --no 参数
+                    paramStr = paramStr + paramNomatcher.Result("--no " + paramNoStrEn + " ");
+                }
+            }
+            return string.Concat(imageUrls) + text + paramStr;
+        }
+
+        /// <summary>
+        /// 违规词缓存
+        /// </summary>
+        /// <returns></returns>
+        public Dictionary<string, HashSet<string>> GetBannedWordsCache()
+        {
+            return RedisHelper.Instance.GetOrCreate(BannedWord.CacheKey, () =>
+            {
+                var list = _freeSql.Select<BannedWord>().Where(c => c.Enable).ToList();
+
+                var dict = new Dictionary<string, HashSet<string>>();
+                foreach (var item in list)
+                {
+                    var keywords = item.Keywords?.Where(c => !string.IsNullOrWhiteSpace(c))
+                    .Select(c => c.Trim()).Distinct().ToList() ?? [];
+
+                    dict[item.Id] = new HashSet<string>(keywords);
+                }
+
+                return dict;
+            }, TimeSpan.FromMinutes(30));
+        }
+
+        /// <summary>
+        /// 验证违规词
+        /// </summary>
+        /// <param name="promptEn"></param>
+        /// <exception cref="BannedPromptException"></exception>
+        public string CheckBanned(string promptEn)
+        {
+            // 如果开启了自动清除用户违规词，则通过正则替换忽略违词，并忽略大小写
+            var setting = GlobalConfiguration.Setting;
+            if (setting.EnableAutoClearUserBannedWords)
+            {
+                var dic = GetBannedWordsCache();
+                var finalPromptEn = promptEn;
+                foreach (var item in dic)
+                {
+                    foreach (string word in item.Value)
+                    {
+                        var regex = new Regex($"\\b{Regex.Escape(word)}\\b", RegexOptions.IgnoreCase);
+                        finalPromptEn = regex.Replace(finalPromptEn, "");
+                    }
+                }
+                // 去除多余的空格
+                finalPromptEn = Regex.Replace(finalPromptEn, @"\s+", " ").Trim();
+                return finalPromptEn;
+            }
+            else
+            {
+                var dic = GetBannedWordsCache();
+                var finalPromptEn = promptEn.ToLower(CultureInfo.InvariantCulture);
+                foreach (var item in dic)
+                {
+                    foreach (string word in item.Value)
+                    {
+                        var regex = new Regex($"\\b{Regex.Escape(word)}\\b", RegexOptions.IgnoreCase);
+                        var match = regex.Match(finalPromptEn);
+                        if (match.Success)
+                        {
+                            int index = finalPromptEn.IndexOf(word, StringComparison.OrdinalIgnoreCase);
+                            throw new BannedPromptException(promptEn.Substring(index, word.Length));
+                        }
+                    }
+                }
+
+                return promptEn;
+            }
+        }
+
+        /// <summary>
         /// 更新 Redis 队列任务进度
         /// </summary>
         /// <param name="queue"></param>
@@ -1580,6 +1727,28 @@ namespace Midjourney.Services
                     return;
                 }
 
+                // 翻译改为异步
+                if (string.IsNullOrWhiteSpace(info.PromptEn) && !string.IsNullOrWhiteSpace(info.Prompt))
+                {
+                    try
+                    {
+                        var promptEn = TranslatePrompt(info.Prompt, info.RealBotType ?? info.BotType);
+
+                        info.PromptEn = CheckBanned(promptEn);
+
+                        _freeSql.Update<TaskInfo>()
+                            .Set(c => c.PromptEn, info.PromptEn)
+                            .Where(c => c.Id == info.Id)
+                            .ExecuteAffrows();
+                    }
+                    catch (BannedPromptException)
+                    {
+                        info.Fail("可能包含敏感词");
+                        SaveAndNotify(info);
+                        return;
+                    }
+                }
+
                 if (info.Status == TaskStatus.NOT_START || (info.Status == TaskStatus.MODAL && queue.Function == TaskInfoQueueFunction.MODAL))
                 {
                     // 判断提交时间是否大于超时 * 最大队列数
@@ -1624,6 +1793,7 @@ namespace Midjourney.Services
                             // 其他暂不处理，因为没参数
                         }
                     }
+
 
                     switch (queue.Function)
                     {

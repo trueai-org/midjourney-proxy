@@ -23,9 +23,7 @@
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
 using FreeSql.DataAnnotations;
-using Midjourney.Base.Data;
 using MongoDB.Bson.Serialization.Attributes;
-using Newtonsoft.Json.Linq;
 
 namespace Midjourney.Base.Models
 {
@@ -35,6 +33,11 @@ namespace Midjourney.Base.Models
     [Serializable]
     public class BannedWord : DomainObject
     {
+        /// <summary>
+        /// 缓存键
+        /// </summary>
+        public static string CacheKey => "BannedWords";
+
         public BannedWord()
         {
         }
