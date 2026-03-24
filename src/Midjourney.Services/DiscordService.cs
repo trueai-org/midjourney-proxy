@@ -1727,22 +1727,30 @@ namespace Midjourney.Services
                     return;
                 }
 
-                // 翻译改为异步
-                if (string.IsNullOrWhiteSpace(info.PromptEn) && !string.IsNullOrWhiteSpace(info.Prompt))
+                if (!string.IsNullOrWhiteSpace(info.Prompt))
                 {
                     try
                     {
-                        var promptEn = TranslatePrompt(info.Prompt, info.RealBotType ?? info.BotType);
+                        // 验证默认提示词
+                        CheckBanned(info.Prompt);
 
-                        info.PromptEn = CheckBanned(promptEn);
+                        // 翻译改为异步，翻译并验证英文提示词
+                        if (string.IsNullOrWhiteSpace(info.PromptEn))
+                        {
+                            var promptEn = TranslatePrompt(info.Prompt, info.RealBotType ?? info.BotType);
 
-                        _freeSql.Update<TaskInfo>()
-                            .Set(c => c.PromptEn, info.PromptEn)
-                            .Where(c => c.Id == info.Id)
-                            .ExecuteAffrows();
+                            info.PromptEn = CheckBanned(promptEn);
+
+                            _freeSql.Update<TaskInfo>()
+                                .Set(c => c.PromptEn, info.PromptEn)
+                                .Where(c => c.Id == info.Id)
+                                .ExecuteAffrows();
+                        }
                     }
-                    catch (BannedPromptException)
+                    catch (BannedPromptException ex)
                     {
+                        Log.Warning(ex, "可能包含敏感词");
+
                         info.Fail("可能包含敏感词");
                         SaveAndNotify(info);
                         return;
