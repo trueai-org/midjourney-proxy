@@ -1532,13 +1532,15 @@ namespace Midjourney.Services
         /// <returns>翻译后的提示词</returns>
         private string TranslatePrompt(string prompt, EBotType botType)
         {
+            if (string.IsNullOrWhiteSpace(prompt))
+            {
+                return prompt;
+            }
+
             var translateService = GlobalConfiguration.TranslateService;
             var setting = GlobalConfiguration.Setting;
 
-            if (translateService == null ||
-                setting.TranslateWay == TranslateWay.NULL
-                || string.IsNullOrWhiteSpace(prompt)
-                || !translateService.ContainsChinese(prompt))
+            if (translateService == null || setting.TranslateWay == TranslateWay.NULL || !translateService.ContainsChinese(prompt))
             {
                 return prompt;
             }
