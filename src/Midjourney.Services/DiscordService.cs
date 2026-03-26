@@ -1736,13 +1736,11 @@ namespace Midjourney.Services
                         // 验证默认提示词
                         info.Prompt = CheckBanned(info.Prompt);
 
-                        // 翻译改为异步，翻译并验证英文提示词
+                        // 如果没有英文，则设置英文
                         if (string.IsNullOrWhiteSpace(info.PromptEn))
                         {
                             info.PromptEn = info.Prompt;
                         }
-
-                        info.PromptEn = TranslatePrompt(info.PromptEn, info.RealBotType ?? info.BotType);
                     }
                     catch (BannedPromptException ex)
                     {
@@ -1759,6 +1757,10 @@ namespace Midjourney.Services
                 {
                     try
                     {
+                        // 翻译
+                        info.PromptEn = TranslatePrompt(info.PromptEn, info.RealBotType ?? info.BotType);
+
+                        // 验证
                         info.PromptEn = CheckBanned(info.PromptEn);
                     }
                     catch (BannedPromptException ex)

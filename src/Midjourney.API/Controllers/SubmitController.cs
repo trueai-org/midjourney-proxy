@@ -151,6 +151,7 @@ namespace Midjourney.API.Controllers
 
                 task.Action = TaskAction.IMAGINE;
                 task.Prompt = prompt;
+                task.PromptEn = prompt;
                 task.BotType = GetBotType(imagineDTO.BotType);
 
                 // 转换 --niji 为 Niji Bot
@@ -184,7 +185,6 @@ namespace Midjourney.API.Controllers
                     return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "base64格式错误"));
                 }
 
-                task.PromptEn = string.Empty;
                 task.Description = $"/imagine {prompt}";
 
                 NewTaskDoFilter(task, imagineDTO.AccountFilter);
@@ -351,6 +351,7 @@ namespace Midjourney.API.Controllers
 
             var prompt = dto.Prompt;
             task.Prompt = prompt;
+            task.PromptEn = prompt;
 
             //var promptEn = TranslatePrompt(prompt, task.RealBotType ?? task.BotType);
             //try
@@ -364,7 +365,6 @@ namespace Midjourney.API.Controllers
             //        .SetProperty("bannedWord", e.Message));
             //}
 
-            task.PromptEn = string.Empty;
             task.Description = $"/shorten {prompt}";
 
             NewTaskDoFilter(task, dto.AccountFilter);
@@ -750,7 +750,7 @@ namespace Midjourney.API.Controllers
             }
 
             task.Prompt = prompt;
-            task.PromptEn = string.Empty;
+            task.PromptEn = prompt;
 
             // 提交 modal 指示为 true
             task.RemixAutoSubmit = true;
@@ -824,7 +824,7 @@ namespace Midjourney.API.Controllers
             task.Action = TaskAction.EDIT;
             task.Description = $"/edit {editsDTO.Prompt}";
             task.Prompt = editsDTO.Prompt;
-            task.PromptEn = string.Empty;
+            task.PromptEn = editsDTO.Prompt;
 
             NewTaskDoFilter(task, editsDTO.AccountFilter);
 
@@ -894,7 +894,7 @@ namespace Midjourney.API.Controllers
             task.Action = TaskAction.RETEXTURE;
             task.Description = $"/retexture {editsDTO.Prompt}";
             task.Prompt = editsDTO.Prompt;
-            task.PromptEn = string.Empty;
+            task.PromptEn = editsDTO.Prompt;
 
             NewTaskDoFilter(task, editsDTO.AccountFilter);
 
