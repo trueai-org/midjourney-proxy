@@ -401,7 +401,8 @@ namespace Midjourney.Services
             }
 
             info.Description = "/retexture " + info.Prompt;
-            info.PromptEn = info.PromptEn + " --dref " + info.BaseImageUrl;
+            info.Prompt = info.Prompt + " --dref " + info.BaseImageUrl;
+            info.PromptEn = info.Prompt + " --dref " + info.BaseImageUrl;
 
             // 入队前不保存
             //_taskStoreService.Save(info);
@@ -677,7 +678,7 @@ namespace Midjourney.Services
             }
 
             // 提示词拼接
-            var prompt = info.PromptEn;
+            var prompt = info.Prompt;
 
             // 开始图片
             if (!string.IsNullOrWhiteSpace(startImageUrl) && !prompt.Contains(startImageUrl, StringComparison.OrdinalIgnoreCase))
@@ -735,6 +736,7 @@ namespace Midjourney.Services
                     }
 
                     info.SetProperty(Constants.TASK_PROPERTY_CUSTOM_ID, customId);
+                    info.Prompt = prompt;
                     info.PromptEn = prompt;
                     info.VideoType = videoDTO.VideoType;
                     info.Description = "/video " + info.Prompt;
@@ -798,6 +800,7 @@ namespace Midjourney.Services
                     info.SetProperty(Constants.TASK_PROPERTY_VIDEO_EXTEND_INDEX, videoDTO.Index + 1);
                     info.SetProperty(Constants.TASK_PROPERTY_CUSTOM_ID, upscaleCustomId);
                     info.Action = TaskAction.UPSCALE;
+                    info.Prompt = prompt;
                     info.PromptEn = prompt;
                     info.VideoType = videoDTO.VideoType;
                     info.Description = "/video extend";
@@ -825,6 +828,7 @@ namespace Midjourney.Services
             }
             else
             {
+                info.Prompt = prompt;
                 info.PromptEn = prompt;
                 info.Description = "/video " + info.Prompt;
 
@@ -1127,28 +1131,29 @@ namespace Midjourney.Services
             }
 
             task.Action = TaskAction.BLEND;
-            task.PromptEn = string.Join(" ", finalFileNames) + " " + task.PromptEn;
+            task.Prompt = string.Join(" ", finalFileNames) + " " + task.PromptEn ?? task.Prompt;
 
-            if (!task.PromptEn.Contains("--ar"))
+            if (!task.Prompt.Contains("--ar"))
             {
                 switch (dimensions)
                 {
                     case BlendDimensions.PORTRAIT:
-                        task.PromptEn += " --ar 2:3";
+                        task.Prompt += " --ar 2:3";
                         break;
 
                     case BlendDimensions.SQUARE:
-                        task.PromptEn += " --ar 1:1";
+                        task.Prompt += " --ar 1:1";
                         break;
 
                     case BlendDimensions.LANDSCAPE:
-                        task.PromptEn += " --ar 3:2";
+                        task.Prompt += " --ar 3:2";
                         break;
 
                     default:
                         break;
                 }
             }
+            task.PromptEn = task.Prompt;
 
             return await discordInstance.RedisEnqueue(new TaskInfoQueue()
             {

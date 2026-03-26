@@ -1734,20 +1734,32 @@ namespace Midjourney.Services
                     try
                     {
                         // 验证默认提示词
-                        CheckBanned(info.Prompt);
+                        info.Prompt = CheckBanned(info.Prompt);
 
                         // 翻译改为异步，翻译并验证英文提示词
                         if (string.IsNullOrWhiteSpace(info.PromptEn))
                         {
-                            var promptEn = TranslatePrompt(info.Prompt, info.RealBotType ?? info.BotType);
-
-                            info.PromptEn = CheckBanned(promptEn);
-
-                            _freeSql.Update<TaskInfo>()
-                                .Set(c => c.PromptEn, info.PromptEn)
-                                .Where(c => c.Id == info.Id)
-                                .ExecuteAffrows();
+                            info.PromptEn = info.Prompt;
                         }
+
+                        info.PromptEn = TranslatePrompt(info.PromptEn, info.RealBotType ?? info.BotType);
+                    }
+                    catch (BannedPromptException ex)
+                    {
+                        Log.Warning(ex, "可能包含敏感词");
+
+                        info.Fail("可能包含敏感词");
+                        SaveAndNotify(info);
+                        return;
+                    }
+                }
+
+                // 再次验证英文
+                if (!string.IsNullOrWhiteSpace(info.PromptEn))
+                {
+                    try
+                    {
+                        info.PromptEn = CheckBanned(info.PromptEn);
                     }
                     catch (BannedPromptException ex)
                     {

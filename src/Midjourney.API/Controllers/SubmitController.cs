@@ -1004,7 +1004,7 @@ namespace Midjourney.API.Controllers
 
             task.Description = $"/video {videoDTO.Prompt}";
             task.Prompt = videoDTO.Prompt;
-            task.PromptEn = string.Empty;
+            task.PromptEn = videoDTO.Prompt;
 
             var data = await _taskService.SubmitVideo(task, targetTask, startUrl, endUrl, videoDTO);
 
