@@ -1019,10 +1019,39 @@ namespace Midjourney.Services
 
             if (GlobalConfiguration.GlobalMaxConcurrent != 0)
             {
+                var globalLock = GlobalConfiguration.GlobalLock;
+
                 while (!token.IsCancellationRequested)
                 {
-                    var globalLock = GlobalConfiguration.GlobalLock;
-                    var globalLimit = GlobalConfiguration.GlobalMaxConcurrent;
+                    //// ═══ 迁移后（using 自动释放，不会遗漏）═══
+                    //AsyncParallelLock.LockHandle globalHandle = null;
+                    //if (globalLimit > 0)
+                    //{
+                    //    globalHandle = await globalLock.AcquireAsync(token);
+                    //}
+                    //try
+                    //{
+                    //    // 业务逻辑...
+                    //}
+                    //finally
+                    //{
+                    //    globalHandle?.Dispose(); // 幂等，null 安全
+                    //}
+
+                    //// ═══ 最简写法（如果总是需要获取锁）═══
+                    //using (await globalLock.AcquireAsync(token))
+                    //{
+                    //    // 业务逻辑...
+                    //}
+
+                    //// ═══ 带超时 ═══
+                    //using (var handle = await globalLock.TryAcquireAsync(TimeSpan.FromSeconds(5), token))
+                    //{
+                    //    if (handle.IsAcquired)
+                    //    {
+                    //        // 业务逻辑...
+                    //    }
+                    //}
 
                     try
                     {
@@ -1110,11 +1139,8 @@ namespace Midjourney.Services
                         var describeQueueCount = await _describeQueue.CountAsync();
                         if (describeQueueCount > 0)
                         {
-                            if (globalLimit > 0)
-                            {
-                                await globalLock.LockAsync(token);
-                            }
                             // 先尝试获取并发锁
+                            var globalHandle = await globalLock?.AcquireAsync(token);
                             var lockObj = _describeConcurrent.TryLock(Account.CoreSize);
                             if (lockObj != null)
                             {
@@ -1137,10 +1163,8 @@ namespace Midjourney.Services
                                         {
                                             // 释放锁
                                             lockObj.Dispose();
-                                            if (globalLimit > 0)
-                                            {
-                                                globalLock.Unlock();
-                                            }
+                                            globalHandle?.Dispose();
+
                                             // 发送锁我已经释放了
                                             var notification = new RedisNotification
                                             {
@@ -1157,10 +1181,8 @@ namespace Midjourney.Services
                                 {
                                     // 释放锁
                                     lockObj.Dispose();
-                                    if (globalLimit > 0)
-                                    {
-                                        globalLock.Unlock();
-                                    }
+                                    globalHandle?.Dispose();
+
                                     // 发送锁我已经释放了
                                     var notification = new RedisNotification
                                     {
@@ -1174,25 +1196,14 @@ namespace Midjourney.Services
                                     Log.Warning("Redis 图生文队列出队为空 {@0}", Account.ChannelId);
                                 }
                             }
-                            else
-                            {
-                                if (globalLimit > 0)
-                                {
-                                    globalLock.Unlock();
-                                }
-                            }
                         }
 
                         // 从快速队列获取任务
                         var queueCount = await _defaultOrFastQueue.CountAsync();
                         if (queueCount > 0)
                         {
-                            if (globalLimit > 0)
-                            {
-                                await globalLock.LockAsync(token);
-                            }
-
                             // 先尝试获取并发锁
+                            var globalHandle = await globalLock?.AcquireAsync(token);
                             var lockObj = _defaultOrFastConcurrent.TryLock(Account.CoreSize);
                             if (lockObj != null)
                             {
@@ -1217,11 +1228,7 @@ namespace Midjourney.Services
                                         {
                                             // 释放锁
                                             lockObj.Dispose();
-
-                                            if (globalLimit > 0)
-                                            {
-                                                globalLock.Unlock();
-                                            }
+                                            globalHandle?.Dispose();
 
                                             // 发送锁我已经释放了
                                             var notification = new RedisNotification
@@ -1240,11 +1247,7 @@ namespace Midjourney.Services
                                 {
                                     // 释放锁
                                     lockObj.Dispose();
-
-                                    if (globalLimit > 0)
-                                    {
-                                        globalLock.Unlock();
-                                    }
+                                    globalHandle?.Dispose();
 
                                     // 发送锁我已经释放了
                                     var notification = new RedisNotification
@@ -1259,13 +1262,6 @@ namespace Midjourney.Services
                                     Log.Warning("Redis 默认队列出队为空 {@0}", Account.ChannelId);
                                 }
                             }
-                            else
-                            {
-                                if (globalLimit > 0)
-                                {
-                                    globalLock.Unlock();
-                                }
-                            }
                         }
 
                         // 只有悠船才有慢速队列
@@ -1273,16 +1269,12 @@ namespace Midjourney.Services
                         var relaxQueueCount = 0;
                         if (Account.IsYouChuan)
                         {
-                            if (globalLimit > 0)
-                            {
-                                await globalLock.LockAsync(token);
-                            }
-
                             // 从放松队列获取任务
                             relaxQueueCount = await _relaxQueue.CountAsync();
                             if (relaxQueueCount > 0)
                             {
                                 // 先尝试获取并发锁
+                                var globalHandle = await globalLock?.AcquireAsync(token);
                                 var lockObj = _relaxConcurrent.TryLock(Account.RelaxCoreSize);
                                 if (lockObj != null)
                                 {
@@ -1304,11 +1296,7 @@ namespace Midjourney.Services
                                             {
                                                 // 释放锁
                                                 lockObj.Dispose();
-
-                                                if (globalLimit > 0)
-                                                {
-                                                    globalLock.Unlock();
-                                                }
+                                                globalHandle?.Dispose();
 
                                                 // 发送锁我已经释放了
                                                 var notification = new RedisNotification
@@ -1327,11 +1315,7 @@ namespace Midjourney.Services
                                     {
                                         // 释放锁
                                         lockObj.Dispose();
-
-                                        if (globalLimit > 0)
-                                        {
-                                            globalLock.Unlock();
-                                        }
+                                        globalHandle?.Dispose();
 
                                         // 发送锁我已经释放了
                                         var notification = new RedisNotification
@@ -1345,13 +1329,6 @@ namespace Midjourney.Services
                                         // 中文日志
                                         Log.Warning("Redis 慢速队列出队为空 {@0}", Account.ChannelId);
                                     }
-                                }
-                            }
-                            else
-                            {
-                                if (globalLimit > 0)
-                                {
-                                    globalLock.Unlock();
                                 }
                             }
                         }
@@ -1817,7 +1794,6 @@ namespace Midjourney.Services
                             // 其他暂不处理，因为没参数
                         }
                     }
-
 
                     switch (queue.Function)
                     {
