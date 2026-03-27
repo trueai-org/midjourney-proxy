@@ -149,28 +149,29 @@ namespace Midjourney.Services
                     }
                 }
 
-                // 如果本地中没有配置，则从 litedb 中加载
-                if (setting == null)
-                {
-                    // 判断是否存在旧版 litedb 文件
-                    var litedbPath = Path.Combine(Directory.GetCurrentDirectory(), Path.Combine("data", "mj.db"));
-                    if (File.Exists(litedbPath))
-                    {
-                        var liteDb = new LiteDBRepository<Setting>("data/mj.db");
+                // 不再从 LiteDB 加载配置，直接使用本地 json 文件作为唯一本地配置来源，避免加载就配置导致的混乱和不一致问题。
+                //// 如果本地中没有配置，则从 litedb 中加载
+                //if (setting == null)
+                //{
+                //    // 判断是否存在旧版 litedb 文件
+                //    var litedbPath = Path.Combine(Directory.GetCurrentDirectory(), Path.Combine("data", "mj.db"));
+                //    if (File.Exists(litedbPath))
+                //    {
+                //        var liteDb = new LiteDBRepository<Setting>("data/mj.db");
 
-                        setting = liteDb.Get(Constants.DEFAULT_SETTING_ID);
+                //        setting = liteDb.Get(Constants.DEFAULT_SETTING_ID);
 
-                        // 写入本地
-                        if (setting != null)
-                        {
-                            await File.WriteAllTextAsync(_configPath, setting.ToJson(new Newtonsoft.Json.JsonSerializerSettings()
-                            {
-                                NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore,
-                                Formatting = Newtonsoft.Json.Formatting.Indented
-                            }), cancellation);
-                        }
-                    }
-                }
+                //        // 写入本地
+                //        if (setting != null)
+                //        {
+                //            await File.WriteAllTextAsync(_configPath, setting.ToJson(new Newtonsoft.Json.JsonSerializerSettings()
+                //            {
+                //                NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore,
+                //                Formatting = Newtonsoft.Json.Formatting.Indented
+                //            }), cancellation);
+                //        }
+                //    }
+                //}
 
                 if (setting == null)
                 {

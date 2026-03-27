@@ -313,26 +313,29 @@ namespace Midjourney.API
                 {
                     concurrent = maxConcurrent;
                 }
-                if (concurrent.HasValue)
+
+                // CONCURRENT 如果配置为 NULL，则限制单机单个 CPU 最大并发 100，避免无限制并发导致系统过载；如果配置为 0 则：不处理任务；如果配置为 -1 则：不限制并发。
+                concurrent ??= Math.Max(100, Environment.ProcessorCount * 100);
+
+                // 初始化全局锁
+                if (concurrent > 0)
                 {
-                    // 初始化全局锁
-                    if (concurrent.Value > 0)
-                    {
-                        GlobalConfiguration.GlobalLock = new AsyncParallelLock(concurrent.Value);
-                    }
-                    else if (concurrent.Value <= -1)
-                    {
-                        // 不限制
-                        concurrent = -1;
-                    }
-                    else
-                    {
-                        // 不处理任务
-                        concurrent = 0;
-                    }
-                    GlobalConfiguration.GlobalMaxConcurrent = concurrent.Value;
-                    Log.Information("环境变量设置当前节点全局最大任务并行处理上限：{0}", concurrent.Value);
+                    GlobalConfiguration.GlobalLock = new AsyncParallelLock(concurrent.Value);
                 }
+                else if (concurrent.Value <= -1)
+                {
+                    // 不限制
+                    concurrent = -1;
+                }
+                else
+                {
+                    // 不处理任务
+                    concurrent = 0;
+                }
+
+                GlobalConfiguration.GlobalMaxConcurrent = concurrent.Value;
+
+                Log.Information("环境变量设置当前节点全局最大任务并行处理上限：{0}", concurrent.Value);
 
                 app.UseDefaultFiles(); // 启用默认文件（index.html）
                 app.UseStaticFiles(); // 配置提供静态文件
