@@ -25,7 +25,7 @@
 namespace Midjourney.Base.Util
 {
     /// <summary>
-    /// 基于信号量的并发锁，支持动态调整最大并行度 - v20260327
+    /// 基于信号量的并发锁，支持动态调整最大并行度 - v20260328
     ///
     /// 特性：
     /// 1. 支持 using 自动释放（LockHandle）
@@ -33,6 +33,7 @@ namespace Midjourney.Base.Util
     /// 3. 支持异步等待 / 超时 / 取消
     /// 4. 兼容原有 LockAsync + Unlock 手动模式
     /// 5. 支持动态调整并行度
+    /// 6. 动态调整与并发获取之间无竞态窗口
     ///
     /// 用法：
     /// // 方式 1：using 自动释放（推荐）
@@ -51,14 +52,20 @@ namespace Midjourney.Base.Util
     /// await lock.LockAsync(token);
     /// try { /* 临界区 */ }
     /// finally { lock.Unlock(); }
+    ///
+    /// 注意：
+    /// 1. 不需要在 Unlock 外通过临时变量捕获 semaphore，因为 LockHandle 内部已经处理了防止重复释放的逻辑。
+    /// 2. 不需要提前判断 cancelledToken 是否已取消，因为 SemaphoreSlim.WaitAsync 本身会正确处理取消逻辑。
     /// </summary>
     public class AsyncParallelLock : IDisposable
     {
         private readonly object _syncLock = new();
         private SemaphoreSlim _semaphore;
 
-        private int _maxCount; // 存储最大数量
-        private int _currentlyHeld; // 跟踪当前已获取的资源数量
+        private int _maxCount;       // 存储最大数量
+        private int _currentlyHeld;  // 跟踪当前已获取的资源数量
+        private int _waitingCount;   // 跟踪正在等待获取信号量的线程数（防止动态调整时的竞态窗口）
+        private bool _disposed;      // Dispose 标志
 
         /// <summary>
         /// 构造并发锁，允许设置最大并发数量。
@@ -71,6 +78,7 @@ namespace Midjourney.Base.Util
 
             _maxCount = maxParallelism;
             _currentlyHeld = 0;
+            _waitingCount = 0;
             _semaphore = new SemaphoreSlim(maxParallelism, maxParallelism);
         }
 
@@ -88,6 +96,14 @@ namespace Midjourney.Base.Util
         public int CurrentlyHeldCount
         {
             get { lock (_syncLock) return _currentlyHeld; }
+        }
+
+        /// <summary>
+        /// 当前正在等待获取的线程数量
+        /// </summary>
+        public int WaitingCount
+        {
+            get { lock (_syncLock) return _waitingCount; }
         }
 
         /// <summary>
@@ -113,13 +129,24 @@ namespace Midjourney.Base.Util
             SemaphoreSlim semaphore;
             lock (_syncLock)
             {
+                ThrowIfDisposed();
+                _waitingCount++;
                 semaphore = _semaphore;
             }
 
-            await semaphore.WaitAsync(cancellationToken);
+            try
+            {
+                await semaphore.WaitAsync(cancellationToken);
+            }
+            catch
+            {
+                lock (_syncLock) { _waitingCount--; }
+                throw;
+            }
 
             lock (_syncLock)
             {
+                _waitingCount--;
                 _currentlyHeld++;
             }
 
@@ -140,20 +167,33 @@ namespace Midjourney.Base.Util
             SemaphoreSlim semaphore;
             lock (_syncLock)
             {
+                ThrowIfDisposed();
+                _waitingCount++;
                 semaphore = _semaphore;
             }
 
-            bool acquired = await semaphore.WaitAsync(timeout, cancellationToken);
+            bool acquired;
+            try
+            {
+                acquired = await semaphore.WaitAsync(timeout, cancellationToken);
+            }
+            catch
+            {
+                lock (_syncLock) { _waitingCount--; }
+                throw;
+            }
 
             if (acquired)
             {
                 lock (_syncLock)
                 {
+                    _waitingCount--;
                     _currentlyHeld++;
                 }
                 return new LockHandle(this);
             }
 
+            lock (_syncLock) { _waitingCount--; }
             return LockHandle.Empty;
         }
 
@@ -169,13 +209,24 @@ namespace Midjourney.Base.Util
             SemaphoreSlim semaphore;
             lock (_syncLock)
             {
+                ThrowIfDisposed();
+                _waitingCount++;
                 semaphore = _semaphore;
             }
 
-            await semaphore.WaitAsync(cancellationToken);
+            try
+            {
+                await semaphore.WaitAsync(cancellationToken);
+            }
+            catch
+            {
+                lock (_syncLock) { _waitingCount--; }
+                throw;
+            }
 
             lock (_syncLock)
             {
+                _waitingCount--;
                 _currentlyHeld++;
             }
         }
@@ -188,13 +239,24 @@ namespace Midjourney.Base.Util
             SemaphoreSlim semaphore;
             lock (_syncLock)
             {
+                ThrowIfDisposed();
+                _waitingCount++;
                 semaphore = _semaphore;
             }
 
-            semaphore.Wait(cancellationToken);
+            try
+            {
+                semaphore.Wait(cancellationToken);
+            }
+            catch
+            {
+                lock (_syncLock) { _waitingCount--; }
+                throw;
+            }
 
             lock (_syncLock)
             {
+                _waitingCount--;
                 _currentlyHeld++;
             }
         }
@@ -207,16 +269,27 @@ namespace Midjourney.Base.Util
             SemaphoreSlim semaphore;
             lock (_syncLock)
             {
+                ThrowIfDisposed();
+                _waitingCount++;
                 semaphore = _semaphore;
             }
 
-            bool acquired = semaphore.Wait(0);
-            if (acquired)
+            bool acquired;
+            try
             {
-                lock (_syncLock)
-                {
+                acquired = semaphore.Wait(0);
+            }
+            catch
+            {
+                lock (_syncLock) { _waitingCount--; }
+                throw;
+            }
+
+            lock (_syncLock)
+            {
+                _waitingCount--;
+                if (acquired)
                     _currentlyHeld++;
-                }
             }
 
             return acquired;
@@ -227,17 +300,16 @@ namespace Midjourney.Base.Util
         /// </summary>
         public void Unlock()
         {
-            SemaphoreSlim semaphore;
             lock (_syncLock)
             {
+                ThrowIfDisposed();
+
                 if (_currentlyHeld <= 0)
                     throw new InvalidOperationException("尝试释放未获取的锁");
 
                 _currentlyHeld--;
-                semaphore = _semaphore;
+                _semaphore.Release();
             }
-
-            semaphore.Release();
         }
 
         #endregion 原有手动模式 API（兼容）
@@ -251,7 +323,7 @@ namespace Midjourney.Base.Util
         {
             lock (_syncLock)
             {
-                return _semaphore?.CurrentCount > 0;
+                return !_disposed && _semaphore?.CurrentCount > 0;
             }
         }
 
@@ -262,7 +334,10 @@ namespace Midjourney.Base.Util
         {
             lock (_syncLock)
             {
-                return _currentlyHeld == 0 && _semaphore?.CurrentCount == _maxCount;
+                return !_disposed
+                    && _currentlyHeld == 0
+                    && _waitingCount == 0
+                    && _semaphore?.CurrentCount == _maxCount;
             }
         }
 
@@ -271,7 +346,7 @@ namespace Midjourney.Base.Util
         #region 动态调整
 
         /// <summary>
-        /// 设置新的最大并行度（必须所有锁可用时才允许修改）
+        /// 设置新的最大并行度（必须所有锁可用且无等待线程时才允许修改）
         /// </summary>
         public bool SetMaxParallelism(int newMaxParallelism)
         {
@@ -280,10 +355,12 @@ namespace Midjourney.Base.Util
 
             lock (_syncLock)
             {
+                ThrowIfDisposed();
+
                 if (newMaxParallelism == _maxCount)
                     return true;
 
-                if (_currentlyHeld > 0 || _semaphore.CurrentCount < _maxCount)
+                if (_currentlyHeld > 0 || _waitingCount > 0 || _semaphore.CurrentCount < _maxCount)
                     return false;
 
                 var oldSemaphore = _semaphore;
@@ -304,9 +381,21 @@ namespace Midjourney.Base.Util
         {
             lock (_syncLock)
             {
+                if (_disposed) return;
+                _disposed = true;
                 _semaphore?.Dispose();
                 _semaphore = null;
             }
+        }
+
+        /// <summary>
+        /// 检查是否已释放，若已释放则抛出异常。
+        /// 调用方必须已持有 _syncLock。
+        /// </summary>
+        private void ThrowIfDisposed()
+        {
+            if (_disposed)
+                throw new ObjectDisposedException(nameof(AsyncParallelLock));
         }
 
         /// <summary>
@@ -343,6 +432,7 @@ namespace Midjourney.Base.Util
                 catch (InvalidOperationException)
                 {
                     // 防御：已经被手动 Unlock 过了
+                    // 防御：锁已经被 Dispose 了
                 }
 
                 _owner = null;
