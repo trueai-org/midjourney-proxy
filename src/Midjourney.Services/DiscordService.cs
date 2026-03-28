@@ -1333,6 +1333,16 @@ namespace Midjourney.Services
                             }
                         }
 
+                        // 全局锁日志
+                        if (globalLock != null)
+                        {
+                            Log.Information("全局锁状态 - 可用数: {0}, 已用数: {1}, 等待数: {2}, 最大数: {3}",
+                                globalLock.AvailableCount,
+                                globalLock.CurrentlyHeldCount, 
+                                globalLock.WaitingCount,
+                                globalLock.MaxParallelism);
+                        }
+
                         // 队列可能还有任务时，立即执行下一次判断
                         if (isContinueNext)
                         {
