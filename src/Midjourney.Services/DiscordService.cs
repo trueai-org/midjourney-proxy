@@ -29,6 +29,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.RegularExpressions;
+using CSRedis;
 using Midjourney.License;
 using Newtonsoft.Json.Linq;
 using Serilog;
@@ -44,6 +45,11 @@ namespace Midjourney.Services
         /// 全局正在运行的任务列表
         /// </summary>
         public static readonly ConcurrentDictionary<string, TaskInfo> GlobalRunningTasks = new();
+
+        /// <summary>
+        /// 后台任务执行器 — 替代所有 Task.Run fire-and-forget
+        /// </summary>
+        private readonly BackgroundTaskExecutor _backgroundExecutor;
 
         private readonly object _accountLock = new();
 
@@ -124,9 +130,14 @@ namespace Midjourney.Services
         /// </summary>
         private readonly AsyncParallelLock _seekParallelLock = new(12);
 
-        public DiscordService(DiscordAccount account, INotifyService notifyService,
-            Dictionary<string, string> paramsMap, IHttpClientFactory httpClientFactory)
+        public DiscordService(
+            DiscordAccount account,
+            INotifyService notifyService,
+            Dictionary<string, string> paramsMap,
+            IHttpClientFactory httpClientFactory,
+            BackgroundTaskExecutor backgroundExecutor)
         {
+            _backgroundExecutor = backgroundExecutor;
             _httpClientFactory = httpClientFactory;
             _logger = Log.Logger;
 
@@ -1070,15 +1081,15 @@ namespace Midjourney.Services
                             }
                         }
 
-                        // 全局锁日志
-                        if (globalLock != null && globalLock.CurrentlyHeldCount > 0 || globalLock.WaitingCount > 0)
-                        {
-                            Log.Information("全局锁状态 - 可用数: {0}, 已用数: {1}, 等待数: {2}, 最大数: {3}",
-                                globalLock.AvailableCount,
-                                globalLock.CurrentlyHeldCount,
-                                globalLock.WaitingCount,
-                                globalLock.MaxParallelism);
-                        }
+                        //// 全局锁日志
+                        //if (globalLock != null && globalLock.CurrentlyHeldCount > 0 || globalLock.WaitingCount > 0)
+                        //{
+                        //    Log.Information("全局锁状态 - 可用数: {0}, 已用数: {1}, 等待数: {2}, 最大数: {3}",
+                        //        globalLock.AvailableCount,
+                        //        globalLock.CurrentlyHeldCount,
+                        //        globalLock.WaitingCount,
+                        //        globalLock.MaxParallelism);
+                        //}
 
                         // 是否立即执行下一个任务
                         var isContinueNext = false;
@@ -1087,271 +1098,308 @@ namespace Midjourney.Services
                         if (Account.IsYouChuan || Account.IsOfficial)
                         {
                             // 悠船 | 官方立即执行全部放大任务
-                            var upscaleQueueCount = 0;
+                            //var upscaleQueueCount = 0;
+                            //do
+                            //{
+                            //    upscaleQueueCount = await _upscaleQueue.CountAsync();
+                            //    if (upscaleQueueCount > 0)
+                            //    {
+                            //        var req = await _upscaleQueue.DequeueAsync(token);
+                            //        if (req?.Info != null)
+                            //        {
+                            //            // 使用 Task.Run 启动后台任务，避免阻塞主线程
+                            //            _ = Task.Run(async () =>
+                            //            {
+                            //                try
+                            //                {
+                            //                    await RedisQueueUpdateProgress(req);
+                            //                }
+                            //                finally
+                            //                {
+                            //                    // 由于不占用并发锁，所以不需要释放锁通知
+                            //                }
+                            //            }, token);
+                            //        }
+                            //    }
+                            //} while (upscaleQueueCount > 1);
+
                             do
                             {
-                                upscaleQueueCount = await _upscaleQueue.CountAsync();
-                                if (upscaleQueueCount > 0)
+                                var upscaleMore = await TryConsumeQueue(
+                                    _upscaleQueue, null, globalLock,
+                                    0, token, "放大(悠船/官方)", isPicReader: false);
+                                if (!upscaleMore)
                                 {
-                                    var req = await _upscaleQueue.DequeueAsync(token);
-                                    if (req?.Info != null)
-                                    {
-                                        // 使用 Task.Run 启动后台任务，避免阻塞主线程
-                                        _ = Task.Run(async () =>
-                                        {
-                                            try
-                                            {
-                                                await RedisQueueUpdateProgress(req);
-                                            }
-                                            finally
-                                            {
-                                                // 由于不占用并发锁，所以不需要释放锁通知
-                                            }
-                                        }, token);
-                                    }
+                                    break;
                                 }
-                            } while (upscaleQueueCount > 1);
+                            } while (true);
                         }
                         else
                         {
                             // Discord 放大任务插队优先执行
-                            var upscaleQueueCount = await _upscaleQueue.CountAsync();
-                            if (upscaleQueueCount > 0)
-                            {
-                                var req = await _upscaleQueue.DequeueAsync(token);
-                                if (req?.Info != null)
-                                {
-                                    // 如果队列中还有任务
-                                    isContinueNext = isContinueNext || upscaleQueueCount > 1;
+                            //var upscaleQueueCount = await _upscaleQueue.CountAsync();
+                            //if (upscaleQueueCount > 0)
+                            //{
+                            //    var req = await _upscaleQueue.DequeueAsync(token);
+                            //    if (req?.Info != null)
+                            //    {
+                            //        // 如果队列中还有任务
+                            //        isContinueNext = isContinueNext || upscaleQueueCount > 1;
 
-                                    // 在执行前休眠，由于消息已经取出来了，但是还没有消费或提交，如果服务器突然宕机，可能会导致提交参数丢失
-                                    await AccountBeforeDelay();
+                            //        // 在执行前休眠，由于消息已经取出来了，但是还没有消费或提交，如果服务器突然宕机，可能会导致提交参数丢失
+                            //        await AccountBeforeDelay();
 
-                                    // 使用 Task.Run 启动后台任务，避免阻塞主线程
-                                    _ = Task.Run(async () =>
-                                    {
-                                        try
-                                        {
-                                            await RedisQueueUpdateProgress(req);
-                                        }
-                                        finally
-                                        {
-                                            // 由于不占用并发锁，所以不需要释放锁通知
-                                        }
-                                    }, token);
+                            //        // 使用 Task.Run 启动后台任务，避免阻塞主线程
+                            //        _ = Task.Run(async () =>
+                            //        {
+                            //            try
+                            //            {
+                            //                await RedisQueueUpdateProgress(req);
+                            //            }
+                            //            finally
+                            //            {
+                            //                // 由于不占用并发锁，所以不需要释放锁通知
+                            //            }
+                            //        }, token);
 
-                                    await AccountAfterDelay();
-                                }
-                            }
+                            //        await AccountAfterDelay();
+                            //    }
+                            //}
+
+                            var upscaleMore = await TryConsumeQueue(
+                                _upscaleQueue, null, globalLock,
+                                0, token, "放大(Discord)", isPicReader: false);
+                            isContinueNext = isContinueNext || upscaleMore;
                         }
 
-                        // 图生文队列任务处理
-                        var describeQueueCount = await _describeQueue.CountAsync();
-                        if (describeQueueCount > 0)
-                        {
-                            // 先尝试获取并发锁
-                            var globalHandle = await globalLock?.AcquireAsync(token);
-                            var lockObj = _describeConcurrent.TryLock(Account.CoreSize);
-                            if (lockObj != null)
-                            {
-                                // 如果队列中还有任务，并且获取到锁
-                                isContinueNext = isContinueNext || describeQueueCount > 1;
-                                // 内部已经控制了并发和阻塞，这里只需循环调用
-                                var req = await _describeQueue.DequeueAsync(token);
-                                if (req?.Info != null)
-                                {
-                                    // 在执行前休眠，由于消息已经取出来了，但是还没有消费或提交，如果服务器突然宕机，可能会导致提交参数丢失
-                                    await AccountBeforeDelay();
-                                    // 使用 Task.Run 启动后台任务，避免阻塞主线程
-                                    _ = Task.Run(async () =>
-                                    {
-                                        try
-                                        {
-                                            await RedisQueueUpdateProgress(req);
-                                        }
-                                        finally
-                                        {
-                                            // 释放锁
-                                            lockObj.Dispose();
-                                            globalHandle?.Dispose();
+                        // ═══ 图生文队列 ═══
+                        var describeMore = await TryConsumeQueue(
+                            _describeQueue, _describeConcurrent, globalLock,
+                            Account.CoreSize, token, "图生文", isPicReader: true);
+                        isContinueNext = isContinueNext || describeMore;
 
-                                            // 发送锁我已经释放了
-                                            var notification = new RedisNotification
-                                            {
-                                                Type = ENotificationType.DisposeLock,
-                                                ChannelId = ChannelId,
-                                                TaskInfoId = req?.Info?.Id
-                                            };
-                                            RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
-                                        }
-                                    }, token);
-                                    await AccountAfterDelay();
-                                }
-                                else
-                                {
-                                    // 释放锁
-                                    lockObj.Dispose();
-                                    globalHandle?.Dispose();
+                        // ═══ 快速队列 ═══
+                        var fastMore = await TryConsumeQueue(
+                            _defaultOrFastQueue, _defaultOrFastConcurrent, globalLock,
+                            Account.CoreSize, token, "快速");
+                        isContinueNext = isContinueNext || fastMore;
 
-                                    // 发送锁我已经释放了
-                                    var notification = new RedisNotification
-                                    {
-                                        Type = ENotificationType.DisposeLock,
-                                        ChannelId = ChannelId,
-                                        TaskInfoId = req?.Info?.Id
-                                    };
-                                    RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
-
-                                    // 中文日志
-                                    Log.Warning("Redis 图生文队列出队为空 {@0}", Account.ChannelId);
-                                }
-                            }
-                        }
-
-                        // 从快速队列获取任务
-                        var queueCount = await _defaultOrFastQueue.CountAsync();
-                        if (queueCount > 0)
-                        {
-                            // 先尝试获取并发锁
-                            var globalHandle = await globalLock?.AcquireAsync(token);
-                            var lockObj = _defaultOrFastConcurrent.TryLock(Account.CoreSize);
-                            if (lockObj != null)
-                            {
-                                // 如果队列中还有任务，并且获取到锁
-                                isContinueNext = isContinueNext || queueCount > 1;
-
-                                // 内部已经控制了并发和阻塞，这里只需循环调用
-                                var req = await _defaultOrFastQueue.DequeueAsync(token);
-                                if (req?.Info != null)
-                                {
-                                    // 在执行前休眠，由于消息已经取出来了，但是还没有消费或提交，如果服务器突然宕机，可能会导致提交参数丢失
-                                    await AccountBeforeDelay();
-
-                                    // 使用 Task.Run 启动后台任务，避免阻塞主线程
-                                    _ = Task.Run(async () =>
-                                    {
-                                        try
-                                        {
-                                            await RedisQueueUpdateProgress(req);
-                                        }
-                                        finally
-                                        {
-                                            // 释放锁
-                                            lockObj.Dispose();
-                                            globalHandle?.Dispose();
-
-                                            // 发送锁我已经释放了
-                                            var notification = new RedisNotification
-                                            {
-                                                Type = ENotificationType.DisposeLock,
-                                                ChannelId = ChannelId,
-                                                TaskInfoId = req?.Info?.Id
-                                            };
-                                            RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
-                                        }
-                                    }, token);
-
-                                    await AccountAfterDelay();
-                                }
-                                else
-                                {
-                                    // 释放锁
-                                    lockObj.Dispose();
-                                    globalHandle?.Dispose();
-
-                                    // 发送锁我已经释放了
-                                    var notification = new RedisNotification
-                                    {
-                                        Type = ENotificationType.DisposeLock,
-                                        ChannelId = ChannelId,
-                                        TaskInfoId = req?.Info?.Id
-                                    };
-                                    RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
-
-                                    // 中文日志
-                                    Log.Warning("Redis 默认队列出队为空 {@0}", Account.ChannelId);
-                                }
-                            }
-                        }
-
-                        // 只有悠船才有慢速队列
-                        // 是否立即执行下一个慢速任务
-                        var relaxQueueCount = 0;
+                        // ═══ 慢速队列（悠船）═══
                         if (Account.IsYouChuan)
                         {
-                            // 从放松队列获取任务
-                            relaxQueueCount = await _relaxQueue.CountAsync();
-                            if (relaxQueueCount > 0)
-                            {
-                                // 先尝试获取并发锁
-                                var globalHandle = await globalLock?.AcquireAsync(token);
-                                var lockObj = _relaxConcurrent.TryLock(Account.RelaxCoreSize);
-                                if (lockObj != null)
-                                {
-                                    // 如果队列中还有任务，并且获取到锁
-                                    isContinueNext = isContinueNext || relaxQueueCount > 1;
-
-                                    // 内部已经控制了并发和阻塞，这里只需循环调用
-                                    var req = await _relaxQueue.DequeueAsync(token);
-                                    if (req?.Info != null)
-                                    {
-                                        // 使用 Task.Run 启动后台任务，避免阻塞主线程
-                                        _ = Task.Run(async () =>
-                                        {
-                                            try
-                                            {
-                                                await RedisQueueUpdateProgress(req);
-                                            }
-                                            finally
-                                            {
-                                                // 释放锁
-                                                lockObj.Dispose();
-                                                globalHandle?.Dispose();
-
-                                                // 发送锁我已经释放了
-                                                var notification = new RedisNotification
-                                                {
-                                                    Type = ENotificationType.DisposeLock,
-                                                    ChannelId = ChannelId,
-                                                    TaskInfoId = req?.Info?.Id
-                                                };
-                                                RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
-                                            }
-                                        }, token);
-
-                                        await AccountAfterDelay();
-                                    }
-                                    else
-                                    {
-                                        // 释放锁
-                                        lockObj.Dispose();
-                                        globalHandle?.Dispose();
-
-                                        // 发送锁我已经释放了
-                                        var notification = new RedisNotification
-                                        {
-                                            Type = ENotificationType.DisposeLock,
-                                            ChannelId = ChannelId,
-                                            TaskInfoId = req?.Info?.Id
-                                        };
-                                        RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
-
-                                        // 中文日志
-                                        Log.Warning("Redis 慢速队列出队为空 {@0}", Account.ChannelId);
-                                    }
-                                }
-                            }
+                            var relaxMore = await TryConsumeQueue(
+                                _relaxQueue, _relaxConcurrent, globalLock,
+                                Account.RelaxCoreSize, token, "悠船慢速");
+                            isContinueNext = isContinueNext || relaxMore;
                         }
 
-                        // 全局锁日志
-                        if (globalLock != null && globalLock.CurrentlyHeldCount > 0 || globalLock.WaitingCount > 0)
-                        {
-                            Log.Information("全局锁状态 - 可用数: {0}, 已用数: {1}, 等待数: {2}, 最大数: {3}",
-                                globalLock.AvailableCount,
-                                globalLock.CurrentlyHeldCount,
-                                globalLock.WaitingCount,
-                                globalLock.MaxParallelism);
-                        }
+                        //// 图生文队列任务处理
+                        //var describeQueueCount = await _describeQueue.CountAsync();
+                        //if (describeQueueCount > 0)
+                        //{
+                        //    // 先尝试获取并发锁
+                        //    var globalHandle = await globalLock?.AcquireAsync(token);
+                        //    var lockObj = _describeConcurrent.TryLock(Account.CoreSize);
+                        //    if (lockObj != null)
+                        //    {
+                        //        // 如果队列中还有任务，并且获取到锁
+                        //        isContinueNext = isContinueNext || describeQueueCount > 1;
+                        //        // 内部已经控制了并发和阻塞，这里只需循环调用
+                        //        var req = await _describeQueue.DequeueAsync(token);
+                        //        if (req?.Info != null)
+                        //        {
+                        //            // 在执行前休眠，由于消息已经取出来了，但是还没有消费或提交，如果服务器突然宕机，可能会导致提交参数丢失
+                        //            await AccountBeforeDelay();
+                        //            // 使用 Task.Run 启动后台任务，避免阻塞主线程
+                        //            _ = Task.Run(async () =>
+                        //            {
+                        //                try
+                        //                {
+                        //                    await RedisQueueUpdateProgress(req);
+                        //                }
+                        //                finally
+                        //                {
+                        //                    // 释放锁
+                        //                    lockObj.Dispose();
+                        //                    globalHandle?.Dispose();
+
+                        //                    // 发送锁我已经释放了
+                        //                    var notification = new RedisNotification
+                        //                    {
+                        //                        Type = ENotificationType.DisposeLock,
+                        //                        ChannelId = ChannelId,
+                        //                        TaskInfoId = req?.Info?.Id
+                        //                    };
+                        //                    RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
+                        //                }
+                        //            }, token);
+                        //            await AccountAfterDelay();
+                        //        }
+                        //        else
+                        //        {
+                        //            // 释放锁
+                        //            lockObj.Dispose();
+                        //            globalHandle?.Dispose();
+
+                        //            // 发送锁我已经释放了
+                        //            var notification = new RedisNotification
+                        //            {
+                        //                Type = ENotificationType.DisposeLock,
+                        //                ChannelId = ChannelId,
+                        //                TaskInfoId = req?.Info?.Id
+                        //            };
+                        //            RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
+
+                        //            // 中文日志
+                        //            Log.Warning("Redis 图生文队列出队为空 {@0}", Account.ChannelId);
+                        //        }
+                        //    }
+                        //}
+
+                        //// 从快速队列获取任务
+                        //var queueCount = await _defaultOrFastQueue.CountAsync();
+                        //if (queueCount > 0)
+                        //{
+                        //    // 先尝试获取并发锁
+                        //    var globalHandle = await globalLock?.AcquireAsync(token);
+                        //    var lockObj = _defaultOrFastConcurrent.TryLock(Account.CoreSize);
+                        //    if (lockObj != null)
+                        //    {
+                        //        // 如果队列中还有任务，并且获取到锁
+                        //        isContinueNext = isContinueNext || queueCount > 1;
+
+                        //        // 内部已经控制了并发和阻塞，这里只需循环调用
+                        //        var req = await _defaultOrFastQueue.DequeueAsync(token);
+                        //        if (req?.Info != null)
+                        //        {
+                        //            // 在执行前休眠，由于消息已经取出来了，但是还没有消费或提交，如果服务器突然宕机，可能会导致提交参数丢失
+                        //            await AccountBeforeDelay();
+
+                        //            // 使用 Task.Run 启动后台任务，避免阻塞主线程
+                        //            _ = Task.Run(async () =>
+                        //            {
+                        //                try
+                        //                {
+                        //                    await RedisQueueUpdateProgress(req);
+                        //                }
+                        //                finally
+                        //                {
+                        //                    // 释放锁
+                        //                    lockObj.Dispose();
+                        //                    globalHandle?.Dispose();
+
+                        //                    // 发送锁我已经释放了
+                        //                    var notification = new RedisNotification
+                        //                    {
+                        //                        Type = ENotificationType.DisposeLock,
+                        //                        ChannelId = ChannelId,
+                        //                        TaskInfoId = req?.Info?.Id
+                        //                    };
+                        //                    RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
+                        //                }
+                        //            }, token);
+
+                        //            await AccountAfterDelay();
+                        //        }
+                        //        else
+                        //        {
+                        //            // 释放锁
+                        //            lockObj.Dispose();
+                        //            globalHandle?.Dispose();
+
+                        //            // 发送锁我已经释放了
+                        //            var notification = new RedisNotification
+                        //            {
+                        //                Type = ENotificationType.DisposeLock,
+                        //                ChannelId = ChannelId,
+                        //                TaskInfoId = req?.Info?.Id
+                        //            };
+                        //            RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
+
+                        //            // 中文日志
+                        //            Log.Warning("Redis 默认队列出队为空 {@0}", Account.ChannelId);
+                        //        }
+                        //    }
+                        //}
+
+                        //// 只有悠船才有慢速队列
+                        //// 是否立即执行下一个慢速任务
+                        //var relaxQueueCount = 0;
+                        //if (Account.IsYouChuan)
+                        //{
+                        //    // 从放松队列获取任务
+                        //    relaxQueueCount = await _relaxQueue.CountAsync();
+                        //    if (relaxQueueCount > 0)
+                        //    {
+                        //        // 先尝试获取并发锁
+                        //        var globalHandle = await globalLock?.AcquireAsync(token);
+                        //        var lockObj = _relaxConcurrent.TryLock(Account.RelaxCoreSize);
+                        //        if (lockObj != null)
+                        //        {
+                        //            // 如果队列中还有任务，并且获取到锁
+                        //            isContinueNext = isContinueNext || relaxQueueCount > 1;
+
+                        //            // 内部已经控制了并发和阻塞，这里只需循环调用
+                        //            var req = await _relaxQueue.DequeueAsync(token);
+                        //            if (req?.Info != null)
+                        //            {
+                        //                // 使用 Task.Run 启动后台任务，避免阻塞主线程
+                        //                _ = Task.Run(async () =>
+                        //                {
+                        //                    try
+                        //                    {
+                        //                        await RedisQueueUpdateProgress(req);
+                        //                    }
+                        //                    finally
+                        //                    {
+                        //                        // 释放锁
+                        //                        lockObj.Dispose();
+                        //                        globalHandle?.Dispose();
+
+                        //                        // 发送锁我已经释放了
+                        //                        var notification = new RedisNotification
+                        //                        {
+                        //                            Type = ENotificationType.DisposeLock,
+                        //                            ChannelId = ChannelId,
+                        //                            TaskInfoId = req?.Info?.Id
+                        //                        };
+                        //                        RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
+                        //                    }
+                        //                }, token);
+
+                        //                await AccountAfterDelay();
+                        //            }
+                        //            else
+                        //            {
+                        //                // 释放锁
+                        //                lockObj.Dispose();
+                        //                globalHandle?.Dispose();
+
+                        //                // 发送锁我已经释放了
+                        //                var notification = new RedisNotification
+                        //                {
+                        //                    Type = ENotificationType.DisposeLock,
+                        //                    ChannelId = ChannelId,
+                        //                    TaskInfoId = req?.Info?.Id
+                        //                };
+                        //                RedisHelper.Publish(RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL, notification.ToJson());
+
+                        //                // 中文日志
+                        //                Log.Warning("Redis 慢速队列出队为空 {@0}", Account.ChannelId);
+                        //            }
+                        //        }
+                        //    }
+                        //}
+
+                        //// 全局锁日志
+                        //if (globalLock != null && globalLock.CurrentlyHeldCount > 0 || globalLock.WaitingCount > 0)
+                        //{
+                        //    Log.Information("全局锁状态 - 可用数: {0}, 已用数: {1}, 等待数: {2}, 最大数: {3}",
+                        //        globalLock.AvailableCount,
+                        //        globalLock.CurrentlyHeldCount,
+                        //        globalLock.WaitingCount,
+                        //        globalLock.MaxParallelism);
+                        //}
 
                         // 队列可能还有任务时，立即执行下一次判断
                         if (isContinueNext)
@@ -1385,6 +1433,110 @@ namespace Midjourney.Services
                         await Task.Delay(1000 * 10, token);
                     }
                 }
+            }
+        }
+
+        /// <summary>
+        /// 尝试从队列消费一个任务并提交到后台执行器
+        /// </summary>
+        private async Task<bool> TryConsumeQueue(
+            RedisQueue<TaskInfoQueue> queue,
+            RedisConcurrent concurrent,
+            AsyncParallelLock globalLock,
+            int coreSize,
+            CancellationToken token,
+            string queueName,
+            bool isPicReader = false)
+        {
+            var count = await queue.CountAsync();
+            if (count <= 0)
+            {
+                return false;
+            }
+
+            // 1. 全局锁
+            var globalHandle = await globalLock?.AcquireAsync(token);
+
+            // 2. Redis 并发锁
+            CSRedisClientLock lockObj = null;
+            if (concurrent != null)
+            {
+                lockObj = concurrent.TryLock(coreSize);
+                if (lockObj == null)
+                {
+                    globalHandle?.Dispose();
+                    return false;
+                }
+            }
+
+            // 3. 出队
+            var req = await queue.DequeueAsync(token);
+            if (req?.Info == null)
+            {
+                lockObj?.Dispose();
+                globalHandle?.Dispose();
+
+                Log.Warning("Redis {@0} 队列出队为空 {@1}", queueName, Account.ChannelId);
+
+                return count > 1;
+            }
+
+            // 4. 前置延迟
+            await AccountBeforeDelay();
+
+            // 5. 提交到 Channel 执行器（锁的所有权转移给消费者）
+            await _backgroundExecutor.PostAsync(new BackgroundWorkItem
+            {
+                WorkAsync = () => RedisQueueUpdateProgress(req),
+                OnCompleted = () =>
+                {
+                    lockObj?.Dispose();
+                    globalHandle?.Dispose();
+
+                    PublishLockDisposed(req.Info.Id);
+
+                    Log.Information("释放锁 - 完成 {@0} 任务, {@1} - {@2}", queueName, Account.ChannelId, req.Info.Id);
+
+                    if (globalLock != null)
+                    {
+                        Log.Information("全局锁 - 可用数: {0}, 已用数: {1}, 等待数: {2}, 最大数: {3}",
+                            globalLock.AvailableCount,
+                            globalLock.CurrentlyHeldCount,
+                            globalLock.WaitingCount,
+                            globalLock.MaxParallelism);
+                    }
+                },
+                Description = $"{queueName}:{req.Info.Id}"
+            });
+
+            // 6. 后置延迟
+            await AccountAfterDelay(isPicReader);
+
+            return count > 1;
+        }
+
+        private void PublishLockDisposed(string taskInfoId)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(taskInfoId))
+                {
+                    return;
+                }
+
+                var notification = new RedisNotification
+                {
+                    Type = ENotificationType.DisposeLock,
+                    ChannelId = ChannelId,
+                    TaskInfoId = taskInfoId
+                };
+                RedisHelper.Publish(
+                    RedisHelper.Prefix + Constants.REDIS_NOTIFY_CHANNEL,
+                    notification.ToJson());
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "发布锁释放通知异常 {@0}", ChannelId);
             }
         }
 

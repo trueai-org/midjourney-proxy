@@ -219,6 +219,47 @@ namespace Midjourney.API
                 services.AddSingleton<DiscordAccountInitializer>();
                 services.AddHostedService(provider => provider.GetRequiredService<DiscordAccountInitializer>());
 
+                // 从配置中读取任务最大并行数限制  -e CONCURRENT=10
+                // 优先使用环境变量
+                var concurrent = configuration.GetSection("CONCURRENT").Get<int?>();
+                var concurrentEnv = Environment.GetEnvironmentVariable("CONCURRENT");
+                if (!string.IsNullOrWhiteSpace(concurrentEnv) && int.TryParse(concurrentEnv, out var maxConcurrent))
+                {
+                    concurrent = maxConcurrent;
+                }
+
+                // 如果配置为 NULL，则限制单机单个 CPU 最大并发 64，避免无限制并发导致系统过载
+                // 如果配置为 0 则不处理任务
+                // 如果配置为 -1 则不限制并发
+                // -1 / 0 / 1 - 1280
+                concurrent ??= Math.Min(1280, Math.Max(1, Environment.ProcessorCount * 64));
+                if (concurrent > 0)
+                {
+                    concurrent = Math.Min(1280, Math.Max(1, concurrent.Value));
+                }
+
+                // 生产者 - 消费者模式的后台任务执行器，使用 Channel 和 SemaphoreSlim 实现高效的并发控制和任务调度
+                services.AddSingleton(sp =>
+                {
+                    // 如果并发不限制则为 1280
+                    var concurrentValue = concurrent.Value > 0 ? concurrent.Value : 1280;
+
+                    // 并发的 2 倍，最小 32，最大 1280
+                    var capacity = Math.Min(Math.Max(concurrentValue * 2, 32), 1280);
+
+                    // 并发的 1.2 倍，最小 32，最大 1280
+                    var maxConcurrency = Math.Min(Math.Max((int)(concurrentValue * 1.2), 32), 1280);
+
+                    return new BackgroundTaskExecutor(
+                        name: "Global",
+                        maxConcurrency: maxConcurrency,
+                        capacity: capacity
+                    );
+                });
+
+                // AddHostedService 让 Host 自动管理生命周期
+                services.AddHostedService(sp => sp.GetRequiredService<BackgroundTaskExecutor>());
+
                 // 添加健康检查
                 services.AddHealthChecks();
 
@@ -305,18 +346,6 @@ namespace Midjourney.API
 
                 GlobalConfiguration.ContentRootPath = app.Environment.ContentRootPath;
 
-                // 从配置中读取任务最大并行数限制  -e CONCURRENT=10
-                // 优先使用环境变量
-                var concurrent = configuration.GetSection("CONCURRENT").Get<int?>();
-                var concurrentEnv = Environment.GetEnvironmentVariable("CONCURRENT");
-                if (!string.IsNullOrWhiteSpace(concurrentEnv) && int.TryParse(concurrentEnv, out var maxConcurrent))
-                {
-                    concurrent = maxConcurrent;
-                }
-
-                // CONCURRENT 如果配置为 NULL，则限制单机单个 CPU 最大并发 100，避免无限制并发导致系统过载；如果配置为 0 则：不处理任务；如果配置为 -1 则：不限制并发。
-                concurrent ??= Math.Max(100, Environment.ProcessorCount * 100);
-
                 // 初始化全局锁
                 if (concurrent > 0)
                 {
@@ -332,10 +361,8 @@ namespace Midjourney.API
                     // 不处理任务
                     concurrent = 0;
                 }
-
                 GlobalConfiguration.GlobalMaxConcurrent = concurrent.Value;
-
-                Log.Information("环境变量设置当前节点全局最大任务并行处理上限：{0}", concurrent.Value);
+                Log.Information("当前节点全局最大任务并行处理上限：{0}", concurrent.Value);
 
                 app.UseDefaultFiles(); // 启用默认文件（index.html）
                 app.UseStaticFiles(); // 配置提供静态文件

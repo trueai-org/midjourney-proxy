@@ -41,11 +41,18 @@ namespace Midjourney.Services
         private readonly Dictionary<string, string> _paramsMap;
         private readonly HashSet<DiscordService> _instances = [];
 
+        /// <summary>
+        /// 后台任务执行器 — 替代所有 Task.Run fire-and-forget
+        /// </summary>
+        private readonly BackgroundTaskExecutor _backgroundExecutor;
+
         public DiscordAccountService(
             INotifyService notifyService,
             IHttpClientFactory httpClientFactory,
-            IDiscordRuleService rule)
+            IDiscordRuleService rule,
+            BackgroundTaskExecutor backgroundExecutor)
         {
+            _backgroundExecutor = backgroundExecutor;
             _notifyService = notifyService;
             _rule = rule;
             _httpClientFactory = httpClientFactory;
@@ -352,7 +359,7 @@ namespace Midjourney.Services
                 account.UserAgent = Constants.DEFAULT_DISCORD_USER_AGENT;
             }
 
-            var discordInstance = new DiscordService(account, _notifyService, _paramsMap, _httpClientFactory);
+            var discordInstance = new DiscordService(account, _notifyService, _paramsMap, _httpClientFactory, _backgroundExecutor);
 
             if (account.Enable == true)
             {
