@@ -97,12 +97,6 @@ namespace Midjourney.Base.Util
                     // 等待一个并发许可（满了就在这里等）
                     await _semaphore.WaitAsync(stoppingToken);
 
-                    Interlocked.Increment(ref _activeConsumers);
-
-                    Log.Information("[{Name}] 收到新任务: {Desc}, 活跃: {Active}, 排队: {Pending}",
-                        _name, item.Description, ActiveConsumers, PendingCount);
-
-
                     // 启动一个消费协程处理理这个 item
                     var task = ConsumeOneAsync(item);
                     inflightTasks.Add(task);
@@ -134,6 +128,11 @@ namespace Midjourney.Base.Util
         {
             try
             {
+                Interlocked.Increment(ref _activeConsumers);
+
+                Log.Information("[{Name}] 收到新任务: {Desc}, 活跃: {Active}, 排队: {Pending}",
+                    _name, item.Description, ActiveConsumers, PendingCount);
+
                 await item.WorkAsync();
             }
             catch (Exception ex)

@@ -741,6 +741,9 @@ namespace Midjourney.Services
                     info.VideoType = videoDTO.VideoType;
                     info.Description = "/video " + info.Prompt;
 
+                    // 不赋值，由于视频 api 接口和 视频放大 -> 再拓展获取索引规则不同，因此使用 customId 来携带索引信息，后续根据 customId 解析出索引进行处理
+                    //info.SetProperty(Constants.TASK_PROPERTY_ACTION_INDEX, videoDTO.Index + 1);
+
                     // 入队前不保存
                     //_taskStoreService.Save(info);
 

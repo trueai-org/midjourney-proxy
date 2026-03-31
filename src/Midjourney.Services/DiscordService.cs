@@ -1455,7 +1455,9 @@ namespace Midjourney.Services
             }
 
             // 1. 全局锁
-            var globalHandle = await globalLock?.AcquireAsync(token);
+            // 当 globalLock 为 null 时，globalLock?.AcquireAsync(token) 返回 null，await null 在 C# 中实际上是合法的（等价于 await Task.CompletedTask 对于 Task<T> 返回 default），但这依赖于返回类型。
+            // 如果返回的是 ValueTask<T> 或其他类型，行为可能不可预测。
+            var globalHandle = globalLock == null ? null : await globalLock?.AcquireAsync(token);
 
             // 2. Redis 并发锁
             CSRedisClientLock lockObj = null;
