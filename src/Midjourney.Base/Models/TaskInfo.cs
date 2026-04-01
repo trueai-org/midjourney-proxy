@@ -36,8 +36,12 @@ namespace Midjourney.Base.Models
 {
     /// <summary>
     /// 任务类，表示一个任务的基本信息。
+    /// 索引说明：
+    /// MySQL InnoDB 二级索引自动包含主键，显式加 Id 不影响
+    /// PostgreSQL 二级索引不包含主键，排序分页索引必须包含 Id 以实现 Index Only Scan
     /// </summary>
     [Serializable]
+    // ===== 纯过滤/查找索引 =====
     [Index("i_UserId", "UserId")]
     [Index("i_ClientIp", "ClientIp")]
     [Index("i_InstanceId", "InstanceId")]
@@ -45,10 +49,6 @@ namespace Midjourney.Base.Models
     [Index("i_Status", "Status")]
     [Index("i_Action", "Action")]
     [Index("i_ParentId", "ParentId")]
-    [Index("i_SubmitTime_UserId", "SubmitTime,UserId")]
-    [Index("i_SubmitTime_InstanceId", "SubmitTime,InstanceId")]
-    [Index("i_SubmitTime_Status_UserId", "SubmitTime,Status,UserId")]
-    [Index("i_SubmitTime_Status", "SubmitTime,Status")]
     [Index("i_State", "State")]
     [Index("i_Mode", "Mode")]
     [Index("i_Nonce", "Nonce")]
@@ -58,6 +58,13 @@ namespace Midjourney.Base.Models
     [Index("i_OfficialTaskId", "OfficialTaskId")]
     [Index("i_Status_SubmitTime_Mode_Action", "Status, SubmitTime, Mode, Action")]
     [Index("i_IsThirdParty", "IsThirdParty")]
+    // ===== 排序分页索引（尾部追加 Id，兼容 MySQL 和 PostgreSQL）=====
+    [Index("i_SubmitTime_Id", "SubmitTime,Id")]
+    [Index("i_SubmitTime_Status_Id", "SubmitTime,Status,Id")]
+    [Index("i_SubmitTime_UserId_Id", "SubmitTime,UserId,Id")]
+    [Index("i_SubmitTime_InstanceId_Id", "SubmitTime,InstanceId,Id")]
+    [Index("i_SubmitTime_Status_UserId_Id", "SubmitTime,Status,UserId,Id")]
+    [Index("i_Status_SubmitTime_Mode_Action_Id", "Status,SubmitTime,Mode,Action,Id")]
     public class TaskInfo : DomainObject
     {
         /// <summary>
