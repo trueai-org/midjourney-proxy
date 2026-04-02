@@ -3372,7 +3372,7 @@ namespace Midjourney.Services
             prompt = FormatUrls(prompt, info).ConfigureAwait(false).GetAwaiter().GetResult();
 
             // 转全球加速地址
-            var storage = StorageHelper.Instance.GetBaseStorage();
+            var storage = StorageHelper.Instance?.GetBaseStorage();
             if (!string.IsNullOrWhiteSpace(storage?.GlobalCustomCdn))
             {
                 // 使用正则提取所有的 url
