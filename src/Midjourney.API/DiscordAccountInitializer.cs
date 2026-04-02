@@ -131,7 +131,7 @@ namespace Midjourney.API
                     {
                         try
                         {
-                            var migOK = FreeSqlHelper.Verify(setting.MigrateDatabaseType, setting.MigrateDatabaseConnectionString);
+                            var migOK = await FreeSqlHelper.Verify(setting.MigrateDatabaseType, setting.MigrateDatabaseConnectionString);
                             if (migOK)
                             {
                                 var _mgFreesql = FreeSqlHelper.Init(setting.MigrateDatabaseType, setting.MigrateDatabaseConnectionString);

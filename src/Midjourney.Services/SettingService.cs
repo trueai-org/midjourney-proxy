@@ -117,7 +117,17 @@ namespace Midjourney.Services
                 GlobalConfiguration.TranslateService = null;
             }
 
-            // 缓存 / Redis / Reids 锁
+            // 应用 Redis
+            ApplyRedis();
+        }
+
+        /// <summary>
+        /// 应用 Redis
+        /// 缓存 / Redis / Reids 锁
+        /// </summary>
+        public void ApplyRedis()
+        {
+            var setting = Current;
             if (setting.IsValidRedis)
             {
                 var csredis = new CSRedisClient(setting.RedisConnectionString);

@@ -28,6 +28,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using CSRedis;
 using FreeSql;
 using LiteDB;
@@ -1887,8 +1888,31 @@ namespace Midjourney.API.Controllers
                 }
             }
 
+            // 如果启用了 redis 则验证
+            // 先验证 redis
+            if (setting.IsValidRedis)
+            {
+                try
+                {
+                    var csredis = new CSRedisClient(setting.RedisConnectionString);
+                    if (!csredis.Ping())
+                    {
+                        return Result.Fail("Redis 连接失败，请检查连接字符串是否正确");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex, "Redis 连接失败");
+                    return Result.Fail("Redis 连接失败，请检查连接字符串是否正确");
+                }
+            }
+            else
+            {
+                return Result.Fail("必须配置 Redis 模式");
+            }
+
             // 数据库验证
-            var dbSuccess = FreeSqlHelper.Verify(setting.DatabaseType, setting.DatabaseConnectionString);
+            var dbSuccess = await FreeSqlHelper.Verify(setting.DatabaseType, setting.DatabaseConnectionString);
             if (!dbSuccess)
             {
                 return Result.Fail("数据库连接失败，请检查连接字符串/名称是否正确");
@@ -1924,27 +1948,6 @@ namespace Midjourney.API.Controllers
                 }
             }
 
-            // 如果启用了 redis 则验证
-            if (setting.IsValidRedis)
-            {
-                try
-                {
-                    var csredis = new CSRedisClient(setting.RedisConnectionString);
-                    if (!csredis.Ping())
-                    {
-                        return Result.Fail("Redis 连接失败，请检查连接字符串是否正确");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Log.Error(ex, "Redis 连接失败");
-                    return Result.Fail("Redis 连接失败，请检查连接字符串是否正确");
-                }
-            }
-            else
-            {
-                return Result.Fail("必须配置 Redis 模式");
-            }
 
             // 如果启用了风控验证
             if (setting.EnableRiskControlAutoCaptcha)
@@ -2024,7 +2027,7 @@ namespace Midjourney.API.Controllers
         /// <param name="request"></param>
         /// <returns></returns>
         [HttpPost("validate-database-connection")]
-        public Result ValidateDatabaseConnection([FromBody] ValidateDatabaseRequest request)
+        public async Task<Result> ValidateDatabaseConnection([FromBody] ValidateDatabaseRequest request)
         {
             if (_isAnonymous)
             {
@@ -2062,7 +2065,7 @@ namespace Midjourney.API.Controllers
                     //    }
                     //}
 
-                    var success = FreeSqlHelper.Verify(request.DatabaseType!.Value, request.DatabaseConnectionString);
+                    var success = await FreeSqlHelper.Verify(request.DatabaseType!.Value, request.DatabaseConnectionString);
                     if (success)
                     {
                         return Result.Ok();

@@ -117,8 +117,35 @@ namespace Midjourney.API
                     isSaveSetting = true;
                 }
 
+                // 初始化 Redis 验证是否可连接
+                // 需要先验证 Redis 是否可连接，后续会用到 Redis
+                if (setting.IsValidRedis)
+                {
+                    try
+                    {
+                        var csredis = new CSRedisClient(setting.RedisConnectionString);
+                        if (!csredis.Ping())
+                        {
+                            setting.EnableRedis = false;
+                            isSaveSetting = true;
+                            Log.Error("Redis 连接失败，已自动禁用 Redis 功能");
+                        }
+                        else
+                        {
+                            SettingService.Instance.ApplyRedis();
+                            Log.Information("Redis 连接成功，已启用 Redis 功能");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        setting.EnableRedis = false;
+                        isSaveSetting = true;
+                        Log.Error(ex, "Redis 连接异常，已自动禁用 Redis 功能");
+                    }
+                }
+
                 // 验证数据库是否可连接
-                if (!FreeSqlHelper.VerifyConfigure())
+                if (!await FreeSqlHelper.VerifyConfigure())
                 {
                     // 切换为本地数据库
                     setting.DatabaseType = DatabaseType.SQLite;
@@ -135,27 +162,6 @@ namespace Midjourney.API
                 }
 
                 Log.Information("数据库类型：{0}", setting.DatabaseType);
-
-                // 初始化 Redis 验证是否可连接
-                if (setting.IsValidRedis)
-                {
-                    try
-                    {
-                        var csredis = new CSRedisClient(setting.RedisConnectionString);
-                        if (!csredis.Ping())
-                        {
-                            setting.EnableRedis = false;
-                            isSaveSetting = true;
-                            Log.Error("Redis 连接失败，已自动禁用 Redis 功能");
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        setting.EnableRedis = false;
-                        isSaveSetting = true;
-                        Log.Error(ex, "Redis 连接异常，已自动禁用 Redis 功能");
-                    }
-                }
 
                 // 需要重新保存配置，注意：如果版本过旧，重新保存配置可能会覆盖新的业务，需谨慎处理
                 if (isSaveSetting)

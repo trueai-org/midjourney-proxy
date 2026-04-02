@@ -22,9 +22,11 @@
 // invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
+using System.Threading.Tasks;
 using FreeSql;
 using FreeSql.Aop;
 using FreeSql.DataAnnotations;
+using Midjourney.Base.Util;
 using Newtonsoft.Json.Linq;
 using Serilog;
 
@@ -216,10 +218,10 @@ namespace Midjourney.Base.Data
         /// 验证并配置数据库连接
         /// </summary>
         /// <returns></returns>
-        public static bool VerifyConfigure()
+        public static async Task<bool> VerifyConfigure()
         {
             var setting = GlobalConfiguration.Setting;
-            var isSuccess = Verify(setting.DatabaseType, setting.DatabaseConnectionString);
+            var isSuccess = await Verify(setting.DatabaseType, setting.DatabaseConnectionString);
             if (isSuccess)
             {
                 // 验证成功后，确认配置当前数据库
@@ -240,10 +242,18 @@ namespace Midjourney.Base.Data
         /// <param name="databaseConnectionString"></param>
         /// <param name="isConfigure">验证成功后是否配置</param>
         /// <returns></returns>
-        public static bool Verify(DatabaseType databaseType, string databaseConnectionString)
+        public static async Task<bool> Verify(DatabaseType databaseType, string databaseConnectionString)
         {
             try
             {
+                // 数据连接验证要加锁，防止多服务器同时启动变更数据库时导致字段/结构同步冲突
+                await using var isLock = await AdaptiveLock.LockAsync("FreeSql.Verify", 60);
+                if(!isLock.IsAcquired)
+                {
+                    Log.Error("无法获取 FreeSql 验证锁，可能存在多个服务器同时启动导致数据库连接验证冲突");
+                    return false;
+                }
+
                 switch (databaseType)
                 {
                     //case DatabaseType.MongoDB:
