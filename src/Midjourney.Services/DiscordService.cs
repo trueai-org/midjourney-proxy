@@ -202,12 +202,12 @@ namespace Midjourney.Services
 
             if (account.IsYouChuan || account.IsOfficial)
             {
-                _ymTaskService = new YmTaskService(account, this, _httpClientFactory);
+                _ymTaskService = new YmTaskService(account, this, _httpClientFactory, _longToken.Token);
             }
             else if (account.IsDiscord && !string.IsNullOrWhiteSpace(account.Cookie))
             {
                 // 当 discord 账号有 cookie 时
-                _ymTaskService = new YmTaskService(account, this, _httpClientFactory);
+                _ymTaskService = new YmTaskService(account, this, _httpClientFactory, _longToken.Token);
             }
         }
 
@@ -2727,6 +2727,11 @@ namespace Midjourney.Services
                 catch (Exception ex)
                 {
                     _logger.Error(ex, "记录 relax/fast 次数异常 {@0} - {@1}", info.Id, info.InstanceId);
+                }
+
+                if (info.IsPartner || info.IsOfficial)
+                {
+                    _ymTaskService?.TryRemoveFromPollQueue(info.Id);
                 }
 
                 _runningTasks.TryRemove(info.Id, out _);

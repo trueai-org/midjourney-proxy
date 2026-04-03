@@ -127,5 +127,10 @@ namespace Midjourney.Base.Services
         /// <returns>返回存储链接</returns>
         /// <exception cref="Exception"></exception>
         Task<string> DownloadImageToStorage(string url, string id);
+
+        /// <summary>
+        /// 从批量轮询队列移除任务（任务完成/失败后由外部调用）
+        /// </summary>
+        void TryRemoveFromPollQueue(string taskId);
     }
 }
