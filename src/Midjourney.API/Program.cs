@@ -145,20 +145,48 @@ namespace Midjourney.API
                 }
 
                 // 验证数据库是否可连接
-                if (!await FreeSqlHelper.VerifyConfigure())
+                // 增加重试机制，第1次10秒，第2次60秒，第3次360秒，3次失败后才切换为本地 SQLite 数据库
+                // 使用 SQLite 数据库时，超级管理员 admin 密码一定要修改，避免服务挂起时自动切换 SQLite 数据库导致配置泄露
+                var retryCount = 0;
+                while (!await FreeSqlHelper.VerifyConfigure())
                 {
-                    // 切换为本地数据库
-                    setting.DatabaseType = DatabaseType.SQLite;
-                    isSaveSetting = true;
+                    retryCount++;
 
-                    // 切换为 SQLite
-                    var freeSql = FreeSqlHelper.Init(setting.DatabaseType, setting.DatabaseConnectionString, true);
-                    if (freeSql != null)
+                    if (retryCount == 1)
                     {
-                        FreeSqlHelper.Configure(freeSql);
+                        // 等待 10 秒后重试
+                        Log.Warning("数据库连接失败，正在进行第 {0} 次重试，等待 10 秒后重试...", retryCount);
+                        await Task.Delay(1000 * 10);
                     }
+                    else if(retryCount == 2)
+                    {
+                        // 等待 60 秒后重试
+                        Log.Warning("数据库连接失败，正在进行第 {0} 次重试，等待 60 秒后重试...", retryCount);
+                        await Task.Delay(1000 * 60);
+                    }
+                    else if (retryCount == 3)
+                    {
+                        // 等待 360 秒后重试
+                        Log.Warning("数据库连接失败，正在进行第 {0} 次重试，等待 360 秒后重试...", retryCount);
+                        await Task.Delay(1000 * 360);
+                    }
+                    else
+                    {
+                        // 超过重试次数，切换数据库
+                        // 切换为本地数据库
+                        setting.DatabaseType = DatabaseType.SQLite;
+                        isSaveSetting = true;
 
-                    Log.Error("数据库连接失败，自动切换为 SQLite 数据库");
+                        // 切换为 SQLite
+                        var freeSql = FreeSqlHelper.Init(setting.DatabaseType, setting.DatabaseConnectionString, true);
+                        if (freeSql != null)
+                        {
+                            FreeSqlHelper.Configure(freeSql);
+                        }
+
+                        Log.Error("数据库连接失败，已进行 {0} 次重试，仍然无法连接数据库，正在切换为 SQLite 数据库", retryCount);
+                        break;
+                    }
                 }
 
                 Log.Information("数据库类型：{0}", setting.DatabaseType);

@@ -25,6 +25,7 @@
 using System.Net;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Caching.Memory;
 
 namespace Midjourney.API.Controllers
@@ -455,7 +456,18 @@ namespace Midjourney.API.Controllers
                                     var parentTaskUrl = parentEle.GetString();
                                     if (!string.IsNullOrWhiteSpace(parentTaskUrl))
                                     {
+                                        var uri = new Uri(parentTaskUrl);
+                                        var query = QueryHelpers.ParseQuery(uri.Query);
+                                        var token = query.ContainsKey("token") ? query["token"].ToString() : string.Empty;
                                         using var client = new HttpClient() { Timeout = TimeSpan.FromMinutes(1) };
+
+                                        if (!string.IsNullOrWhiteSpace(token))
+                                        {
+                                            //client.DefaultRequestHeaders.Remove("Authorization");
+                                            //client.DefaultRequestHeaders.Add("Authorization", token);
+                                            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(token);
+                                        }
+
                                         var response = await client.GetAsync(parentTaskUrl);
                                         if (response.IsSuccessStatusCode)
                                         {

@@ -35,108 +35,51 @@ namespace Midjourney.Base.Util
         private const string BANNED_WORDS = """
             ahegao
             anus
-            ass
             ballgag
-            barely dressed
             bloodbath
-            bloody
             bodily fluids
-            boobs
-            breasts
             brothel
-            brown pudding
-            bruises
             bunghole
             cannibal
             cannibalism
-            car crash
-            cleavage
-            clunge
             cocaine
             coon
-            corpse
-            crack
-            crotch
-            crucifixion
             decapitate
-            deepfake
             dick
             dominatrix
-            erotic
             excrement
-            explicit
-            fart
-            farts
             feces
-            flesh
             fuck
-            full frontal
             gore
-            gory
-            gruesome
             guts
-            hardcore
             hentai
             heroin
-            hitler
-            honkey
             incest
-            infected
-            intimate parts
             jav
-            kill
-            killing
             kinbaku
             labia
             legs spread
-            lingerie
             loli
-            lolita
-            making love
-            mammaries
             massacre
             meth
-            naked
-            negligee
             nipple
             no clothes
             nude
-            organs
             orgy
-            ovaries
             penis
-            phallus
             porn
             rape
-            rear nude
             rule34
-            scantily clad
-            see-through
-            sexual
-            sexualized
-            shag
-            shibari
-            shit
             skeletal gore
             slaughter
-            slave
             smut
             sperm
-            suicide
-            tied up
-            torture
             unclothed
             vagina
             veiny penis
-            violence
-            visceral
             vivisection
-            vomit
-            wang
-            warts
             wearing nothing
             wincest
-            wound
             zero clothes
             """;
 

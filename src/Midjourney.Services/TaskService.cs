@@ -22,9 +22,7 @@
 // invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
-using System.Globalization;
 using System.Text.RegularExpressions;
-using Midjourney.Base;
 using RestSharp;
 using Serilog;
 
@@ -1262,6 +1260,75 @@ namespace Midjourney.Services
             }
 
             var instance = _accountService.GetDiscordInstanceIsAlive(task.SubInstanceId ?? task.InstanceId);
+
+            // 悠船慢速变化任务特殊处理
+            // 如果父级是悠船慢速任务，且当前账号没有慢速额度的情况下，交由其他慢速账号出图
+            if (task.IsPartner && task.Action != null)
+            {
+                if (targetTask.Mode == GenerationSpeedMode.RELAX
+                    && task.Action != TaskAction.VIDEO
+                    && task.Action != TaskAction.UPSCALE)
+                {
+                    // Vary Region、Vary Subtle, Vary Strong、缩放、平移 -> 可以在当前账号快速模式下继续执行
+
+                    // 如果父级是慢速，且属于以下操作，则只能通过其他慢速账号继续执行
+                    // UPSCALE_HD
+                    // V1, V2, V3, V4
+                    // ::reroll
+                    var relaxActions = new List<TaskAction>()
+                    {
+                        TaskAction.UPSCALE_HD,
+                    };
+
+                    var forceRelax = false;
+
+                    var customId = task.GetProperty<string>(Constants.TASK_PROPERTY_CUSTOM_ID, default);
+
+                    // 低变化/高变化 - 暂时也强制慢速
+                    if (relaxActions.Contains(task.Action.Value)
+                        || customId?.Contains("::low_variation") == true
+                        || customId?.Contains("::high_variation") == true
+                        || customId?.Contains("::variation") == true
+                        || customId?.Contains("::reroll") == true)
+                    {
+                        forceRelax = true;
+                    }
+                    else
+                    {
+                        // 如果没有快速或极速，则依然强制慢速处理
+                        if (!modes.Contains(GenerationSpeedMode.FAST)
+                            && !modes.Contains(GenerationSpeedMode.TURBO))
+                        {
+                            forceRelax = true;
+                        }
+                    }
+
+                    // 还是精确一些 - 如果后续处理麻烦，可以统一慢速处理
+                    // 简单点 -> 虽然 Vary Subtle、Vary Strong、缩放、平移 可以通过快速模式继续生成，但是原始任务是慢速任务
+                    // 简单点统一用慢速变化操作
+
+                    // 强制慢速账号衍生
+                    if (forceRelax)
+                    {
+                        mode = GenerationSpeedMode.RELAX;
+                        modes = [GenerationSpeedMode.RELAX];
+
+                        task.AccountFilter ??= new();
+                        task.AccountFilter.Modes = modes;
+
+                        // 判断此账号是否有慢速额度，如果没有则需要换账号
+                        if (instance != null && instance.IsAllowContinue(GenerationSpeedMode.RELAX) && instance.Account.IsAcceptActionTask())
+                        {
+                            // 允许在当前账号继续执行
+                        }
+                        else
+                        {
+                            // 不允许在当前账号继续执行，交由其他慢速账号出图
+                            instance = null;
+                        }
+                    }
+                }
+            }
 
             // 是否允许继续任务
             var isContinue = false;
