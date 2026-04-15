@@ -6,7 +6,7 @@
   "nonce": "$nonce",
   "application_id": "936929561302675456",
   "data": {
-    "version": "1237876415790055475",
+    "version": "1493662068581077053",
     "id": "1000850743479255081",
     "name": "settings",
     "type": 1,
@@ -15,7 +15,7 @@
       "id": "1000850743479255081",
       "type": 1,
       "application_id": "936929561302675456",
-      "version": "1237876415790055475",
+      "version": "1493662068581077053",
       "name": "settings",
       "description": "View and adjust your personal settings.",
       "dm_permission": true,
