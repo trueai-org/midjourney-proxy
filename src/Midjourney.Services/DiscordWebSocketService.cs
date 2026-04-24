@@ -833,7 +833,8 @@ namespace Midjourney.Services
                 {
                     if (data.TryGetProperty("title", out var t))
                     {
-                        if (t.GetString() == "Action required to continue")
+                        var title = t.GetString();
+                        if (!string.IsNullOrWhiteSpace(title) && "Action required to continue".Equals(title, StringComparison.OrdinalIgnoreCase))
                         {
                             _logger.Warning("CF 验证 {@0}, {@1}", Account.ChannelId, raw.ToString());
 
@@ -1032,7 +1033,7 @@ namespace Midjourney.Services
                     // MJ
                     if (authId == Constants.MJ_APPLICATION_ID)
                     {
-                        if (contentStr.StartsWith("Remix mode turned off"))
+                        if (contentStr.StartsWith("Remix mode turned off", StringComparison.OrdinalIgnoreCase))
                         {
                             foreach (var item in Account.Components)
                             {
@@ -1045,7 +1046,7 @@ namespace Midjourney.Services
                                 }
                             }
                         }
-                        else if (contentStr.StartsWith("Remix mode turned on"))
+                        else if (contentStr.StartsWith("Remix mode turned on", StringComparison.OrdinalIgnoreCase))
                         {
                             foreach (var item in Account.Components)
                             {
@@ -1062,7 +1063,7 @@ namespace Midjourney.Services
                     // NIJI
                     else if (authId == Constants.NIJI_APPLICATION_ID)
                     {
-                        if (contentStr.StartsWith("Remix mode turned off"))
+                        if (contentStr.StartsWith("Remix mode turned off", StringComparison.OrdinalIgnoreCase))
                         {
                             foreach (var item in Account.NijiComponents)
                             {
@@ -1075,7 +1076,7 @@ namespace Midjourney.Services
                                 }
                             }
                         }
-                        else if (contentStr.StartsWith("Remix mode turned on"))
+                        else if (contentStr.StartsWith("Remix mode turned on", StringComparison.OrdinalIgnoreCase))
                         {
                             foreach (var item in Account.NijiComponents)
                             {
@@ -1096,7 +1097,7 @@ namespace Midjourney.Services
                     return;
                 }
                 // 同步 settings 和 remix
-                else if (metaName == "settings")
+                else if ("settings".Equals(metaName, StringComparison.OrdinalIgnoreCase))
                 {
                     // settings 指令
                     var eventDataMsg = data.Deserialize<EventData>();
@@ -1117,11 +1118,13 @@ namespace Midjourney.Services
                     }
                 }
                 // 切换 fast 和 relax
-                else if (metaName == "fast" || metaName == "relax" || metaName == "turbo")
+                else if ("fast".Equals(metaName, StringComparison.OrdinalIgnoreCase)
+                    || "relax".Equals(metaName, StringComparison.OrdinalIgnoreCase)
+                    || "turbo".Equals(metaName, StringComparison.OrdinalIgnoreCase))
                 {
                     // MJ
                     // Done! Your jobs now do not consume fast-hours, but might take a little longer. You can always switch back with /fast
-                    if (metaName == "fast" && contentStr.StartsWith("Done!"))
+                    if ("fast".Equals(metaName, StringComparison.OrdinalIgnoreCase) && contentStr.StartsWith("Done!", StringComparison.OrdinalIgnoreCase))
                     {
                         foreach (var item in Account.Components)
                         {
@@ -1160,7 +1163,8 @@ namespace Midjourney.Services
                             }
                         }
                     }
-                    else if (metaName == "turbo" && contentStr.StartsWith("Done!"))
+                    else if ("turbo".Equals(metaName, StringComparison.OrdinalIgnoreCase) 
+                        && contentStr.StartsWith("Done!", StringComparison.OrdinalIgnoreCase))
                     {
                         foreach (var item in Account.Components)
                         {
@@ -1199,7 +1203,8 @@ namespace Midjourney.Services
                             }
                         }
                     }
-                    else if (metaName == "relax" && contentStr.StartsWith("Done!"))
+                    else if ("relax".Equals(metaName, StringComparison.OrdinalIgnoreCase)
+                        && contentStr.StartsWith("Done!", StringComparison.OrdinalIgnoreCase))
                     {
                         foreach (var item in Account.Components)
                         {
