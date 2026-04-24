@@ -18,6 +18,8 @@ The most powerful, complete, full-featured, completely free and open source Midj
 
 **极速响应 · 快速出图 · 价格实惠 · 高并发 · 不封号 · 不删图。**
 
+**企业级全局快速通道稳定出图。**
+
 - https://huanwangai.com
 - https://api.huanwangai.com
 
