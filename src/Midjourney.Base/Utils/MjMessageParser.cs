@@ -35,13 +35,14 @@ namespace Midjourney.Base.Util
         /// **car --v 7.0** - Variations (Region) by <@123456789> (turbo)
         /// **car --v 7.0** - Variations by <@123456789> (fast)
         /// **portrait --niji 6** - Variations (Strong) by <@987654321> (relaxed)
+        /// **cat** - Variations (Strong) by <@1217674642169528330> [(Open on website for full quality)](<https://midjourney.com/jobs/b21f08de-3d62-49aa-b38f-e06eddec9765>) (fast)
         /// **car --ar 16:9 --v 6.0 --s 750 --style raw** - Remix (Subtle) by <@1300571410770427945> (relaxed)
         /// **car --v 7.0** - Remix (Strong) by <@123456789> (fast)
         /// **car --v 7.0** - Remix (Region) by <@123456789> (turbo)
         /// **car --v 7.0** - Remix by <@123456789> (fast)
         /// ]]>
         /// </example>
-        public const string VARIATIONS = @$"\*\*(.+?)\*\* - (Remix|Variations)\s*(?:\((Subtle|Strong|Region)\))?\s*by <@(\d+)>\s*{PROGRESS_PATTERN}\({MODE_PATTERN}\)";
+        public const string VARIATIONS = @$"\*\*(.+?)\*\* - (Remix|Variations)\s*(?:\((Subtle|Strong|Region)\))?\s*by <@(\d+)>\s*{PROGRESS_PATTERN}(?:\s*\[[^\]]*\]\([^)]*\)|\s*\([^)]*\))*\s*\({MODE_PATTERN}\)";
 
         /// <summary>
         /// Pan 平移操作消息格式: **prompt** - Pan (direction) by @user (mode)

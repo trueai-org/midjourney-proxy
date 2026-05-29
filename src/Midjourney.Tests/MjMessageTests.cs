@@ -1,6 +1,7 @@
 ﻿using Midjourney.Base.Data;
 using Midjourney.Base.Models;
 using Midjourney.Base.Util;
+using Midjourney.Base;
 using Midjourney.Services;
 using Xunit.Abstractions;
 
@@ -93,6 +94,48 @@ namespace Midjourney.Tests
             {
                 var content = """**car --ar 3:2 --seed 2960366558 --video 1** - <@1323696991334694963> (75%) (fast)""";
                 var result = MjMessageParser.TryParseImagine(content);
+
+                await Task.CompletedTask;
+            }
+            catch (Exception ex)
+            {
+                _output.WriteLine("解析失败: {0}", ex.Message);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// 测试变化消息
+        /// </summary>
+        /// <returns></returns>
+        [Fact]
+        public async Task Test_Parse()
+        {
+            try
+            {
+                var content = """**cat** - Variations (Strong) by <@1217674642169528330> [(Open on website for full quality)](<https://midjourney.com/jobs/b21f08de-3d62-49aa-b38f-e06eddec9765>) (fast)""";
+                var parse0 = MjMessageParser.Parse(content);
+                Assert.NotNull(parse0);
+
+
+                var parseResult = MjMessageParser.TryParseVariations(content);
+
+                Assert.NotNull(parseResult);
+                Assert.Equal(TaskAction.VARIATION, parseResult.Action);
+                Assert.Equal("cat", parseResult.Prompt);
+                Assert.Equal("Strong", parseResult.VariationType);
+                Assert.Equal("1217674642169528330", parseResult.UserId);
+                Assert.Equal("fast", parseResult.Mode);
+                Assert.Equal("done", parseResult.Status);
+
+                var legacyContent = """**car --v 7.0** - Variations (Strong) by <@123456789> (relaxed)""";
+                var legacyResult = MjMessageParser.TryParseVariations(legacyContent);
+
+                Assert.NotNull(legacyResult);
+                Assert.Equal("car --v 7.0", legacyResult.Prompt);
+                Assert.Equal("Strong", legacyResult.VariationType);
+                Assert.Equal("123456789", legacyResult.UserId);
+                Assert.Equal("relaxed", legacyResult.Mode);
 
                 await Task.CompletedTask;
             }
