@@ -107,6 +107,61 @@ namespace Midjourney.Base
         }
 
         /// <summary>
+        /// 构建 S3 自定义 CDN 根路径
+        /// </summary>
+        /// <param name="opt"></param>
+        /// <returns></returns>
+        private static string GetS3CustomCdnRoot(S3StorageOptions opt)
+        {
+            if (opt == null || string.IsNullOrWhiteSpace(opt.CustomCdn))
+            {
+                return null;
+            }
+
+            var cdn = opt.CustomCdn.TrimEnd('/');
+
+            if (opt.IgnoreBucketInCustomCdnPath)
+            {
+                return cdn;
+            }
+
+            return $"{cdn}/{opt.Bucket}";
+        }
+
+        /// <summary>
+        /// 构建 S3 访问 URL
+        /// </summary>
+        /// <param name="opt"></param>
+        /// <param name="localPath"></param>
+        /// <returns></returns>
+        private static string BuildS3AccessUrl(S3StorageOptions opt, string localPath)
+        {
+            if (opt == null || string.IsNullOrWhiteSpace(localPath))
+            {
+                return null;
+            }
+
+            localPath = localPath.TrimStart('/');
+
+            var cdn = GetS3CustomCdnRoot(opt);
+            if (!string.IsNullOrWhiteSpace(cdn))
+            {
+                return $"{cdn.TrimEnd('/')}/{localPath}";
+            }
+
+            // 使用默认S3 URL
+            if (opt.ForcePathStyle)
+            {
+                return $"{opt.Endpoint.TrimEnd('/')}/{opt.Bucket}/{localPath}";
+            }
+            else
+            {
+                var baseUrl = opt.Endpoint.Replace("://", $"://{opt.Bucket}.");
+                return $"{baseUrl.TrimEnd('/')}/{localPath}";
+            }
+        }
+
+        /// <summary>
         /// 下载并保存图片
         /// </summary>
         /// <param name="info"></param>
@@ -362,14 +417,15 @@ namespace Midjourney.Base
                 cdn = opt.CustomCdn;
 
                 // 已经保存了
-                if (imageUrl.StartsWith(cdn))
+                var customCdnRoot = GetS3CustomCdnRoot(opt);
+                if (!string.IsNullOrWhiteSpace(customCdnRoot) && imageUrl.StartsWith(customCdnRoot))
                 {
                     return;
                 }
 
                 if (!string.IsNullOrWhiteSpace(cdn))
                 {
-                    cdn = $"{cdn}/{opt.Bucket}";
+                    cdn = GetS3CustomCdnRoot(opt);
                 }
 
                 if (string.IsNullOrWhiteSpace(cdn) && !opt.EnablePresignedUrl)
@@ -408,16 +464,7 @@ namespace Midjourney.Base
                 }
                 else
                 {
-                    // 使用默认S3 URL
-                    if (opt.ForcePathStyle)
-                    {
-                        url = $"{opt.Endpoint.TrimEnd('/')}/{opt.Bucket}/{localPath}";
-                    }
-                    else
-                    {
-                        var baseUrl = opt.Endpoint.Replace("://", $"://{opt.Bucket}.");
-                        url = $"{baseUrl.TrimEnd('/')}/{localPath}";
-                    }
+                    url = BuildS3AccessUrl(opt, localPath);
                 }
 
                 // 根据内容类型应用不同的样式
@@ -439,12 +486,12 @@ namespace Midjourney.Base
                 }
                 else
                 {
-                    imageUrl = url.ToStyle(opt.ImageStyle);
+                    imageUrl = url;
                     thumbnailUrl = url.ToStyle(opt.ThumbnailImageStyle);
                 }
             }
 
-            // https://cdn.discordapp.com/attachments/1265095688782614602/1266300100989161584/03ytbus_LOGO_design_A_warrior_frog_Muscles_like_Popeye_Freehand_06857373-4fd9-403d-a5df-c2f27f9be269.png?ex=66a4a55e&is=66a353de&hm=c597e9d6d128c493df27a4d0ae41204655ab73f7e885878fc1876a8057a7999f&
+            // https://cdn.discordapp.com/attachments/1265095688782614602/1266300100989161584/03ytbus_LOGO_design_A_warrior_frog_Muscles_like_Popeye_Freehand_06857373-4fd9-403d-a5df-c2f27f9be269.png?e[...]
             // 将图片保存到本地，并替换 url，并且保持原 url和参数
             // 默认保存根目录为 /wwwroot
             // 保存图片
@@ -619,7 +666,7 @@ namespace Midjourney.Base
                         return null;
                     }
 
-                    cdn = $"{cdn.TrimEnd('/')}/{opt.Bucket}";
+                    cdn = GetS3CustomCdnRoot(opt);
 
                     _instance.SaveAsync(stream, path, contentType);
 
@@ -851,7 +898,7 @@ namespace Midjourney.Base
                         return null;
                     }
 
-                    cdn = $"{cdn.TrimEnd('/')}/{opt.Bucket}";
+                    cdn = GetS3CustomCdnRoot(opt);
 
                     storageService.SaveAsync(stream, path, contentType);
 

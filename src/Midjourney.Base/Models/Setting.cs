@@ -737,6 +737,13 @@ namespace Midjourney.Base.Models
         public bool ForcePathStyle { get; set; } = true;
 
         /// <summary>
+        /// 生成自定义 CDN 地址时，是否忽略 Bucket 作为路径前缀。
+        /// false: 兼容旧逻辑，访问地址为 {CustomCdn}/{Bucket}/{Key}
+        /// true:  忽略 Bucket，访问地址为 {CustomCdn}/{Key}
+        /// </summary>
+        public bool IgnoreBucketInCustomCdnPath { get; set; } = false;
+
+        /// <summary>
         /// 默认图片样式参数
         /// </summary>
         public string ImageStyle { get; set; }

@@ -80,6 +80,27 @@ namespace Midjourney.Base.Storages
         }
 
         /// <summary>
+        /// 获取自定义 CDN 根路径
+        /// </summary>
+        /// <returns></returns>
+        private string GetCustomCdnRoot()
+        {
+            if (string.IsNullOrWhiteSpace(_s3Options.CustomCdn))
+            {
+                return null;
+            }
+
+            var cdn = _s3Options.CustomCdn.TrimEnd('/');
+
+            if (_s3Options.IgnoreBucketInCustomCdnPath)
+            {
+                return cdn;
+            }
+
+            return $"{cdn}/{_s3Options.Bucket}";
+        }
+
+        /// <summary>
         /// 上传文件
         /// </summary>
         /// <param name="mediaBinaryStream">文件流</param>
@@ -134,7 +155,8 @@ namespace Midjourney.Base.Storages
                     else if (!string.IsNullOrWhiteSpace(_s3Options.CustomCdn))
                     {
                         // 使用自定义CDN域名
-                        accessUrl = $"{_s3Options.CustomCdn.TrimEnd('/')}/{_s3Options.Bucket}/{key.TrimStart('/')}";
+                        var cdnRoot = GetCustomCdnRoot();
+                        accessUrl = $"{cdnRoot}/{key.TrimStart('/')}";
                     }
                     else
                     {
@@ -348,7 +370,8 @@ namespace Midjourney.Base.Storages
                     // 返回公共访问URL
                     if (!string.IsNullOrWhiteSpace(_s3Options.CustomCdn))
                     {
-                        return new Uri($"{_s3Options.CustomCdn.TrimEnd('/')}/{_s3Options.Bucket}/{key.TrimStart('/')}");
+                        var cdnRoot = GetCustomCdnRoot();
+                        return new Uri($"{cdnRoot}/{key.TrimStart('/')}");
                     }
                     else if (_s3Options.ForcePathStyle)
                     {
@@ -388,7 +411,7 @@ namespace Midjourney.Base.Storages
 
         public string GetCustomCdn()
         {
-            return $"{_s3Options.CustomCdn}/{_s3Options.Bucket}";
+            return GetCustomCdnRoot();
         }
 
         public BaseStorage GetBaseStorage()
