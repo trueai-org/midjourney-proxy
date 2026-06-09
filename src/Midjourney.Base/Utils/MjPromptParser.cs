@@ -787,6 +787,47 @@ namespace Midjourney.Base.Util
         /// </summary>
         public static IEnumerable<MjParamInfo> GetAllParams() => ParamDefinitions.Values;
 
+        /// <summary>
+        /// 获取提示词纯文本内容（移除所有字符/参数及其值后的纯文本）
+        /// </summary>
+        /// <param name="prompt"></param>
+        /// <returns></returns>
+        public static string GetSeoText(string prompt)
+        {
+            if (string.IsNullOrWhiteSpace(prompt))
+                return prompt;
+
+            // 清洗逻辑
+            prompt = GetCleanPrompt(prompt);
+
+            if (string.IsNullOrWhiteSpace(prompt))
+                return prompt;
+
+            // 1. 移除链接
+            if (prompt.Contains("http", StringComparison.OrdinalIgnoreCase))
+            {
+                // 移除 URL 链接
+                prompt = Regex.Replace(prompt, @"https?://[^\s,，。；;！!）)\]]+", "", RegexOptions.IgnoreCase);
+            }
+
+            // 2. 将空白字符和特殊符号初步替换为连字符
+            // \s 包含空格、制表符、换行符等
+            prompt = Regex.Replace(prompt, @"\s", "-");
+
+            // 3. 核心：仅保留英文、数字、连字符(-)、下划线(_)
+            // 移除所有不在 [a-zA-Z0-9\-_] 范围内的字符（如中文、标点符号、特殊符号）
+            prompt = Regex.Replace(prompt, @"[^a-zA-Z0-9\-_]", "");
+
+            // 4. 收紧连字符：将连续的多个 [-] 或 [_] 压缩成一个 [-]
+            // 同时也处理类似 --、__、-_ 等混合情况，统一转为 SEO 友好的连字符
+            prompt = Regex.Replace(prompt, @"[-_]{2,}", "-");
+
+            // 5. 修整首尾并转为小写（SEO 惯例）
+            prompt = prompt.Trim('-', '_').ToLower();
+
+            return prompt;
+        }
+
         #endregion 核心方法
 
         #region 扩展方法

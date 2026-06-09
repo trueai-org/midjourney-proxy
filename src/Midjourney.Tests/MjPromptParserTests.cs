@@ -1,5 +1,4 @@
-using FFMpegCore.Enums;
-using System;
+using System.Text.RegularExpressions;
 using Midjourney.Base.Data;
 using Midjourney.Base.Models;
 using Midjourney.Base.Util;
@@ -716,6 +715,69 @@ namespace Midjourney.Tests
             Assert.Null(parseResult.GetVersion()); // 版本参数应该被移除
             Assert.Equal("16:9", parseResult.GetAspectRatio()); // 其他参数应该保留
             Assert.Equal(500, parseResult.GetStylize());
+        }
+
+        /// <summary>
+        /// 测试大文本解析/特殊字符
+        /// </summary>
+        [Fact]
+        public void Parse_LargePrompt_ShouldHandleCorrectly()
+        {
+            var prompt = @"
+PURE SOLID #F0EDE5 BACKGROUND ONLY, NO COLOR VARIATIONS, NO GRADIENTS, NO TONES.
+Premium original new Chinese minimalist narrative poster art, pure flat color block graphic design, matte high-end texture, NO gradients, NO brush strokes, NO textures, NO details, NO extra colors, NO variations.
+
+STRICTLY USE ONLY THESE HEX COLORS:
+-Sky background: #F0EDE5 (ABSOLUTELY PURE SOLID COLOR, NO CHANGES)
+-Mountains: distant #E0D8D0, middle #D0C8C0, foreground #C0B8B0 (only 3 low saturation shades)
+- Vast grassland: near #B8A898, middle #C8B8A8, far #D8C8B8 (only 3 shades, receding into distance)
+- ONLY Mongolian yurts: #E8E4DC
+-Dirt road: #A89888
+-Achnatherum grass: #8A7D6F
+-ONLY horse caravan silhouettes: #3A3A3A (only this dark gray, NO other colors)
+
+75 % extreme large blank space at the top of the frame, 100 % pure solid #F0EDE5.
+Three layers of low saturation warm gray mountains in the far distance, thin soft mist drifting between layers.
+2 - 3 TINY MONGOLIAN YURT SILHOUETTES ONLY, SCATTERED AT THE FOOT OF THE DISTANT MOUNTAINS, EXTREMELY SMALL, NO DETAILS.
+BOUNDLESS VAST FLAT GRASSLAND STRETCHING TO THE HORIZON, NO HILLS, NO VALLEYS, THREE DISTINCT COLOR LAYERS CREATING STRONG SPATIAL DEPTH.
+A straight dirt road runs from the bottom foreground straight towards the distant mountains.
+A tiny sparse achnatherum grass branch in the top right corner, LESS THAN 10 % of the frame, simple shape, NO details.
+
+A CLEARLY VISIBLE HORSE CARAVAN OF 2 HORSES AND 2 PEOPLE ONLY, EXTREMELY TINY, NO LARGER THAN 1 / 25 OF THE MOUNTAIN HEIGHT, WALKING SLOWLY ALONG THE DIRT ROAD TOWARDS THE DISTANT MOUNTAINS.
+Swordsman with a bamboo hat and subtle sword outline, each horse carries two stacked square salt bags, simple binding lines, tiny bell silhouette on each horse.
+
+Tiny figures against boundless vast grassland and mountains, grand open landscape sense, desolate serene autumn atmosphere.
+
+Exclusive original style, cinematic blockbuster poster vibe, martial arts poetic mood, high - end oriental art.
+
+NOT a photograph, NOT traditional ink was";
+            var result = MjPromptParser.Parse(prompt);
+            Assert.Contains("PURE SOLID #F0EDE5 BACKGROUND ONLY", result.CleanPrompt);
+
+            prompt = MjPromptParser.GetCleanPrompt(prompt);
+
+            // 如果有链接，移除链接部分
+            if (!string.IsNullOrEmpty(prompt) && prompt.Contains("http", StringComparison.OrdinalIgnoreCase))
+            {
+                // 正则移除所有链接
+                prompt = Regex.Replace(prompt, @"https?://[^\s,，。；;！!）)\]]+", "");
+                prompt = Regex.Replace(prompt, @"\s{2,}", " ").Trim();
+            }
+
+            var p2 = MjPromptParser.GetSeoText(prompt);
+
+            if (string.IsNullOrWhiteSpace(prompt))
+            {
+                prompt = "merged";
+            }
+
+            // 最多截图 36 个字符
+            if (prompt.Length > 36)
+            {
+                prompt = prompt.Substring(0, 36);
+            }
+
+            prompt = prompt.Replace("__", "_").Replace("__", "_").Trim('_');
         }
     }
 }
