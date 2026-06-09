@@ -1432,7 +1432,7 @@ namespace Midjourney.Services
 
                                                 // 计算快速可用次数
                                                 var fastDua = GlobalConfiguration.Setting.FastDrawDuration;
-                                                if (fastDua < 45 || fastDua > 60)
+                                                if (fastDua < 15 || fastDua > 60)
                                                 {
                                                     fastDua = 60;
                                                 }
