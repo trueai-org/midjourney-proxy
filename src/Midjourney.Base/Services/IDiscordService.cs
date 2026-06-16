@@ -41,5 +41,13 @@ namespace Midjourney.Base.Services
         /// <param name="info"></param>
         /// <returns></returns>
         Task<string> GetPrompt(string promptEn, TaskInfo info);
+
+        /// <summary>
+        /// 对 prompt 中含有 url 的进行转换为云存储/官方链接/全球加速链接处理
+        /// 同一个 url 24 小时内有效缓存
+        /// </summary>
+        /// <param name="prompt"></param>
+        /// <returns></returns>
+        Task<string> ConvertPromptUrlsAsync(string prompt, TaskInfo info);
     }
 }
