@@ -73,14 +73,11 @@ jobs:
           ls "midjourney-proxy-linux-x64-${{ github.event.release.tag_name }}-docker.tar.gz"
 
       - name: 上传 tar.gz 文件到 release
-        uses: actions/upload-release-asset@v1  # 使用最新稳定版本
+        run: |
+          gh release upload ${{ github.event.release.tag_name }} \
+            "midjourney-proxy-linux-x64-${{ github.event.release.tag_name }}-docker.tar.gz"
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: "midjourney-proxy-linux-x64-${{ github.event.release.tag_name }}-docker.tar.gz"
-          asset_name: "midjourney-proxy-linux-x64-${{ github.event.release.tag_name }}-docker.tar.gz"
-          asset_content_type: application/gzip
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # ================== 新增：阿里云 OSS 上传步骤 ==================
       - name: 安装 ossutil 2.0
