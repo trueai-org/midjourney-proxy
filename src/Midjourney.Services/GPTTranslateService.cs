@@ -68,6 +68,18 @@ namespace Midjourney.Services
             };
             _httpClient = new HttpClient(hch) { Timeout = _timeout };
             _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {_apiKey}");
+
+            // 追加自定义请求头
+            if (config?.Headers != null && config.Headers.Count > 0)
+            {
+                foreach (var header in config.Headers)
+                {
+                    if (!string.IsNullOrWhiteSpace(header.Key) && !string.IsNullOrWhiteSpace(header.Value))
+                    {
+                        _httpClient.DefaultRequestHeaders.Add(header.Key, header.Value);
+                    }
+                }
+            }
         }
 
         public string TranslateToEnglish(string prompt)
