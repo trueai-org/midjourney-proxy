@@ -1,4 +1,4 @@
-﻿// Midjourney Proxy - Proxy for Midjourney's Discord, enabling AI drawings via API with one-click face swap. A free, non-profit drawing API project.
+// Midjourney Proxy - Proxy for Midjourney's Discord, enabling AI drawings via API with one-click face swap. A free, non-profit drawing API project.
 // Copyright (C) 2024 trueai.org
 
 // This program is free software: you can redistribute it and/or modify
@@ -1203,6 +1203,11 @@ namespace Midjourney.Base.Models
         /// 相似度，取值 0-2.
         /// </summary>
         public double Temperature { get; set; } = 0;
+
+        /// <summary>
+        /// 自定义请求头，如果配置了则在请求时追加.
+        /// </summary>
+        public Dictionary<string, string> Headers { get; set; } = [];
     }
 
     /// <summary>
