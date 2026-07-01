@@ -52,7 +52,7 @@ namespace Midjourney.Services
             _apiKey = config?.GptApiKey;
             _timeout = config?.Timeout ?? TimeSpan.FromSeconds(30);
             _model = config?.Model ?? "gpt-4o-mini";
-            _maxTokens = config?.MaxTokens ?? 2048;
+            _maxTokens = config?.MaxTokens ?? 8192;
             _temperature = config?.Temperature ?? 0;
 
             WebProxy webProxy = null;
