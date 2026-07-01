@@ -32,6 +32,7 @@ namespace Midjourney.Services
 {
     /// <summary>
     /// 百度翻译服务
+    /// https://fanyi-api.baidu.com/manage/overview
     /// </summary>
     public class BaiduTranslateService : ITranslateService
     {
