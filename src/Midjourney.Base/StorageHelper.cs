@@ -1027,9 +1027,11 @@ namespace Midjourney.Base
         {
             if (info?.IsPartner == true && !string.IsNullOrWhiteSpace(url) && GlobalConfiguration.Setting.EnableYouChuanInternalDownload)
             {
-                if (url.Contains(TaskInfo.YOUCHUAN_CDN, StringComparison.OrdinalIgnoreCase))
+                if (url.Contains(TaskInfo.YOUCHUAN_CDN, StringComparison.OrdinalIgnoreCase)
+                    || url.Contains(TaskInfo.YOUCHUAN_CDN2, StringComparison.OrdinalIgnoreCase))
                 {
-                    return url.Replace(TaskInfo.YOUCHUAN_CDN, TaskInfo.YOUCHUAN_CDN_INTERNAL);
+                    return url.Replace(TaskInfo.YOUCHUAN_CDN, TaskInfo.YOUCHUAN_CDN_INTERNAL)
+                        .Replace(TaskInfo.YOUCHUAN_CDN2, TaskInfo.YOUCHUAN_CDN_INTERNAL);
                 }
             }
             return url;

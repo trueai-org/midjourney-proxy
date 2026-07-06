@@ -78,6 +78,11 @@ namespace Midjourney.Base.Models
         public const string YOUCHUAN_CDN = "youchuan-imagine.oss-cn-shanghai.aliyuncs.com";
 
         /// <summary>
+        /// 悠船 CDN 域名2
+        /// </summary>
+        public const string YOUCHUAN_CDN2 = "imagine-cdn.youchuan.cn";
+
+        /// <summary>
         /// 悠船内网 CDN 域名
         /// </summary>
         public const string YOUCHUAN_CDN_INTERNAL = "youchuan-imagine.oss-cn-shanghai-internal.aliyuncs.com";
