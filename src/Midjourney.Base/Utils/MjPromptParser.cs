@@ -58,7 +58,7 @@ namespace Midjourney.Base.Util
         /// <summary>
         /// 默认 MJ 版本
         /// </summary>
-        public const string DEFALUT_MJ_VERSION = "7";
+        public const string DEFALUT_MJ_VERSION = "8.1";
 
         /// <summary>
         /// 默认 NIJI 版本
