@@ -4006,6 +4006,28 @@ namespace Midjourney.Services
                 }
             }
 
+            // 6. Discord may publish the final image as a new message and
+            // truncate a long rendered prompt. Match only one conservative
+            // long-prefix candidate; ambiguity must remain unmatched.
+            if (task == null)
+            {
+                var filterList = list
+                    .Where(c => !string.IsNullOrWhiteSpace(c.PromptEn)
+                        && ConservativePromptMatcher.IsMatch(c.PromptEn, fullPrompt))
+                    .ToList();
+                if (filterList.Count == 1)
+                {
+                    task = filterList[0];
+                    Log.Information("Matched image task by conservative long-prompt prefix: TaskId={@0}, MessageId={@1}",
+                        task.Id, msgId);
+                }
+                else if (filterList.Count > 1)
+                {
+                    Log.Warning("Skipped ambiguous conservative long-prompt match: Count={@0}, MessageId={@1}",
+                        filterList.Count, msgId);
+                }
+            }
+
             if (task == null || task.IsCompleted)
             {
                 return;
