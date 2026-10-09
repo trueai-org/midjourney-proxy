@@ -533,26 +533,38 @@ namespace Midjourney.Base.Models
         public Dictionary<string, string> ConvertPromptLinkReplaceRules { get; set; } = new();
 
         /// <summary>
-        /// 按自定义垫图替换规则替换提示词中的链接
+        /// 尝试按自定义垫图替换规则替换链接，命中的链接将替换为指定链接
+        /// 例如：{"cdn.huanwangai.cn":"cdn.skynetcircle.com"}
         /// </summary>
-        /// <param name="prompt">提示词</param>
-        /// <returns>替换后的提示词</returns>
-        public string ReplacePromptLinkRules(string prompt)
+        /// <param name="url">原始链接</param>
+        /// <param name="newUrl">替换后的链接</param>
+        /// <returns>是否命中替换规则</returns>
+        public bool TryReplacePromptLinkRule(string url, out string newUrl)
         {
-            if (string.IsNullOrWhiteSpace(prompt) || ConvertPromptLinkReplaceRules == null || ConvertPromptLinkReplaceRules.Count == 0)
+            newUrl = url;
+
+            var rules = ConvertPromptLinkReplaceRules;
+            if (string.IsNullOrWhiteSpace(url) || rules == null || rules.Count == 0)
             {
-                return prompt;
+                return false;
             }
 
-            foreach (var rule in ConvertPromptLinkReplaceRules)
+            var changed = false;
+            foreach (var rule in rules)
             {
-                if (!string.IsNullOrWhiteSpace(rule.Key) && rule.Value != null)
+                if (string.IsNullOrWhiteSpace(rule.Key) || rule.Value == null)
                 {
-                    prompt = prompt.Replace(rule.Key, rule.Value, StringComparison.OrdinalIgnoreCase);
+                    continue;
+                }
+
+                if (newUrl.Contains(rule.Key, StringComparison.OrdinalIgnoreCase))
+                {
+                    newUrl = newUrl.Replace(rule.Key, rule.Value, StringComparison.OrdinalIgnoreCase);
+                    changed = true;
                 }
             }
 
-            return prompt;
+            return changed;
         }
 
         /// <summary>

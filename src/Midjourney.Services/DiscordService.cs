@@ -3394,11 +3394,28 @@ namespace Midjourney.Services
 
             var setting = GlobalConfiguration.Setting;
 
+            // 提取 prompt 中的 url，使用正则表达式提取
+            var urls = prompt.ExtractUrls();
+            if (urls == null || urls.Count == 0)
+            {
+                return prompt;
+            }
+
+            // 自定义垫图替换规则：命中的链接直接替换为指定链接（例如：垫图、混图、参考图等），并且不再抓取/上传云存储
+            var replacedUrls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var url in urls)
+            {
+                if (setting.TryReplacePromptLinkRule(url, out var ruleNewUrl))
+                {
+                    prompt = prompt.Replace(url, ruleNewUrl);
+                    replacedUrls.Add(url);
+                }
+            }
+
             // 未开启提示词链接转换保存到云存储
             if (!setting.EnableConvertPromptLinkStorage)
             {
-                // 自定义垫图替换规则
-                return setting.ReplacePromptLinkRules(prompt);
+                return prompt;
             }
 
             //// 未开启用户上传
@@ -3407,16 +3424,15 @@ namespace Midjourney.Services
             //    return prompt;
             //}
 
-            // 提取 prompt 中的 url，使用正则表达式提取
-            var urls = prompt.ExtractUrls();
-            if (urls == null || urls.Count == 0)
-            {
-                return prompt;
-            }
-
             var urlDic = new Dictionary<string, string>();
             foreach (var url in urls)
             {
+                // 已命中自定义垫图替换规则的链接，保留指定链接，不再进行后续转换
+                if (replacedUrls.Contains(url))
+                {
+                    continue;
+                }
+
                 try
                 {
                     // 如果是悠船任务
@@ -3546,9 +3562,6 @@ namespace Midjourney.Services
                     }
                 }
             }
-
-            // 自定义垫图替换规则
-            prompt = setting.ReplacePromptLinkRules(prompt);
 
             return prompt;
         }
