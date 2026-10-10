@@ -134,6 +134,7 @@ The most powerful, complete, full-featured, completely free and open source Midj
 - [x] 支持自动切换到慢速模式、支持自动切快速模式、支持自动设置慢速
 - [x] 私信 ID 免配置，服务启动时自动获取私信 ID
 - [x] 自动过 Tos not accepted 验证
+- [x] 自动确认 Pending mod message 审核消息（点击 Acknowledge），带临时封禁时长时禁用账号并到期自动恢复
 - [x] 2FA 验证器，示例：<http://47.76.110.222:8081/code>，详情：<http://47.76.110.222:8081/swagger/index.html>
 - [x] 赞助账号功能
 - [x] 阿里云存储、腾讯云存储、本地存储、S3存储（感谢`@八级大狂风`赞助支持）、Cloudflare R2（不限流量！详情：<https://developers.cloudflare.com/r2/>）

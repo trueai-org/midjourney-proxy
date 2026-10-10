@@ -502,6 +502,9 @@ namespace Midjourney.API
                         // 验证许可
                         await LicenseKeyHelper.Validate();
 
+                        // 风控临时封禁到期的账号自动恢复
+                        CheckRiskControlUnlock();
+
                         // 初始化
                         await Initialize();
 
@@ -745,6 +748,35 @@ namespace Midjourney.API
             catch (Exception ex)
             {
                 _logger.Error(ex, "检查未开始任务异常");
+            }
+        }
+
+        /// <summary>
+        /// 检查风控临时封禁（Pending mod message 等）已到期的账号，自动重新启用
+        /// </summary>
+        private void CheckRiskControlUnlock()
+        {
+            try
+            {
+                var now = DateTime.Now;
+                var accounts = _freeSql.Select<DiscordAccount>()
+                    .Where(c => c.Enable != true && c.RiskControlUnlockTime != null && c.RiskControlUnlockTime <= now)
+                    .ToList();
+
+                foreach (var account in accounts)
+                {
+                    _logger.Information("账号 {@0} 风控临时封禁已到期（{@1}），自动启用", account.GetDisplay(), account.RiskControlUnlockTime);
+
+                    account.Enable = true;
+                    account.DisabledReason = null;
+                    account.RiskControlUnlockTime = null;
+                    _freeSql.Update(account);
+                    account.ClearCache();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "检查风控解封账号异常");
             }
         }
 
@@ -1252,11 +1284,12 @@ namespace Midjourney.API
                 model.DisabledReason = null;
             }
 
-            // 更新账号重连时，自动解锁
+            // 更新账号重连时，自动解锁，并清空风控解封时间
             model.Lock = false;
             model.CfHashCreated = null;
             model.CfHashUrl = null;
             model.CfUrl = null;
+            model.RiskControlUnlockTime = null;
 
             // 验证 Interval
             if (param.Interval < 0m)

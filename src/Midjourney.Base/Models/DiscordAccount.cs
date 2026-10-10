@@ -610,8 +610,8 @@ namespace Midjourney.Base.Models
         public int QueueCount { get; set; }
 
         /// <summary>
-        /// 触发风控后的解封时间点 - 风控期间不再接收任务（废弃）
-        /// 重连时清空风控时间
+        /// 触发风控（例如 Pending mod message 临时封禁）后的解封时间点
+        /// 封禁期间账号被禁用，到期后例行检查自动重新启用；重连时清空风控时间
         /// </summary>
         [BsonDateTimeOptions(Kind = DateTimeKind.Local)]
         public DateTime? RiskControlUnlockTime { get; set; }
