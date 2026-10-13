@@ -70,4 +70,4 @@
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=trueai-org/midjourney-proxy&type=Date)](https://star-history.com/#trueai-org/midjourney-proxy&Date)
+[![Star History Chart](https://star-history.dera.page/svg?repos=trueai-org/midjourney-proxy&type=Date)](https://star-history.dera.page/#trueai-org/midjourney-proxy&Date)
