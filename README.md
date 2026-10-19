@@ -27,20 +27,14 @@ The most powerful, complete, full-featured, completely free and open source Midj
 <img src="./docs/screenshots/huanwangai.com.png" alt="trueai.org" width="500"/>
 
 
-## 👍👍 ChatGPT · Discord · Midjourney 官方镜像站，官方 1 折优惠！
+## 👍👍 Discord 官方镜像站
 
-- 🍎 支持 Discord ChatGPT 所有指令！
-- 😍 多端登录，不限设备，不限网络，永不封号！
-- ☘ 只需一个域名，即刻拥有 ChatGPT Discord 官方镜像站！无需自己部署，无需服务器！
+**支持 Discord 所有指令！**
 
-官网：<https://trueai.org>
-
-企业注册：<https://admin.trueai.org>
-
-更多官方镜像站接入指南：<https://trueai-org.feishu.cn/wiki/VvEZwL0X8i14wGkXcfrc85w7nFU>
+- <https://trueai.org>
+- 接入指南：<https://trueai-org.feishu.cn/wiki/VvEZwL0X8i14wGkXcfrc85w7nFU>
 
 <img src="./docs/screenshots/trueai.org-mj.png" alt="trueai.org" width="500"/>
-<img src="./docs/screenshots/trueai.org-chatgpt.png" alt="trueai.org" width="500"/>
 
 ## 交流群
 
