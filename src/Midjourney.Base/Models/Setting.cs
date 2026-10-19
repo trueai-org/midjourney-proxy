@@ -526,14 +526,14 @@ namespace Midjourney.Base.Models
         public bool EnableConvertPromptLinkStorage { get; set; } = false;
 
         /// <summary>
-        /// 自定义垫图替换规则
+        /// 输入链接替换规则
         /// 配置后转换提示词中的链接到指定链接，例如：垫图、混图、参考图等
         /// 支持配置多个 key value，例如：{"cdn.huanwangai.cn":"cdn.skynetcircle.com"}
         /// </summary>
         public Dictionary<string, string> ConvertPromptLinkReplaceRules { get; set; } = new();
 
         /// <summary>
-        /// 尝试按自定义垫图替换规则替换链接，命中的链接将替换为指定链接
+        /// 尝试按输入链接替换规则替换链接，命中的链接将替换为指定链接
         /// 例如：{"cdn.huanwangai.cn":"cdn.skynetcircle.com"}
         /// </summary>
         /// <param name="url">原始链接</param>
@@ -565,6 +565,38 @@ namespace Midjourney.Base.Models
             }
 
             return changed;
+        }
+
+        /// <summary>
+        /// 输出链接替换规则
+        /// 当上游任务进度中、完成时，将最终提示词、prompt、promptEn 等结果中的链接替换为指定链接
+        /// 支持配置多个 key value，例如：{"cdn.huanwangai.cn":"cdn.skynetcircle.com"}
+        /// </summary>
+        public Dictionary<string, string> ConvertPromptOutputLinkReplaceRules { get; set; } = new();
+
+        /// <summary>
+        /// 按输出链接替换规则替换文本中的链接（用于任务进度、完成时的结果）
+        /// 例如：{"cdn.huanwangai.cn":"cdn.skynetcircle.com"}
+        /// </summary>
+        /// <param name="text">原始文本</param>
+        /// <returns>替换后的文本</returns>
+        public string ReplaceOutputLinkRules(string text)
+        {
+            var rules = ConvertPromptOutputLinkReplaceRules;
+            if (string.IsNullOrWhiteSpace(text) || rules == null || rules.Count == 0)
+            {
+                return text;
+            }
+
+            foreach (var rule in rules)
+            {
+                if (!string.IsNullOrWhiteSpace(rule.Key) && rule.Value != null)
+                {
+                    text = text.Replace(rule.Key, rule.Value, StringComparison.OrdinalIgnoreCase);
+                }
+            }
+
+            return text;
         }
 
         /// <summary>

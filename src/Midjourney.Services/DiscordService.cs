@@ -2760,6 +2760,9 @@ namespace Midjourney.Services
                     return;
                 }
 
+                // 输出链接替换规则（进度中、完成时）
+                task.ApplyOutputLinkReplaceRules();
+
                 _freeSql.Save(task);
                 _notifyService.NotifyTaskChange(task);
             }

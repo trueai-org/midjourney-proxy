@@ -1600,6 +1600,9 @@ namespace Midjourney.Services
 
                                 await info.SuccessAsync();
 
+                                // 输出链接替换规则
+                                info.ApplyOutputLinkReplaceRules();
+
                                 _freeSql.Save(info);
 
                                 return SubmitResultVO.Of(ReturnCode.SUCCESS, "提交成功", info.Id)
@@ -1674,6 +1677,9 @@ namespace Midjourney.Services
                                 }
 
                                 await info.SuccessAsync();
+
+                                // 输出链接替换规则
+                                info.ApplyOutputLinkReplaceRules();
 
                                 _freeSql.Save(info);
 

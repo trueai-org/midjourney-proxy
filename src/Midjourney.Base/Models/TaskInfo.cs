@@ -630,6 +630,71 @@ namespace Midjourney.Base.Models
         // ------------------------------------- 方法 --------------------------------------
 
         /// <summary>
+        /// 应用输出链接替换规则
+        /// 当上游任务进度中、完成时，将最终提示词、prompt、promptEn 以及结果图片/视频中的链接替换为指定链接
+        /// </summary>
+        /// <returns>当前任务</returns>
+        public TaskInfo ApplyOutputLinkReplaceRules()
+        {
+            var setting = GlobalConfiguration.Setting;
+            if (setting?.ConvertPromptOutputLinkReplaceRules == null || setting.ConvertPromptOutputLinkReplaceRules.Count == 0)
+            {
+                return this;
+            }
+
+            // 提示词
+            Prompt = setting.ReplaceOutputLinkRules(Prompt);
+            PromptEn = setting.ReplaceOutputLinkRules(PromptEn);
+            PromptFull = setting.ReplaceOutputLinkRules(PromptFull);
+            Description = setting.ReplaceOutputLinkRules(Description);
+
+            // 最终提示词
+            var finalPrompt = GetProperty<string>(Constants.TASK_PROPERTY_FINAL_PROMPT, default);
+            if (!string.IsNullOrWhiteSpace(finalPrompt))
+            {
+                SetProperty(Constants.TASK_PROPERTY_FINAL_PROMPT, setting.ReplaceOutputLinkRules(finalPrompt));
+            }
+
+            // 结果链接
+            ImageUrl = setting.ReplaceOutputLinkRules(ImageUrl);
+            ThumbnailUrl = setting.ReplaceOutputLinkRules(ThumbnailUrl);
+            Url = setting.ReplaceOutputLinkRules(Url);
+            ProxyUrl = setting.ReplaceOutputLinkRules(ProxyUrl);
+            VideoUrl = setting.ReplaceOutputLinkRules(VideoUrl);
+            VideoGenOriginImageUrl = setting.ReplaceOutputLinkRules(VideoGenOriginImageUrl);
+
+            if (ImageUrls != null)
+            {
+                foreach (var item in ImageUrls)
+                {
+                    if (item == null)
+                    {
+                        continue;
+                    }
+
+                    item.Url = setting.ReplaceOutputLinkRules(item.Url);
+                    item.Thumbnail = setting.ReplaceOutputLinkRules(item.Thumbnail);
+                }
+            }
+
+            if (VideoUrls != null)
+            {
+                foreach (var item in VideoUrls)
+                {
+                    if (item == null)
+                    {
+                        continue;
+                    }
+
+                    item.Url = setting.ReplaceOutputLinkRules(item.Url);
+                    item.Thumbnail = setting.ReplaceOutputLinkRules(item.Thumbnail);
+                }
+            }
+
+            return this;
+        }
+
+        /// <summary>
         /// 异步保存成功（自动设置完成）
         /// </summary>
         /// <returns></returns>

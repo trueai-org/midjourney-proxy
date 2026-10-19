@@ -96,6 +96,9 @@ namespace Midjourney.Services
         /// <param name="task">任务信息</param>
         public void SaveAndNotify(TaskInfo task)
         {
+            // 输出链接替换规则（进度中、完成时）
+            task.ApplyOutputLinkReplaceRules();
+
             _freeSql.Save(task);
             _notifyService.NotifyTaskChange(task);
         }
