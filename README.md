@@ -600,4 +600,4 @@ http://img.aitop3000.com/attachments/4872b862-7aeb-4346-a87d-16e077a2935d/0_2.pn
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=trueai-org/midjourney-proxy&type=Date)](https://star-history.com/#trueai-org/midjourney-proxy&Date)
+[![Star History Chart](https://star-history.dera.page/svg?repos=trueai-org/midjourney-proxy&type=Date)](https://star-history.dera.page/#trueai-org/midjourney-proxy&Date)
