@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkmidjourney_proxy_admin=self.webpackChunkmidjourney_proxy_admin||[]).push([[209],{14209:(function(d,n,t){t.r(n),t.d(n,{default:function(){return E}});var m=t(96540),u=t(5419),o=t(74848);function E(){var e=(0,u.useOutletContext)();return(0,o.jsx)(u.Outlet,{context:e})}})}]);

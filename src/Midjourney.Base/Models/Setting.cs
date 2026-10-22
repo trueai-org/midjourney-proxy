@@ -684,6 +684,11 @@ namespace Midjourney.Base.Models
         public string NotifyHook { get; set; }
 
         /// <summary>
+        /// 通知冷却时间（分钟），默认 30，范围 1 - 1440
+        /// </summary>
+        public int CooldownMinutes { get; set; } = 30;
+
+        /// <summary>
         /// 快速剩余
         /// </summary>
         public int FastRemaining { get; set; } = -1;

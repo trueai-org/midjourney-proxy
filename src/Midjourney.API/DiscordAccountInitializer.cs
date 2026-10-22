@@ -1761,6 +1761,15 @@ namespace Midjourney.API
 
                     if (isNotify)
                     {
+                        var cooldownMinutes = alert.CooldownMinutes is >= 1 and <= 1440 ? alert.CooldownMinutes : 30;
+                        var cooldownKey = "alert_notify:cooldown";
+                        if (RedisHelper.Exists(cooldownKey))
+                        {
+                            return;
+                        }
+
+                        result.CooldownMinutes = cooldownMinutes;
+
                         await EmailHelper.Instance.EmailSend(setting.Smtp, $"MJ 账号资源预警通知", $"当前可用账号数: {result.AvailableAccountCount}，快速剩余: {result.FastRemaining}，慢速剩余: {result.RelaxedRemaining}，错误日志数: {result.ErrorCount}，警告日志数: {result.WarningCount}");
 
                         // hooks
@@ -1786,6 +1795,7 @@ namespace Midjourney.API
                         }
 
                         // 记录次数
+                        RedisHelper.Set(cooldownKey, DateTime.Now, TimeSpan.FromMinutes(cooldownMinutes));
                         RedisHelper.Set(hourCountKey, ++hourCount, TimeSpan.FromDays(1));
                         RedisHelper.Set(dayCountKey, ++todayCount, TimeSpan.FromDays(1));
                     }
