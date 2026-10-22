@@ -22,6 +22,9 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<Reference Include="Midjourney.License">
+			<HintPath>..\lib\Midjourney.License.dll</HintPath>
+		</Reference>
 		<ProjectReference Include="..\Midjourney.Base\Midjourney.Base.csproj" />
 		<ProjectReference Include="..\Midjourney.Services\Midjourney.Services.csproj" />
 	</ItemGroup>

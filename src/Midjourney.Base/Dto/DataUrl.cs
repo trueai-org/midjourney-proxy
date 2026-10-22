@@ -82,6 +82,19 @@ namespace Midjourney.Base
         /// <exception cref="FormatException"></exception>
         public static DataUrl Parse(string dataUrl)
         {
+            return Parse(dataUrl, false);
+        }
+
+        /// <summary>
+        /// 解析 DataUrl 字符串
+        /// </summary>
+        /// <param name="dataUrl"></param>
+        /// <param name="convertToWebp">是否将提示词/垫图图片转换为 WebP</param>
+        /// <returns></returns>
+        /// <exception cref="LogicException"></exception>
+        /// <exception cref="FormatException"></exception>
+        public static DataUrl Parse(string dataUrl, bool convertToWebp)
+        {
             if (string.IsNullOrWhiteSpace(dataUrl))
             {
                 return null;
@@ -115,13 +128,23 @@ namespace Midjourney.Base
                 }
 
                 var defaultMimeType = "image/png";
-                return new DataUrl(defaultMimeType, Convert.FromBase64String(match.Groups["data"].Value));
+                var parsedDataUrl = new DataUrl(defaultMimeType, Convert.FromBase64String(match.Groups["data"].Value));
+                if (convertToWebp)
+                {
+                    PromptImageWebpConverter.TryConvertToWebP(parsedDataUrl, setting);
+                }
+                return parsedDataUrl;
             }
 
             string mimeType = match.Groups["type"].Value;
             byte[] data = Convert.FromBase64String(match.Groups["data"].Value);
 
-            return new DataUrl(mimeType, data);
+            var result = new DataUrl(mimeType, data);
+            if (convertToWebp)
+            {
+                PromptImageWebpConverter.TryConvertToWebP(result, setting);
+            }
+            return result;
         }
 
         /// <summary>
@@ -130,6 +153,17 @@ namespace Midjourney.Base
         /// <param name="base64Array"></param>
         /// <returns></returns>
         public static List<DataUrl> ConvertBase64Array(List<string> base64Array)
+        {
+            return ConvertBase64Array(base64Array, false);
+        }
+
+        /// <summary>
+        /// 转换 Base64 字符串数组为 DataUrl 列表
+        /// </summary>
+        /// <param name="base64Array"></param>
+        /// <param name="convertToWebp">是否将提示词/垫图图片转换为 WebP</param>
+        /// <returns></returns>
+        public static List<DataUrl> ConvertBase64Array(List<string> base64Array, bool convertToWebp)
         {
             if (base64Array == null || base64Array.Count == 0)
             {
@@ -141,7 +175,7 @@ namespace Midjourney.Base
             {
                 if (!string.IsNullOrWhiteSpace(base64))
                 {
-                    var dataUrl = DataUrl.Parse(base64);
+                    var dataUrl = DataUrl.Parse(base64, convertToWebp);
                     dataUrlList.Add(dataUrl);
                 }
             }
