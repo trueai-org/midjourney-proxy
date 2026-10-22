@@ -9,7 +9,7 @@
 		<IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
 		<EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
 		<SatelliteResourceLanguages>zh-Hans</SatelliteResourceLanguages>
-		<AssemblyVersion>11.11.5</AssemblyVersion>
+		<AssemblyVersion>12.0.1</AssemblyVersion>
 		<DockerfileContext>..\..</DockerfileContext>
 	</PropertyGroup>
 
@@ -22,6 +22,15 @@
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 			<ExcludeFromSingleFile>true</ExcludeFromSingleFile>
 		</None>
+	</ItemGroup>
+
+	<!--
+		wwwroot\attachments 是运行期上传/生成的附件目录，可能包含超长路径和大文件。
+		发布时排除，避免 MSBuild 在 Windows 长路径（>260）下报 MSB3030；
+		如需随包部署历史附件，请单独用 robocopy 复制到发布目录。
+	-->
+	<ItemGroup>
+		<Content Remove="wwwroot\attachments\**" />
 	</ItemGroup>
 	
 	<ItemGroup>
