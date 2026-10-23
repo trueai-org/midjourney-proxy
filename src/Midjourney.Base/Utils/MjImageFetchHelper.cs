@@ -370,9 +370,10 @@ namespace Midjourney.Base.Util
         {
             try
             {
-                // 发送一个 HEAD 请求
-                HttpRequestMessage request = new(HttpMethod.Head, url);
-                HttpResponseMessage response = await SharedHttpClient.SendAsync(request);
+                // 发送 HEAD 请求；HEAD 只用于猜后缀，不能让提交卡在慢 CDN 上
+                using var request = new HttpRequestMessage(HttpMethod.Head, url);
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                using var response = await SharedHttpClient.SendAsync(request, cts.Token);
                 if (response.IsSuccessStatusCode)
                 {
                     // 获取 Content-Type 头部
@@ -383,11 +384,20 @@ namespace Midjourney.Base.Util
                 }
                 return null;
             }
+            catch (OperationCanceledException)
+            {
+                Log.Warning("获取图片链接 Content-Type 超时（5s）: Host={Host}", TryGetHost(url));
+            }
             catch (Exception ex)
             {
-                Log.Warning(ex, "获取图片链接 Content-Type 失败: {@0}", url);
+                Log.Warning(ex, "获取图片链接 Content-Type 失败: Host={Host}", TryGetHost(url));
             }
             return null;
+        }
+
+        private static string TryGetHost(string url)
+        {
+            return Uri.TryCreate(url, UriKind.Absolute, out var uri) ? uri.Host : url;
         }
     }
 

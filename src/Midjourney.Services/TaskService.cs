@@ -22,6 +22,7 @@
 // invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
+using System.Diagnostics;
 using System.Text.RegularExpressions;
 using RestSharp;
 using Serilog;
@@ -58,6 +59,11 @@ namespace Midjourney.Services
         public async Task<SubmitResultVO> SubmitImagine(TaskInfo info, List<DataUrl> dataUrls)
         {
             var setting = GlobalConfiguration.Setting;
+            var totalSw = Stopwatch.StartNew();
+            var imageCount = dataUrls?.Count ?? 0;
+            var urlOnlyCount = dataUrls?.Count(c => c != null
+                && !string.IsNullOrWhiteSpace(c.Url)
+                && (c.Data == null || c.Data.Length == 0)) ?? 0;
             var promptEn = info.PromptEn;
             if (promptEn.Contains("--video", StringComparison.OrdinalIgnoreCase))
             {
@@ -69,6 +75,7 @@ namespace Midjourney.Services
                 }
             }
 
+            var chooseSw = Stopwatch.StartNew();
             var (instance, mode) = _accountService.ChooseInstance(info.AccountFilter,
                 isNewTask: true,
                 botType: info.RealBotType ?? info.BotType,
@@ -85,6 +92,9 @@ namespace Midjourney.Services
             info.IsOfficial = instance.Account.IsOfficial;
             info.SetProperty(Constants.TASK_PROPERTY_DISCORD_INSTANCE_ID, instance.ChannelId);
             info.InstanceId = instance.ChannelId;
+
+            Log.Information("SubmitImagine 开始: TaskId={TaskId}, IsYouChuan={IsYouChuan}, IsOfficial={IsOfficial}, Images={ImageCount}, UrlOnly={UrlOnlyCount}, ChooseMs={ChooseMs}",
+                info.Id, instance.Account.IsYouChuan, instance.Account.IsOfficial, imageCount, urlOnlyCount, chooseSw.ElapsedMilliseconds);
 
             if (instance.Account.IsYouChuan || instance.Account.IsOfficial)
             {
@@ -103,7 +113,10 @@ namespace Midjourney.Services
                             {
                                 // 悠船官网链接转换
                                 //var ff = new MjImageFetchHelper();
+                                var fetchSw = Stopwatch.StartNew();
                                 var res = await MjImageFetchHelper.FetchFileAsync(link, convertToWebp: true);
+                                Log.Information("SubmitImagine 悠船链接转换: TaskId={TaskId}, Host={Host}, Success={Success}, HasUrl={HasUrl}, HasBytes={HasBytes}, Elapsed={Elapsed}ms",
+                                    info.Id, GetImageHost(dataUrl), res.Success, !string.IsNullOrWhiteSpace(res.Url), res.FileBytes?.Length > 0, fetchSw.ElapsedMilliseconds);
                                 if (res.Success && !string.IsNullOrWhiteSpace(res.Url))
                                 {
                                     link = res.Url;
@@ -125,8 +138,13 @@ namespace Midjourney.Services
                     }
                     else
                     {
-                        var taskFileName = await dataUrl.GenerateFileName();
+                        var imageSw = Stopwatch.StartNew();
+                        var taskFileName = await GetUploadFileNameAsync(dataUrl);
+                        var fileNameMs = imageSw.ElapsedMilliseconds;
+                        imageSw.Restart();
                         var uploadResult = await instance.UploadAsync(taskFileName, dataUrl);
+                        Log.Information("SubmitImagine 图片处理: TaskId={TaskId}, Account=Official, UrlOnly={UrlOnly}, Host={Host}, FileNameMs={FileNameMs}, UploadMs={UploadMs}, Code={Code}",
+                            info.Id, IsUrlOnly(dataUrl), GetImageHost(dataUrl), fileNameMs, imageSw.ElapsedMilliseconds, uploadResult.Code);
                         if (uploadResult.Code != ReturnCode.SUCCESS)
                         {
                             return SubmitResultVO.Fail(ReturnCode.FAILURE, uploadResult.Description);
@@ -156,19 +174,31 @@ namespace Midjourney.Services
                     info.Description = "/imagine " + info.Prompt;
                 }
 
-                return await instance.RedisEnqueue(new TaskInfoQueue()
+                Log.Information("SubmitImagine 图片处理完成: TaskId={TaskId}, Elapsed={Elapsed}ms, Images={ImageCount}",
+                    info.Id, totalSw.ElapsedMilliseconds, imageCount);
+
+                var enqueueSw = Stopwatch.StartNew();
+                var submitResult = await instance.RedisEnqueue(new TaskInfoQueue()
                 {
                     Info = info,
                     Function = TaskInfoQueueFunction.SUBMIT
                 });
+                Log.Information("SubmitImagine 入队完成: TaskId={TaskId}, Elapsed={Elapsed}ms, Code={Code}",
+                    info.Id, enqueueSw.ElapsedMilliseconds, submitResult?.Code);
+                return submitResult;
             }
             else
             {
                 var imageUrls = new List<string>();
                 foreach (var dataUrl in dataUrls)
                 {
-                    var taskFileName = await dataUrl.GenerateFileName();
+                    var imageSw = Stopwatch.StartNew();
+                    var taskFileName = await GetUploadFileNameAsync(dataUrl);
+                    var fileNameMs = imageSw.ElapsedMilliseconds;
+                    imageSw.Restart();
                     var uploadResult = await instance.UploadAsync(taskFileName, dataUrl);
+                    Log.Information("SubmitImagine 图片处理: TaskId={TaskId}, Account=Discord, UrlOnly={UrlOnly}, Host={Host}, FileNameMs={FileNameMs}, UploadMs={UploadMs}, Code={Code}",
+                        info.Id, IsUrlOnly(dataUrl), GetImageHost(dataUrl), fileNameMs, imageSw.ElapsedMilliseconds, uploadResult.Code);
                     if (uploadResult.Code != ReturnCode.SUCCESS)
                     {
                         return SubmitResultVO.Fail(ReturnCode.FAILURE, uploadResult.Description);
@@ -197,11 +227,18 @@ namespace Midjourney.Services
                     info.Description = "/imagine " + info.Prompt;
                 }
 
-                return await instance.RedisEnqueue(new TaskInfoQueue()
+                Log.Information("SubmitImagine 图片处理完成: TaskId={TaskId}, Elapsed={Elapsed}ms, Images={ImageCount}",
+                    info.Id, totalSw.ElapsedMilliseconds, imageCount);
+
+                var enqueueSw = Stopwatch.StartNew();
+                var submitResult = await instance.RedisEnqueue(new TaskInfoQueue()
                 {
                     Info = info,
                     Function = TaskInfoQueueFunction.SUBMIT
                 });
+                Log.Information("SubmitImagine 入队完成: TaskId={TaskId}, Elapsed={Elapsed}ms, Code={Code}",
+                    info.Id, enqueueSw.ElapsedMilliseconds, submitResult?.Code);
+                return submitResult;
             }
         }
 
@@ -2273,6 +2310,37 @@ namespace Midjourney.Services
             Thread.Sleep(2000);
 
             await SyncInfoSetting(id);
+        }
+
+        /// <summary>
+        /// 是否为 URL-only 图片数据（没有 base64/byte 内容）。
+        /// </summary>
+        private static bool IsUrlOnly(DataUrl dataUrl)
+        {
+            return dataUrl != null
+                && !string.IsNullOrWhiteSpace(dataUrl.Url)
+                && (dataUrl.Data == null || dataUrl.Data.Length == 0);
+        }
+
+        /// <summary>
+        /// 获取上传文件名；URL-only 数据由 UploadAsync 直接复用，不需要猜后缀/发 HEAD。
+        /// </summary>
+        private static async Task<string> GetUploadFileNameAsync(DataUrl dataUrl)
+        {
+            if (IsUrlOnly(dataUrl))
+            {
+                return null;
+            }
+
+            return await dataUrl.GenerateFileName();
+        }
+
+        /// <summary>
+        /// 只记录图片主机，避免日志里出现带签名参数的完整 URL。
+        /// </summary>
+        private static string GetImageHost(DataUrl dataUrl)
+        {
+            return Uri.TryCreate(dataUrl?.Url, UriKind.Absolute, out var uri) ? uri.Host : null;
         }
     }
 }

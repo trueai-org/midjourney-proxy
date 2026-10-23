@@ -21,6 +21,7 @@
 // The use of this software for any form of illegal face swapping,
 // invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
+using System.Diagnostics;
 using Serilog;
 using SixLabors.ImageSharp;
 using SkiaSharp;
@@ -207,24 +208,29 @@ namespace Midjourney.Base.Util
             var url = dataUrl.Url;
             if (!string.IsNullOrWhiteSpace(url))
             {
-                // 根据请求头返回的 ContentType 分析扩展名
-                var contentType = await MjImageFetchHelper.GetContentTypeAsync(url);
-                var ext = GuessFileSuffixOrNull(contentType);
-                if (!string.IsNullOrWhiteSpace(ext))
-                {
-                    return ext;
-                }
-
-                // 根据 uri 猜测扩展名
                 var uri = new Uri(url);
+
+                // 先看 URL 后缀：.webp/.png/.jpg 这类已知后缀不需要 HEAD 请求。
+                // 之前先 HEAD 再判断 URI，CDN 不回 HEAD 时会拖慢整个提交。
                 if (uri.Segments.Length > 0)
                 {
                     var lastSegment = uri.Segments.Last();
-                    ext = Path.GetExtension(lastSegment).ToLowerInvariant();
+                    var ext = Path.GetExtension(lastSegment).ToLowerInvariant();
                     if (AllowedImageFormats.Contains(ext))
                     {
                         return ext;
                     }
+                }
+
+                // 没有已知后缀时才 HEAD 探测 ContentType
+                var headSw = Stopwatch.StartNew();
+                var contentType = await MjImageFetchHelper.GetContentTypeAsync(url);
+                Log.Information("GuessFileSuffix URL 无已知后缀，HEAD 探测: Host={Host}, Path={Path}, ContentType={ContentType}, Elapsed={Elapsed}ms",
+                    uri.Host, uri.GetLeftPart(UriPartial.Path), contentType, headSw.ElapsedMilliseconds);
+                var extFromContentType = GuessFileSuffixOrNull(contentType);
+                if (!string.IsNullOrWhiteSpace(extFromContentType))
+                {
+                    return extFromContentType;
                 }
             }
 
