@@ -3771,14 +3771,26 @@ namespace Midjourney.Services
         }
 
         /// <summary>
-        /// 上传文件到文件存储
+        /// 上传文件到文件存储。
+        /// 如果调用方已经传入对象存储 URL，则直接复用，避免重复上传拖慢任务提交。
         /// </summary>
-        /// <param name="fileName"></param>
-        /// <param name="dataUrl"></param>
-        /// <param name="useDiscordUpload"></param>
-        /// <returns></returns>
+        /// <param name="fileName">目标文件名（仅本地/云存储上传时使用）</param>
+        /// <param name="dataUrl">图片数据，支持 base64 或 http URL</param>
+        /// <returns>上传结果，Description 为可访问的图片 URL</returns>
         public async Task<Message> UploadAsync(string fileName, DataUrl dataUrl)
         {
+            if (dataUrl == null)
+            {
+                return Message.Of(ReturnCode.FAILURE, "图片数据不能为空");
+            }
+
+            // 用户已先上传到对象存储时，直接复用 URL，代理不再重复上传。
+            if ((dataUrl.Data == null || dataUrl.Data.Length == 0)
+                && !string.IsNullOrWhiteSpace(dataUrl.Url))
+            {
+                return Message.Success(dataUrl.Url);
+            }
+
             try
             {
                 var url = await UploadToStorageAsync(fileName, dataUrl.MimeType, dataUrl.Data);

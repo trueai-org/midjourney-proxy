@@ -44,9 +44,10 @@ namespace Midjourney.Base.Dto
         public string Prompt { get; set; }
 
         /// <summary>
-        /// 垫图base64数组。
+        /// 垫图数组。
+        /// 支持 base64 data URL 或 http(s) 图片 URL；传 URL 时代理直接复用，不再重复上传。
         /// </summary>
-        [SwaggerSchema("垫图base64数组")]
+        [SwaggerSchema("垫图数组，支持 base64 data URL 或 http(s) 图片 URL")]
         public List<string> Base64Array { get; set; }
 
         ///// <summary>
