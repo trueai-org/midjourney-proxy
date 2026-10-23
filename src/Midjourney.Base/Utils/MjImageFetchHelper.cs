@@ -93,7 +93,12 @@ namespace Midjourney.Base.Util
 
             if (!string.IsNullOrEmpty(proxyHost))
             {
-                handler.Proxy = new WebProxy(proxyHost, proxyPort);
+                handler.Proxy = new WebProxy(proxyHost, proxyPort)
+                {
+                    // 本机/回环地址不走代理，避免影响本地服务与测试
+                    BypassProxyOnLocal = true,
+                    BypassList = ["127\\.0\\.0\\.1", "localhost", "\\[::1\\]"],
+                };
                 handler.UseProxy = true;
             }
         }
@@ -146,7 +151,20 @@ namespace Midjourney.Base.Util
         /// </summary>
         /// <param name="url">https://mp-70570b1c-bf6a-40fe-9635-8e5c1901c65d.cdn.bspapp.com/temp/1723592564348_0.png</param>
         /// <returns></returns>
-        public static async Task<FetchFileResult> FetchFileAsync(string url, int retry = 0, bool isWhite = true, bool isRetry = true)
+        public static Task<FetchFileResult> FetchFileAsync(string url, int retry = 0, bool isWhite = true, bool isRetry = true)
+        {
+            return FetchFileAsync(url, retry, isWhite, isRetry, false);
+        }
+
+        /// <summary>
+        /// 异步获取文件，并指定是否将提示词/垫图图片转换为 WebP
+        /// </summary>
+        public static Task<FetchFileResult> FetchFileAsync(string url, bool convertToWebp, int retry = 0, bool isWhite = true, bool isRetry = true)
+        {
+            return FetchFileAsync(url, retry, isWhite, isRetry, convertToWebp);
+        }
+
+        private static async Task<FetchFileResult> FetchFileAsync(string url, int retry, bool isWhite, bool isRetry, bool convertToWebp)
         {
             if (isRetry && retry > 5)
             {
@@ -188,7 +206,7 @@ namespace Midjourney.Base.Util
                             {
                                 if (isRetry)
                                 {
-                                    return await FetchFileAsync(newUrl, ++retry, isWhite, isRetry);
+                                    return await FetchFileAsync(newUrl, ++retry, isWhite, isRetry, convertToWebp);
                                 }
                             }
                         }
@@ -211,6 +229,14 @@ namespace Midjourney.Base.Util
                     Data = fileBytes
                 };
                 var ext = await MjImageHelper.GuessFileSuffix(dataUrl);
+
+                // 提示词/垫图图片按配置转换为 WebP
+                if (convertToWebp && PromptImageWebpConverter.TryConvertToWebP(dataUrl))
+                {
+                    ext = PromptImageWebpConverter.WebpExtension;
+                    contentType = dataUrl.MimeType;
+                }
+
                 var fileName = $"{Guid.NewGuid()}{ext}";
 
                 // 返回处理后的图片或原始图片数据

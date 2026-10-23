@@ -526,6 +526,21 @@ namespace Midjourney.Base.Models
         public bool EnableConvertPromptLinkStorage { get; set; } = false;
 
         /// <summary>
+        /// 开启提示词/垫图图片转换为 WebP 格式
+        /// 启用后，用户上传的 base64 图片（垫图、混图、参考图、图生文、编辑等）以及提示词中抓取的图片，
+        /// 在上传前会统一转为 WebP。已识别且未在忽略列表中的图片格式才会转换，
+        /// 无法识别或无法解码的格式保持原样。
+        /// </summary>
+        public bool EnablePromptImageWebp { get; set; } = false;
+
+        /// <summary>
+        /// 转换为 WebP 时忽略的图片格式
+        /// 支持 "gif" 或 ".gif"，不区分大小写。为 null 时默认忽略 .gif，避免动图丢失动画。
+        /// 未在忽略列表中的可识别图片格式将转为 WebP；未知格式保持原样。
+        /// </summary>
+        public List<string> PromptImageWebpIgnoreFormats { get; set; }
+
+        /// <summary>
         /// 输入链接替换规则
         /// 配置后转换提示词中的链接到指定链接，例如：垫图、混图、参考图等
         /// 支持配置多个 key value，例如：{"cdn.huanwangai.cn":"cdn.skynetcircle.com"}

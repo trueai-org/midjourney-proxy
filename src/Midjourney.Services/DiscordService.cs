@@ -3397,6 +3397,15 @@ namespace Midjourney.Services
 
             var setting = GlobalConfiguration.Setting;
 
+            // WebP 配置参与缓存键，避免切换开关/忽略格式后命中旧缓存
+            var webpCacheKey = setting.EnablePromptImageWebp
+                ? ":webp:" + string.Join(",", (setting.PromptImageWebpIgnoreFormats ?? [".gif"])
+                    .Where(x => !string.IsNullOrWhiteSpace(x))
+                    .Select(x => x.Trim().ToLowerInvariant())
+                    .Distinct()
+                    .OrderBy(x => x))
+                : "";
+
             // 提取 prompt 中的 url，使用正则表达式提取
             var urls = prompt.ExtractUrls();
             if (urls == null || urls.Count == 0)
@@ -3451,9 +3460,9 @@ namespace Midjourney.Services
                             }
 
                             // 转为悠船官方链接，缓存默认 24 小时
-                            var ycOkUrl = await AdaptiveCache.GetOrCreateAsync($"fetchimg:yc_{url}", async () =>
+                            var ycOkUrl = await AdaptiveCache.GetOrCreateAsync($"fetchimg:yc_{url}{webpCacheKey}", async () =>
                             {
-                                var res = await MjImageFetchHelper.FetchFileAsync(url);
+                                var res = await MjImageFetchHelper.FetchFileAsync(url, convertToWebp: true);
                                 if (res.Success && !string.IsNullOrWhiteSpace(res.Url))
                                 {
                                     return res.Url;
@@ -3491,9 +3500,9 @@ namespace Midjourney.Services
                     }
 
                     // 转为云存储链接，缓存默认 24 小时
-                    var okUrl = await AdaptiveCache.GetOrCreateAsync($"fetchimg:{url}", async () =>
+                    var okUrl = await AdaptiveCache.GetOrCreateAsync($"fetchimg:{url}{webpCacheKey}", async () =>
                     {
-                        var res = await MjImageFetchHelper.FetchFileAsync(url);
+                        var res = await MjImageFetchHelper.FetchFileAsync(url, convertToWebp: true);
                         if (res.Success && !string.IsNullOrWhiteSpace(res.Url))
                         {
                             return res.Url;

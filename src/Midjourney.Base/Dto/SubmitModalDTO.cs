@@ -44,7 +44,7 @@ namespace Midjourney.Base.Dto
         public string TaskId { get; set; }
 
         /// <summary>
-        /// 局部重绘的蒙版base64
+        /// 局部重绘的蒙版base64（必须是 PNG，不能转为 WebP）
         /// </summary>
         [SwaggerSchema("图片base64", Description = "data:image/png;base64,xxx")]
         public string MaskBase64 { get; set; }

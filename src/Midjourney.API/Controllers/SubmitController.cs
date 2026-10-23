@@ -178,7 +178,7 @@ namespace Midjourney.API.Controllers
                 List<DataUrl> dataUrls = new List<DataUrl>();
                 try
                 {
-                    dataUrls = DataUrl.ConvertBase64Array(base64Array);
+                    dataUrls = DataUrl.ConvertBase64Array(base64Array, true);
                 }
                 catch (Exception e)
                 {
@@ -228,7 +228,7 @@ namespace Midjourney.API.Controllers
             var dataUrls = new List<DataUrl>();
             try
             {
-                dataUrls = DataUrl.ConvertBase64Array(base64Array);
+                dataUrls = DataUrl.ConvertBase64Array(base64Array, true);
             }
             catch (Exception e)
             {
@@ -304,7 +304,7 @@ namespace Midjourney.API.Controllers
 
                 try
                 {
-                    dataUrl = DataUrl.Parse(describeDTO.Base64);
+                    dataUrl = DataUrl.Parse(describeDTO.Base64, true);
                 }
                 catch
                 {
@@ -404,7 +404,7 @@ namespace Midjourney.API.Controllers
             List<DataUrl> dataUrlList = new List<DataUrl>();
             try
             {
-                dataUrlList = DataUrl.ConvertBase64Array(base64Array);
+                dataUrlList = DataUrl.ConvertBase64Array(base64Array, true);
             }
             catch (Exception e)
             {
@@ -749,6 +749,7 @@ namespace Midjourney.API.Controllers
             //}
 
             // 不检查
+            // 局部重绘蒙版必须是 PNG（带透明通道），不能转为 WebP
             DataUrl dataUrl = null;
             try
             {
@@ -809,7 +810,7 @@ namespace Midjourney.API.Controllers
                     {
                         editsDTO.Image = "data:image/png;base64," + editsDTO.Image;
                     }
-                    dataUrl = DataUrl.Parse(editsDTO.Image);
+                    dataUrl = DataUrl.Parse(editsDTO.Image, true);
                 }
             }
             catch (Exception e)
@@ -879,7 +880,7 @@ namespace Midjourney.API.Controllers
                     {
                         editsDTO.Image = "data:image/png;base64," + editsDTO.Image;
                     }
-                    dataUrl = DataUrl.Parse(editsDTO.Image);
+                    dataUrl = DataUrl.Parse(editsDTO.Image, true);
                 }
             }
             catch (Exception e)

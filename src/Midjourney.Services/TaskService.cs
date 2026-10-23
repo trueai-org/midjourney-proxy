@@ -103,14 +103,14 @@ namespace Midjourney.Services
                             {
                                 // 悠船官网链接转换
                                 //var ff = new MjImageFetchHelper();
-                                var res = await MjImageFetchHelper.FetchFileAsync(link);
+                                var res = await MjImageFetchHelper.FetchFileAsync(link, convertToWebp: true);
                                 if (res.Success && !string.IsNullOrWhiteSpace(res.Url))
                                 {
                                     link = res.Url;
                                 }
                                 else if (res.Success && res.FileBytes.Length > 0)
                                 {
-                                    var taskFileName = await dataUrl.GenerateFileName();
+                                    var taskFileName = string.IsNullOrWhiteSpace(res.FileName) ? await dataUrl.GenerateFileName() : res.FileName;
                                     link = await instance.YmTaskService.UploadFile(info, res.FileBytes, taskFileName);
                                 }
                             }
@@ -247,14 +247,14 @@ namespace Midjourney.Services
                     {
                         // 悠船官网链接转换
                         //var ff = new MjImageFetchHelper();
-                        var res = await MjImageFetchHelper.FetchFileAsync(link);
+                        var res = await MjImageFetchHelper.FetchFileAsync(link, convertToWebp: true);
                         if (res.Success && !string.IsNullOrWhiteSpace(res.Url))
                         {
                             link = res.Url;
                         }
                         else if (res.Success && res.FileBytes.Length > 0)
                         {
-                            var taskFileName = await dataUrl.GenerateFileName();
+                            var taskFileName = string.IsNullOrWhiteSpace(res.FileName) ? await dataUrl.GenerateFileName() : res.FileName;
                             link = await instance.YmTaskService.UploadFile(info, res.FileBytes, taskFileName);
                         }
                     }
@@ -352,14 +352,14 @@ namespace Midjourney.Services
                     {
                         // 悠船官网链接转换
                         //var ff = new MjImageFetchHelper();
-                        var res = await MjImageFetchHelper.FetchFileAsync(link);
+                        var res = await MjImageFetchHelper.FetchFileAsync(link, convertToWebp: true);
                         if (res.Success && !string.IsNullOrWhiteSpace(res.Url))
                         {
                             link = res.Url;
                         }
                         else if (res.Success && res.FileBytes.Length > 0)
                         {
-                            var taskFileName = await dataUrl.GenerateFileName();
+                            var taskFileName = string.IsNullOrWhiteSpace(res.FileName) ? await dataUrl.GenerateFileName() : res.FileName;
                             link = await instance.YmTaskService.UploadFile(info, res.FileBytes, taskFileName);
                         }
                     }
@@ -518,7 +518,7 @@ namespace Midjourney.Services
                         }
                         else if (res.Success && res.FileBytes.Length > 0)
                         {
-                            var taskFileName = await startUrl.GenerateFileName();
+                            var taskFileName = string.IsNullOrWhiteSpace(res.FileName) ? await startUrl.GenerateFileName() : res.FileName;
                             startImageUrl = await instance.YmTaskService.UploadFile(info, res.FileBytes, taskFileName);
                         }
                     }
@@ -544,7 +544,7 @@ namespace Midjourney.Services
                         }
                         else if (res.Success && res.FileBytes.Length > 0)
                         {
-                            var taskFileName = await endUrl.GenerateFileName();
+                            var taskFileName = string.IsNullOrWhiteSpace(res.FileName) ? await endUrl.GenerateFileName() : res.FileName;
                             endImageUrl = await instance.YmTaskService.UploadFile(info, res.FileBytes, taskFileName);
                         }
                     }

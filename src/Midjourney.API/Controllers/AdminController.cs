@@ -1806,6 +1806,9 @@ namespace Midjourney.API.Controllers
                 throw new LogicException("系统配置错误，请重启服务");
             }
 
+            // 未配置时展示默认忽略格式
+            model.PromptImageWebpIgnoreFormats ??= [".gif"];
+
             // 演示模式，部分配置不可见
             if (_isAnonymous)
             {
