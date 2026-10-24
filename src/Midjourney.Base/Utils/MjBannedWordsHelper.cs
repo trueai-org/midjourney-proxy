@@ -33,54 +33,82 @@ namespace Midjourney.Base.Util
         /// 禁用词列表
         /// </summary>
         private const string BANNED_WORDS = """
-            ahegao
-            anus
-            ballgag
-            bloodbath
-            bodily fluids
-            brothel
-            bunghole
-            cannibal
-            cannibalism
-            cocaine
-            coon
-            decapitate
-            dick
+            cleavage
             dominatrix
-            excrement
-            feces
-            fuck
-            gore
-            guts
-            hentai
-            heroin
-            incest
-            jav
-            kinbaku
-            labia
-            legs spread
-            loli
-            massacre
-            meth
-            nipple
-            no clothes
+            sexualiz
+            coon
+            booba
+            busty
+            scantily clad
+            sexual
             nude
-            orgy
-            penis
-            porn
-            rape
-            rule34
-            skeletal gore
-            slaughter
-            smut
-            sperm
-            unclothed
-            vagina
-            veiny penis
-            vivisection
+            breasts
+            honkey
+            shibari
+            booty
+            naked
+            explicit
+            bodily fluids
             wearing nothing
-            wincest
+            titty
+            without clothes on
+            barely dressed
+            full frontal
+            orgy
+            stripped
+            oppai
+            erected
+            making love
+            unclothed
+            loli
+            decapitate
+            tight white
+            bunghole
+            bosom
+            clunge
+            no clothes
+            fuck
+            nipple
             zero clothes
+            wincest
+            cannibalism
+            kinbaku
+            sadist
+            anus
+            smut
+            boobs
+            incest
+            erotic
+            vagina
+            sensuality
+            minge
+            legs spread
+            crotch
+            phallus
+            porn
+            jerk off king at pic
+            lolita
+            ballgag
+            bimbo
+            arse
+            intimate
+            horny
+            penis
+            sexy
+            mammaries
+            hentai
+            ass
+            big ass
+            hardcore
+            seducing
+            sexy female
+            shit
+            labia
+            sexi
+            shag
+            sperm
+            brothel
+            dick
             """;
 
         /// <summary>

@@ -64,6 +64,7 @@ namespace Midjourney.API.Controllers
 
         private readonly IUpgradeService _upgradeService;
         private readonly IFreeSql _freeSql;
+        private readonly BannedWordTestService _bannedWordTestService;
 
         public AdminController(
             ITaskService taskService,
@@ -72,7 +73,8 @@ namespace Midjourney.API.Controllers
             IMemoryCache memoryCache,
             WorkContext workContext,
             IHttpContextAccessor context,
-            IUpgradeService upgradeService)
+            IUpgradeService upgradeService,
+            BannedWordTestService bannedWordTestService)
         {
             _freeSql = FreeSqlHelper.FreeSql;
             _upgradeService = upgradeService;
@@ -81,6 +83,7 @@ namespace Midjourney.API.Controllers
             _taskService = taskService;
             _discordAccountInitializer = discordAccountInitializer;
             _workContext = workContext;
+            _bannedWordTestService = bannedWordTestService;
 
             // 如果不是管理员，并且是演示模式时，则是为匿名用户
             var user = workContext.GetUser();
@@ -2096,6 +2099,99 @@ namespace Midjourney.API.Controllers
             _freeSql.Delete(model);
 
             _taskService.ClearBannedWordsCache();
+
+            return Result.Ok();
+        }
+
+        /// <summary>
+        /// 创建违规词测试任务
+        /// 按全局并发数异步提交真实绘图任务，跟踪上游是否触发违规拦截
+        /// 需要 Redis；测试任务跳过本地违规词检查，避免本地拦截影响测试结论
+        /// </summary>
+        /// <param name="request">违规词、提示词模板、并发数</param>
+        /// <returns>本次新增任务数</returns>
+        [HttpPost("banned-word-test")]
+        public Result<BannedWordTestCreateResult> BannedWordTestCreate([FromBody] BannedWordTestCreateRequest request)
+        {
+            if (_isAnonymous)
+            {
+                return Result.Fail<BannedWordTestCreateResult>("演示模式，禁止操作");
+            }
+
+            if (request == null)
+            {
+                throw new LogicException("参数错误");
+            }
+
+            return Result.Ok(_bannedWordTestService.Create(request));
+        }
+
+        /// <summary>
+        /// 查询违规词测试任务
+        /// 返回全量的未开始/进行中/完成统计，以及确认违规词记录
+        /// 只读接口，演示模式允许查询；创建/删除会校验演示模式
+        /// </summary>
+        /// <param name="request">分页、敏感词、状态筛选条件</param>
+        /// <returns>测试任务分页与统计</returns>
+        [HttpPost("banned-word-tests")]
+        public Result<BannedWordTestListResult> BannedWordTests([FromBody] BannedWordTestQueryRequest request)
+        {
+            return Result.Ok(_bannedWordTestService.Query(request ?? new BannedWordTestQueryRequest()));
+        }
+
+        /// <summary>
+        /// 重试所有测试失败的任务
+        /// 失败任务会重置为未开始并重新排队，使用当前全局并发数
+        /// </summary>
+        /// <returns>重试结果</returns>
+        [HttpPost("banned-word-test/retry-failed")]
+        public Result BannedWordTestRetryFailed()
+        {
+            if (_isAnonymous)
+            {
+                return Result.Fail("演示模式，禁止操作");
+            }
+
+            var count = _bannedWordTestService.RetryFailed();
+            return Result.Ok($"已重新提交 {count} 条失败任务");
+        }
+
+        /// <summary>
+        /// 清空所有违规词测试记录
+        /// 只清空测试任务、队列、运行中标记和确认违规记录，不影响已提交到上游的绘图任务
+        /// </summary>
+        /// <returns>清空结果</returns>
+        [HttpDelete("banned-word-test")]
+        public Result BannedWordTestClearAll()
+        {
+            if (_isAnonymous)
+            {
+                return Result.Fail("演示模式，禁止操作");
+            }
+
+            var count = _bannedWordTestService.ClearAll();
+            return Result.Ok($"已清空 {count} 条测试记录");
+        }
+
+        /// <summary>
+        /// 删除单条违规词测试任务记录
+        /// 只删除测试跟踪记录，不会撤销已经提交到上游的绘图任务
+        /// </summary>
+        /// <param name="taskId">测试任务 ID</param>
+        /// <returns>删除结果</returns>
+        [HttpDelete("banned-word-test/{taskId}")]
+        public Result BannedWordTestDelete(string taskId)
+        {
+            if (_isAnonymous)
+            {
+                return Result.Fail("演示模式，禁止操作");
+            }
+
+            var deleted = _bannedWordTestService.DeleteTask(taskId);
+            if (!deleted)
+            {
+                throw new LogicException("测试任务不存在或已过期");
+            }
 
             return Result.Ok();
         }

@@ -64,6 +64,12 @@ namespace Midjourney.Base.Data
         /// </summary>
         public const string OFFICIAL_DEFAULT_BANNED_WORD_ID = "official_default";
 
+        /// <summary>
+        /// 确认违规词库 ID
+        /// 违规词测试确认违规后自动追加到该违规词条
+        /// </summary>
+        public const string CONFIRMED_VIOLATION_BANNED_WORD_ID = "confirmed_violation";
+
         // -----------------
 
         /// <summary>
@@ -236,6 +242,13 @@ namespace Midjourney.Base.Data
         /// 视频扩展的 index 参数
         /// </summary>
         public const string TASK_PROPERTY_VIDEO_EXTEND_INDEX = "video_extend_index";
+
+        /// <summary>
+        /// 违规词测试任务 ID（任务扩展属性）
+        /// 存在该属性时，该任务属于违规词测试任务，提交时跳过本地违规词检查，
+        /// 以便让上游返回真实的审核结果。
+        /// </summary>
+        public const string TASK_PROPERTY_BANNED_WORD_TEST_ID = "bannedWordTestId";
 
         // --------------- redis ---------------
 

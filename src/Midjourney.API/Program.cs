@@ -246,6 +246,10 @@ namespace Midjourney.API
                 // 注册 Midjourney 服务（扩展方法）
                 services.AddMidjourneyServices(setting);
 
+                // 违规词测试服务：Redis 存储 + 后台调度 + 上游结果跟踪
+                services.AddSingleton<BannedWordTestService>();
+                services.AddHostedService(provider => provider.GetRequiredService<BannedWordTestService>());
+
                 // 注册 Consul
                 services.AddSingleton<IConsulService, ConsulService>();
 

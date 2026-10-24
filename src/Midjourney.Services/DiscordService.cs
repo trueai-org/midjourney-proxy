@@ -1885,12 +1885,16 @@ namespace Midjourney.Services
                     return;
                 }
 
+                // 违规词测试任务：跳过本地违规词检查，确保测试结果来自上游
+                var isBannedWordTest = !string.IsNullOrWhiteSpace(
+                    info.GetProperty<string>(Constants.TASK_PROPERTY_BANNED_WORD_TEST_ID, default));
+
                 if (!string.IsNullOrWhiteSpace(info.Prompt))
                 {
                     try
                     {
                         // 验证默认提示词
-                        info.Prompt = CheckBanned(info.Prompt);
+                        info.Prompt = isBannedWordTest ? info.Prompt : CheckBanned(info.Prompt);
 
                         // 如果没有英文，则设置英文
                         if (string.IsNullOrWhiteSpace(info.PromptEn))
@@ -1916,8 +1920,8 @@ namespace Midjourney.Services
                         // 翻译
                         info.PromptEn = TranslatePrompt(info.PromptEn, info.RealBotType ?? info.BotType);
 
-                        // 验证
-                        info.PromptEn = CheckBanned(info.PromptEn);
+                        // 验证（违规词测试任务跳过本地词库检查）
+                        info.PromptEn = isBannedWordTest ? info.PromptEn : CheckBanned(info.PromptEn);
                     }
                     catch (BannedPromptException ex)
                     {
