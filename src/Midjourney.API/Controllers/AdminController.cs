@@ -35,6 +35,7 @@ using LiteDB;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
+using Midjourney.API.Models;
 using Midjourney.Base.Options;
 using Midjourney.License;
 using MongoDB.Driver;
@@ -956,6 +957,313 @@ namespace Midjourney.API.Controllers
             }
 
             return Result.Ok();
+        }
+
+        /// <summary>
+        /// 预览悠船账号 Excel 导入。
+        /// 只解析文件并标记新增/更新/无效，不写数据库；前端确认后再调用导入接口。
+        /// </summary>
+        /// <param name="file">悠船账号 Excel 文件，最大 20MB</param>
+        /// <returns>按 Excel 行号返回的预览结果</returns>
+        /// <exception cref="LogicException">文件为空、格式不认识或超过行数限制时抛出</exception>
+        [HttpPost("account-import/youchuan/preview")]
+        [Consumes("multipart/form-data")]
+        [RequestSizeLimit(YouChuanImportLimits.MaxFileBytes)]
+        public Result<YouChuanImportPreviewResult> PreviewYouChuanAccountImport([FromForm] IFormFile file)
+        {
+            if (_isAnonymous)
+            {
+                return Result.Fail<YouChuanImportPreviewResult>("演示模式，禁止操作");
+            }
+
+            if (file == null || file.Length == 0)
+            {
+                throw new LogicException("请选择要导入的 Excel 文件");
+            }
+
+            if (file.Length > YouChuanImportLimits.MaxFileBytes)
+            {
+                throw new LogicException("文件不能超过 20MB");
+            }
+
+            List<YouChuanImportRow> rows;
+            using (var stream = file.OpenReadStream())
+            {
+                rows = YouChuanAccountExcelParser.Parse(stream);
+            }
+
+            // 重复账号按规范化虚拟号匹配；只匹配悠船账号，不影响同名的 Discord/官方账号。
+            var existingMap = GetYouChuanAccountMap();
+
+            foreach (var row in rows)
+            {
+                if (row.Status == YouChuanImportRow.StatusInvalid)
+                {
+                    continue;
+                }
+
+                if (existingMap.TryGetValue(row.LoginAccount, out var account))
+                {
+                    row.Status = YouChuanImportRow.StatusUpdate;
+                    row.ExistingAccountId = account.Id;
+                }
+                else
+                {
+                    row.Status = YouChuanImportRow.StatusAdd;
+                }
+            }
+
+            return Result.Ok(new YouChuanImportPreviewResult
+            {
+                FileName = file.FileName,
+                Rows = rows
+            });
+        }
+
+        /// <summary>
+        /// 导入悠船账号。已存在的账号（按规范化虚拟号匹配）会更新，不存在的账号会新增并启用。
+        /// </summary>
+        /// <remarks>
+        /// 采用逐行处理，允许部分成功：单行失败只计入 <see cref="YouChuanImportResult.Failed"/> 和错误列表，不回滚已成功的行。
+        /// 更新时同步修改数据库与运行中实例的凭证/池参数，但不强制重连，避免中断正在执行的任务。
+        /// </remarks>
+        /// <param name="request">用户在预览中勾选的行和账号池参数</param>
+        /// <returns>新增、更新、失败计数及失败原因</returns>
+        /// <exception cref="LogicException">没有可导入行或超过行数限制时抛出</exception>
+        [HttpPost("account-import/youchuan")]
+        public Result<YouChuanImportResult> ImportYouChuanAccounts([FromBody] YouChuanImportRequest request)
+        {
+            if (_isAnonymous)
+            {
+                return Result.Fail<YouChuanImportResult>("演示模式，禁止操作");
+            }
+
+            if (request?.Rows == null || request.Rows.Count == 0)
+            {
+                throw new LogicException("请选择要导入的账号");
+            }
+
+            if (request.Rows.Count > YouChuanImportLimits.MaxRows)
+            {
+                throw new LogicException($"单次最多支持导入 {YouChuanImportLimits.MaxRows} 行数据");
+            }
+
+            var options = NormalizeImportOptions(request.Options);
+            var result = new YouChuanImportResult();
+            var existingMap = GetYouChuanAccountMap();
+            var createdAccounts = new List<DiscordAccount>();
+
+            foreach (var row in request.Rows)
+            {
+                if (row == null)
+                {
+                    result.Failed++;
+                    result.Errors.Add("存在空的导入行");
+                    continue;
+                }
+
+                var phone = YouChuanAccountExcelParser.NormalizePhone(row.LoginAccount);
+                var password = YouChuanAccountExcelParser.NormalizePassword(row.LoginPassword);
+
+                if (string.IsNullOrWhiteSpace(phone) || phone.Length < 5 || string.IsNullOrWhiteSpace(password))
+                {
+                    result.Failed++;
+                    result.Errors.Add($"第 {row.RowNumber} 行：虚拟号或虚拟 SmsCode 为空");
+                    continue;
+                }
+
+                try
+                {
+                    var planRemark = BuildPlanRemark(row);
+
+                    // 命中重复账号：只更新导入相关字段，保留 Enable、ChannelId、UserToken 等运行态字段。
+                    if (existingMap.TryGetValue(phone, out var existing))
+                    {
+                        // 使用 Set 定向更新，避免把运行中变化的剩余时长、状态等统计字段覆盖回旧值。
+                        var update = _freeSql.Update<DiscordAccount>()
+                            .Set(c => c.LoginAccount, phone)
+                            .Set(c => c.LoginPassword, password)
+                            .Set(c => c.CoreSize, options.CoreSize)
+                            .Set(c => c.QueueSize, options.QueueSize)
+                            .Set(c => c.RelaxCoreSize, options.RelaxCoreSize)
+                            .Set(c => c.RelaxQueueSize, options.RelaxQueueSize)
+                            .Set(c => c.Weight, options.Weight)
+                            .Set(c => c.IsBlend, options.IsBlend)
+                            .Set(c => c.IsDescribe, options.IsDescribe)
+                            .Set(c => c.DayDrawLimit, options.DayDrawLimit)
+                            .Set(c => c.DayRelaxDrawLimit, options.DayRelaxDrawLimit)
+                            .Set(c => c.TimeoutMinutes, options.TimeoutMinutes);
+
+                        if (!string.IsNullOrWhiteSpace(planRemark) && string.IsNullOrWhiteSpace(existing.Remark))
+                        {
+                            update = update.Set(c => c.Remark, planRemark);
+                        }
+
+                        update.Where(c => c.Id == existing.Id).ExecuteAffrows();
+
+                        existing.LoginAccount = phone;
+                        existing.LoginPassword = password;
+                        existing.Remark ??= planRemark;
+                        existing.ClearCache();
+
+                        // 正在运行的账号同步更新内存中的登录凭证和账号池参数，不强制重连，避免中断正在执行的任务。
+                        // 注意：RedisQueue 的容量等硬限制在下次启动/重连后才完全生效。
+                        var instance = _accountService.GetDiscordInstance(existing.ChannelId);
+                        if (instance != null)
+                        {
+                            ApplyImportOptions(instance.Account, phone, password, options);
+                        }
+
+                        result.Updated++;
+                    }
+                    else
+                    {
+                        // 新账号默认启用；纯数字 SmsCode 会在首次登录时按悠船短信验证码流程处理。
+                        var account = DiscordAccount.Create(new DiscordAccountConfig
+                        {
+                            IsYouChuan = true,
+                            Enable = true,
+                            EnableMj = true,
+                            EnableNiji = true,
+                            IsShorten = false,
+                            LoginAccount = phone,
+                            LoginPassword = password,
+                            CoreSize = options.CoreSize,
+                            QueueSize = options.QueueSize,
+                            RelaxCoreSize = options.RelaxCoreSize,
+                            RelaxQueueSize = options.RelaxQueueSize,
+                            Weight = options.Weight,
+                            IsBlend = options.IsBlend,
+                            IsDescribe = options.IsDescribe,
+                            DayDrawLimit = options.DayDrawLimit,
+                            DayRelaxDrawLimit = options.DayRelaxDrawLimit,
+                            TimeoutMinutes = options.TimeoutMinutes,
+                            Remark = planRemark,
+                        });
+
+                        account.ChannelId = Guid.NewGuid().ToString("N").Substring(0, 16);
+                        account.GuildId = Guid.NewGuid().ToString("N").Substring(0, 16);
+
+                        _freeSql.Add(account);
+
+                        existingMap[phone] = account;
+                        createdAccounts.Add(account);
+
+                        result.Created++;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // 单行失败不影响其他行；错误信息只包含行号和异常消息，不输出 SmsCode/密码。
+                    result.Failed++;
+                    result.Errors.Add($"第 {row.RowNumber} 行：{ex.Message}");
+
+                    Log.Warning(ex, "导入悠船账号失败，行：{0}", row.RowNumber);
+                }
+            }
+
+            if (createdAccounts.Count > 0)
+            {
+                // 后台顺序启动新账号，避免并发登录触发悠船风控；启动失败由 StartAccount 内部禁用并记录。
+                _ = Task.Run(async () =>
+                {
+                    foreach (var account in createdAccounts)
+                    {
+                        try
+                        {
+                            await _discordAccountInitializer.StartAccount(account);
+                        }
+                        catch (Exception ex)
+                        {
+                            Log.Warning(ex, "启动导入的悠船账号失败，账号：{0}", account.Id);
+                        }
+                    }
+                });
+            }
+
+            Log.Information("悠船账号导入完成，新增：{0}，更新：{1}，失败：{2}", result.Created, result.Updated, result.Failed);
+
+            return Result.Ok(result);
+        }
+
+        /// <summary>
+        /// 获取现有悠船账号的虚拟号索引。
+        /// 键为规范化后的虚拟号；同一虚拟号存在多条历史数据时只取第一条用于更新，避免误更新其他账号。
+        /// </summary>
+        private Dictionary<string, DiscordAccount> GetYouChuanAccountMap()
+        {
+            var accounts = _freeSql.Select<DiscordAccount>()
+                .Where(c => c.IsYouChuan)
+                .ToList();
+
+            return accounts
+                .Select(c => new
+                {
+                    Account = c,
+                    Phone = YouChuanAccountExcelParser.NormalizePhone(c.LoginAccount)
+                })
+                .Where(c => !string.IsNullOrWhiteSpace(c.Phone))
+                .GroupBy(c => c.Phone)
+                .ToDictionary(c => c.Key, c => c.First().Account);
+        }
+
+        /// <summary>
+        /// 收敛导入参数到账号池允许范围，防止前端传入越界值。
+        /// 上限与账号编辑表单保持一致：快速并发 12、队列 100、慢速并发 12、慢速队列 100。
+        /// </summary>
+        private static YouChuanImportOptions NormalizeImportOptions(YouChuanImportOptions options)
+        {
+            options ??= new YouChuanImportOptions();
+
+            options.CoreSize = Math.Clamp(options.CoreSize, 1, 12);
+            options.QueueSize = Math.Clamp(options.QueueSize, 1, 100);
+            options.RelaxCoreSize = Math.Clamp(options.RelaxCoreSize, 1, 12);
+            options.RelaxQueueSize = Math.Clamp(options.RelaxQueueSize, 1, 100);
+            options.Weight = Math.Max(options.Weight, 1);
+            options.DayDrawLimit = Math.Max(options.DayDrawLimit, -1);
+            options.DayRelaxDrawLimit = Math.Max(options.DayRelaxDrawLimit, -1);
+            options.TimeoutMinutes = Math.Clamp(options.TimeoutMinutes, 1, 1440);
+
+            return options;
+        }
+
+        /// <summary>
+        /// 把 Excel 的套餐名称/周期写入账号备注。
+        /// 账号模型没有独立的套餐字段，备注只在新账号或原备注为空时写入，避免覆盖用户手工备注。
+        /// </summary>
+        private static string BuildPlanRemark(YouChuanImportRow row)
+        {
+            var parts = new[] { row.PlanName?.Trim(), row.PlanCycle?.Trim() }
+                .Where(c => !string.IsNullOrWhiteSpace(c))
+                .ToList();
+
+            return parts.Count == 0 ? null : string.Join(" ", parts);
+        }
+
+        /// <summary>
+        /// 把导入参数同步到正在运行的账号实例，使新凭证和并发/队列参数尽量立即生效。
+        /// 不在这里重连；队列容量等状态在下次账号启动/重连后完全生效。
+        /// </summary>
+        private static void ApplyImportOptions(DiscordAccount account, string phone, string password, YouChuanImportOptions options)
+        {
+            if (account == null)
+            {
+                return;
+            }
+
+            account.LoginAccount = phone;
+            account.LoginPassword = password;
+            account.CoreSize = options.CoreSize;
+            account.QueueSize = options.QueueSize;
+            account.RelaxCoreSize = options.RelaxCoreSize;
+            account.RelaxQueueSize = options.RelaxQueueSize;
+            account.Weight = options.Weight;
+            account.IsBlend = options.IsBlend;
+            account.IsDescribe = options.IsDescribe;
+            account.DayDrawLimit = options.DayDrawLimit;
+            account.DayRelaxDrawLimit = options.DayRelaxDrawLimit;
+            account.TimeoutMinutes = options.TimeoutMinutes;
+            account.ClearCache();
         }
 
         /// <summary>

@@ -32,6 +32,10 @@ namespace Midjourney.API
     {
         private readonly IMemoryCache _memberCache;
         private readonly string _ip;
+
+        /// <summary>
+        /// 请求携带的认证令牌，按请求头优先级取第一个非空值
+        /// </summary>
         private readonly string _token;
 
         public WorkContext(IHttpContextAccessor contextAccessor, IMemoryCache memoryCache)
@@ -43,10 +47,61 @@ namespace Midjourney.API
             {
                 _ip = request.GetIP();
 
-                var hasAuthHeader = request.Headers.TryGetValue("Authorization", out var authHeader);
-                var hasApiSecretHeader = request.Headers.TryGetValue("Mj-Api-Secret", out var apiSecretHeader);
-                _token = hasAuthHeader ? authHeader.ToString() : apiSecretHeader.ToString();
+                // 兼容 OpenAI、Midjourney、Claude、Azure 等客户端的认证头。
+                // 按优先级取第一个非空值；头名不区分大小写，Bearer 前缀会自动去掉。
+                _token = GetFirstToken(request, "Authorization")
+                    ?? GetFirstToken(request, "mj-api-secret")
+                    ?? GetFirstToken(request, "x-api-key")
+                    ?? GetFirstToken(request, "api-key");
             }
+        }
+
+        /// <summary>
+        /// 读取指定请求头的第一个非空令牌值
+        /// </summary>
+        /// <param name="request">当前请求</param>
+        /// <param name="headerName">请求头名称</param>
+        /// <returns>去除 Bearer 前缀后的令牌；没有非空值时返回 null</returns>
+        private static string GetFirstToken(HttpRequest request, string headerName)
+        {
+            if (!request.Headers.TryGetValue(headerName, out var values))
+            {
+                return null;
+            }
+
+            foreach (var value in values)
+            {
+                var token = NormalizeToken(value);
+                if (!string.IsNullOrWhiteSpace(token))
+                {
+                    return token;
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// 去除令牌首尾空白和 Bearer 前缀
+        /// </summary>
+        /// <param name="value">请求头原始值</param>
+        /// <returns>规范化后的令牌；原始值为空时返回 null</returns>
+        private static string NormalizeToken(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return null;
+            }
+
+            value = value.Trim();
+
+            const string bearerPrefix = "Bearer ";
+            if (value.StartsWith(bearerPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                value = value[bearerPrefix.Length..].Trim();
+            }
+
+            return value;
         }
 
         public string GetToken()
