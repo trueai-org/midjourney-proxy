@@ -66,6 +66,7 @@ For drawing requests, contact group admins. Everyone in the group is highly skil
 - [x] Supports client path specification, with default URLs like https://{BASE_URL}/mj/submit/imagine, /mj-turbo/mj for turbo mode, /mj-relax/mj for relax mode, /mj-fast/mj for fast mode, /mj without mode specification
 - [x] CloudFlare manual human verification, auto-lock account upon trigger, verify via GUI or email notification
 - [x] CloudFlare automatic human verification, configurable verification server address (auto-verifier only supports Windows deployment)
+- [x] Auto-acknowledge Midjourney "Pending mod message" (clicks Acknowledge); when the message carries a temporary block (e.g. "blocked for 1 hour") the account is disabled and re-enabled automatically once the block expires
 - [x] Work schedule configuration; 24/7 drawing may trigger warnings. Recommended rest: 8–10 hours, e.g., `09:10-23:55, 13:00-08:10`
 - [x] Built-in IP rate limiting, IP range limiting, blacklists, whitelists, automatic blacklisting
 - [x] Daily drawing limit, after which new tasks aren’t accepted but modifications and redrawing are still allowed

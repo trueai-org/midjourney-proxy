@@ -117,6 +117,11 @@ namespace Midjourney.Services
         private readonly DiscordService _discordInstance;
 
         /// <summary>
+        /// 最近一次处理审核消息（Pending mod message）的时间，用于忽略确认后的重复 UPDATE 事件
+        /// </summary>
+        private DateTime? _lastModMessageHandled;
+
+        /// <summary>
         /// 表示是否已释放资源
         /// </summary>
         private bool _isDispose = false;
@@ -1592,15 +1597,12 @@ namespace Midjourney.Services
                                         return;
                                     }
                                     // 临时禁止/订阅取消/订阅过期/订阅暂停
-                                    else if (title == "Pending mod message"
+                                    else if (title == MjModerationHelper.PENDING_MOD_MESSAGE_TITLE
                                         || title == "Blocked"
                                         || title == "Plan Cancelled"
                                         || title == "Subscription required"
                                         || title == "Subscription paused")
                                     {
-                                        // 你的处理逻辑
-                                        _logger.Warning($"账号 {Account.GetDisplay()} {title}, 自动禁用账号");
-
                                         var task = _discordInstance.FindRunningTask(c => c.MessageId == id).FirstOrDefault();
                                         if (task == null && !string.IsNullOrWhiteSpace(metaId))
                                         {
@@ -1612,6 +1614,39 @@ namespace Midjourney.Services
                                             task.Fail(title);
                                         }
 
+                                        // 审核消息：MJ 要求先点击 Acknowledge 确认后才能继续使用，这里自动确认
+                                        // 如果消息中带有临时封禁时长（blocked ... for 1 hour），则禁用账号并记录解封时间，到期后由例行检查自动恢复
+                                        DateTime? riskControlUnlockTime = null;
+                                        if (title == MjModerationHelper.PENDING_MOD_MESSAGE_TITLE)
+                                        {
+                                            // 点击 Acknowledge 后 Discord 会推送同一条消息的 UPDATE（按钮已移除），避免重复处理
+                                            if (messageType != MessageType.CREATE
+                                                && _lastModMessageHandled != null
+                                                && (DateTime.Now - _lastModMessageHandled.Value).TotalMinutes < 5)
+                                            {
+                                                _logger.Information("审核消息已处理，忽略 {@0} 事件 {@1}", messageType, Account.ChannelId);
+                                                return;
+                                            }
+                                            _lastModMessageHandled = DateTime.Now;
+
+                                            var acknowledged = TryAcknowledgeModMessage(data, id, task);
+
+                                            var blockDuration = MjModerationHelper.TryParseBlockDuration(desc);
+                                            if (blockDuration != null)
+                                            {
+                                                // 多等 1 分钟，避免解封边界重试再次触发
+                                                riskControlUnlockTime = DateTime.Now.Add(blockDuration.Value).AddMinutes(1);
+                                            }
+                                            else if (acknowledged)
+                                            {
+                                                // 仅需确认、无临时封禁，确认后账号可继续使用
+                                                _logger.Warning("账号 {@0} {@1} 已自动确认，无临时封禁，账号继续使用", Account.GetDisplay(), title);
+                                                return;
+                                            }
+                                        }
+
+                                        _logger.Warning($"账号 {Account.GetDisplay()} {title}, 自动禁用账号, 解封时间: {riskControlUnlockTime}");
+
                                         // 5s 后禁用账号
                                         _ = Task.Run(() =>
                                         {
@@ -1621,7 +1656,10 @@ namespace Midjourney.Services
 
                                                 // 保存
                                                 Account.Enable = false;
-                                                Account.DisabledReason = $"{title}, {desc}";
+                                                Account.DisabledReason = riskControlUnlockTime != null
+                                                    ? $"{title}, {desc}, 自动解封时间: {riskControlUnlockTime:yyyy-MM-dd HH:mm:ss}"
+                                                    : $"{title}, {desc}";
+                                                Account.RiskControlUnlockTime = riskControlUnlockTime;
                                                 _freeSql.Update(Account);
                                                 Account.ClearCache();
 
@@ -4228,6 +4266,46 @@ namespace Midjourney.Services
             {
                 Log.Error(ex, "检查视频扩展时发生异常: UpscaleTaskId={UpscaleTaskId}", upscaleTask.Id);
             }
+        }
+
+        /// <summary>
+        /// 自动确认 MJ 审核消息（Pending mod message），点击消息中的 Acknowledge 按钮
+        /// </summary>
+        /// <param name="data">MESSAGE_CREATE 消息体</param>
+        /// <param name="messageId">消息 ID</param>
+        /// <param name="task">关联任务（可为空，例如用户在 Discord 手动触发）</param>
+        /// <returns>是否确认成功</returns>
+        private bool TryAcknowledgeModMessage(JsonElement data, string messageId, TaskInfo task)
+        {
+            try
+            {
+                var eventData = data.Deserialize<EventData>();
+                var customId = MjModerationHelper.FindButtonCustomId(eventData?.Components, MjModerationHelper.ACKNOWLEDGE_LABEL);
+                if (string.IsNullOrWhiteSpace(customId) || string.IsNullOrWhiteSpace(messageId))
+                {
+                    _logger.Warning("审核消息未找到 {@0} 按钮，无法自动确认 {@1}", MjModerationHelper.ACKNOWLEDGE_LABEL, Account.ChannelId);
+                    return false;
+                }
+
+                // 没有关联任务时（例如用户在 Discord 手动绘图触发），按 MJ 机器人处理
+                var info = task ?? new TaskInfo { BotType = EBotType.MID_JOURNEY };
+                var nonce = SnowFlake.NextId();
+                var res = _discordInstance.ActionAsync(messageId, customId, eventData.Flags, nonce, info)
+                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                if (res?.Code == ReturnCode.SUCCESS)
+                {
+                    _logger.Information("审核消息自动确认成功 {@0}, {@1}", Account.ChannelId, customId);
+                    return true;
+                }
+
+                _logger.Warning("审核消息自动确认失败 {@0}, {@1}", Account.ChannelId, res);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "审核消息自动确认异常 {@0}", Account.ChannelId);
+            }
+
+            return false;
         }
     }
 
