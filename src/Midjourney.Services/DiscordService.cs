@@ -3078,9 +3078,9 @@ namespace Midjourney.Services
         }
 
         /// <summary>
-        /// 准备阶段 URL 抓取：统一限流、超时和最大文件大小。
+        /// 准备/提示词转换阶段 URL 抓取：统一限流、超时和最大文件大小。
         /// </summary>
-        private static async Task<FetchFileResult> FetchPrepareFileAsync(string url, CancellationToken cancellationToken)
+        private static async Task<FetchFileResult> FetchPrepareFileAsync(string url, CancellationToken cancellationToken, TimeSpan? timeout = null)
         {
             await ImaginePrepareLimits.Network.WaitAsync(cancellationToken);
             try
@@ -3088,7 +3088,7 @@ namespace Midjourney.Services
                 return await MjImageFetchHelper.FetchFileAsync(
                     url,
                     convertToWebp: false,
-                    timeout: ImaginePrepareLimits.UrlFetchTimeout,
+                    timeout: timeout ?? ImaginePrepareLimits.UrlFetchTimeout,
                     cancellationToken: cancellationToken,
                     maxBytes: ImaginePrepareLimits.UrlMaxBytes,
                     detectFileName: false);
@@ -3125,6 +3125,38 @@ namespace Midjourney.Services
             try
             {
                 return await UploadStagedImagineInputAsync(info, dataUrl, fileName);
+            }
+            finally
+            {
+                ImaginePrepareLimits.Network.Release();
+            }
+        }
+
+        /// <summary>
+        /// 提示词链接转换为悠船链接：上传走网络限流。
+        /// </summary>
+        private async Task<string> UploadYouChuanPromptImageWithLimitAsync(TaskInfo info, DataUrl dataUrl, string fileName, CancellationToken cancellationToken)
+        {
+            await ImaginePrepareLimits.Network.WaitAsync(cancellationToken);
+            try
+            {
+                return await _ymTaskService.UploadFile(info, dataUrl.Data, fileName);
+            }
+            finally
+            {
+                ImaginePrepareLimits.Network.Release();
+            }
+        }
+
+        /// <summary>
+        /// 提示词链接转换为云存储链接：上传走网络限流。
+        /// </summary>
+        private async Task<string> UploadPromptImageToStorageWithLimitAsync(DataUrl dataUrl, string fileName, CancellationToken cancellationToken)
+        {
+            await ImaginePrepareLimits.Network.WaitAsync(cancellationToken);
+            try
+            {
+                return await UploadToStorageAsync(fileName, dataUrl.MimeType, dataUrl.Data);
             }
             finally
             {
@@ -3876,29 +3908,27 @@ namespace Midjourney.Services
                         // 转为悠船官方链接，缓存默认 24 小时
                         var ycOkUrl = await AdaptiveCache.GetOrCreateAsync($"fetchimg:yc_{url}{webpCacheKey}", async () =>
                         {
-                            var res = await MjImageFetchHelper.FetchFileAsync(
-                                url,
-                                convertToWebp: true,
-                                timeout: fetchTimeout,
-                                cancellationToken: cancellationToken,
-                                maxBytes: ImaginePrepareLimits.UrlMaxBytes);
+                            var res = await FetchPrepareFileAsync(url, cancellationToken, fetchTimeout);
                             cancellationToken.ThrowIfCancellationRequested();
+
                             if (res.Success && !string.IsNullOrWhiteSpace(res.Url))
                             {
                                 return res.Url;
                             }
-                            else if (res.Success && res.FileBytes.Length > 0)
+
+                            if (res.Success && res.FileBytes?.Length > 0)
                             {
-                                var resUrl = await _ymTaskService.UploadFile(info, res.FileBytes, res.FileName);
-                                if (!string.IsNullOrWhiteSpace(resUrl))
-                                {
-                                    return resUrl;
-                                }
-                                else
+                                var dataUrl = new DataUrl(res.ContentType, res.FileBytes);
+                                var fileName = await PrepareImageFileAsync(dataUrl, setting, cancellationToken);
+                                var resUrl = await UploadYouChuanPromptImageWithLimitAsync(info, dataUrl, fileName, cancellationToken);
+                                if (string.IsNullOrWhiteSpace(resUrl))
                                 {
                                     throw new LogicException(ReturnCode.FAILURE, "悠船链接转换失败");
                                 }
+
+                                return resUrl;
                             }
+
                             throw new LogicException($"解析链接失败: {res?.Msg}");
                         }, TimeSpan.FromDays(1));
 
@@ -3959,52 +3989,25 @@ namespace Midjourney.Services
                     // 转为云存储链接，缓存默认 24 小时
                     var okUrl = await AdaptiveCache.GetOrCreateAsync($"fetchimg:{url}{webpCacheKey}", async () =>
                     {
-                        var res = await MjImageFetchHelper.FetchFileAsync(
-                            url,
-                            convertToWebp: true,
-                            timeout: fetchTimeout,
-                            cancellationToken: cancellationToken,
-                            maxBytes: ImaginePrepareLimits.UrlMaxBytes);
+                        var res = await FetchPrepareFileAsync(url, cancellationToken, fetchTimeout);
                         cancellationToken.ThrowIfCancellationRequested();
+
                         if (res.Success && !string.IsNullOrWhiteSpace(res.Url))
                         {
                             return res.Url;
                         }
-                        else if (res.Success && res.FileBytes.Length > 0)
+
+                        if (res.Success && res.FileBytes?.Length > 0)
                         {
-                            var resUrl = await UploadToStorageAsync(res.FileName, res.ContentType, res.FileBytes);
-                            if (!string.IsNullOrWhiteSpace(resUrl))
-                            {
-                                return resUrl;
-                            }
-                            else
+                            var dataUrl = new DataUrl(res.ContentType, res.FileBytes);
+                            var fileName = await PrepareImageFileAsync(dataUrl, setting, cancellationToken);
+                            var resUrl = await UploadPromptImageToStorageWithLimitAsync(dataUrl, fileName, cancellationToken);
+                            if (string.IsNullOrWhiteSpace(resUrl))
                             {
                                 throw new LogicException(ReturnCode.FAILURE, "链接转换失败");
                             }
 
-                            // 已废弃
-                            //// 上传到 Discord 服务器
-                            //var uploadResult = await UploadAsync(res.FileName, new DataUrl(res.ContentType, res.FileBytes));
-                            //if (uploadResult.Code != ReturnCode.SUCCESS)
-                            //{
-                            //    throw new LogicException(uploadResult.Code, uploadResult.Description);
-                            //}
-
-                            //if (uploadResult.Description.StartsWith("http"))
-                            //{
-                            //    return uploadResult.Description;
-                            //}
-                            //else
-                            //{
-                            //    var finalFileName = uploadResult.Description;
-                            //    var sendImageResult = await SendImageMessageAsync("upload image: " + finalFileName, finalFileName);
-                            //    if (sendImageResult.Code != ReturnCode.SUCCESS)
-                            //    {
-                            //        throw new LogicException(sendImageResult.Code, sendImageResult.Description);
-                            //    }
-
-                            //    return sendImageResult.Description;
-                            //}
+                            return resUrl;
                         }
 
                         throw new LogicException($"解析链接失败: {res?.Msg}");

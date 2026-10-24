@@ -5,24 +5,29 @@ namespace Midjourney.Tests
     public class ImaginePrepareLimitsTests
     {
         [Theory]
-        [InlineData(1, null, 2)]
-        [InlineData(2, null, 4)]
-        [InlineData(8, null, 16)]
+        [InlineData(1, null, 4)]
+        [InlineData(2, null, 6)]
+        [InlineData(3, null, 8)]
+        [InlineData(8, null, 18)]
+        [InlineData(15, null, 32)]
         [InlineData(16, null, 32)]
         [InlineData(64, null, 32)]
-        public void ResolveConcurrency_DefaultIsTwoPerCoreCappedAtThirtyTwo(int processorCount, string configured, int expected)
+        public void ResolveConcurrency_StartsAtFourAndAddsTwoPerAdditionalCoreCappedAtThirtyTwo(int processorCount, string configured, int expected)
         {
             Assert.Equal(expected, ImaginePrepareLimits.ResolveConcurrency(processorCount, configured));
         }
 
         [Theory]
+        [InlineData("1", 4)]
+        [InlineData("2", 4)]
+        [InlineData("4", 4)]
         [InlineData("6", 6)]
         [InlineData("32", 32)]
         [InlineData("100", 32)]
-        [InlineData("0", 8)]
-        [InlineData("-1", 8)]
-        [InlineData("abc", 8)]
-        [InlineData("", 8)]
+        [InlineData("0", 10)]
+        [InlineData("-1", 10)]
+        [InlineData("abc", 10)]
+        [InlineData("", 10)]
         public void ResolveConcurrency_UsesConfiguredValueWithinBounds(string configured, int expected)
         {
             Assert.Equal(expected, ImaginePrepareLimits.ResolveConcurrency(4, configured));

@@ -5,15 +5,20 @@ namespace Midjourney.Base.Models
 {
     /// <summary>
     /// 异步垫图准备阶段的统一限流与资源上限。
-    /// 网络 I/O 与 CPU 转换分开限流，默认每核心 2 个，最大 32 个。
+    /// 网络 I/O 与 CPU 转换分开限流，最小 4 个，每增加 1 个核心 +2，最大 32 个。
     /// 可通过环境变量 MJ_IMAGINE_PREPARE_CONCURRENCY 覆盖并发数。
     /// </summary>
     public static class ImaginePrepareLimits
     {
         /// <summary>
-        /// 每个核心的默认并发数
+        /// 每增加 1 个核心的并发增量
         /// </summary>
         public const int DefaultPerCore = 2;
+
+        /// <summary>
+        /// 并发数下限
+        /// </summary>
+        public const int MinConcurrency = 4;
 
         /// <summary>
         /// 并发数上限
@@ -53,16 +58,18 @@ namespace Midjourney.Base.Models
         public static SemaphoreSlim Cpu { get; } = new(Concurrency, Concurrency);
 
         /// <summary>
-        /// 计算准备阶段并发数：默认每核心 2 个，最多 32 个；环境变量可覆盖。
+        /// 计算准备阶段并发数：最小 4 个，每增加 1 个核心 +2，最多 32 个；环境变量可覆盖。
         /// </summary>
         public static int ResolveConcurrency(int processorCount, string configured)
         {
             if (int.TryParse(configured, out var value) && value > 0)
             {
-                return Math.Min(value, MaxConcurrency);
+                return Math.Clamp(value, MinConcurrency, MaxConcurrency);
             }
 
-            return Math.Clamp(Math.Max(1, processorCount) * DefaultPerCore, 1, MaxConcurrency);
+            var cores = Math.Max(1, processorCount);
+            var concurrency = MinConcurrency + (cores - 1) * DefaultPerCore;
+            return Math.Clamp(concurrency, MinConcurrency, MaxConcurrency);
         }
     }
 }
