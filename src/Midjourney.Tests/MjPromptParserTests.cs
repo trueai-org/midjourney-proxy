@@ -712,7 +712,9 @@ namespace Midjourney.Tests
 
             // Assert
             Assert.Equal("cute cat", parseResult.CleanPrompt);
-            Assert.Null(parseResult.GetVersion()); // 版本参数应该被移除
+            Assert.Equal("cute cat --ar 16:9 --s 500", cleanedPrompt);
+            Assert.Equal(MjParseResult.DEFALUT_MJ_VERSION, parseResult.GetVersion()); // 未显式指定版本时返回默认版本
+            Assert.DoesNotContain("--v", cleanedPrompt);
             Assert.Equal("16:9", parseResult.GetAspectRatio()); // 其他参数应该保留
             Assert.Equal(500, parseResult.GetStylize());
         }

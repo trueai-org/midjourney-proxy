@@ -92,6 +92,19 @@ namespace Midjourney.Base.Util
         }
 
         /// <summary>
+        /// 只要有 query 参数就先 HEAD 探测 Content-Type（5 秒超时）；失败后返回 null，由调用方继续按 URL 后缀判断。
+        /// </summary>
+        private static async Task<string> GuessSuffixFromQueryAsync(Uri uri)
+        {
+            var headSw = Stopwatch.StartNew();
+            var contentType = await MjImageFetchHelper.GetContentTypeAsync(uri.AbsoluteUri);
+            Log.Debug("GuessFileSuffix URL 含查询参数，HEAD 探测: Host={Host}, Path={Path}, ContentType={ContentType}, Elapsed={Elapsed}ms",
+                uri.Host, uri.GetLeftPart(UriPartial.Path), contentType, headSw.ElapsedMilliseconds);
+
+            return GuessFileSuffixOrNull(contentType);
+        }
+
+        /// <summary>
         /// 猜测文件后缀并处理图片，如果处理失败则最终返回 .jpg
         /// </summary>
         /// <param name="dataUrl"></param>
@@ -210,8 +223,20 @@ namespace Midjourney.Base.Util
             {
                 var uri = new Uri(url);
 
-                // 先看 URL 后缀：.webp/.png/.jpg 这类已知后缀不需要 HEAD 请求。
-                // 之前先 HEAD 再判断 URI，CDN 不回 HEAD 时会拖慢整个提交。
+                // 只要有 query 参数，就先 HEAD 探测实际 Content-Type（5 秒超时）；
+                // HEAD 失败后继续按 URL 后缀判断。
+                var headTried = false;
+                if (!string.IsNullOrWhiteSpace(uri.Query))
+                {
+                    headTried = true;
+                    var queryExt = await GuessSuffixFromQueryAsync(uri);
+                    if (!string.IsNullOrWhiteSpace(queryExt))
+                    {
+                        return queryExt;
+                    }
+                }
+
+                // 再按 URL 后缀判断：.webp/.png/.jpg 这类已知后缀不再发 HEAD。
                 if (uri.Segments.Length > 0)
                 {
                     var lastSegment = uri.Segments.Last();
@@ -222,15 +247,18 @@ namespace Midjourney.Base.Util
                     }
                 }
 
-                // 没有已知后缀时才 HEAD 探测 ContentType
-                var headSw = Stopwatch.StartNew();
-                var contentType = await MjImageFetchHelper.GetContentTypeAsync(url);
-                Log.Information("GuessFileSuffix URL 无已知后缀，HEAD 探测: Host={Host}, Path={Path}, ContentType={ContentType}, Elapsed={Elapsed}ms",
-                    uri.Host, uri.GetLeftPart(UriPartial.Path), contentType, headSw.ElapsedMilliseconds);
-                var extFromContentType = GuessFileSuffixOrNull(contentType);
-                if (!string.IsNullOrWhiteSpace(extFromContentType))
+                // 无 query 且无已知后缀时才 HEAD 探测 ContentType
+                if (!headTried)
                 {
-                    return extFromContentType;
+                    var headSw = Stopwatch.StartNew();
+                    var contentType = await MjImageFetchHelper.GetContentTypeAsync(url);
+                    Log.Information("GuessFileSuffix URL 无已知后缀，HEAD 探测: Host={Host}, Path={Path}, ContentType={ContentType}, Elapsed={Elapsed}ms",
+                        uri.Host, uri.GetLeftPart(UriPartial.Path), contentType, headSw.ElapsedMilliseconds);
+                    var extFromContentType = GuessFileSuffixOrNull(contentType);
+                    if (!string.IsNullOrWhiteSpace(extFromContentType))
+                    {
+                        return extFromContentType;
+                    }
                 }
             }
 

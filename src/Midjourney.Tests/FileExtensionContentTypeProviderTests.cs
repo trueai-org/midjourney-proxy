@@ -2,6 +2,9 @@
 using Midjourney.Base;
 using Midjourney.Base.Util;
 using SkiaSharp;
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
 using Xunit.Abstractions;
 
 namespace Midjourney.Tests
@@ -745,9 +748,10 @@ namespace Midjourney.Tests
         [Fact]
         public async Task GuessFileSuffix_UrlWebp2()
         {
+            using var server = new HeadOnlyTcpServer("image/webp");
             var dataUrl = new DataUrl
             {
-                Url = "https://img.aitop3000.com/attachments/2fde8050-b7ea-4327-be45-3dfc738efb40/0_0.png?x-oss-process=style/webp"
+                Url = $"http://127.0.0.1:{server.Port}/0_0.png?x-oss-process=style/webp"
             };
 
             var result = await MjImageHelper.GuessFileSuffix(dataUrl);
@@ -756,33 +760,79 @@ namespace Midjourney.Tests
         }
 
         [Fact]
-        public async Task GuessFileSuffix_UrlPng()
+        public async Task GuessFileSuffix_PngData_ReturnsPng()
         {
-            var res = await MjImageFetchHelper.FetchFileAsync("https://img.aitop3000.com/attachments/2fde8050-b7ea-4327-be45-3dfc738efb40/0_0.png");
+            using var bitmap = new SKBitmap(1, 1);
+            using var image = SKImage.FromBitmap(bitmap);
+            using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+
             var dataUrl = new DataUrl
             {
-                Data = res.FileBytes
+                Data = data.ToArray()
             };
-
-            // 日志记录大小和宽高
-            using var bitmap = SKBitmap.Decode(res.FileBytes);
-
-            _output.WriteLine($"图片尺寸: {bitmap.Width} x {bitmap.Height}");
-            _output.WriteLine($"图片大小: {res.FileBytes.Length / 1024.0:F2} KB");
 
             var result = await MjImageHelper.GuessFileSuffix(dataUrl);
 
             Assert.Equal(".png", result);
+        }
 
-            //// 保存到本地临时目录
-            //var tempPath = Path.Combine(Path.GetTempPath(), $"test_image{result}");
+        [Fact]
+        public async Task GuessFileSuffix_QueryHeadSuccess_UsesHeadContentType()
+        {
+            using var server = new HeadOnlyTcpServer("image/jpeg");
+            var dataUrl = new DataUrl
+            {
+                Url = $"http://127.0.0.1:{server.Port}/0_0.png?x-oss-process=style/webp"
+            };
 
-            //await File.WriteAllBytesAsync(tempPath, dataUrl.Data);
-            //_output.WriteLine($"图片已保存到: {tempPath}");
+            var result = await MjImageHelper.GuessFileSuffix(dataUrl);
 
-            //var newFile = SKBitmap.Decode(dataUrl.Data);
-            //_output.WriteLine($"新图片尺寸: {newFile.Width} x {newFile.Height}");
-            //_output.WriteLine($"新图片大小: {dataUrl.Data.Length / 1024.0:F2} KB");
+            // HEAD 成功时以服务端 Content-Type 为准，而不是 query 转换参数
+            Assert.Equal(".jpg", result);
+        }
+
+        [Fact]
+        public async Task GuessFileSuffix_QueryWithoutTransform_StillUsesHead()
+        {
+            using var server = new HeadOnlyTcpServer("image/webp");
+            var dataUrl = new DataUrl
+            {
+                Url = $"http://127.0.0.1:{server.Port}/0_0.png?token=1"
+            };
+
+            var result = await MjImageHelper.GuessFileSuffix(dataUrl);
+
+            // 任意 query 参数都会先 HEAD 探测
+            Assert.Equal(".webp", result);
+        }
+
+        [Fact]
+        public async Task GuessFileSuffix_QueryHeadFailure_FallsBackToUrlSuffixForOssUrl()
+        {
+            using var server = new HeadOnlyTcpServer("text/plain", 500);
+            var dataUrl = new DataUrl
+            {
+                Url = $"http://127.0.0.1:{server.Port}/0_0.png?x-oss-process=style/webp"
+            };
+
+            var result = await MjImageHelper.GuessFileSuffix(dataUrl);
+
+            // HEAD 失败后不再解析业务转换参数，直接回退 URL 后缀
+            Assert.Equal(".png", result);
+        }
+
+        [Fact]
+        public async Task GuessFileSuffix_QueryHeadFailure_FallsBackToUrlSuffix()
+        {
+            using var server = new HeadOnlyTcpServer("text/plain", 500);
+            var dataUrl = new DataUrl
+            {
+                Url = $"http://127.0.0.1:{server.Port}/0_0.png?token=1"
+            };
+
+            var result = await MjImageHelper.GuessFileSuffix(dataUrl);
+
+            Assert.Equal(".png", result);
         }
 
         [Fact]
@@ -796,6 +846,57 @@ namespace Midjourney.Tests
             var result = await MjImageHelper.GuessFileSuffix(dataUrl);
 
             Assert.Equal(".jpg", result);
+        }
+
+        /// <summary>
+        /// 仅响应一次 HEAD 的本地 TCP 服务，用于稳定验证 Content-Type 探测。
+        /// </summary>
+        private sealed class HeadOnlyTcpServer : IDisposable
+        {
+            private readonly TcpListener _listener;
+            private readonly Task _serverTask;
+
+            public int Port { get; }
+
+            public HeadOnlyTcpServer(string contentType, int statusCode = 200)
+            {
+                _listener = new TcpListener(IPAddress.Loopback, 0);
+                _listener.Start();
+                Port = ((IPEndPoint)_listener.LocalEndpoint).Port;
+
+                _serverTask = Task.Run(async () =>
+                {
+                    try
+                    {
+                        using var client = await _listener.AcceptTcpClientAsync();
+                        using var stream = client.GetStream();
+                        var buffer = new byte[4096];
+                        await stream.ReadAsync(buffer);
+
+                        var reason = statusCode == 200 ? "OK" : "Error";
+                        var response = Encoding.ASCII.GetBytes(
+                            $"HTTP/1.1 {statusCode} {reason}\r\nContent-Type: {contentType}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
+                        await stream.WriteAsync(response);
+                    }
+                    catch
+                    {
+                        // 测试结束或连接取消时忽略
+                    }
+                });
+            }
+
+            public void Dispose()
+            {
+                _listener.Stop();
+                try
+                {
+                    _serverTask.Wait(TimeSpan.FromSeconds(2));
+                }
+                catch
+                {
+                    // ignore
+                }
+            }
         }
     }
 }
