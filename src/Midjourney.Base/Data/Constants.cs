@@ -175,6 +175,26 @@ namespace Midjourney.Base.Data
         /// </summary>
         public const string TASK_PROPERTY_ACTION_INDEX = "action_index";
 
+        /// <summary>
+        /// 异步垫图暂存引用列表（JSON），包含 Key/MimeType/Index/Size
+        /// </summary>
+        public const string TASK_PROPERTY_IMAGINE_INPUTS = "imagineInputs";
+
+        /// <summary>
+        /// 是否需要工作线程准备异步垫图
+        /// </summary>
+        public const string TASK_PROPERTY_IMAGINE_NEED_PREPARE = "imagineNeedPrepare";
+
+        /// <summary>
+        /// 异步垫图是否已经准备完成（上传并写入提示词）
+        /// </summary>
+        public const string TASK_PROPERTY_IMAGINE_PREPARED = "imaginePrepared";
+
+        /// <summary>
+        /// 异步垫图准备完成后的图片链接（JSON）
+        /// </summary>
+        public const string TASK_PROPERTY_IMAGINE_PREPARED_URLS = "imaginePreparedUrls";
+
         // 任务扩展属性 end
 
         /// <summary>

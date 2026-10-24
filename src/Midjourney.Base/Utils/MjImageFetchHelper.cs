@@ -153,7 +153,7 @@ namespace Midjourney.Base.Util
         /// <returns></returns>
         public static Task<FetchFileResult> FetchFileAsync(string url, int retry = 0, bool isWhite = true, bool isRetry = true)
         {
-            return FetchFileAsync(url, retry, isWhite, isRetry, false);
+            return FetchFileAsync(url, retry, isWhite, isRetry, false, null, default);
         }
 
         /// <summary>
@@ -161,10 +161,40 @@ namespace Midjourney.Base.Util
         /// </summary>
         public static Task<FetchFileResult> FetchFileAsync(string url, bool convertToWebp, int retry = 0, bool isWhite = true, bool isRetry = true)
         {
-            return FetchFileAsync(url, retry, isWhite, isRetry, convertToWebp);
+            return FetchFileAsync(url, retry, isWhite, isRetry, convertToWebp, null, default);
         }
 
-        private static async Task<FetchFileResult> FetchFileAsync(string url, int retry, bool isWhite, bool isRetry, bool convertToWebp)
+        /// <summary>
+        /// 异步获取文件，并指定单次请求超时与取消令牌。
+        /// 用于工作线程准备垫图时限制慢 CDN 占用时间。
+        /// </summary>
+        /// <param name="detectFileName">是否探测/生成文件名；准备阶段不需要，可避免额外 HEAD 与 CPU</param>
+        public static Task<FetchFileResult> FetchFileAsync(
+            string url,
+            bool convertToWebp,
+            TimeSpan timeout,
+            CancellationToken cancellationToken = default,
+            int retry = 0,
+            bool isWhite = true,
+            bool isRetry = true,
+            long? maxBytes = null,
+            bool detectFileName = true)
+        {
+            var deadline = timeout > TimeSpan.Zero ? DateTime.UtcNow + timeout : (DateTime?)null;
+            return FetchFileAsync(url, retry, isWhite, isRetry, convertToWebp, timeout, cancellationToken, deadline, maxBytes, detectFileName);
+        }
+
+        private static async Task<FetchFileResult> FetchFileAsync(
+            string url,
+            int retry,
+            bool isWhite,
+            bool isRetry,
+            bool convertToWebp,
+            TimeSpan? timeout,
+            CancellationToken cancellationToken,
+            DateTime? deadline = null,
+            long? maxBytes = null,
+            bool detectFileName = true)
         {
             if (isRetry && retry > 5)
             {
@@ -174,6 +204,23 @@ namespace Midjourney.Base.Util
             if (string.IsNullOrWhiteSpace(url) || !Uri.IsWellFormedUriString(url, UriKind.Absolute))
             {
                 return new FetchFileResult { Success = false, Msg = "Invalid URL" };
+            }
+
+            if (!deadline.HasValue && timeout.HasValue && timeout.Value > TimeSpan.Zero)
+            {
+                deadline = DateTime.UtcNow + timeout.Value;
+            }
+
+            var remaining = deadline.HasValue ? deadline.Value - DateTime.UtcNow : (TimeSpan?)null;
+            if (remaining.HasValue && remaining.Value <= TimeSpan.Zero)
+            {
+                return new FetchFileResult { Success = false, Msg = "Fetch timeout" };
+            }
+
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            if (remaining.HasValue)
+            {
+                cts.CancelAfter(remaining.Value);
             }
 
             try
@@ -188,12 +235,17 @@ namespace Midjourney.Base.Util
                 // 创建独立的请求消息，避免污染共享 HttpClient
                 using var request = new HttpRequestMessage(HttpMethod.Get, url);
 
-                if (MAX_SIZE > 0)
+                var maxSize = maxBytes.GetValueOrDefault(MAX_SIZE);
+                if (maxSize <= 0)
                 {
-                    request.Headers.Range = new RangeHeaderValue(0, MAX_SIZE - 1);
+                    maxSize = MAX_SIZE;
+                }
+                if (maxSize > 0)
+                {
+                    request.Headers.Range = new RangeHeaderValue(0, maxSize - 1);
                 }
 
-                var response = await SharedHttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+                using var response = await SharedHttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cts.Token);
                 if (!response.IsSuccessStatusCode)
                 {
                     if (response.StatusCode == HttpStatusCode.Redirect)
@@ -206,7 +258,9 @@ namespace Midjourney.Base.Util
                             {
                                 if (isRetry)
                                 {
-                                    return await FetchFileAsync(newUrl, ++retry, isWhite, isRetry, convertToWebp);
+                                    // 重定向复用同一截止时间，避免每一跳重新获得完整超时
+                                    response.Dispose();
+                                    return await FetchFileAsync(newUrl, ++retry, isWhite, isRetry, convertToWebp, timeout, cancellationToken, deadline, maxBytes, detectFileName);
                                 }
                             }
                         }
@@ -215,10 +269,32 @@ namespace Midjourney.Base.Util
                     return new FetchFileResult { Success = false, Msg = $"Failed to fetch file. Status: {response.StatusCode}" };
                 }
 
-                var fileBytes = await response.Content.ReadAsByteArrayAsync();
-                if (fileBytes.Length >= MAX_SIZE)
+                // 先根据响应头拒绝超限文件，避免无谓下载；再按块读取兜底服务端忽略 Range 的情况
+                var contentLength = response.Content.Headers.ContentLength;
+                var contentRangeLength = response.Content.Headers.ContentRange?.Length;
+                if ((contentLength.HasValue && contentLength.Value > maxSize)
+                    || (contentRangeLength.HasValue && contentRangeLength.Value > maxSize))
                 {
                     return new FetchFileResult { Success = false, Msg = "File size exceeds limit." };
+                }
+
+                byte[] fileBytes;
+                using (var stream = await response.Content.ReadAsStreamAsync(cts.Token))
+                using (var memory = new MemoryStream())
+                {
+                    var buffer = new byte[81920];
+                    int read;
+                    while ((read = await stream.ReadAsync(buffer.AsMemory(0, buffer.Length), cts.Token)) > 0)
+                    {
+                        if (memory.Length + read > maxSize)
+                        {
+                            return new FetchFileResult { Success = false, Msg = "File size exceeds limit." };
+                        }
+
+                        memory.Write(buffer, 0, read);
+                    }
+
+                    fileBytes = memory.ToArray();
                 }
 
                 var contentType = response.Content.Headers.ContentType?.MediaType;
@@ -228,7 +304,7 @@ namespace Midjourney.Base.Util
                     MimeType = contentType,
                     Data = fileBytes
                 };
-                var ext = await MjImageHelper.GuessFileSuffix(dataUrl);
+                var ext = detectFileName ? await MjImageHelper.GuessFileSuffix(dataUrl) : null;
 
                 // 提示词/垫图图片按配置转换为 WebP
                 if (convertToWebp && PromptImageWebpConverter.TryConvertToWebP(dataUrl))
@@ -237,7 +313,7 @@ namespace Midjourney.Base.Util
                     contentType = dataUrl.MimeType;
                 }
 
-                var fileName = $"{Guid.NewGuid()}{ext}";
+                var fileName = detectFileName ? $"{Guid.NewGuid()}{ext ?? ".jpg"}" : null;
 
                 // 返回处理后的图片或原始图片数据
 
@@ -249,6 +325,14 @@ namespace Midjourney.Base.Util
                     ContentType = contentType,
                     FileExtension = ext
                 };
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                return new FetchFileResult { Success = false, Msg = "Fetch cancelled" };
+            }
+            catch (OperationCanceledException)
+            {
+                return new FetchFileResult { Success = false, Msg = "Fetch timeout" };
             }
             catch (Exception ex)
             {
@@ -283,7 +367,7 @@ namespace Midjourney.Base.Util
                     request.Headers.Range = new RangeHeaderValue(0, MAX_SIZE - 1);
                 }
 
-                var response = await SharedHttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+                using var response = await SharedHttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
                 if (!response.IsSuccessStatusCode)
                 {
                     Log.Warning($"{url} Failed to fetch file. Status: {response.StatusCode}");
@@ -344,8 +428,8 @@ namespace Midjourney.Base.Util
             try
             {
                 // 发送一个 HEAD 请求
-                HttpRequestMessage request = new(HttpMethod.Head, url);
-                HttpResponseMessage response = await SharedHttpClient.SendAsync(request);
+                using var request = new HttpRequestMessage(HttpMethod.Head, url);
+                using var response = await SharedHttpClient.SendAsync(request);
                 if (response.IsSuccessStatusCode)
                 {
                     if (response.Content.Headers.ContentLength.HasValue)

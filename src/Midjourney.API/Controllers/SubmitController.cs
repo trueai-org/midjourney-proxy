@@ -141,12 +141,6 @@ namespace Midjourney.API.Controllers
 
                 var base64Array = imagineDTO.Base64Array ?? [];
 
-                var setting = GlobalConfiguration.Setting;
-                if (!setting.EnableUserCustomUploadBase64 && base64Array.Count > 0)
-                {
-                    return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "禁止上传"));
-                }
-
                 prompt = prompt.Trim();
                 var task = NewTask(imagineDTO);
 
@@ -178,7 +172,8 @@ namespace Midjourney.API.Controllers
                 List<DataUrl> dataUrls = new List<DataUrl>();
                 try
                 {
-                    dataUrls = DataUrl.ConvertBase64Array(base64Array, true);
+                    // 请求线程只解码，WebP 转换/上传由工作线程按提交时快照处理
+                    dataUrls = DataUrl.ConvertBase64Array(base64Array, false);
                 }
                 catch (Exception e)
                 {
@@ -213,12 +208,6 @@ namespace Midjourney.API.Controllers
         [HttpPost("upload-discord-images")]
         public async Task<ActionResult<SubmitResultVO>> ImagineDiscordImages([FromBody] SubmitUploadDiscordDto imagineDTO)
         {
-            var setting = GlobalConfiguration.Setting;
-            if (!setting.EnableUserCustomUploadBase64)
-            {
-                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "禁止上传"));
-            }
-
             var base64Array = imagineDTO.Base64Array ?? new List<string>();
             if (base64Array.Count <= 0)
             {
@@ -294,17 +283,11 @@ namespace Midjourney.API.Controllers
 
             DataUrl dataUrl;
 
-            var setting = GlobalConfiguration.Setting;
             if (!string.IsNullOrWhiteSpace(describeDTO.Base64))
             {
-                if (!setting.EnableUserCustomUploadBase64)
-                {
-                    return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "禁止上传"));
-                }
-
                 try
                 {
-                    dataUrl = DataUrl.Parse(describeDTO.Base64, true);
+                    dataUrl = DataUrl.Parse(describeDTO.Base64, false);
                 }
                 catch
                 {
@@ -389,13 +372,6 @@ namespace Midjourney.API.Controllers
                 return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "图片参数错误，2~5张图片"));
             }
 
-            // blend 不限制上传
-            //var setting = GlobalConfiguration.Setting;
-            //if (!setting.EnableUserCustomUploadBase64)
-            //{
-            //    return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "禁止上传"));
-            //}
-
             if (blendDTO.Dimensions == null)
             {
                 return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "dimensions参数错误"));
@@ -404,7 +380,7 @@ namespace Midjourney.API.Controllers
             List<DataUrl> dataUrlList = new List<DataUrl>();
             try
             {
-                dataUrlList = DataUrl.ConvertBase64Array(base64Array, true);
+                dataUrlList = DataUrl.ConvertBase64Array(base64Array, false);
             }
             catch (Exception e)
             {
@@ -736,18 +712,6 @@ namespace Midjourney.API.Controllers
                 return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "prompt不能为空"));
             }
 
-            //var promptEn = TranslatePrompt(prompt, task.RealBotType ?? task.BotType);
-            //try
-            //{
-            //    promptEn = _taskService.CheckBanned(promptEn);
-            //}
-            //catch (BannedPromptException e)
-            //{
-            //    return Ok(SubmitResultVO.Fail(ReturnCode.BANNED_PROMPT, "可能包含敏感词")
-            //        .SetProperty("promptEn", promptEn)
-            //        .SetProperty("bannedWord", e.Message));
-            //}
-
             // 不检查
             // 局部重绘蒙版必须是 PNG（带透明通道），不能转为 WebP
             DataUrl dataUrl = null;
@@ -788,12 +752,6 @@ namespace Midjourney.API.Controllers
                 return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "image或prompt不能为空"));
             }
 
-            var setting = GlobalConfiguration.Setting;
-            if (!setting.EnableUserCustomUploadBase64)
-            {
-                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "禁止上传"));
-            }
-
             DataUrl dataUrl;
             try
             {
@@ -810,7 +768,8 @@ namespace Midjourney.API.Controllers
                     {
                         editsDTO.Image = "data:image/png;base64," + editsDTO.Image;
                     }
-                    dataUrl = DataUrl.Parse(editsDTO.Image, true);
+                    // 请求线程只解码，WebP 转换/上传由工作线程异步处理
+                    dataUrl = DataUrl.Parse(editsDTO.Image, false);
                 }
             }
             catch (Exception e)
@@ -820,18 +779,6 @@ namespace Midjourney.API.Controllers
             }
 
             var task = NewTask(editsDTO);
-
-            //var promptEn = TranslatePrompt(editsDTO.Prompt, task.RealBotType ?? task.BotType);
-            //try
-            //{
-            //    promptEn = _taskService.CheckBanned(promptEn);
-            //}
-            //catch (BannedPromptException e)
-            //{
-            //    return Ok(SubmitResultVO.Fail(ReturnCode.BANNED_PROMPT, "可能包含敏感词")
-            //        .SetProperty("promptEn", promptEn)
-            //        .SetProperty("bannedWord", e.Message));
-            //}
 
             task.BotType = EBotType.MID_JOURNEY;
             task.Action = TaskAction.EDIT;
@@ -858,12 +805,6 @@ namespace Midjourney.API.Controllers
                 return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "image或prompt不能为空"));
             }
 
-            var setting = GlobalConfiguration.Setting;
-            if (!setting.EnableUserCustomUploadBase64)
-            {
-                return Ok(SubmitResultVO.Fail(ReturnCode.VALIDATION_ERROR, "禁止上传"));
-            }
-
             DataUrl dataUrl;
             try
             {
@@ -880,7 +821,8 @@ namespace Midjourney.API.Controllers
                     {
                         editsDTO.Image = "data:image/png;base64," + editsDTO.Image;
                     }
-                    dataUrl = DataUrl.Parse(editsDTO.Image, true);
+                    // 请求线程只解码，WebP 转换/上传由工作线程异步处理
+                    dataUrl = DataUrl.Parse(editsDTO.Image, false);
                 }
             }
             catch (Exception e)
@@ -890,18 +832,6 @@ namespace Midjourney.API.Controllers
             }
 
             var task = NewTask(editsDTO);
-
-            //var promptEn = TranslatePrompt(editsDTO.Prompt, task.RealBotType ?? task.BotType);
-            //try
-            //{
-            //    promptEn = _taskService.CheckBanned(promptEn);
-            //}
-            //catch (BannedPromptException e)
-            //{
-            //    return Ok(SubmitResultVO.Fail(ReturnCode.BANNED_PROMPT, "可能包含敏感词")
-            //        .SetProperty("promptEn", promptEn)
-            //        .SetProperty("bannedWord", e.Message));
-            //}
 
             task.BotType = EBotType.MID_JOURNEY;
             task.Action = TaskAction.RETEXTURE;
@@ -938,6 +868,7 @@ namespace Midjourney.API.Controllers
             DataUrl endUrl;
             try
             {
+                // 请求线程只解码，首帧/尾帧的 WebP 转换/上传由工作线程异步处理
                 startUrl = DataUrl.Parse(videoDTO.Image);
                 endUrl = DataUrl.Parse(videoDTO.EndImage);
             }
@@ -954,19 +885,6 @@ namespace Midjourney.API.Controllers
 
             task.SetProperty(Constants.TASK_PROPERTY_BOT_TYPE, task.BotType.GetDescription());
             task.AccountFilter = new AccountFilter();
-
-            //var promptEn = TranslatePrompt(videoDTO.Prompt, task.RealBotType ?? task.BotType);
-
-            //try
-            //{
-            //    promptEn = _taskService.CheckBanned(promptEn);
-            //}
-            //catch (BannedPromptException e)
-            //{
-            //    return Ok(SubmitResultVO.Fail(ReturnCode.BANNED_PROMPT, "可能包含敏感词")
-            //        .SetProperty("promptEn", promptEn)
-            //        .SetProperty("bannedWord", e.Message));
-            //}
 
             // 如果没有路径速度，并且没有过滤速度，解析提示词，生成指定模式过滤
             if (task.Mode == null)

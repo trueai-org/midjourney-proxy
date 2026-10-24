@@ -78,16 +78,19 @@ namespace Midjourney.Base.Models
         /// MongoDB 自动迁移任务（废弃）
         /// 启动时将 MongoDB 数据迁移到迁移到当前数据库
         /// </summary>
+        [Obsolete("IsAutoMigrateMongo - MongoDB 自动迁移任务已废弃，请使用 IsAutoMigrate + MigrateDatabaseType + MigrateDatabaseConnectionString 配置。")]
         public bool IsAutoMigrateMongo { get; set; }
 
         /// <summary>
         /// MongoDB 默认连接字符串（废弃）
         /// </summary>
+        [Obsolete("MongoDefaultConnectionString - MongoDB 默认连接字符串已废弃，请使用 MigrateDatabaseType + MigrateDatabaseConnectionString 配置。")]
         public string MongoDefaultConnectionString { get; set; }
 
         /// <summary>
         /// MongoDB 默认数据库（废弃）
         /// </summary>
+        [Obsolete("MongoDefaultDatabase - MongoDB 默认数据库已废弃，请使用 MigrateDatabaseType + MigrateDatabaseConnectionString 配置。")]
         public string MongoDefaultDatabase { get; set; }
 
         /// <summary>
@@ -466,6 +469,7 @@ namespace Midjourney.Base.Models
         /// <summary>
         /// 数据库名称（废弃）
         /// </summary>
+        [Obsolete("DatabaseName - 数据库名称已废弃，请使用 DatabaseConnectionString 连接字符串配置。")]
         public string DatabaseName { get; set; }
 
         /// <summary>
@@ -506,18 +510,21 @@ namespace Midjourney.Base.Models
         public int FastDrawDuration { get; set; } = 60;
 
         /// <summary>
-        /// 启用 token 自动延期（废弃）
+        /// 已废弃：不再生效，仅保留字段以兼容旧配置和旧客户端。
         /// </summary>
+        [Obsolete("EnableAutoExtendToken 启用 token 自动延期 - 已废弃且不再生效，仅保留字段以兼容旧配置。")]
         public bool EnableAutoExtendToken { get; set; }
 
         /// <summary>
-        /// 启用用户自定义上传 Base64
+        /// 已废弃：不再生效，仅保留字段以兼容旧配置和旧客户端。
         /// </summary>
+        [Obsolete("EnableUserCustomUploadBase64  - 启用用户自定义上传 Base64 - 已废弃且不再生效，仅保留字段以兼容旧配置。")]
         public bool EnableUserCustomUploadBase64 { get; set; } = true;
 
         /// <summary>
-        /// 启用转换官方链接，上传到 discord 服务器（废弃）
+        /// 已废弃：不再生效，仅保留字段以兼容旧配置和旧客户端。
         /// </summary>
+        [Obsolete("EnableConvertOfficialLink - 启用转换官方链接，上传到 discord 服务器 - 已废弃且不再生效，仅保留字段以兼容旧配置。")]
         public bool EnableConvertOfficialLink { get; set; } = true;
 
         /// <summary>
@@ -617,12 +624,14 @@ namespace Midjourney.Base.Models
         /// <summary>
         /// 保存用户上传的 link 到文件存储（例如：describe）（废弃）
         /// </summary>
+        [Obsolete("EnableSaveUserUploadLink - 保存用户上传的 link 到文件存储已废弃，请使用 EnableConvertPromptLinkStorage 配置。")]
         public bool EnableSaveUserUploadLink { get; set; } = true;
 
         /// <summary>
         /// 开启用户上传，默认开启（废弃）
         /// 保存用户上传的 base64 到文件存储（例如：垫图、混图等）
         /// </summary>
+        [Obsolete("EnableSaveUserUploadBase64 - 保存用户上传的 base64 到文件存储已废弃，请使用 EnableConvertPromptLinkStorage 配置。")]
         public bool EnableSaveUserUploadBase64 { get; set; } = true;
 
         /// <summary>

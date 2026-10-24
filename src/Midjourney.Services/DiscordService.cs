@@ -1,4 +1,4 @@
-﻿// Midjourney Proxy - Proxy for Midjourney's Discord, enabling AI drawings via API with one-click face swap. A free, non-profit drawing API project.
+// Midjourney Proxy - Proxy for Midjourney's Discord, enabling AI drawings via API with one-click face swap. A free, non-profit drawing API project.
 // Copyright (C) 2024 trueai.org
 
 // This program is free software: you can redistribute it and/or modify
@@ -45,6 +45,11 @@ namespace Midjourney.Services
         /// 全局正在运行的任务列表
         /// </summary>
         public static readonly ConcurrentDictionary<string, TaskInfo> GlobalRunningTasks = new();
+
+        /// <summary>
+        /// 工作线程处理 URL 垫图的单次抓取超时（其他准备阶段 URL 统一使用 ImaginePrepareLimits.UrlFetchTimeout）
+        /// </summary>
+        private static readonly TimeSpan ImagineUrlFetchTimeout = TimeSpan.FromSeconds(15);
 
         /// <summary>
         /// 后台任务执行器 — 替代所有 Task.Run fire-and-forget
@@ -1973,6 +1978,15 @@ namespace Midjourney.Services
                     {
                         case TaskInfoQueueFunction.SUBMIT:
                             {
+                                // 异步垫图：提交前完成上传/URL 转换
+                                var prepareResult = await PrepareStagedImagineInputsAsync(info, _longToken.Token);
+                                if (prepareResult?.Code != ReturnCode.SUCCESS)
+                                {
+                                    info.Fail(prepareResult?.Description ?? "垫图处理失败，请稍后重试");
+                                    SaveAndNotify(info);
+                                    return;
+                                }
+
                                 // 绘画任务未提交
                                 if (info.IsPartner || info.IsOfficial)
                                 {
@@ -2009,6 +2023,14 @@ namespace Midjourney.Services
                         case TaskInfoQueueFunction.ACTION:
                             // 变化任务未提交
                             {
+                                var prep = await PrepareStagedVideoInputsAsync(info, _longToken.Token);
+                                if (prep?.Code != ReturnCode.SUCCESS)
+                                {
+                                    info.Fail(prep?.Description ?? "图片处理失败，请稍后重试");
+                                    SaveAndNotify(info);
+                                    return;
+                                }
+
                                 if (info.IsPartner || info.IsOfficial)
                                 {
                                     var result = await YmTaskService.SubmitActionAsync(info, queue.ActionParam.Dto, queue.ActionParam.TargetTask, this);
@@ -2361,6 +2383,14 @@ namespace Midjourney.Services
 
                         case TaskInfoQueueFunction.DESCRIBE:
                             {
+                                var prep = await PrepareStagedImagineInputsAsync(info, _longToken.Token);
+                                if (prep?.Code != ReturnCode.SUCCESS)
+                                {
+                                    info.Fail(prep?.Description ?? "垫图处理失败，请稍后重试");
+                                    SaveAndNotify(info);
+                                    return;
+                                }
+
                                 if (info.IsPartner || info.IsOfficial)
                                 {
                                     if (!info.IsCompleted)
@@ -2441,6 +2471,14 @@ namespace Midjourney.Services
 
                         case TaskInfoQueueFunction.BLEND:
                             {
+                                var prep = await PrepareStagedImagineInputsAsync(info, _longToken.Token);
+                                if (prep?.Code != ReturnCode.SUCCESS)
+                                {
+                                    info.Fail(prep?.Description ?? "垫图处理失败，请稍后重试");
+                                    SaveAndNotify(info);
+                                    return;
+                                }
+
                                 if (info.IsPartner || info.IsOfficial)
                                 {
                                     var result = await YmTaskService.SubmitTaskAsync(info, this);
@@ -2489,6 +2527,14 @@ namespace Midjourney.Services
 
                         case TaskInfoQueueFunction.EDIT:
                             {
+                                var prep = await PrepareStagedBaseImageAsync(info, _longToken.Token);
+                                if (prep?.Code != ReturnCode.SUCCESS)
+                                {
+                                    info.Fail(prep?.Description ?? "图片处理失败，请稍后重试");
+                                    SaveAndNotify(info);
+                                    return;
+                                }
+
                                 if (info.IsPartner || info.IsOfficial)
                                 {
                                     var result = await YmTaskService.SubmitTaskAsync(info, this);
@@ -2516,6 +2562,14 @@ namespace Midjourney.Services
 
                         case TaskInfoQueueFunction.RETEXTURE:
                             {
+                                var prep = await PrepareStagedBaseImageAsync(info, _longToken.Token);
+                                if (prep?.Code != ReturnCode.SUCCESS)
+                                {
+                                    info.Fail(prep?.Description ?? "图片处理失败，请稍后重试");
+                                    SaveAndNotify(info);
+                                    return;
+                                }
+
                                 if (info.IsPartner || info.IsOfficial)
                                 {
                                     var result = await YmTaskService.SubmitTaskAsync(info, this);
@@ -2543,6 +2597,14 @@ namespace Midjourney.Services
 
                         case TaskInfoQueueFunction.VIDEO:
                             {
+                                var prep = await PrepareStagedVideoInputsAsync(info, _longToken.Token);
+                                if (prep?.Code != ReturnCode.SUCCESS)
+                                {
+                                    info.Fail(prep?.Description ?? "图片处理失败，请稍后重试");
+                                    SaveAndNotify(info);
+                                    return;
+                                }
+
                                 if (info.IsPartner || info.IsOfficial)
                                 {
                                     var result = await YmTaskService.SubmitTaskAsync(info, this);
@@ -2769,6 +2831,362 @@ namespace Midjourney.Services
             catch (Exception ex)
             {
                 _logger.Error(ex, "作业通知执行异常 {@0}", task.Id);
+            }
+        }
+
+        /// <summary>
+        /// 准备异步暂存的 imagine 垫图：上传图片、写入提示词并清理 Redis。
+        /// 已准备完成的任务直接跳过；数据缺失/过期时明确失败，不提交上游。
+        /// </summary>
+        public async Task<Message> PrepareStagedImagineInputsAsync(TaskInfo info, CancellationToken cancellationToken = default)
+        {
+            if (info == null)
+            {
+                return Message.Success();
+            }
+
+            if (ImagineInputRef.IsPrepared(info))
+            {
+                return Message.Success();
+            }
+
+            // 以是否写入暂存引用为准，避免布尔属性反序列化差异导致跳过准备
+            if (!ImagineInputRef.NeedsPrepare(info))
+            {
+                return Message.Success();
+            }
+
+            var inputsValue = info.GetProperty(Constants.TASK_PROPERTY_IMAGINE_INPUTS);
+            var refs = ImagineInputRef.Parse(inputsValue);
+            if (refs.Count == 0)
+            {
+                Log.Warning("异步垫图元数据缺失: TaskId={TaskId}", info.Id);
+                return Message.Of(ReturnCode.FAILURE, "垫图数据已过期，请重新提交");
+            }
+
+            // 转换时读取当前配置；管理员调整后，尚未准备的排队任务会立即使用新配置
+            var prepareSetting = GlobalConfiguration.Setting ?? new Setting();
+
+            return await ImagineInputPreparer.PrepareAsync(
+                info,
+                refs,
+                prepareSetting,
+                key => RedisHelper.Instance.Get<byte[]>(key),
+                (dataUrl, fileName) => UploadStagedImagineInputWithLimitAsync(info, dataUrl, fileName, cancellationToken),
+                task => { _freeSql.Save(task); },
+                toDelete => DeleteStagedImagineInputs(info, toDelete),
+                (inputRef, dataUrl, webp, elapsed) => Log.Information(
+                    "异步垫图准备完成: TaskId={TaskId}, Index={Index}, MimeType={MimeType}, Size={Size}, Webp={Webp}, Elapsed={Elapsed}ms",
+                    info.Id, inputRef.Index, inputRef.MimeType, inputRef.Size, webp, elapsed),
+                ex => Log.Error(ex, "异步垫图准备异常: TaskId={TaskId}", info.Id),
+                ImaginePrepareLimits.Cpu,
+                cancellationToken);
+        }
+
+        /// <summary>
+        /// 准备编辑/转绘的基础图片：base64 暂存由工作线程上传，悠船外部链接在后台转换。
+        /// </summary>
+        public async Task<Message> PrepareStagedBaseImageAsync(TaskInfo info, CancellationToken cancellationToken = default)
+        {
+            if (info == null || ImagineInputRef.IsPrepared(info))
+            {
+                return Message.Success();
+            }
+
+            var refs = ImagineInputRef.Parse(info.GetProperty(Constants.TASK_PROPERTY_IMAGINE_INPUTS));
+            if (refs.Count == 0 && string.IsNullOrWhiteSpace(info.BaseImageUrl))
+            {
+                Log.Warning("编辑任务图片参数缺失: TaskId={TaskId}", info.Id);
+                return Message.Of(ReturnCode.FAILURE, "图片参数错误，请重新提交");
+            }
+
+            var prepareSetting = GlobalConfiguration.Setting ?? new Setting();
+
+            if (refs.Count > 0)
+            {
+                return await ImagineInputPreparer.PrepareAsync(
+                    info,
+                    refs,
+                    prepareSetting,
+                    key => RedisHelper.Instance.Get<byte[]>(key),
+                    (dataUrl, fileName) => UploadStagedImagineInputWithLimitAsync(info, dataUrl, fileName, cancellationToken),
+                    task => { _freeSql.Save(task); },
+                    toDelete => DeleteStagedImagineInputs(info, toDelete),
+                    (inputRef, dataUrl, webp, elapsed) => Log.Information(
+                        "异步编辑图片准备完成: TaskId={TaskId}, Index={Index}, MimeType={MimeType}, Size={Size}, Webp={Webp}, Elapsed={Elapsed}ms",
+                        info.Id, inputRef.Index, inputRef.MimeType, inputRef.Size, webp, elapsed),
+                    ex => Log.Error(ex, "异步编辑图片准备异常: TaskId={TaskId}", info.Id),
+                    ImaginePrepareLimits.Cpu,
+                    cancellationToken);
+            }
+
+            // URL-only：仅悠船需要把外部链接转换成悠船链接
+            var url = info.BaseImageUrl;
+            if (Account.IsYouChuan
+                && prepareSetting.EnableYouChuanPromptLink
+                && !url.Contains("youchuan", StringComparison.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    var res = await FetchPrepareFileAsync(url, cancellationToken);
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    if (res.Success && !string.IsNullOrWhiteSpace(res.Url))
+                    {
+                        url = res.Url;
+                    }
+                    else if (res.Success && res.FileBytes?.Length > 0)
+                    {
+                        var dataUrl = new DataUrl(res.ContentType, res.FileBytes);
+                        var fileName = await PrepareImageFileAsync(dataUrl, prepareSetting, cancellationToken);
+
+                        var uploadResult = await UploadStagedImagineInputWithLimitAsync(info, dataUrl, fileName, cancellationToken);
+                        if (uploadResult?.Code != ReturnCode.SUCCESS || string.IsNullOrWhiteSpace(uploadResult.Description))
+                        {
+                            return Message.Of(ReturnCode.FAILURE, "图片上传失败，请稍后重试");
+                        }
+
+                        url = uploadResult.Description;
+                    }
+                    else
+                    {
+                        Log.Warning("编辑任务链接转换失败，保留原始链接: TaskId={TaskId}, Msg={Msg}", info.Id, res?.Msg);
+                    }
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    Log.Warning(ex, "编辑任务链接转换异常，保留原始链接: TaskId={TaskId}", info.Id);
+                }
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            info.BaseImageUrl = url;
+
+            if (info.Action == TaskAction.RETEXTURE)
+            {
+                ImagineInputPreparer.AppendDepthReference(info, url);
+            }
+
+            info.SetProperty(Constants.TASK_PROPERTY_IMAGINE_PREPARED, true);
+            // URL-only 输入不写入已准备链接，保留 GetPrompt 原有的云存储/悠船链接转换行为
+            info.SetProperty(Constants.TASK_PROPERTY_IMAGINE_PREPARED_URLS, new List<string>().ToJson());
+            info.SetProperty(Constants.TASK_PROPERTY_IMAGINE_NEED_PREPARE, false);
+            info.RemoveProperty(Constants.TASK_PROPERTY_IMAGINE_INPUTS);
+            _freeSql.Save(info);
+
+            return Message.Success();
+        }
+
+        /// <summary>
+        /// 准备视频首帧/尾帧：base64 由工作线程上传，URL 在悠船链接转换开启时后台转换。
+        /// </summary>
+        public async Task<Message> PrepareStagedVideoInputsAsync(TaskInfo info, CancellationToken cancellationToken = default)
+        {
+            if (info == null || ImagineInputRef.IsPrepared(info))
+            {
+                return Message.Success();
+            }
+
+            var refs = ImagineInputRef.Parse(info.GetProperty(Constants.TASK_PROPERTY_IMAGINE_INPUTS));
+            if (refs.Count == 0)
+            {
+                if (VideoInputPreparer.HasPendingInputs(info))
+                {
+                    Log.Warning("视频图片元数据缺失: TaskId={TaskId}", info.Id);
+                    return Message.Of(ReturnCode.FAILURE, "视频图片数据已过期，请重新提交");
+                }
+
+                return Message.Success();
+            }
+
+            var prepareSetting = GlobalConfiguration.Setting ?? new Setting();
+
+            return await VideoInputPreparer.PrepareAsync(
+                info,
+                refs,
+                prepareSetting,
+                key => RedisHelper.Instance.Get<byte[]>(key),
+                (dataUrl, fileName) => UploadStagedImagineInputWithLimitAsync(info, dataUrl, fileName, cancellationToken),
+                url => ResolveVideoInputUrlAsync(info, url, cancellationToken),
+                task => { _freeSql.Save(task); },
+                toDelete => DeleteStagedImagineInputs(info, toDelete),
+                (inputRef, dataUrl, webp, elapsed) => Log.Information(
+                    "异步视频图片准备完成: TaskId={TaskId}, Index={Index}, MimeType={MimeType}, Size={Size}, Webp={Webp}, Elapsed={Elapsed}ms",
+                    info.Id, inputRef.Index, inputRef.MimeType, inputRef.Size, webp, elapsed),
+                ex => Log.Error(ex, "异步视频图片准备异常: TaskId={TaskId}", info.Id),
+                ImaginePrepareLimits.Cpu,
+                cancellationToken);
+        }
+
+        /// <summary>
+        /// 解析视频输入 URL；悠船外部链接转换为悠船链接，失败时保留原链接。
+        /// </summary>
+        private async Task<string> ResolveVideoInputUrlAsync(TaskInfo info, string url, CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                return url;
+            }
+
+            var setting = GlobalConfiguration.Setting ?? new Setting();
+            if (!Account.IsYouChuan
+                || setting.EnableYouChuanPromptLink != true
+                || url.Contains("youchuan", StringComparison.OrdinalIgnoreCase))
+            {
+                return url;
+            }
+
+            try
+            {
+                var res = await FetchPrepareFileAsync(url, cancellationToken);
+                cancellationToken.ThrowIfCancellationRequested();
+
+                if (res.Success && !string.IsNullOrWhiteSpace(res.Url))
+                {
+                    return res.Url;
+                }
+
+                if (res.Success && res.FileBytes?.Length > 0)
+                {
+                    var dataUrl = new DataUrl(res.ContentType, res.FileBytes);
+                    var fileName = await PrepareImageFileAsync(dataUrl, setting, cancellationToken);
+
+                    var uploadResult = await UploadStagedImagineInputWithLimitAsync(info, dataUrl, fileName, cancellationToken);
+                    if (uploadResult?.Code == ReturnCode.SUCCESS && !string.IsNullOrWhiteSpace(uploadResult.Description))
+                    {
+                        return uploadResult.Description;
+                    }
+                }
+
+                Log.Warning("视频图片链接转换失败，保留原始链接: TaskId={TaskId}, Msg={Msg}", info.Id, res?.Msg);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "视频图片链接转换异常，保留原始链接: TaskId={TaskId}", info.Id);
+            }
+
+            return url;
+        }
+
+        /// <summary>
+        /// 准备阶段 URL 抓取：统一限流、超时和最大文件大小。
+        /// </summary>
+        private static async Task<FetchFileResult> FetchPrepareFileAsync(string url, CancellationToken cancellationToken)
+        {
+            await ImaginePrepareLimits.Network.WaitAsync(cancellationToken);
+            try
+            {
+                return await MjImageFetchHelper.FetchFileAsync(
+                    url,
+                    convertToWebp: false,
+                    timeout: ImaginePrepareLimits.UrlFetchTimeout,
+                    cancellationToken: cancellationToken,
+                    maxBytes: ImaginePrepareLimits.UrlMaxBytes,
+                    detectFileName: false);
+            }
+            finally
+            {
+                ImaginePrepareLimits.Network.Release();
+            }
+        }
+
+        /// <summary>
+        /// 准备阶段图片转码与文件名生成：统一走 CPU 限流。
+        /// </summary>
+        private static async Task<string> PrepareImageFileAsync(DataUrl dataUrl, Setting setting, CancellationToken cancellationToken)
+        {
+            await ImaginePrepareLimits.Cpu.WaitAsync(cancellationToken);
+            try
+            {
+                PromptImageWebpConverter.TryConvertToWebP(dataUrl, setting);
+                return await dataUrl.GenerateFileName();
+            }
+            finally
+            {
+                ImaginePrepareLimits.Cpu.Release();
+            }
+        }
+
+        /// <summary>
+        /// 准备阶段上传：统一走网络限流。
+        /// </summary>
+        private async Task<Message> UploadStagedImagineInputWithLimitAsync(TaskInfo info, DataUrl dataUrl, string fileName, CancellationToken cancellationToken)
+        {
+            await ImaginePrepareLimits.Network.WaitAsync(cancellationToken);
+            try
+            {
+                return await UploadStagedImagineInputAsync(info, dataUrl, fileName);
+            }
+            finally
+            {
+                ImaginePrepareLimits.Network.Release();
+            }
+        }
+
+        /// <summary>
+        /// 上传单张暂存垫图，返回可访问的图片链接
+        /// </summary>
+        private async Task<Message> UploadStagedImagineInputAsync(TaskInfo info, DataUrl dataUrl, string fileName)
+        {
+            if (Account.IsYouChuan)
+            {
+                var url = await _ymTaskService.UploadFile(info, dataUrl.Data, fileName);
+                if (string.IsNullOrWhiteSpace(url))
+                {
+                    return Message.Of(ReturnCode.FAILURE, "垫图上传失败，请稍后重试");
+                }
+
+                return Message.Success(url);
+            }
+
+            var uploadResult = await UploadAsync(fileName, dataUrl);
+            if (uploadResult.Code != ReturnCode.SUCCESS)
+            {
+                return uploadResult;
+            }
+
+            var imageUrl = uploadResult.Description;
+            if (!imageUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+            {
+                var sendImageResult = await SendImageMessageAsync("upload image: " + imageUrl, imageUrl);
+                if (sendImageResult.Code != ReturnCode.SUCCESS)
+                {
+                    return sendImageResult;
+                }
+
+                imageUrl = sendImageResult.Description;
+            }
+
+            return Message.Success(imageUrl);
+        }
+
+        /// <summary>
+        /// 删除任务暂存的垫图数据
+        /// </summary>
+        private static void DeleteStagedImagineInputs(TaskInfo info, IEnumerable<ImagineInputRef> refs)
+        {
+            var keys = ImagineInputRef.CollectKeys(refs);
+            if (keys.Length == 0)
+            {
+                return;
+            }
+
+            try
+            {
+                RedisHelper.Instance.Del(keys);
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "删除异步垫图暂存失败: TaskId={TaskId}, Count={Count}", info?.Id, keys.Length);
             }
         }
 
@@ -3424,9 +3842,88 @@ namespace Midjourney.Services
                 }
             }
 
+            var urlDic = new Dictionary<string, string>();
+            // 异步垫图准备阶段已经上传并写入提示词的链接，不再重复抓取/转换
+            var preparedUrls = ImagineInputRef.ParseUrls(info.GetProperty(Constants.TASK_PROPERTY_IMAGINE_PREPARED_URLS));
+            // 仅 imagine 使用短超时；其他动作使用准备阶段统一的 10 分钟上限
+            var fetchTimeout = info.Action == TaskAction.IMAGINE
+                ? ImagineUrlFetchTimeout
+                : ImaginePrepareLimits.UrlFetchTimeout;
+            var cancellationToken = _longToken.Token;
+
+            // 悠船官方链接转换与云存储转换开关无关：
+            // 原始 URL 直接提交给悠船前仍需要转换（保持原有同步提交行为）
+            if (info.IsPartner && setting.EnableYouChuanPromptLink)
+            {
+                foreach (var url in urls)
+                {
+                    // 已命中自定义垫图替换规则或已准备的链接，保留原链接，不再进行后续转换
+                    if (ImagineInputRef.ShouldSkipConversion(url, replacedUrls, preparedUrls))
+                    {
+                        continue;
+                    }
+
+                    // 已经是了悠船链接
+                    if (url.Contains("youchuan", StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    try
+                    {
+                        // 转为悠船官方链接，缓存默认 24 小时
+                        var ycOkUrl = await AdaptiveCache.GetOrCreateAsync($"fetchimg:yc_{url}{webpCacheKey}", async () =>
+                        {
+                            var res = await MjImageFetchHelper.FetchFileAsync(
+                                url,
+                                convertToWebp: true,
+                                timeout: fetchTimeout,
+                                cancellationToken: cancellationToken,
+                                maxBytes: ImaginePrepareLimits.UrlMaxBytes);
+                            cancellationToken.ThrowIfCancellationRequested();
+                            if (res.Success && !string.IsNullOrWhiteSpace(res.Url))
+                            {
+                                return res.Url;
+                            }
+                            else if (res.Success && res.FileBytes.Length > 0)
+                            {
+                                var resUrl = await _ymTaskService.UploadFile(info, res.FileBytes, res.FileName);
+                                if (!string.IsNullOrWhiteSpace(resUrl))
+                                {
+                                    return resUrl;
+                                }
+                                else
+                                {
+                                    throw new LogicException(ReturnCode.FAILURE, "悠船链接转换失败");
+                                }
+                            }
+                            throw new LogicException($"解析链接失败: {res?.Msg}");
+                        }, TimeSpan.FromDays(1));
+
+                        urlDic[url] = ycOkUrl;
+                    }
+                    catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                    {
+                        throw;
+                    }
+                    catch (Exception ex)
+                    {
+                        var host = Uri.TryCreate(url, UriKind.Absolute, out var uri) ? uri.Host : null;
+                        _logger.Warning(ex, "解析悠船 url 异常 {Host}", host);
+                    }
+                }
+            }
+
             // 未开启提示词链接转换保存到云存储
             if (!setting.EnableConvertPromptLinkStorage)
             {
+                foreach (var item in urlDic)
+                {
+                    prompt = prompt.Replace(item.Key, item.Value);
+                }
+
                 return prompt;
             }
 
@@ -3436,58 +3933,18 @@ namespace Midjourney.Services
             //    return prompt;
             //}
 
-            var urlDic = new Dictionary<string, string>();
             foreach (var url in urls)
             {
-                // 已命中自定义垫图替换规则的链接，保留指定链接，不再进行后续转换
-                if (replacedUrls.Contains(url))
+                // 已命中自定义垫图替换规则、已转为悠船链接或已准备的链接，不再进行后续转换
+                if (ImagineInputRef.ShouldSkipConversion(url, replacedUrls, preparedUrls, urlDic.ContainsKey(url)))
                 {
                     continue;
                 }
 
+                cancellationToken.ThrowIfCancellationRequested();
+
                 try
                 {
-                    // 如果是悠船任务
-                    if (info.IsPartner)
-                    {
-                        // 开启悠船官方链接转换
-                        if (setting.EnableYouChuanPromptLink)
-                        {
-                            // 已经是了悠船链接
-                            if (url.Contains("youchuan", StringComparison.OrdinalIgnoreCase))
-                            {
-                                continue;
-                            }
-
-                            // 转为悠船官方链接，缓存默认 24 小时
-                            var ycOkUrl = await AdaptiveCache.GetOrCreateAsync($"fetchimg:yc_{url}{webpCacheKey}", async () =>
-                            {
-                                var res = await MjImageFetchHelper.FetchFileAsync(url, convertToWebp: true);
-                                if (res.Success && !string.IsNullOrWhiteSpace(res.Url))
-                                {
-                                    return res.Url;
-                                }
-                                else if (res.Success && res.FileBytes.Length > 0)
-                                {
-                                    var resUrl = await _ymTaskService.UploadFile(info, res.FileBytes, res.FileName);
-                                    if (!string.IsNullOrWhiteSpace(resUrl))
-                                    {
-                                        return resUrl;
-                                    }
-                                    else
-                                    {
-                                        throw new LogicException(ReturnCode.FAILURE, "悠船链接转换失败");
-                                    }
-                                }
-                                throw new LogicException($"解析链接失败 {url}, {res?.Msg}");
-                            }, TimeSpan.FromDays(1));
-
-                            urlDic[url] = ycOkUrl;
-
-                            continue;
-                        }
-                    }
-
                     // 白名单判断
                     if (MjImageFetchHelper.IsWhiteHost(url))
                     {
@@ -3502,7 +3959,13 @@ namespace Midjourney.Services
                     // 转为云存储链接，缓存默认 24 小时
                     var okUrl = await AdaptiveCache.GetOrCreateAsync($"fetchimg:{url}{webpCacheKey}", async () =>
                     {
-                        var res = await MjImageFetchHelper.FetchFileAsync(url, convertToWebp: true);
+                        var res = await MjImageFetchHelper.FetchFileAsync(
+                            url,
+                            convertToWebp: true,
+                            timeout: fetchTimeout,
+                            cancellationToken: cancellationToken,
+                            maxBytes: ImaginePrepareLimits.UrlMaxBytes);
+                        cancellationToken.ThrowIfCancellationRequested();
                         if (res.Success && !string.IsNullOrWhiteSpace(res.Url))
                         {
                             return res.Url;
@@ -3544,14 +4007,19 @@ namespace Midjourney.Services
                             //}
                         }
 
-                        throw new LogicException($"解析链接失败 {url}, {res?.Msg}");
+                        throw new LogicException($"解析链接失败: {res?.Msg}");
                     }, TimeSpan.FromDays(1));
 
                     urlDic[url] = okUrl;
                 }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
                 catch (Exception ex)
                 {
-                    _logger.Warning(ex, "解析 url 异常 {0}", url);
+                    var host = Uri.TryCreate(url, UriKind.Absolute, out var uri) ? uri.Host : null;
+                    _logger.Warning(ex, "解析 url 异常 {Host}", host);
                 }
             }
 
