@@ -3944,19 +3944,34 @@ namespace Midjourney.Services
                 }
 
                 var seed = parseResult.GetSeed()?.ToString();
-                var filterList = list
-                    .Where(c => !string.IsNullOrWhiteSpace(c.PromptFull) && parseResult.CleanPrompt.Equals(MjPromptParser.Parse(c.PromptFull)?.CleanPrompt, StringComparison.OrdinalIgnoreCase))
-                    .WhereIf(!string.IsNullOrWhiteSpace(seed), c => c.Seed == seed)
-                    .ToList();
-                if (filterList.Count == 1)
+                task = ConservativeTaskMatcher.FindUniqueBySeed(list, seed, out var seedMatchCount);
+                if (task != null)
                 {
-                    task = filterList.FirstOrDefault();
+                    Log.Information("Matched image task by unique seed: TaskId={@0}, MessageId={@1}, Seed={@2}",
+                        task.Id, msgId, seed);
                 }
-                else if (filterList.Count > 1)
+                else if (seedMatchCount > 1)
                 {
-                    // 根据提交时间取 1 个并记录警告日志
-                    task = filterList.OrderBy(c => c.StartTime).FirstOrDefault();
-                    Log.Warning("通过替换 URL 后的提示词找到多个种子想象/混图任务，取最早提交的一个: Count={@0}, TaskId={@1}, FullPrompt={@2}", filterList.Count, task.Id, fullPrompt);
+                    Log.Warning("Skipped ambiguous seed match: Count={@0}, MessageId={@1}, Seed={@2}",
+                        seedMatchCount, msgId, seed);
+                }
+
+                if (task == null)
+                {
+                    var filterList = list
+                        .Where(c => !string.IsNullOrWhiteSpace(c.PromptFull) && parseResult.CleanPrompt.Equals(MjPromptParser.Parse(c.PromptFull)?.CleanPrompt, StringComparison.OrdinalIgnoreCase))
+                        .WhereIf(!string.IsNullOrWhiteSpace(seed), c => c.Seed == seed)
+                        .ToList();
+                    if (filterList.Count == 1)
+                    {
+                        task = filterList.FirstOrDefault();
+                    }
+                    else if (filterList.Count > 1)
+                    {
+                        // 根据提交时间取 1 个并记录警告日志
+                        task = filterList.OrderBy(c => c.StartTime).FirstOrDefault();
+                        Log.Warning("通过替换 URL 后的提示词找到多个种子想象/混图任务，取最早提交的一个: Count={@0}, TaskId={@1}, FullPrompt={@2}", filterList.Count, task.Id, fullPrompt);
+                    }
                 }
             }
 
@@ -4003,6 +4018,28 @@ namespace Midjourney.Services
                     // 根据提交时间取 1 个并记录警告日志
                     task = filterList.OrderBy(c => c.StartTime).FirstOrDefault();
                     Log.Warning("通过替换 URL 后的提示词找到多个想象/混图任务，取最早提交的一个: Count={@0}, TaskId={@1}, FullPrompt={@2}", filterList.Count, task.Id, fullPrompt);
+                }
+            }
+
+            // 6. Discord may publish the final image as a new message and
+            // truncate a long rendered prompt. Match only one conservative
+            // long-prefix candidate; ambiguity must remain unmatched.
+            if (task == null)
+            {
+                var filterList = list
+                    .Where(c => !string.IsNullOrWhiteSpace(c.PromptEn)
+                        && ConservativePromptMatcher.IsMatch(c.PromptEn, fullPrompt))
+                    .ToList();
+                if (filterList.Count == 1)
+                {
+                    task = filterList[0];
+                    Log.Information("Matched image task by conservative long-prompt prefix: TaskId={@0}, MessageId={@1}",
+                        task.Id, msgId);
+                }
+                else if (filterList.Count > 1)
+                {
+                    Log.Warning("Skipped ambiguous conservative long-prompt match: Count={@0}, MessageId={@1}",
+                        filterList.Count, msgId);
                 }
             }
 
