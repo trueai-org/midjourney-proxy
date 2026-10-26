@@ -326,8 +326,11 @@ namespace Midjourney.Services
                     MarkLeadershipLost("调度领导锁已失效或被其它实例接管");
                 }
 
-                // Lock 自带自动续期（autoDelay = true）
-                var leaderLock = RedisHelper.Lock(LeaderLockKey, LeaderLockTtlSeconds, true);
+                // 这里必须用 TryLock，不能用 Lock：
+                // CSRedis 的 Lock 在锁被占用时会每 3ms 重试一次，持续整个 timeoutSeconds（这里是 15s），
+                // 每个 follower 每轮会产生数千条 SET NX，多个节点/多个前缀共享 Redis 时会形成命令风暴。
+                // 领导选举只需要每轮尝试一次，失败后由外层 LoopInterval（3s）再试。
+                var leaderLock = RedisHelper.Instance.TryLock(LeaderLockKey, LeaderLockTtlSeconds, true);
                 if (leaderLock == null)
                 {
                     return false;
