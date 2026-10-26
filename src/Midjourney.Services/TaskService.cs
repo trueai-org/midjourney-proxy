@@ -1935,8 +1935,13 @@ namespace Midjourney.Services
             }
 
             var stagedKeys = stage.StagedKeys;
-            Log.Information("SubmitImagine 异步垫图暂存完成: TaskId={TaskId}, Staged={Staged}, UrlOnly={UrlOnly}, TtlMinutes={TtlMinutes}, Elapsed={Elapsed}ms",
-                info.Id, stage.Refs.Count, stage.UrlOnly.Count, (int)ttl.TotalMinutes, sw.ElapsedMilliseconds);
+
+            // 无垫图任务不存在暂存工作，不打印该日志，避免所有 imagine 任务都产生一条无意义的“暂存完成”
+            if (stage.Refs.Count > 0 || stage.UrlOnly.Count > 0)
+            {
+                Log.Information("SubmitImagine 异步垫图暂存完成: TaskId={TaskId}, Staged={Staged}, UrlOnly={UrlOnly}, TtlMinutes={TtlMinutes}, Elapsed={Elapsed}ms",
+                    info.Id, stage.Refs.Count, stage.UrlOnly.Count, (int)ttl.TotalMinutes, sw.ElapsedMilliseconds);
+            }
 
             // 暂存成功后再入队。入队异常不能回退同步上传，否则会重复上传图片。
             try
