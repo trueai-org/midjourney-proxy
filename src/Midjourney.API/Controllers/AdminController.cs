@@ -1570,30 +1570,53 @@ namespace Midjourney.API.Controllers
             // 今天成功同步次数
             var syncToday = CounterHelper.GetAllAccountSyncSuccessCountDict();
 
+            // 当前页账号的运行态一次 pipeline 读取，避免逐账号 GetRunningTaskCount/GetQueueTaskCount/IsAlive 产生 3 倍以上 Redis 往返
+            var pageInstances = list
+                .Select(item => _accountService.GetDiscordInstance(item.ChannelId))
+                .Where(x => x != null)
+                .Distinct()
+                .ToList();
+            var snapshots = _accountService.GetRuntimeSnapshots(pageInstances);
+
+            static int SumSuccessCount(Dictionary<GenerationSpeedMode, Dictionary<TaskAction, int>> counter, GenerationSpeedMode mode)
+                => counter != null && counter.TryGetValue(mode, out var actions) ? actions.Values.Sum() : 0;
+
             foreach (var item in list)
             {
                 var inc = _accountService.GetDiscordInstance(item.ChannelId);
 
                 item.TodaySyncCount = syncToday.TryGetValue(item.ChannelId, out int value) ? value : -1;
 
-                // 当前执行中的任务数
-                item.RunningCount = inc?.GetRunningTaskCount ?? 0;
-
-                // 当前队列中任务数
-                item.QueueCount = inc?.GetQueueTaskCount ?? 0;
-
-                // 是否运行中
-                item.Running = inc?.IsAlive ?? false;
-
-                // 计算今日绘图统计（成功）
+                // 今日成功统计只读取一次 HGetAll，三个模式从同一个字典汇总，避免重复 HGetAll
                 item.TodayCounter = CounterHelper.GetAccountTodaySuccessCountDict(item.ChannelId);
-                item.TodayFastDrawCount = CounterHelper.GetAccountTodaySuccessTotalCount(item.ChannelId, GenerationSpeedMode.FAST);
-                item.TodayTurboDrawCount = CounterHelper.GetAccountTodaySuccessTotalCount(item.ChannelId, GenerationSpeedMode.TURBO);
-                item.TodayRelaxDrawCount = CounterHelper.GetAccountTodaySuccessTotalCount(item.ChannelId, GenerationSpeedMode.RELAX);
+                item.TodayFastDrawCount = SumSuccessCount(item.TodayCounter, GenerationSpeedMode.FAST);
+                item.TodayTurboDrawCount = SumSuccessCount(item.TodayCounter, GenerationSpeedMode.TURBO);
+                item.TodayRelaxDrawCount = SumSuccessCount(item.TodayCounter, GenerationSpeedMode.RELAX);
 
-                // 计算今日累计绘图（包含失败，不包含放大）
-                item.DayFastCount = CounterHelper.GetAccountTodayTotalCount(item.ChannelId, GenerationSpeedMode.FAST);
-                item.DayRelaxCount = CounterHelper.GetAccountTodayTotalCount(item.ChannelId, GenerationSpeedMode.RELAX);
+                if (inc != null && snapshots.TryGetValue(inc, out var snapshot))
+                {
+                    // 当前执行中的任务数
+                    item.RunningCount = snapshot.GetRunningTaskCount(item);
+
+                    // 当前队列中任务数
+                    item.QueueCount = snapshot.GetQueueTaskCount(item);
+
+                    // 是否运行中
+                    item.Running = snapshot.IsAlive;
+
+                    // 今日累计绘图（包含失败，不包含放大）
+                    item.DayFastCount = snapshot.GetTodayCount(GenerationSpeedMode.FAST);
+                    item.DayRelaxCount = snapshot.GetTodayCount(GenerationSpeedMode.RELAX);
+                }
+                else
+                {
+                    // 快照失败/实例不存在时回退到原逐账号读取
+                    item.RunningCount = inc?.GetRunningTaskCount ?? 0;
+                    item.QueueCount = inc?.GetQueueTaskCount ?? 0;
+                    item.Running = inc?.IsAlive ?? false;
+                    item.DayFastCount = CounterHelper.GetAccountTodayTotalCount(item.ChannelId, GenerationSpeedMode.FAST);
+                    item.DayRelaxCount = CounterHelper.GetAccountTodayTotalCount(item.ChannelId, GenerationSpeedMode.RELAX);
+                }
 
                 if (user == null || (user.Role != EUserRole.ADMIN && user.Id != item.SponsorUserId))
                 {

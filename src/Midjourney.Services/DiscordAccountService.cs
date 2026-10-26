@@ -469,6 +469,57 @@ namespace Midjourney.Services
         }
 
         /// <summary>
+        /// 批量获取指定实例的运行态快照，供账号列表等只读展示使用。
+        /// 与选号不同，未通过存活前置判断的账号也会读取队列/并发/计数，保证列表展示完整。
+        /// </summary>
+        /// <param name="instances">实例集合。</param>
+        /// <param name="includeDescribeQuota">是否读取图生文计数。</param>
+        /// <returns>实例到快照的映射；失败时返回空字典，调用方可回退逐账号读取。</returns>
+        public IReadOnlyDictionary<DiscordService, AccountRuntimeSnapshot> GetRuntimeSnapshots(
+            IEnumerable<DiscordService> instances,
+            bool includeDescribeQuota = false)
+        {
+            var list = instances?
+                .Where(x => x != null && x.Account != null)
+                .Distinct()
+                .ToList() ?? [];
+
+            var result = new Dictionary<DiscordService, AccountRuntimeSnapshot>(list.Count);
+            if (list.Count == 0)
+            {
+                return result;
+            }
+
+            try
+            {
+                var sources = new List<AccountRuntimeSource>(list.Count);
+                foreach (var instance in list)
+                {
+                    sources.Add(new AccountRuntimeSource
+                    {
+                        Account = instance.Account,
+                        Keys = instance,
+                        PrecheckAlive = instance.IsAlivePrecheck(),
+                        IsSessionValid = instance.IsSessionValidInMemory
+                    });
+                }
+
+                var loaded = AccountRuntimeSnapshotLoader.Load(sources, includeDescribeQuota, includeValuesForInactive: true);
+                for (var i = 0; i < list.Count; i++)
+                {
+                    result[list[i]] = loaded[i];
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "批量加载账号列表运行态失败，回退到逐账号查询");
+                result.Clear();
+            }
+
+            return result;
+        }
+
+        /// <summary>
         /// 获取指定ID的实例（不判断是否存活）
         /// </summary>
         /// <param name="channelId">实例ID/渠道ID</param>

@@ -14,16 +14,20 @@ namespace Midjourney.Services
     {
         /// <summary>
         /// 批量加载账号运行态快照。
-        /// 返回列表与 <paramref name="sources"/> 一一对应；未通过前置存活判断的账号不会访问 Redis，
+        /// 返回列表与 <paramref name="sources"/> 一一对应；未通过前置存活判断的账号默认不会访问 Redis，
         /// 其快照字段保持默认值且 <see cref="AccountRuntimeSnapshot.IsAlive"/> 为 false。
         /// </summary>
         /// <param name="sources">候选账号及 key 提供器。</param>
         /// <param name="includeDescribeQuota">是否读取图生文计数（仅 describe 过滤时使用）。</param>
+        /// <param name="includeValuesForInactive">是否连未通过前置存活判断的账号也读取运行态值（账号列表展示使用）。</param>
         /// <returns>与输入顺序一致的快照列表。</returns>
         /// <exception cref="ArgumentNullException"><paramref name="sources"/> 为 null。</exception>
-        /// <exception cref="ArgumentException">前置存活为 true 但账号或 key 提供器为空。</exception>
+        /// <exception cref="ArgumentException">需要读取运行态但账号或 key 提供器为空。</exception>
         /// <exception cref="InvalidOperationException">pipeline 返回结果数量与命令数量不一致。</exception>
-        internal static List<AccountRuntimeSnapshot> Load(IReadOnlyList<AccountRuntimeSource> sources, bool includeDescribeQuota)
+        internal static List<AccountRuntimeSnapshot> Load(
+            IReadOnlyList<AccountRuntimeSource> sources,
+            bool includeDescribeQuota,
+            bool includeValuesForInactive = false)
         {
             ArgumentNullException.ThrowIfNull(sources);
 
@@ -47,14 +51,14 @@ namespace Midjourney.Services
                 for (var sourceIndex = 0; sourceIndex < sources.Count; sourceIndex++)
                 {
                     var source = sources[sourceIndex];
-                    if (!source.PrecheckAlive)
+                    if (!source.PrecheckAlive && !includeValuesForInactive)
                     {
                         continue;
                     }
 
                     if (source.Account == null || source.Keys == null)
                     {
-                        throw new ArgumentException("PrecheckAlive 为 true 时 Account 和 Keys 不能为空", nameof(sources));
+                        throw new ArgumentException("读取账号运行态时 Account 和 Keys 不能为空", nameof(sources));
                     }
 
                     var acc = source.Account;

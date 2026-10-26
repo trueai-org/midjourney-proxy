@@ -23,6 +23,55 @@ namespace Midjourney.Tests
         private const int PerformanceThresholdMilliseconds = 500;
 
         [Fact]
+        public void GetRuntimeSnapshots_IncludesInactiveAccountDisplayValues()
+        {
+            if (!TryPrepareEnvironment(out var previousSetting, out var keysToDelete))
+            {
+                return;
+            }
+
+            var today = DateTime.Now.Date;
+            keysToDelete.Add(CounterHelper.GetAccountTodayTotalCountKey(today));
+
+            try
+            {
+                var spec = new EdgeAccountSpec
+                {
+                    Id = "display00",
+                    YouChuan = true,
+                    Enable = false,
+                    FastAvailable = 10,
+                    RelaxCount = 1,
+                    FastQueue = 3,
+                    RelaxQueue = 2,
+                    DescribeQueue = 1,
+                    FastCore = 1,
+                    RelaxCore = 2,
+                    DescribeCore = 1,
+                    TodayFast = 4,
+                    TodayTurbo = 5,
+                    TodayRelax = 6
+                };
+
+                var (service, _) = CreateEdgeService(spec, keysToDelete, today);
+                using var executor = new BackgroundTaskExecutor("AccountSelectionIntegrationTest");
+                var accountService = CreateAccountService(executor);
+                var snapshots = accountService.GetRuntimeSnapshots([service]);
+
+                Assert.True(snapshots.TryGetValue(service, out var snapshot));
+                Assert.False(snapshot.IsAlive);
+                Assert.Equal(6, snapshot.GetQueueTaskCount(service.Account));
+                Assert.Equal(4, snapshot.GetRunningTaskCount(service.Account));
+                Assert.Equal(9, snapshot.GetTodayCount(GenerationSpeedMode.FAST));
+                Assert.Equal(6, snapshot.GetTodayCount(GenerationSpeedMode.RELAX));
+            }
+            finally
+            {
+                Cleanup(previousSetting, keysToDelete);
+            }
+        }
+
+        [Fact]
         public void ChooseInstance_200YouChuan_MultiModeRefreshesSnapshot()
         {
             if (!TryPrepareEnvironment(out var previousSetting, out var keysToDelete))
