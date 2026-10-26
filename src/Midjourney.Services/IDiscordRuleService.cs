@@ -35,5 +35,15 @@ namespace Midjourney.Services
         /// <param name="instances">可用的 Discord 实例列表。</param>
         /// <returns>选择的 Discord 实例。</returns>
         DiscordService Choose(List<DiscordService> instances);
+
+        /// <summary>
+        /// 根据规则选择一个 Discord 实例，优先使用批量快照中的队列/并发数据。
+        /// 默认实现忽略快照，兼容不关心运行态指标的选择规则。
+        /// </summary>
+        /// <param name="instances">可用的 Discord 实例列表。</param>
+        /// <param name="snapshots">实例运行态快照；为 null 时由规则自行读取。</param>
+        /// <returns>选择的 Discord 实例。</returns>
+        DiscordService Choose(List<DiscordService> instances, IReadOnlyDictionary<DiscordService, AccountRuntimeSnapshot> snapshots)
+            => Choose(instances);
     }
 }

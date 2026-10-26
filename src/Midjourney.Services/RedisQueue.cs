@@ -48,6 +48,11 @@ namespace Midjourney.Services
         private readonly int _blockTimeoutSeconds;
 
         /// <summary>
+        /// 队列在 Redis 中的 key（不含全局前缀）。
+        /// </summary>
+        internal string Key => _queueKey;
+
+        /// <summary>
         /// 初始化队列
         /// </summary>
         /// <param name="redis">CSRedis 客户端实例</param>

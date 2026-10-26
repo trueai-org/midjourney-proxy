@@ -49,9 +49,16 @@ namespace Midjourney.Services
         private static string InitConnectLockKey(DiscordAccount account) => $"DiscordAccountInitConnectLock:{account.ChannelId}";
 
         /// <summary>
+        /// WS 初始化连接锁在 Redis 中的完整 key（含 CSRedis 锁前缀，不含全局前缀）。
+        /// </summary>
+        /// <param name="account">账号。</param>
+        /// <returns>完整锁 key。</returns>
+        internal static string InitConnectLockRedisKey(DiscordAccount account) => $"CSRedisClientLock:{InitConnectLockKey(account)}";
+
+        /// <summary>
         /// WS 判断是否初始化连接 - 如果存在说明正在连接/连接中
         /// </summary>
-        public static bool IsInitConnect(DiscordAccount account) => RedisHelper.Instance.ExistsLock(InitConnectLockKey(account));
+        public static bool IsInitConnect(DiscordAccount account) => RedisHelper.Exists(InitConnectLockRedisKey(account));
 
         /// <summary>
         /// 创建 WebSocketManager 并启动连接
@@ -90,9 +97,16 @@ namespace Midjourney.Services
         private static string InitConnectingKey(DiscordAccount account) => $"DiscordAccountInitConnecting:{account.ChannelId}";
 
         /// <summary>
+        /// WS 初始化连接中 key（不含全局前缀）。
+        /// </summary>
+        /// <param name="account">账号。</param>
+        /// <returns>连接中 key。</returns>
+        internal static string InitConnectingRedisKey(DiscordAccount account) => InitConnectingKey(account);
+
+        /// <summary>
         /// WS 判断是否初始化连接中
         /// </summary>
-        public static bool IsInitConnecting(DiscordAccount account) => RedisHelper.Exists(InitConnectingKey(account));
+        public static bool IsInitConnecting(DiscordAccount account) => RedisHelper.Exists(InitConnectingRedisKey(account));
 
         private readonly IFreeSql _freeSql = FreeSqlHelper.FreeSql;
 

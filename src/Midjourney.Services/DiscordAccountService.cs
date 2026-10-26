@@ -87,9 +87,23 @@ namespace Midjourney.Services
 
         /// <summary>
         /// 获取存活的实例。
+        /// 使用一次 pipeline 批量查询存活所需的 Redis key；失败时回退到逐账号查询。
         /// </summary>
         /// <returns>存活的实例列表。</returns>
-        public List<DiscordService> GetAliveInstances() => _instances.Where(c => c != null && c.IsAlive == true).ToList() ?? [];
+        public List<DiscordService> GetAliveInstances()
+        {
+            var candidates = _instances.Where(c => c != null).ToList();
+
+            try
+            {
+                return AccountRuntimeSnapshotLoader.LoadAlive(candidates);
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "批量获取存活实例失败，回退到逐账号查询");
+                return _instances.Where(c => c != null && c.IsAlive == true).ToList() ?? [];
+            }
+        }
 
         /// <summary>
         /// 选择一个实例。
@@ -164,7 +178,79 @@ namespace Midjourney.Services
                 // 注意：IEnumerable<T> 是延迟执行的，Where 只是构建了查询表达式，并没有立即执行，ToList() 会立即执行
                 foreach (var mode in modes)
                 {
-                    var list = GetAliveInstances()
+                    // 当前速度模式使用一次 pipeline 读取所有候选账号的存活、队列、计数和并发占用；
+                    // 每个速度模式独立刷新快照，和原逐模式 GetAliveInstances 行为保持一致。
+                    List<DiscordService> aliveInstances = null;
+                    Dictionary<DiscordService, AccountRuntimeSnapshot> snapshots = null;
+                    try
+                    {
+                        var candidates = _instances.Where(c => c != null).ToList();
+                        var sources = new List<AccountRuntimeSource>(candidates.Count);
+                        foreach (var candidate in candidates)
+                        {
+                            sources.Add(new AccountRuntimeSource
+                            {
+                                Account = candidate.Account,
+                                Keys = candidate,
+                                PrecheckAlive = candidate.IsAlivePrecheck(),
+                                IsSessionValid = candidate.IsSessionValidInMemory
+                            });
+                        }
+
+                        var loadedSnapshots = AccountRuntimeSnapshotLoader.Load(sources, describe == true);
+                        snapshots = new Dictionary<DiscordService, AccountRuntimeSnapshot>(candidates.Count);
+                        aliveInstances = new List<DiscordService>(candidates.Count);
+
+                        for (var i = 0; i < candidates.Count; i++)
+                        {
+                            var snapshot = loadedSnapshots[i];
+                            snapshots[candidates[i]] = snapshot;
+
+                            if (snapshot.IsAlive)
+                            {
+                                aliveInstances.Add(candidates[i]);
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // 批量快照失败时回退到原有逐账号查询，保证选号不中断
+                        Log.Warning(ex, "批量加载账号运行态失败，回退到逐账号查询");
+                        snapshots = null;
+                        aliveInstances = null;
+                    }
+
+                    bool AllowContinue(DiscordService instance, GenerationSpeedMode speedMode)
+                    {
+                        if (snapshots != null && snapshots.TryGetValue(instance, out var snapshot))
+                        {
+                            return instance.IsAllowContinue(speedMode, snapshot);
+                        }
+
+                        return instance.IsAllowContinue(speedMode);
+                    }
+
+                    bool AllowGenerateVideo(DiscordService instance, GenerationSpeedMode speedMode)
+                    {
+                        if (snapshots != null && snapshots.TryGetValue(instance, out var snapshot))
+                        {
+                            return instance.IsAllowGenerateVideo(speedMode, snapshot);
+                        }
+
+                        return instance.IsAllowGenerateVideo(speedMode);
+                    }
+
+                    bool AllowDescribe(DiscordService instance)
+                    {
+                        if (snapshots != null && snapshots.TryGetValue(instance, out var snapshot))
+                        {
+                            return instance.IsAllowDescribe(snapshot);
+                        }
+
+                        return instance.IsAllowDescribe();
+                    }
+
+                    var list = (aliveInstances ?? GetAliveInstances())
                        .Where(c => c.Account != null && c.Account.Enable == true)
 
                        // 指定 ID 的实例
@@ -188,7 +274,7 @@ namespace Midjourney.Services
 
                     list = list
                         // 非放大任务，判断是否允许继续
-                        .WhereIf(isUpscale != true, c => c.IsAllowContinue(mode));
+                        .WhereIf(isUpscale != true, c => AllowContinue(c, mode));
 
                     list = list
                        // 判断悠船或官方账号
@@ -201,7 +287,7 @@ namespace Midjourney.Services
                        .WhereIf(isDiscord == true, c => c.Account.IsDiscord)
 
                        // 判断是否允许视频操作
-                       .WhereIf(isVideo == true, c => c.IsAllowGenerateVideo(mode))
+                       .WhereIf(isVideo == true, c => AllowGenerateVideo(c, mode))
 
                        // 高清视频支持
                        .WhereIf(isHdVideo == true, c => c.Account.IsHdVideo);
@@ -234,14 +320,14 @@ namespace Midjourney.Services
 
                         // 过滤开启功能的账号
                         .WhereIf(blend == true, c => c.Account.IsBlend)
-                        .WhereIf(describe == true, c => c.Account.IsDescribe && c.IsAllowDescribe())
+                        .WhereIf(describe == true, c => c.Account.IsDescribe && AllowDescribe(c))
                         .WhereIf(shorten == true, c => c.Account.IsShorten)
 
                         // 领域过滤
                         .WhereIf(isDomain == true && domainIds?.Count > 0, c => c.Account.IsVerticalDomain && c.Account.VerticalDomainIds.Any(x => domainIds.Contains(x)))
                         .WhereIf(isDomain == false, c => c.Account.IsVerticalDomain != true);
 
-                    inc = _rule.Choose(list.ToList());
+                    inc = _rule.Choose(list.ToList(), snapshots);
 
                     if (inc != null)
                     {
@@ -278,31 +364,106 @@ namespace Midjourney.Services
         }
 
         /// <summary>
-        /// 选择一个图生文可用实例 - 不判断速度 - 随机获取实例
+        /// 选择一个图生文可用实例 - 不判断速度 - 随机获取实例。
+        /// 每个筛选阶段用一次 pipeline 快照读取存活、图生文计数/队列/并发；
+        /// 第一轮 10 个候选未命中时，按原逻辑重新获取存活实例并全量筛选。
         /// </summary>
-        /// <param name="preferredSpeedMode"></param>
-        /// <returns></returns>
+        /// <param name="instanceId">指定实例 ID。</param>
+        /// <returns>图生文可用实例；没有则返回 null。</returns>
         public DiscordService GetDescribeInstance(string instanceId = null)
         {
-            var list = GetAliveInstances()
-                .WhereIf(!string.IsNullOrWhiteSpace(instanceId), c => c.ChannelId == instanceId)
-                .Where(c => c.Account.Enable == true && c.IsAlive && c.Account.IsDescribe && c.Account.IsAcceptNewTask())
+            Dictionary<DiscordService, AccountRuntimeSnapshot> snapshots = null;
+            List<DiscordService> alive = null;
+
+            void Refresh()
+            {
+                var candidates = _instances
+                    .Where(c => c != null && c.Account != null && c.Account.Enable == true && c.Account.IsDescribe && c.Account.IsAcceptNewTask())
+                    .WhereIf(!string.IsNullOrWhiteSpace(instanceId), c => c.ChannelId == instanceId)
+                    .ToList();
+
+                snapshots = null;
+                alive = null;
+
+                try
+                {
+                    var sources = new List<AccountRuntimeSource>(candidates.Count);
+                    foreach (var candidate in candidates)
+                    {
+                        sources.Add(new AccountRuntimeSource
+                        {
+                            Account = candidate.Account,
+                            Keys = candidate,
+                            PrecheckAlive = candidate.IsAlivePrecheck(),
+                            IsSessionValid = candidate.IsSessionValidInMemory
+                        });
+                    }
+
+                    var loadedSnapshots = AccountRuntimeSnapshotLoader.Load(sources, includeDescribeQuota: true);
+                    snapshots = new Dictionary<DiscordService, AccountRuntimeSnapshot>(candidates.Count);
+                    alive = new List<DiscordService>(candidates.Count);
+
+                    for (var i = 0; i < candidates.Count; i++)
+                    {
+                        var snapshot = loadedSnapshots[i];
+                        snapshots[candidates[i]] = snapshot;
+
+                        if (snapshot.IsAlive)
+                        {
+                            alive.Add(candidates[i]);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log.Warning(ex, "批量加载图生文账号运行态失败，回退到逐账号查询");
+                    snapshots = null;
+                    alive = null;
+                }
+            }
+
+            bool AllowDescribe(DiscordService instance)
+            {
+                if (snapshots != null && snapshots.TryGetValue(instance, out var snapshot))
+                {
+                    return instance.IsAllowDescribe(snapshot);
+                }
+
+                return instance.IsAllowDescribe();
+            }
+
+            IEnumerable<DiscordService> CandidateSource()
+            {
+                if (alive != null)
+                {
+                    return alive;
+                }
+
+                return GetAliveInstances()
+                    .WhereIf(!string.IsNullOrWhiteSpace(instanceId), c => c.ChannelId == instanceId)
+                    .Where(c => c.Account != null && c.Account.Enable == true && c.IsAlive && c.Account.IsDescribe && c.Account.IsAcceptNewTask());
+            }
+
+            Refresh();
+
+            // 为了减少压力，这里随机取 10 个实例进行二次筛选符合的只有筛选不到才全部筛选
+            var list = CandidateSource()
                 .OrderBy(c => Guid.NewGuid())
                 .Take(10)
                 .ToList();
 
-            // 为了减少压力，这里随机取 10 个实例进行二次筛选符合的只有筛选不到才全部筛选
-            var di = list.Where(c => c.IsAllowDescribe()).OrderBy(c => Guid.NewGuid()).FirstOrDefault();
+            var di = list.Where(AllowDescribe).OrderBy(c => Guid.NewGuid()).FirstOrDefault();
             if (di != null)
             {
                 return di;
             }
 
+            // 原逻辑第二阶段会重新获取存活实例；这里同样刷新一次快照再全量筛选
+            Refresh();
+
             // 实在找不到就全部筛选
-            return GetAliveInstances()
-                .WhereIf(!string.IsNullOrWhiteSpace(instanceId), c => c.ChannelId == instanceId)
-                .Where(c => c.Account.Enable == true && c.IsAlive && c.Account.IsDescribe && c.Account.IsAcceptNewTask())
-                .Where(c => c.IsAllowDescribe())
+            return CandidateSource()
+                .Where(AllowDescribe)
                 .OrderBy(c => Guid.NewGuid())
                 .FirstOrDefault();
         }

@@ -46,6 +46,13 @@ namespace Midjourney.Services
         }
 
         /// <summary>
+        /// 获取指定并发槽位的 Redis key（包含 CSRedis 锁前缀，不含全局 key 前缀）。
+        /// </summary>
+        /// <param name="index">槽位序号。</param>
+        /// <returns>槽位 key。</returns>
+        internal string GetTokenKey(int index) => $"{LOCK_PREFIX}{_concurrentKey}:{index}";
+
+        /// <summary>
         /// 尝试获取执行锁
         /// </summary>
         /// <param name="maxConcurrency">最大并发数 (如 N=12)</param>
@@ -88,7 +95,7 @@ namespace Midjourney.Services
                 for (int i = 0; i < maxConcurrency; i++)
                 {
                     // Key 格式: JobTokenPool:DataSyncJob:1
-                    var tokenKey = $"{LOCK_PREFIX}{_concurrentKey}:{i}";
+                    var tokenKey = GetTokenKey(i);
                     pipe.Exists(tokenKey);
                 }
 
@@ -165,7 +172,7 @@ namespace Midjourney.Services
                 for (int i = 0; i < maxConcurrency; i++)
                 {
                     // Key 格式: JobTokenPool:DataSyncJob:1
-                    var tokenKey = $"{LOCK_PREFIX}{_concurrentKey}:{i}";
+                    var tokenKey = GetTokenKey(i);
                     pipe.Exists(tokenKey);
                 }
 

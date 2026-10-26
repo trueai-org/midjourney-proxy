@@ -9,7 +9,7 @@
 		<IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
 		<EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
 		<SatelliteResourceLanguages>zh-Hans</SatelliteResourceLanguages>
-		<Version>12.0.2</Version>
+		<Version>12.1.0</Version>
 		<AssemblyVersion>12.0.4</AssemblyVersion>
 		<DockerfileContext>..\..</DockerfileContext>
 	</PropertyGroup>

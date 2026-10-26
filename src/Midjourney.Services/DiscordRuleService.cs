@@ -39,7 +39,15 @@ namespace Midjourney.Services
         /// </summary>
         /// <param name="instances">可用的Discord实例列表</param>
         /// <returns>选择的Discord实例</returns>
-        public DiscordService Choose(List<DiscordService> instances)
+        public DiscordService Choose(List<DiscordService> instances) => Choose(instances, null);
+
+        /// <summary>
+        /// 根据队列利用率选择一个Discord实例，优先使用批量快照中的队列数据。
+        /// </summary>
+        /// <param name="instances">可用的Discord实例列表</param>
+        /// <param name="snapshots">实例运行态快照；为 null 时逐账号读取 Redis</param>
+        /// <returns>选择的Discord实例</returns>
+        public DiscordService Choose(List<DiscordService> instances, IReadOnlyDictionary<DiscordService, AccountRuntimeSnapshot> snapshots)
         {
             if (instances == null || instances.Count == 0)
             {
@@ -50,7 +58,9 @@ namespace Midjourney.Services
             var instanceMetrics = instances.Select(instance =>
             {
                 var acc = instance.Account;
-                var queuedTasks = instance.GetQueueTaskCount;
+                AccountRuntimeSnapshot snapshot = null;
+                var hasSnapshot = snapshots != null && snapshots.TryGetValue(instance, out snapshot);
+                var queuedTasks = hasSnapshot ? snapshot.GetQueueTaskCount(acc) : instance.GetQueueTaskCount;
                 var queueSize = acc.QueueSize;
 
                 // 双队列
@@ -121,7 +131,15 @@ namespace Midjourney.Services
         /// </summary>
         /// <param name="instances"></param>
         /// <returns></returns>
-        public DiscordService Choose(List<DiscordService> instances)
+        public DiscordService Choose(List<DiscordService> instances) => Choose(instances, null);
+
+        /// <summary>
+        /// 账号填充模式，优先使用批量快照中的队列/并发数据。
+        /// </summary>
+        /// <param name="instances">可用的 Discord 实例列表。</param>
+        /// <param name="snapshots">实例运行态快照；为 null 时逐账号读取 Redis。</param>
+        /// <returns>选择的 Discord 实例。</returns>
+        public DiscordService Choose(List<DiscordService> instances, IReadOnlyDictionary<DiscordService, AccountRuntimeSnapshot> snapshots)
         {
             if (instances.Count == 0)
             {
@@ -133,8 +151,10 @@ namespace Midjourney.Services
             {
                 var acc = instance.Account;
 
-                var queuedCount = instance.GetQueueTaskCount;
-                var coreCount = instance.GetRunningTaskCount;
+                AccountRuntimeSnapshot snapshot = null;
+                var hasSnapshot = snapshots != null && snapshots.TryGetValue(instance, out snapshot);
+                var queuedCount = hasSnapshot ? snapshot.GetQueueTaskCount(acc) : instance.GetQueueTaskCount;
+                var coreCount = hasSnapshot ? snapshot.GetRunningTaskCount(acc) : instance.GetRunningTaskCount;
 
                 var queueSize = acc.QueueSize;
                 var coreSize = acc.CoreSize;

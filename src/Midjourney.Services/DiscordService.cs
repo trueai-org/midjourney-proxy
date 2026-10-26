@@ -39,7 +39,7 @@ namespace Midjourney.Services
     /// <summary>
     /// Discord 实例服务，负责处理 Discord 相关的任务管理和执行
     /// </summary>
-    public class DiscordService : IDiscordService
+    public class DiscordService : IDiscordService, IAccountRuntimeKeyProvider
     {
         /// <summary>
         /// 全局正在运行的任务列表
@@ -291,153 +291,45 @@ namespace Midjourney.Services
         public int FastAvailableCount => CounterHelper.GetFastTaskAvailableCount(_account.ChannelId);
 
         /// <summary>
-        /// 判断悠船是否允许慢速
+        /// 判断悠船是否允许慢速（实时读取 Redis）。
         /// </summary>
-        /// <returns></returns>
-        public bool IsYouChuanAllowRelax()
-        {
-            var acc = Account;
-            if (acc.IsYouChuan)
-            {
-                if (acc.YouChuanRelaxedReset > DateTime.Now.Date)
-                {
-                    // 已上限
-                    return false;
-                }
-
-                // 悠船每日限制慢速
-                var relaxCount = CounterHelper.GetYouchuanRelaxCount(acc.ChannelId);
-                var limit = acc.YouChuanRelaxDailyLimit;
-
-                if (relaxCount < limit - acc.RelaxCoreSize - acc.RelaxQueueSize)
-                {
-                    return true;
-                }
-                else if (relaxCount >= limit)
-                {
-                    return false;
-                }
-                else
-                {
-                    // 精确计算剩余次数
-                    var currentCore = _relaxConcurrent.GetConcurrency(acc.RelaxCoreSize);
-                    var currentQueue = _relaxQueue.Count();
-                    if (relaxCount + currentCore + currentQueue < limit)
-                    {
-                        return true;
-                    }
-                }
-            }
-            return false;
-        }
+        /// <returns>是否允许慢速。</returns>
+        public bool IsYouChuanAllowRelax() => IsYouChuanAllowRelax(new LiveAccountRuntimeValues(this));
 
         /// <summary>
-        /// 判断是否允许生成视频
+        /// 使用指定运行态数据判断悠船是否允许慢速。
         /// </summary>
-        /// <param name="isVideo"></param>
-        /// <returns></returns>
-        public bool IsAllowGenerateVideo(GenerationSpeedMode mode)
-        {
-            var videoUseCount = 8;
-            if (mode == GenerationSpeedMode.TURBO)
-            {
-                videoUseCount *= 2;
-            }
-
-            // 如果是悠船账号
-            var acc = Account;
-            if (acc.IsYouChuan)
-            {
-                if (mode == GenerationSpeedMode.RELAX)
-                {
-                    return false;
-                }
-
-                return FastAvailableCount > videoUseCount;
-            }
-
-            // 如果是官方账号
-            if (acc.IsOfficial)
-            {
-                if (mode == GenerationSpeedMode.RELAX)
-                {
-                    if (!acc.IsRelaxVideo)
-                    {
-                        return false;
-                    }
-                }
-
-                return FastAvailableCount > videoUseCount || acc.IsRelaxVideo;
-            }
-
-            // Discord 账号
-            if (acc.IsDiscord)
-            {
-                if (mode == GenerationSpeedMode.RELAX)
-                {
-                    if (!acc.IsRelaxVideo)
-                    {
-                        return false;
-                    }
-
-                    return acc.IsRelaxVideo;
-                }
-
-                return FastAvailableCount > videoUseCount || acc.IsRelaxVideo;
-            }
-
-            return false;
-        }
+        /// <param name="values">运行态数据。</param>
+        /// <returns>是否允许慢速。</returns>
+        internal bool IsYouChuanAllowRelax(IAccountRuntimeValues values) => AccountSelectionEvaluator.IsYouChuanAllowRelax(Account, values);
 
         /// <summary>
-        /// 判断是否允许图生文
+        /// 判断是否允许生成视频（实时读取 Redis）。
         /// </summary>
-        /// <returns></returns>
-        public bool IsAllowDescribe()
-        {
-            var acc = Account;
-            if (acc.IsDescribe)
-            {
-                // 官方/discord 账号不限制图生文
-                if (acc.IsOfficial || acc.IsDiscord)
-                {
-                    return true;
-                }
+        /// <param name="mode">速度模式。</param>
+        /// <returns>是否允许生成视频。</returns>
+        public bool IsAllowGenerateVideo(GenerationSpeedMode mode) => IsAllowGenerateVideo(mode, new LiveAccountRuntimeValues(this));
 
-                // 悠船每日 200 限制
-                var limit = 200;
-                if (acc.IsYouChuan)
-                {
-                    if (acc.YouChuanPicreadReset > DateTime.Now.Date)
-                    {
-                        // 已上限
-                        return false;
-                    }
+        /// <summary>
+        /// 使用指定运行态数据判断是否允许生成视频。
+        /// </summary>
+        /// <param name="mode">速度模式。</param>
+        /// <param name="values">运行态数据。</param>
+        /// <returns>是否允许生成视频。</returns>
+        internal bool IsAllowGenerateVideo(GenerationSpeedMode mode, IAccountRuntimeValues values) => AccountSelectionEvaluator.IsAllowGenerateVideo(Account, mode, values);
 
-                    var describeCount = CounterHelper.GetDescribeCount(acc.ChannelId);
-                    if (describeCount < limit - acc.CoreSize - acc.QueueSize)
-                    {
-                        return true;
-                    }
-                    else if (describeCount >= limit)
-                    {
-                        return false;
-                    }
-                    else
-                    {
-                        // 精确计算剩余次数
-                        var currentCore = _describeConcurrent.GetConcurrency(acc.CoreSize);
-                        var currentQueue = _describeQueue.Count();
-                        if (describeCount + currentCore + currentQueue < limit)
-                        {
-                            return true;
-                        }
-                    }
-                }
-            }
+        /// <summary>
+        /// 判断是否允许图生文（实时读取 Redis）。
+        /// </summary>
+        /// <returns>是否允许图生文。</returns>
+        public bool IsAllowDescribe() => IsAllowDescribe(new LiveAccountRuntimeValues(this));
 
-            return false;
-        }
+        /// <summary>
+        /// 使用指定运行态数据判断是否允许图生文。
+        /// </summary>
+        /// <param name="values">运行态数据。</param>
+        /// <returns>是否允许图生文。</returns>
+        internal bool IsAllowDescribe(IAccountRuntimeValues values) => AccountSelectionEvaluator.IsAllowDescribe(Account, values);
 
         /// <summary>
         /// 扣减快速
@@ -480,48 +372,105 @@ namespace Midjourney.Services
         public bool IsInit { get; set; }
 
         /// <summary>
-        /// 判断实例是否存活
+        /// 判断实例是否存活。
+        /// 实时路径逐项访问 Redis；批量选号路径使用 <see cref="IsAlivePrecheck"/> + 快照。
         /// </summary>
-        /// <returns>是否存活</returns>
-        public bool IsAlive
+        public bool IsAlive => IsAliveWithValues(new LiveAccountRuntimeValues(this));
+
+        /// <summary>
+        /// 使用指定运行态数据判断实例是否存活。
+        /// </summary>
+        /// <param name="values">运行态数据。</param>
+        /// <returns>是否存活。</returns>
+        internal bool IsAliveWithValues(IAccountRuntimeValues values)
         {
-            get
+            var acc = Account;
+
+            if (acc == null || acc.Enable != true || !IsInit)
             {
-                var acc = Account;
-
-                if (acc == null || acc.Enable != true || !IsInit)
-                {
-                    return false;
-                }
-
-                var hasFast = CounterHelper.HasFastTaskAvailableCount(acc.ChannelId);
-                if (!hasFast)
-                {
-                    return false;
-                }
-
-                if (acc.IsYouChuan)
-                {
-                    return !string.IsNullOrWhiteSpace(_ymTaskService?.YouChuanToken);
-                }
-
-                if (acc.IsOfficial)
-                {
-                    return !string.IsNullOrWhiteSpace(_ymTaskService?.OfficialToken);
-                }
-
-                if (acc.IsDiscord)
-                {
-                    //#if DEBUG
-                    //                    return true;
-                    //#endif
-
-                    // 已经建立连接，且不是正在连接中，且没有被锁定
-                    return DiscordWebSocketService.IsInitConnect(acc) && !DiscordWebSocketService.IsInitConnecting(acc) && acc.Lock == false;
-                }
-
                 return false;
             }
+
+            if (!values.HasFastAvailableCount)
+            {
+                return false;
+            }
+
+            return HasValidSession();
+        }
+
+        /// <summary>
+        /// 不访问 Redis 的存活前置判断：账号启用且已初始化。
+        /// 登录会话、Discord WS 和 Lock 由批量加载器在 pipeline 完成后最终判断，
+        /// 避免在 Lock/Token 状态变化时提前跳过账号。
+        /// </summary>
+        /// <returns>前置判断是否通过。</returns>
+        internal bool IsAlivePrecheck()
+        {
+            var acc = Account;
+            return acc != null && acc.Enable == true && IsInit;
+        }
+
+        /// <summary>
+        /// 判断当前账号的登录会话是否有效（只读内存，不访问 Redis）。
+        /// Discord 只判断 Lock；WS 连接状态由快照/实时 WS 检查补充。
+        /// </summary>
+        /// <returns>会话是否有效。</returns>
+        internal bool IsSessionValidInMemory()
+        {
+            var acc = Account;
+            if (acc == null)
+            {
+                return false;
+            }
+
+            if (acc.IsYouChuan)
+            {
+                return !string.IsNullOrWhiteSpace(_ymTaskService?.YouChuanToken);
+            }
+
+            if (acc.IsOfficial)
+            {
+                return !string.IsNullOrWhiteSpace(_ymTaskService?.OfficialToken);
+            }
+
+            if (acc.IsDiscord)
+            {
+                return acc.Lock == false;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// 判断当前账号的登录会话是否有效（Discord 额外检查 WS 状态，实时读取 Redis）。
+        /// </summary>
+        /// <returns>会话是否有效。</returns>
+        private bool HasValidSession()
+        {
+            var acc = Account;
+            if (acc == null)
+            {
+                return false;
+            }
+
+            if (acc.IsYouChuan)
+            {
+                return !string.IsNullOrWhiteSpace(_ymTaskService?.YouChuanToken);
+            }
+
+            if (acc.IsOfficial)
+            {
+                return !string.IsNullOrWhiteSpace(_ymTaskService?.OfficialToken);
+            }
+
+            if (acc.IsDiscord)
+            {
+                // 保持原判断顺序：WS 已建立、未在连接中、且没有被锁定
+                return DiscordWebSocketService.IsInitConnect(acc) && !DiscordWebSocketService.IsInitConnecting(acc) && acc.Lock == false;
+            }
+
+            return false;
         }
 
         /// <summary>
@@ -545,203 +494,126 @@ namespace Midjourney.Services
         public List<TaskInfo> GetRunningTasks() => _runningTasks.Values.ToList();
 
         /// <summary>
-        /// 获取正在运行的任务数量。
+        /// 获取正在运行的任务数量（实时读取 Redis）。
         /// </summary>
-        public int GetRunningTaskCount
+        public int GetRunningTaskCount => AccountSelectionEvaluator.GetRunningTaskCount(Account, new LiveAccountRuntimeValues(this));
+
+        /// <summary>
+        /// 使用指定运行态数据获取正在运行的任务数量。
+        /// </summary>
+        /// <param name="values">运行态数据。</param>
+        /// <returns>并发任务数。</returns>
+        internal int GetRunningTaskCountFromValues(IAccountRuntimeValues values) => AccountSelectionEvaluator.GetRunningTaskCount(Account, values);
+
+        /// <summary>
+        /// 获取队列中的任务数量（实时读取 Redis）。
+        /// </summary>
+        public int GetQueueTaskCount => AccountSelectionEvaluator.GetQueueTaskCount(Account, new LiveAccountRuntimeValues(this));
+
+        /// <summary>
+        /// 使用指定运行态数据获取队列中的任务数量。
+        /// </summary>
+        /// <param name="values">运行态数据。</param>
+        /// <returns>队列任务数。</returns>
+        internal int GetQueueTaskCountFromValues(IAccountRuntimeValues values) => AccountSelectionEvaluator.GetQueueTaskCount(Account, values);
+
+        /// <summary>
+        /// 根据速度模式判断是否允许继续绘图，不判断放大任务（实时读取 Redis）。
+        /// </summary>
+        /// <param name="mode">速度模式。</param>
+        /// <returns>是否允许继续。</returns>
+        public bool IsAllowContinue(GenerationSpeedMode mode) => IsAllowContinue(mode, new LiveAccountRuntimeValues(this));
+
+        /// <summary>
+        /// 使用指定运行态数据判断是否允许继续绘图。
+        /// </summary>
+        /// <param name="mode">速度模式。</param>
+        /// <param name="values">运行态数据。</param>
+        /// <returns>是否允许继续。</returns>
+        internal bool IsAllowContinue(GenerationSpeedMode mode, IAccountRuntimeValues values) => AccountSelectionEvaluator.IsAllowContinue(Account, mode, values);
+
+        /// <summary>
+        /// 实时运行态读取器：逐项访问 Redis，保持原有按需读取语义；批量选号使用快照替代。
+        /// </summary>
+        private sealed class LiveAccountRuntimeValues : IAccountRuntimeValues
         {
-            get
-            {
-                var count = 0;
-                var acc = Account;
+            private readonly DiscordService _service;
 
-                count += _defaultOrFastConcurrent.GetConcurrency(acc.CoreSize);
+            /// <summary>
+            /// 创建实时运行态读取器。
+            /// </summary>
+            /// <param name="service">所属实例。</param>
+            public LiveAccountRuntimeValues(DiscordService service) => _service = service;
 
-                if (acc.IsYouChuan)
-                {
-                    count += _relaxConcurrent.GetConcurrency(acc.RelaxCoreSize);
-                }
+            /// <inheritdoc />
+            public bool HasFastAvailableCount => CounterHelper.HasFastTaskAvailableCount(_service.ChannelId);
 
-                count += _describeConcurrent.GetConcurrency(acc.CoreSize);
+            /// <inheritdoc />
+            public int FastAvailableCount => CounterHelper.GetFastTaskAvailableCount(_service.ChannelId);
 
-                return count;
-            }
+            /// <inheritdoc />
+            public int RelaxCount => CounterHelper.GetYouchuanRelaxCount(_service.ChannelId);
+
+            /// <inheritdoc />
+            public int TodayCount(GenerationSpeedMode mode) => CounterHelper.GetAccountTodayTotalCount(_service.ChannelId, mode);
+
+            /// <inheritdoc />
+            public int DescribeCount => CounterHelper.GetDescribeCount(_service.ChannelId);
+
+            /// <inheritdoc />
+            public int FastQueueCount => _service._defaultOrFastQueue.Count();
+
+            /// <inheritdoc />
+            public int RelaxQueueCount => _service._relaxQueue.Count();
+
+            /// <inheritdoc />
+            public int DescribeQueueCount => _service._describeQueue.Count();
+
+            /// <inheritdoc />
+            public int FastConcurrency => _service._defaultOrFastConcurrent.GetConcurrency(_service.Account.CoreSize);
+
+            /// <inheritdoc />
+            public int RelaxConcurrency => _service._relaxConcurrent.GetConcurrency(_service.Account.RelaxCoreSize);
+
+            /// <inheritdoc />
+            public int DescribeConcurrency => _service._describeConcurrent.GetConcurrency(_service.Account.CoreSize);
         }
 
         /// <summary>
-        /// 获取队列中的任务数量。
+        /// 快速/默认队列 key（不含全局前缀）。
         /// </summary>
-        public int GetQueueTaskCount
-        {
-            get
-            {
-                var count = _defaultOrFastQueue.Count();
-
-                if (Account.IsYouChuan)
-                {
-                    count += _relaxQueue.Count();
-                }
-
-                count += _describeQueue.Count();
-
-                return count;
-            }
-        }
+        string IAccountRuntimeKeyProvider.FastQueueKey => _defaultOrFastQueue.Key;
 
         /// <summary>
-        /// 根据速度模式判断是否允许继续绘图，不判断放大任务
+        /// 悠船慢速队列 key（不含全局前缀）。
         /// </summary>
-        /// <param name="mode"></param>
-        /// <returns></returns>
-        public bool IsAllowContinue(GenerationSpeedMode mode)
-        {
-            var acc = Account;
+        string IAccountRuntimeKeyProvider.RelaxQueueKey => _relaxQueue.Key;
 
-            var isContinue = true;
+        /// <summary>
+        /// 图生文队列 key（不含全局前缀）。
+        /// </summary>
+        string IAccountRuntimeKeyProvider.DescribeQueueKey => _describeQueue.Key;
 
-            // 使用数据库判断指定模式是否允许绘图
-            if (isContinue)
-            {
-                // 首先判断允许速度
-                if (acc.AllowModes.Count > 0 && !acc.AllowModes.Contains(mode))
-                {
-                    isContinue = false;
-                }
-                else
-                {
-                    // 如果是固定速度，则强制修改速度为固定速度
-                    if (acc.Mode != null)
-                    {
-                        mode = acc.Mode.Value;
-                    }
+        /// <summary>
+        /// 获取快速并发槽位 key（不含全局前缀）。
+        /// </summary>
+        /// <param name="index">槽位序号。</param>
+        /// <returns>槽位 key。</returns>
+        string IAccountRuntimeKeyProvider.GetFastConcurrencyKey(int index) => _defaultOrFastConcurrent.GetTokenKey(index);
 
-                    // 判断速度对应的额度是否满足
-                    switch (mode)
-                    {
-                        case GenerationSpeedMode.RELAX:
-                            {
-                                if (acc.IsYouChuan)
-                                {
-                                    isContinue = acc.YouChuanRelaxedReset == null || acc.YouChuanRelaxedReset <= DateTime.Now.Date;
-                                }
-                                else
-                                {
-                                    isContinue = true;
-                                }
-                            }
-                            break;
+        /// <summary>
+        /// 获取悠船慢速并发槽位 key（不含全局前缀）。
+        /// </summary>
+        /// <param name="index">槽位序号。</param>
+        /// <returns>槽位 key。</returns>
+        string IAccountRuntimeKeyProvider.GetRelaxConcurrencyKey(int index) => _relaxConcurrent.GetTokenKey(index);
 
-                        case GenerationSpeedMode.FAST:
-                            {
-                                isContinue = FastAvailableCount > 6;
-                            }
-                            break;
-
-                        case GenerationSpeedMode.TURBO:
-                            {
-                                isContinue = FastAvailableCount > 12;
-                            }
-                            break;
-
-                        default:
-                            break;
-                    }
-                }
-            }
-
-            // 判断空闲队列
-            if (isContinue)
-            {
-                // 悠船慢速队列验证
-                if (acc.IsYouChuan && mode == GenerationSpeedMode.RELAX)
-                {
-                    var queueCount = _relaxQueue.Count();
-
-                    // 判断 RELAX 队列是否有空闲
-                    isContinue = acc.RelaxQueueSize <= 0 || queueCount < acc.RelaxQueueSize;
-                }
-                else
-                {
-                    // 快速队列验证
-                    var defaultOrFastQueueCount = _defaultOrFastQueue.Count();
-                    isContinue = acc.QueueSize <= 0 || defaultOrFastQueueCount < acc.QueueSize;
-                }
-            }
-
-            // 判断日绘图限制
-            if (isContinue)
-            {
-                // 慢速
-                if (mode == GenerationSpeedMode.RELAX)
-                {
-                    if (acc.DayRelaxDrawLimit <= -1)
-                    {
-                        isContinue = true;
-                    }
-                    else
-                    {
-                        var todayCount = CounterHelper.GetAccountTodayTotalCount(ChannelId, mode);
-                        isContinue = todayCount < acc.DayRelaxDrawLimit;
-                    }
-                }
-                // 快速 | 极速
-                else
-                {
-                    if (acc.DayDrawLimit <= -1)
-                    {
-                        isContinue = true;
-                    }
-                    else
-                    {
-                        var todayCount = CounterHelper.GetAccountTodayTotalCount(ChannelId, mode);
-                        isContinue = todayCount < acc.DayDrawLimit;
-                    }
-                }
-            }
-
-            // 根据计数器精确判断
-            if (isContinue)
-            {
-                // 如果慢速模式，只有悠船才判断慢速次数
-                if (mode == GenerationSpeedMode.RELAX)
-                {
-                    if (acc.IsYouChuan)
-                    {
-                        isContinue = IsYouChuanAllowRelax();
-                    }
-                    else
-                    {
-                        isContinue = true;
-                    }
-                }
-                else
-                {
-                    // 如果是快速，则判断快速是否足够次数
-                    // 快速至少 > 3 次
-                    // 暂不考虑极速的次数、暂不考虑视频的次数
-
-                    if (FastAvailableCount > 3 && FastAvailableCount > acc.CoreSize + acc.QueueCount)
-                    {
-                        isContinue = true;
-                    }
-                    else
-                    {
-                        // 精确计算
-                        var currentCore = _defaultOrFastConcurrent.GetConcurrency(acc.CoreSize);
-                        var currentQueue = _defaultOrFastQueue.Count();
-                        if (FastAvailableCount > 3 && FastAvailableCount > currentCore + currentQueue)
-                        {
-                            isContinue = true;
-                        }
-                        else
-                        {
-                            isContinue = false;
-                        }
-                    }
-                }
-            }
-
-            return isContinue;
-        }
+        /// <summary>
+        /// 获取图生文并发槽位 key（不含全局前缀）。
+        /// </summary>
+        /// <param name="index">槽位序号。</param>
+        /// <returns>槽位 key。</returns>
+        string IAccountRuntimeKeyProvider.GetDescribeConcurrencyKey(int index) => _describeConcurrent.GetTokenKey(index);
 
         /// <summary>
         /// 获取图片 seed

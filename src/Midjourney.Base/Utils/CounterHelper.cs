@@ -13,6 +13,40 @@ namespace Midjourney.Base
         private const string FastTaskAvailableCountHashKey = "FastTaskAvailableCount";
 
         /// <summary>
+        /// 快速任务可用计数 Hash key。
+        /// </summary>
+        public static string FastTaskAvailableCountKey => FastTaskAvailableCountHashKey;
+
+        /// <summary>
+        /// 获取指定日期的悠船慢速每日计数 Hash key。
+        /// </summary>
+        /// <param name="date">日期（只使用 yyyyMMdd）。</param>
+        /// <returns>Redis Hash key。</returns>
+        public static string GetYouchuanRelaxCountKey(DateTime date) => $"YouchuanRelaxCount:{date:yyyyMMdd}";
+
+        /// <summary>
+        /// 获取指定日期的账号今日绘图总数 Hash key。
+        /// </summary>
+        /// <param name="date">日期（只使用 yyyyMMdd）。</param>
+        /// <returns>Redis Hash key。</returns>
+        public static string GetAccountTodayTotalCountKey(DateTime date) => $"TaskAccountAll:{date:yyyyMMdd}";
+
+        /// <summary>
+        /// 获取指定日期的图生文每日计数 Hash key。
+        /// </summary>
+        /// <param name="date">日期（只使用 yyyyMMdd）。</param>
+        /// <returns>Redis Hash key。</returns>
+        public static string GetDescribeCountKey(DateTime date) => $"DescribeCount:{date:yyyyMMdd}";
+
+        /// <summary>
+        /// 获取账号今日绘图总数 Hash 的字段名。
+        /// </summary>
+        /// <param name="instanceId">账号实例 ID。</param>
+        /// <param name="mode">速度模式。</param>
+        /// <returns>Hash 字段名，格式为 {mode}_{instanceId}。</returns>
+        public static string GetAccountTodayTotalCountField(string instanceId, GenerationSpeedMode mode) => $"{mode}_{instanceId}";
+
+        /// <summary>
         /// 增加图生文每日计数
         /// </summary>
         /// <param name="account"></param>
