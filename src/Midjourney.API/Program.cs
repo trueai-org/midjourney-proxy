@@ -109,12 +109,10 @@ namespace Midjourney.API
 
                 var setting = SettingService.Instance.Current;
 
-                // 是否需要重新保存配置
-                var isSaveSetting = false;
+                // 运行时数据库降级只影响当前进程内存，不会自动写回本地缓存/Consul。
                 if (setting.DatabaseType == DatabaseType.NONE || setting.DatabaseType == DatabaseType.LiteDB || setting.DatabaseType == DatabaseType.MongoDB)
                 {
                     setting.DatabaseType = DatabaseType.SQLite;
-                    isSaveSetting = true;
                 }
 
                 // 初始化 Redis 验证是否可连接
@@ -127,8 +125,7 @@ namespace Midjourney.API
                         if (!csredis.Ping())
                         {
                             setting.EnableRedis = false;
-                            isSaveSetting = true;
-                            Log.Error("Redis 连接失败，已自动禁用 Redis 功能");
+                            Log.Error("Redis 连接失败，已自动禁用 Redis 功能；该降级状态只保存在内存，不会自动写回本地配置或 Consul");
                         }
                         else
                         {
@@ -139,8 +136,7 @@ namespace Midjourney.API
                     catch (Exception ex)
                     {
                         setting.EnableRedis = false;
-                        isSaveSetting = true;
-                        Log.Error(ex, "Redis 连接异常，已自动禁用 Redis 功能");
+                        Log.Error(ex, "Redis 连接异常，已自动禁用 Redis 功能；该降级状态只保存在内存，不会自动写回本地配置或 Consul");
                     }
                 }
 
@@ -172,10 +168,8 @@ namespace Midjourney.API
                     }
                     else
                     {
-                        // 超过重试次数，切换数据库
-                        // 切换为本地数据库
+                        // 超过重试次数，运行时切换为本地数据库；该降级状态只保存在内存，不会自动写回配置。
                         setting.DatabaseType = DatabaseType.SQLite;
-                        isSaveSetting = true;
 
                         // 切换为 SQLite
                         var freeSql = FreeSqlHelper.Init(setting.DatabaseType, setting.DatabaseConnectionString, true);
@@ -191,11 +185,8 @@ namespace Midjourney.API
 
                 Log.Information("数据库类型：{0}", setting.DatabaseType);
 
-                // 需要重新保存配置，注意：如果版本过旧，重新保存配置可能会覆盖新的业务，需谨慎处理
-                if (isSaveSetting)
-                {
-                    await SettingService.Instance.SaveAsync(setting);
-                }
+                // Redis/数据库运行时降级状态只保存在内存，不会自动写回 data/mj.json 或 Consul。
+                // 共享配置只能由管理员显式保存，避免某个节点网络异常时把降级配置污染到整个集群。
 
                 // 应用配置项
                 SettingService.Instance.ApplySettings();

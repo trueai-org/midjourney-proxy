@@ -34,6 +34,12 @@ namespace Midjourney.Base.Models
     public class Setting : DomainObject
     {
         /// <summary>
+        /// 配置版本号。启用 Consul 时作为共享配置的乐观锁版本，每次管理员保存成功后递增；
+        /// 提交的版本与 Consul 当前版本不一致时拒绝写入，避免旧配置覆盖新配置。
+        /// </summary>
+        public long Revision { get; set; }
+
+        /// <summary>
         /// 启用 Discord 防撞图机制，默认对提示词添加 --seed 参数，避免生成重复图片
         /// </summary>
         public bool EnableDiscordAppendSeed { get; set; } = true;

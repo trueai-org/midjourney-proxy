@@ -72,8 +72,9 @@ namespace Midjourney.Tests
         }
 
         [Fact]
-        public void ChooseInstance_200YouChuan_MultiModeRefreshesSnapshot()
+        public void ChooseInstance_200YouChuan_MultiModeUsesOneSnapshot()
         {
+            // 多速度模式共用同一份批量快照：正常路径只允许一次 Redis pipeline，耗时阈值用于防止退回逐模式查询。
             if (!TryPrepareEnvironment(out var previousSetting, out var keysToDelete))
             {
                 return;

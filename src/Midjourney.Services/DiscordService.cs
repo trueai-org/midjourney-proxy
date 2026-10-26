@@ -3861,6 +3861,13 @@ namespace Midjourney.Services
                     {
                         continue;
                     }
+                    // 悠船账号使用悠船 CDN 链接时无需转存云存储，避免重复抓取上游图片
+                    if (info.IsPartner
+                        && (url.Contains(TaskInfo.YOUCHUAN_CDN_PREFIX, StringComparison.OrdinalIgnoreCase)
+                            || url.Contains(TaskInfo.YOUCHUAN_CDN2, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        continue;
+                    }
 
                     // 转为云存储链接，缓存默认 24 小时
                     var okUrl = await AdaptiveCache.GetOrCreateAsync($"fetchimg:{url}{webpCacheKey}", async () =>

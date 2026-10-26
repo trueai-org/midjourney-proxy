@@ -107,6 +107,7 @@ namespace Midjourney.Services
 
         /// <summary>
         /// 选择一个实例。
+        /// 所有候选账号的运行态在一次 Redis pipeline 中读取，各速度模式复用同一份快照。
         /// </summary>
         /// <returns>选择的实例。</returns>
         /// <param name="accountFilter"></param>
@@ -118,7 +119,6 @@ namespace Midjourney.Services
         /// <param name="domainIds">过滤垂直领域 ID</param>
         /// <param name="instanceIds">指定 ids 账号</param>
         /// <param name="shorten"></param>
-        /// <param name="preferredSpeedMode">首选速度模式，优先使用此模式过滤</param>
         /// <param name="isYm">悠船/官方账号</param>
         /// <param name="isHdVideo"></param>
         /// <param name="isUpscale">是否为放大任务</param>
@@ -173,83 +173,83 @@ namespace Midjourney.Services
                     relaxFirstAttempt = true;
                 }
 
+                // 所有候选账号的运行态只读取一次：快照已包含 FAST/TURBO/RELAX、队列和并发数据，
+                // 后续按速度模式筛选复用同一份快照，避免每个模式重复执行 Redis pipeline。
+                List<DiscordService> aliveInstances = null;
+                Dictionary<DiscordService, AccountRuntimeSnapshot> snapshots = null;
+                try
+                {
+                    var candidates = _instances.Where(c => c != null).ToList();
+                    var sources = new List<AccountRuntimeSource>(candidates.Count);
+                    foreach (var candidate in candidates)
+                    {
+                        sources.Add(new AccountRuntimeSource
+                        {
+                            Account = candidate.Account,
+                            Keys = candidate,
+                            PrecheckAlive = candidate.IsAlivePrecheck(),
+                            IsSessionValid = candidate.IsSessionValidInMemory
+                        });
+                    }
+
+                    var loadedSnapshots = AccountRuntimeSnapshotLoader.Load(sources, describe == true);
+                    snapshots = new Dictionary<DiscordService, AccountRuntimeSnapshot>(candidates.Count);
+                    aliveInstances = new List<DiscordService>(candidates.Count);
+
+                    for (var i = 0; i < candidates.Count; i++)
+                    {
+                        var snapshot = loadedSnapshots[i];
+                        snapshots[candidates[i]] = snapshot;
+
+                        if (snapshot.IsAlive)
+                        {
+                            aliveInstances.Add(candidates[i]);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // 批量快照失败时回退到原有逐账号查询，保证选号不中断
+                    Log.Warning(ex, "批量加载账号运行态失败，回退到逐账号查询");
+                    snapshots = null;
+                    aliveInstances = null;
+                }
+
+                bool AllowContinue(DiscordService instance, GenerationSpeedMode speedMode)
+                {
+                    if (snapshots != null && snapshots.TryGetValue(instance, out var snapshot))
+                    {
+                        return instance.IsAllowContinue(speedMode, snapshot);
+                    }
+
+                    return instance.IsAllowContinue(speedMode);
+                }
+
+                bool AllowGenerateVideo(DiscordService instance, GenerationSpeedMode speedMode)
+                {
+                    if (snapshots != null && snapshots.TryGetValue(instance, out var snapshot))
+                    {
+                        return instance.IsAllowGenerateVideo(speedMode, snapshot);
+                    }
+
+                    return instance.IsAllowGenerateVideo(speedMode);
+                }
+
+                bool AllowDescribe(DiscordService instance)
+                {
+                    if (snapshots != null && snapshots.TryGetValue(instance, out var snapshot))
+                    {
+                        return instance.IsAllowDescribe(snapshot);
+                    }
+
+                    return instance.IsAllowDescribe();
+                }
+
                 // 根据顺序获取速度模式进行过滤，直到获取到可用实例为止
                 // 如果所有速度模式都没有可用实例，则返回 null
                 // 注意：IEnumerable<T> 是延迟执行的，Where 只是构建了查询表达式，并没有立即执行，ToList() 会立即执行
                 foreach (var mode in modes)
                 {
-                    // 当前速度模式使用一次 pipeline 读取所有候选账号的存活、队列、计数和并发占用；
-                    // 每个速度模式独立刷新快照，和原逐模式 GetAliveInstances 行为保持一致。
-                    List<DiscordService> aliveInstances = null;
-                    Dictionary<DiscordService, AccountRuntimeSnapshot> snapshots = null;
-                    try
-                    {
-                        var candidates = _instances.Where(c => c != null).ToList();
-                        var sources = new List<AccountRuntimeSource>(candidates.Count);
-                        foreach (var candidate in candidates)
-                        {
-                            sources.Add(new AccountRuntimeSource
-                            {
-                                Account = candidate.Account,
-                                Keys = candidate,
-                                PrecheckAlive = candidate.IsAlivePrecheck(),
-                                IsSessionValid = candidate.IsSessionValidInMemory
-                            });
-                        }
-
-                        var loadedSnapshots = AccountRuntimeSnapshotLoader.Load(sources, describe == true);
-                        snapshots = new Dictionary<DiscordService, AccountRuntimeSnapshot>(candidates.Count);
-                        aliveInstances = new List<DiscordService>(candidates.Count);
-
-                        for (var i = 0; i < candidates.Count; i++)
-                        {
-                            var snapshot = loadedSnapshots[i];
-                            snapshots[candidates[i]] = snapshot;
-
-                            if (snapshot.IsAlive)
-                            {
-                                aliveInstances.Add(candidates[i]);
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        // 批量快照失败时回退到原有逐账号查询，保证选号不中断
-                        Log.Warning(ex, "批量加载账号运行态失败，回退到逐账号查询");
-                        snapshots = null;
-                        aliveInstances = null;
-                    }
-
-                    bool AllowContinue(DiscordService instance, GenerationSpeedMode speedMode)
-                    {
-                        if (snapshots != null && snapshots.TryGetValue(instance, out var snapshot))
-                        {
-                            return instance.IsAllowContinue(speedMode, snapshot);
-                        }
-
-                        return instance.IsAllowContinue(speedMode);
-                    }
-
-                    bool AllowGenerateVideo(DiscordService instance, GenerationSpeedMode speedMode)
-                    {
-                        if (snapshots != null && snapshots.TryGetValue(instance, out var snapshot))
-                        {
-                            return instance.IsAllowGenerateVideo(speedMode, snapshot);
-                        }
-
-                        return instance.IsAllowGenerateVideo(speedMode);
-                    }
-
-                    bool AllowDescribe(DiscordService instance)
-                    {
-                        if (snapshots != null && snapshots.TryGetValue(instance, out var snapshot))
-                        {
-                            return instance.IsAllowDescribe(snapshot);
-                        }
-
-                        return instance.IsAllowDescribe();
-                    }
-
                     var list = (aliveInstances ?? GetAliveInstances())
                        .Where(c => c.Account != null && c.Account.Enable == true)
 

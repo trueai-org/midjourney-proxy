@@ -2303,6 +2303,7 @@ namespace Midjourney.API.Controllers
                 if (model.ConsulOptions != null)
                 {
                     model.ConsulOptions.ConsulUrl = "****";
+                    model.ConsulOptions.ConsulToken = "****";
                 }
 
                 if (!string.IsNullOrWhiteSpace(model.RedisConnectionString))
@@ -2343,10 +2344,12 @@ namespace Midjourney.API.Controllers
         }
 
         /// <summary>
-        /// 编辑系统配置
+        /// 编辑系统配置。
+        /// 启用 Consul 时，请求体必须携带 GetSetting 返回的 revision；Consul 已有版本时版本不一致会直接失败。
+        /// 只有该管理员显式保存路径会写入 Consul，节点启动或运行时降级不会写回共享配置。
         /// </summary>
-        /// <param name="setting"></param>
-        /// <returns></returns>
+        /// <param name="setting">管理员提交的完整配置，revision 必须与 Consul 当前版本一致</param>
+        /// <returns>保存结果；版本冲突或 Consul 写入失败时返回失败，不应用也不广播配置</returns>
         [HttpPost("setting")]
         public async Task<Result> SettingEdit([FromBody] Setting setting)
         {
@@ -2436,7 +2439,12 @@ namespace Midjourney.API.Controllers
 
             setting.Id = Constants.DEFAULT_SETTING_ID;
 
-            await SettingService.Instance.SaveAsync(setting);
+            // Consul 模式下使用 CAS + Revision 保存；版本冲突时直接失败，不应用也不广播旧配置。
+            var saveResult = await SettingService.Instance.SaveAdminAsync(setting);
+            if (!saveResult.Success)
+            {
+                return saveResult;
+            }
 
             // 应用新配置
             SettingService.Instance.ApplySettings();

@@ -1624,7 +1624,8 @@ namespace Midjourney.API
                                 return;
                             }
 
-                            await SettingService.Instance.LoadAsync();
+                            // 运行时重载不回退本地缓存；Consul 不可用时保留当前内存配置
+                            await SettingService.Instance.ReloadAsync();
                             SettingService.Instance.ApplySettings();
                         }
                         break;
