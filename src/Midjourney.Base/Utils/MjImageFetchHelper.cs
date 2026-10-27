@@ -232,6 +232,12 @@ namespace Midjourney.Base.Util
                     return new FetchFileResult { Success = true, Url = url, Msg = "White host" };
                 }
 
+                // 输入链接白名单：配置的域名不抓取/不转存，直接复用原链接
+                if (GlobalConfiguration.Setting?.IsPromptLinkWhitelisted(url) == true)
+                {
+                    return new FetchFileResult { Success = true, Url = url, Msg = "Prompt link whitelist" };
+                }
+
                 // 创建独立的请求消息，避免污染共享 HttpClient
                 using var request = new HttpRequestMessage(HttpMethod.Get, url);
 

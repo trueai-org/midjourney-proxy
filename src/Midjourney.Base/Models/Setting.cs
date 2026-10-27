@@ -596,6 +596,80 @@ namespace Midjourney.Base.Models
         }
 
         /// <summary>
+        /// 输入链接白名单域名
+        /// 在输入链接替换规则之后生效：提示词中的输入链接（垫图、混图、参考图、编辑/转绘基础图、视频首尾帧、图生文图片）
+        /// 命中白名单域名时不再抓取、不再转存（云存储、悠船 CDN），并完全保留原链接（不参与全球加速地址重写）。
+        /// 支持配置域名或完整链接，例如：cdn.huanwangai.com、https://cdn.huanwangai.com/attachments。
+        /// 按 host 精确匹配，不区分大小写，不匹配子域名；为 null 或空列表时不跳过任何链接。
+        /// </summary>
+        public List<string> ConvertPromptLinkWhitelistDomains { get; set; } = new();
+
+        /// <summary>
+        /// 判断链接的域名是否命中输入链接白名单。
+        /// 配置项会归一化为 host（去除协议、端口、路径、末尾点并忽略大小写）；链接必须是绝对 URL，否则返回 false。
+        /// 仅做 host 精确匹配，不匹配子域名，例如配置 cdn.a.com 时 img.cdn.a.com 不命中。
+        /// </summary>
+        /// <param name="url">待判断的链接；为空或非法链接时返回 false</param>
+        /// <returns>命中白名单返回 true，否则返回 false</returns>
+        public bool IsPromptLinkWhitelisted(string url)
+        {
+            var domains = ConvertPromptLinkWhitelistDomains;
+            if (string.IsNullOrWhiteSpace(url) || domains == null || domains.Count == 0)
+            {
+                return false;
+            }
+
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            {
+                return false;
+            }
+
+            var host = uri.Host.TrimEnd('.');
+            if (string.IsNullOrWhiteSpace(host))
+            {
+                return false;
+            }
+
+            foreach (var domain in domains)
+            {
+                if (string.IsNullOrWhiteSpace(domain))
+                {
+                    continue;
+                }
+
+                var normalized = NormalizePromptLinkWhitelistDomain(domain);
+                if (normalized != null && host.Equals(normalized, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// 将白名单配置项归一化为 host：支持 host、host:port、完整 URL；解析失败返回 null。
+        /// 例如 https://cdn.a.com/path、cdn.a.com:443、CDN.A.com. 都归一化为 cdn.a.com。
+        /// </summary>
+        private static string NormalizePromptLinkWhitelistDomain(string domain)
+        {
+            var value = domain.Trim();
+            if (value.Length == 0)
+            {
+                return null;
+            }
+
+            var candidate = value.Contains("://", StringComparison.Ordinal) ? value : "http://" + value;
+            if (!Uri.TryCreate(candidate, UriKind.Absolute, out var uri))
+            {
+                return null;
+            }
+
+            var host = uri.Host.TrimEnd('.');
+            return string.IsNullOrWhiteSpace(host) ? null : host;
+        }
+
+        /// <summary>
         /// 输出链接替换规则
         /// 当上游任务进度中、完成时，将最终提示词、prompt、promptEn 等结果中的链接替换为指定链接
         /// 支持配置多个 key value，例如：{"cdn.huanwangai.cn":"cdn.skynetcircle.com"}

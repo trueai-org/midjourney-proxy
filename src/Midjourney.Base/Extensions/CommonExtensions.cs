@@ -583,12 +583,19 @@ namespace Midjourney.Base
 
         /// <summary>
         /// 转为国际站地址
+        /// 输入链接白名单命中的链接完全保留原链接，不做全球加速重写。
         /// </summary>
         /// <param name="url"></param>
         /// <returns></returns>
         public static string ToGlobalCdn(this string url)
         {
             if (string.IsNullOrWhiteSpace(url))
+            {
+                return url;
+            }
+
+            // 输入链接白名单：命中白名单的链接完全保留原链接，不参与全球加速重写
+            if (GlobalConfiguration.Setting?.IsPromptLinkWhitelisted(url) == true)
             {
                 return url;
             }

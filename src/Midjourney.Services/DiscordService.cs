@@ -2798,7 +2798,9 @@ namespace Midjourney.Services
 
             // URL-only：仅悠船需要把外部链接转换成悠船链接
             var url = info.BaseImageUrl;
-            if (Account.IsYouChuan
+            // 命中输入链接白名单：保留原链接，不抓取、不上传悠船 CDN
+            if (!prepareSetting.IsPromptLinkWhitelisted(url)
+                && Account.IsYouChuan
                 && prepareSetting.EnableYouChuanPromptLink
                 && !url.Contains("youchuan", StringComparison.OrdinalIgnoreCase))
             {
@@ -2910,6 +2912,12 @@ namespace Midjourney.Services
             }
 
             var setting = GlobalConfiguration.Setting ?? new Setting();
+            // 命中输入链接白名单：保留原链接，不抓取、不上传悠船 CDN
+            if (setting.IsPromptLinkWhitelisted(url))
+            {
+                return url;
+            }
+
             if (!Account.IsYouChuan
                 || setting.EnableYouChuanPromptLink != true
                 || url.Contains("youchuan", StringComparison.OrdinalIgnoreCase))
@@ -3750,6 +3758,24 @@ namespace Midjourney.Services
                 }
             }
 
+            // 输入链接白名单：在替换规则之后判断，命中的链接不抓取/不转存（云存储、悠船、全球加速），完全保留原链接
+            var whitelistedUrls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var url in urls)
+            {
+                if (setting.IsPromptLinkWhitelisted(url))
+                {
+                    whitelistedUrls.Add(url);
+                }
+            }
+
+            if (whitelistedUrls.Count > 0)
+            {
+                var hosts = whitelistedUrls
+                    .Select(x => Uri.TryCreate(x, UriKind.Absolute, out var u) ? u.Host : x)
+                    .Distinct();
+                _logger.Debug("提示词输入链接命中白名单，跳过抓取/转存: {Hosts}", string.Join(",", hosts));
+            }
+
             var urlDic = new Dictionary<string, string>();
             // 异步垫图准备阶段已经上传并写入提示词的链接，不再重复抓取/转换
             var preparedUrls = ImagineInputRef.ParseUrls(info.GetProperty(Constants.TASK_PROPERTY_IMAGINE_PREPARED_URLS));
@@ -3767,6 +3793,12 @@ namespace Midjourney.Services
                 {
                     // 已命中自定义垫图替换规则或已准备的链接，保留原链接，不再进行后续转换
                     if (ImagineInputRef.ShouldSkipConversion(url, replacedUrls, preparedUrls))
+                    {
+                        continue;
+                    }
+
+                    // 命中输入链接白名单：保留原链接，不转换为悠船链接
+                    if (whitelistedUrls.Contains(url))
                     {
                         continue;
                     }
@@ -3847,6 +3879,12 @@ namespace Midjourney.Services
                     continue;
                 }
 
+                // 命中输入链接白名单：保留原链接，不抓取、不上传云存储
+                if (whitelistedUrls.Contains(url))
+                {
+                    continue;
+                }
+
                 cancellationToken.ThrowIfCancellationRequested();
 
                 try
@@ -3921,6 +3959,12 @@ namespace Midjourney.Services
             {
                 foreach (var url in urls)
                 {
+                    // 命中输入链接白名单：完全保留原链接，不做全球加速重写
+                    if (whitelistedUrls.Contains(url))
+                    {
+                        continue;
+                    }
+
                     var newUrl = url.ToGlobalCdn();
                     if (newUrl != url)
                     {
