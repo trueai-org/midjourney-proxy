@@ -217,6 +217,18 @@ namespace Midjourney.API.Controllers
 
             data.SystemInfo = SystemInfo.GetCurrentSystemInfo();
 
+            // 实时并发与队列概览（匿名接口）：统计范围为数据库中已启用的账号，已用值取自当前 Redis，Total 为账号配置上限之和。
+            // 独立 10 秒短缓存，避免高频刷新首页时放大 Redis pipeline 压力；
+            // 不放进上面 10 分钟的 DB 统计缓存块，以保证并发/队列数据接近实时。
+            // 读取失败时 Calculator 返回 null，前端据此不展示该区块。
+            data.RuntimeOverview = _memoryCache.GetOrCreate($"{now}_home_runtime", c =>
+            {
+                c.SetAbsoluteExpiration(TimeSpan.FromSeconds(10));
+
+                var accounts = _freeSql.Select<DiscordAccount>().Where(x => x.Enable == true).ToList();
+                return AccountRuntimeOverviewCalculator.Calculate(accounts);
+            });
+
             var (fastTotal, notYcRelaxTotal, ycRelaxTotal) = _notifyService.GetTodayAccountCount();
 
             data.FastAvailableCount = fastTotal;

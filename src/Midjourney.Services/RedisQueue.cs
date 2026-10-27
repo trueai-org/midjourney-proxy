@@ -27,6 +27,20 @@ using CSRedis;
 namespace Midjourney.Services
 {
     /// <summary>
+    /// Redis 队列 key 工厂。
+    /// 与 <see cref="RedisQueue{T}"/> 共用同一套 key 规则，供外部（如首页实时概览）构造队列 key，避免手写前缀导致格式漂移。
+    /// </summary>
+    internal static class RedisQueue
+    {
+        /// <summary>
+        /// 构造队列在 Redis 中的 key（不含全局 key 前缀）。
+        /// </summary>
+        /// <param name="queueName">队列名称，例如 <c>fast:{channelId}</c>。</param>
+        /// <returns>队列 key，格式为 <c>queue:{queueName}</c>。</returns>
+        internal static string BuildQueueKey(string queueName) => $"queue:{queueName}";
+    }
+
+    /// <summary>
     /// 安全的 Redis 队列实现（支持分布式锁和并发控制）
     ///
     /// var queue1 = new RedisQueue(redis, "queue1", maxSize: 10, maxConcurrency: 12)
@@ -61,7 +75,7 @@ namespace Midjourney.Services
         public RedisQueue(CSRedisClient redis, string queueName, int maxConcurrency = 12)
         {
             _redis = redis;
-            _queueKey = $"queue:{queueName}";
+            _queueKey = RedisQueue.BuildQueueKey(queueName);
             _lockKey = $"lock:queue:{queueName}"; // 锁的Key
             _blockTimeoutSeconds = 5; // BLPOP 超时时间
             _consumerSemaphore = new SemaphoreSlim(maxConcurrency);

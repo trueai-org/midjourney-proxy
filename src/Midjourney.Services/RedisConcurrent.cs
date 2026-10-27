@@ -33,16 +33,34 @@ namespace Midjourney.Services
     {
         private readonly CSRedisClient _redis;
 
-        // 并发队列 key
-        private readonly string _concurrentKey;
+        // 并发名称（例如 fast:{channelId}），槽位 key 由 BuildLockName/BuildTokenKey 统一拼装
+        private readonly string _concurrentName;
 
         // csredis 分布式锁前缀
-        private const string LOCK_PREFIX = "CSRedisClientLock:";
+        // CSRedis 的 TryLock 内部会自动加上该前缀，因此直接传给 TryLock 的锁名称不能带前缀，
+        // 而 EXISTS 探测槽位时必须使用带前缀的完整 key，两者因此存在差异。
+        internal const string LOCK_PREFIX = "CSRedisClientLock:";
+
+        /// <summary>
+        /// 构造分布式锁名称（不含 CSRedisClientLock 前缀，供 CSRedis TryLock 使用）。
+        /// </summary>
+        /// <param name="concurrentName">并发名称，例如 <c>fast:{channelId}</c>。</param>
+        /// <param name="index">槽位序号，从 0 开始。</param>
+        /// <returns>锁名称，格式为 <c>concurrent:{concurrentName}:{index}</c>。</returns>
+        internal static string BuildLockName(string concurrentName, int index) => $"concurrent:{concurrentName}:{index}";
+
+        /// <summary>
+        /// 构造并发槽位在 Redis 中的 key（含 CSRedisClientLock 前缀，不含全局 key 前缀），供 EXISTS 探测使用。
+        /// </summary>
+        /// <param name="concurrentName">并发名称，例如 <c>fast:{channelId}</c>。</param>
+        /// <param name="index">槽位序号，从 0 开始。</param>
+        /// <returns>槽位 key，格式为 <c>CSRedisClientLock:concurrent:{concurrentName}:{index}</c>。</returns>
+        internal static string BuildTokenKey(string concurrentName, int index) => $"{LOCK_PREFIX}{BuildLockName(concurrentName, index)}";
 
         public RedisConcurrent(CSRedisClient redis, string concurrentName)
         {
             _redis = redis;
-            _concurrentKey = $"concurrent:{concurrentName}";
+            _concurrentName = concurrentName;
         }
 
         /// <summary>
@@ -50,7 +68,7 @@ namespace Midjourney.Services
         /// </summary>
         /// <param name="index">槽位序号。</param>
         /// <returns>槽位 key。</returns>
-        internal string GetTokenKey(int index) => $"{LOCK_PREFIX}{_concurrentKey}:{index}";
+        internal string GetTokenKey(int index) => BuildTokenKey(_concurrentName, index);
 
         /// <summary>
         /// 尝试获取执行锁
@@ -62,7 +80,8 @@ namespace Midjourney.Services
         {
             for (int i = 0; i < maxConcurrency; i++)
             {
-                var tokenKey = $"{_concurrentKey}:{i}";
+                // 注意：传给 CSRedis TryLock 的锁名称不能带 CSRedisClientLock 前缀，由 TryLock 内部补全
+                var tokenKey = BuildLockName(_concurrentName, i);
 
                 // 尝试获取令牌 i 的锁
                 var lockObj = _redis.TryLock(tokenKey, jobTimeoutSeconds, true);
@@ -107,8 +126,8 @@ namespace Midjourney.Services
                 {
                     if (results[i] is bool any && !any)
                     {
-                        // 发现空闲槽位，记录其后缀 (例如 "DataSyncJob:1")
-                        availableKeySuffix = $"{_concurrentKey}:{i}";
+                        // 发现空闲槽位，记录锁名称（不含 LOCK_PREFIX，后续交给 TryLock 自动补全）
+                        availableKeySuffix = BuildLockName(_concurrentName, i);
 
                         // 只要找到一个空闲槽位，就立即跳出，进入抢占阶段
                         break;

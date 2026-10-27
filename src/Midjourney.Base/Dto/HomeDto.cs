@@ -144,5 +144,12 @@ namespace Midjourney.Base.Dto
         /// 所有节点
         /// </summary>
         public List<string> Nodes { get; set; } = [];
+
+        /// <summary>
+        /// 实时并发与队列概览。
+        /// 统计范围为数据库中启用（<c>Enable == true</c>）的账号，不包含图生文（describe）队列与并发。
+        /// 读取失败（Redis 未启用或 pipeline 异常）时为 null，前端据此不展示该区块。
+        /// </summary>
+        public HomeRuntimeOverviewDto RuntimeOverview { get; set; }
     }
 }
