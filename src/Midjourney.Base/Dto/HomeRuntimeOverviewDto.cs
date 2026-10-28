@@ -28,7 +28,8 @@ namespace Midjourney.Base.Dto
     /// 首页实时并发与队列概览。
     /// 统计范围：数据库中 <c>Enable == true</c> 的账号；每组指标均为「可用 / 已用 / 总数」：
     /// 可用数受剩余绘图次数限制（后端已按阈值计算），已用数为当前 Redis 实际占用，总数为账号配置上限之和。
-    /// 不包含图生文（describe）队列与并发。单位统一为「个」（并发槽位 / 任务数）。
+    /// 图生文（describe）指标只统计开启 <c>IsDescribe</c> 的账号；其中「悠船图生文剩余次数」按悠船每日 200 次固定额度折算。
+    /// 单位统一为「个」（并发槽位 / 任务数 / 次数）。
     /// </summary>
     public class HomeRuntimeOverviewDto
     {
@@ -109,5 +110,67 @@ namespace Midjourney.Base.Dto
         /// 单位：个（任务数）。
         /// </summary>
         public int YouChuanRelaxQueueAvailable { get; set; }
+
+        /// <summary>
+        /// 图生文并发数：仅统计启用且开启 <c>IsDescribe</c> 的账号，
+        /// 当前已占用的图生文并发槽位数之和（Redis 中 <c>CSRedisClientLock:concurrent:describe:{channelId}:{i}</c> 存在的槽位数量）。
+        /// 单位：个（并发槽位）。
+        /// </summary>
+        public int DescribeConcurrency { get; set; }
+
+        /// <summary>
+        /// 图生文总并发数：仅统计启用且开启 <c>IsDescribe</c> 的账号，并发上限（<c>CoreSize</c>）之和。
+        /// 图生文队列与并发复用账号的 <c>CoreSize</c> / <c>QueueSize</c> 配置。
+        /// 单位：个（并发槽位）。
+        /// </summary>
+        public int DescribeConcurrencyTotal { get; set; }
+
+        /// <summary>
+        /// 可用图生文并发数：仅统计开启 <c>IsDescribe</c> 的账号，按 (CoreSize - 已用图生文并发) 累加。
+        /// 口径：悠船账号先按「今日剩余可提交次数」（200 - 今日已用 - 运行中并发 - 排队数，当日已重置按 0）截断，
+        /// 可用并发不会超过该值；官方/Discord 账号不限制图生文，空闲槽位始终计入。
+        /// 「可用并发 + 可用队列」不超过悠船剩余可提交次数，是否还有额度也可结合「悠船图生文剩余次数」判断。
+        /// 单位：个（并发槽位）。
+        /// </summary>
+        public int DescribeConcurrencyAvailable { get; set; }
+
+        /// <summary>
+        /// 图生文队列数：仅统计启用且开启 <c>IsDescribe</c> 的账号，当前图生文等待队列（<c>queue:describe:{channelId}</c>）长度之和。
+        /// 单位：个（任务数）。
+        /// </summary>
+        public int DescribeQueueCount { get; set; }
+
+        /// <summary>
+        /// 图生文总队列数：仅统计启用且开启 <c>IsDescribe</c> 的账号，图生文等待队列上限（<c>QueueSize</c>）之和。
+        /// 单位：个（任务数）。
+        /// </summary>
+        public int DescribeQueueCountTotal { get; set; }
+
+        /// <summary>
+        /// 可用图生文队列数：仅统计开启 <c>IsDescribe</c> 的账号，按 (QueueSize - 已用图生文队列) 累加。
+        /// 口径：悠船账号先扣掉可用于空闲并发的额度，剩余可提交次数才计入队列可用；
+        /// 官方/Discord 账号不限制图生文，空闲队列始终计入。
+        /// 单位：个（任务数）。
+        /// </summary>
+        public int DescribeQueueAvailable { get; set; }
+
+        /// <summary>
+        /// 悠船图生文已用次数：仅统计启用、悠船且开启 <c>IsDescribe</c> 的账号，今日已用图生文次数之和。
+        /// 单位：次。
+        /// </summary>
+        public int YouChuanDescribeQuotaUsed { get; set; }
+
+        /// <summary>
+        /// 悠船图生文总额度：仅统计启用、悠船且开启 <c>IsDescribe</c> 的账号，每账号每日 200 次，按账号数累加。
+        /// 单位：次。
+        /// </summary>
+        public int YouChuanDescribeQuotaTotal { get; set; }
+
+        /// <summary>
+        /// 悠船图生文剩余次数：仅统计启用、悠船且开启 <c>IsDescribe</c> 的账号，
+        /// 按 max(0, 200 - 今日已用) 逐账号累加；当日已触发图生文上限重置（<c>YouChuanPicreadReset</c> 大于当天）时按 0 计。
+        /// 单位：次。
+        /// </summary>
+        public int YouChuanDescribeQuotaRemaining { get; set; }
     }
 }
