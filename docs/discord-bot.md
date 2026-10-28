@@ -15,7 +15,7 @@ client_id 可以在应用详情页找到，为 APPLICATION ID
 
 https://discord.com/oauth2/authorize?client_id=xxx&permissions=8&scope=bot
 
-4. 复制或重置 Bot Token 到配置文件
+4. 复制或重置 Bot Token，在管理后台的 Discord 账号表单中填写（可选）
 ```
 
 设置应用权限（确保拥有读取内容权限，参考截图）

@@ -33,82 +33,40 @@ namespace Midjourney.Base.Util
         /// 禁用词列表
         /// </summary>
         private const string BANNED_WORDS = """
-            cleavage
-            dominatrix
-            sexualiz
-            coon
-            booba
             busty
-            scantily clad
-            sexual
+            sexualiz
             nude
-            breasts
-            honkey
-            shibari
-            booty
-            naked
-            explicit
-            bodily fluids
-            wearing nothing
-            titty
-            without clothes on
-            barely dressed
-            full frontal
-            orgy
-            stripped
-            oppai
-            erected
-            making love
-            unclothed
             loli
-            decapitate
+            dominatrix
+            coon
+            sexual
+            scantily clad
             tight white
-            bunghole
-            bosom
-            clunge
-            no clothes
-            fuck
-            nipple
-            zero clothes
-            wincest
-            cannibalism
+            brothel
+            sexi
+            honkey
             kinbaku
             sadist
             anus
-            smut
-            boobs
-            incest
-            erotic
-            vagina
             sensuality
-            minge
-            legs spread
-            crotch
-            phallus
-            porn
+            vagina
+            shibari
+            clunge
+            big ass
+            shag
             jerk off king at pic
-            lolita
-            ballgag
-            bimbo
-            arse
-            intimate
-            horny
+            sexy female
             penis
             sexy
-            mammaries
-            hentai
-            ass
-            big ass
-            hardcore
-            seducing
-            sexy female
-            shit
-            labia
-            sexi
-            shag
-            sperm
-            brothel
-            dick
+            bimbo
+            incest
+            erotic
+            lolita
+            bunghole
+            smut
+            unclothed
+            crotch
+            making love
             """;
 
         /// <summary>

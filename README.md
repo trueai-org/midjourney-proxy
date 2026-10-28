@@ -1,292 +1,293 @@
 # Midjourney API
 
-A public welfare project offering a free drawing API that proxies Midjourney's Discord channel, supporting one-click face swapping for images and videos.
+A free, open-source Midjourney API that puts Discord, YouChuan and the Midjourney official website behind one HTTP interface, with one-click face swap for images and videos.
 
-The most powerful, complete, full-featured, completely free and open source Midjourney API project on the market.
+The most powerful, complete and full-featured free open-source Midjourney API project available.
 
-**中文** | [English](README.en.md)
+🦄 The world's largest Midjourney drawing API, generating 1,000,000+ images per day 🐂!
 
-市面上最强大，最完整，功能最全面、完全免费开源的 Midjourney API 项目。
+⭐ If you find this project useful, please give it a `Star` — thank you!
 
-代理 Midjourney 的 Discord 频道，通过 API 绘图，支持图片、视频一键换脸，公益项目，提供免费绘图接口。
+## 👍👍 Enterprise Midjourney API
 
-🦄 全球最大的 Midjourney 绘图 API，日绘图 100万+ 🐂！
+**Fast response · Quick rendering · Affordable · High concurrency · No account bans · No image deletion.**
 
-⭐ 如果觉得项目不错，请一定帮忙点个 `Star`，万分感谢！
-
-## 👍👍 Midjourney 企业级 API
-
-**极速响应 · 快速出图 · 价格实惠 · 高并发 · 不封号 · 不删图。**
-
-**企业级全局快速通道稳定出图。**
+**Stable rendering through the enterprise-grade global fast channel.**
 
 - https://huanwangai.com
 - https://api.huanwangai.com
 
-<img src="./docs/screenshots/api.huanwangai.com.png" alt="trueai.org" width="500"/>
-<img src="./docs/screenshots/huanwangai.com.png" alt="trueai.org" width="500"/>
+<img src="./docs/screenshots/api.huanwangai.com.png" alt="Enterprise API" width="500"/>
+<img src="./docs/screenshots/huanwangai.com.png" alt="Enterprise API" width="500"/>
 
+**English** | [中文](README.zh-CN.md)
 
-## 👍👍 Discord 官方镜像站
+## Documentation
 
-**支持 Discord 所有指令！**
+- [English manual entry](docs/manual/en/README.md)
+- [Chinese manual](docs/manual/index.md)
+- [Documentation maintenance & AI generation rules](docs/manual/AGENTS.md)
+- [Release archive](docs/manual/appendix/releases.md)
+- API reference: [docs/api.md](docs/api.md)
+- Configuration reference: [docs/appsettings.md](docs/appsettings.md)
+
+### Quick start
+
+1. Start the service with the one-click Docker script or the published image (default port `8086`).
+2. Open the admin console, sign in, and reset the administrator token immediately.
+3. On a private deployment, turn off demo mode, registration and guest access.
+4. Add at least one drawing account and wait until it comes online.
+5. Submit a minimal drawing request and confirm that the task result comes back.
+
+## 👍👍 Discord Official Mirror
+
+**Every Discord command is supported!**
 
 - <https://trueai.org>
-- 接入指南：<https://trueai-org.feishu.cn/wiki/VvEZwL0X8i14wGkXcfrc85w7nFU>
+- Integration guide: <https://trueai-org.feishu.cn/wiki/VvEZwL0X8i14wGkXcfrc85w7nFU>
 
 <img src="./docs/screenshots/trueai.org-mj.png" alt="trueai.org" width="500"/>
 
-## 交流群
+## Community
 
-如果使用上和部署上有什么疑问，欢迎加入交流群，一起讨论和解决问题。
+If you have questions about usage or deployment, join the community group and work through them together.
 
-如有绘图需求，欢迎加群联系群管理，群中皆是大佬！
+If you need drawing capacity, contact a group admin — the group is full of experienced users.
 
-[Midjourney公益群](https://qm.qq.com/q/k88clCkyMS)（QQ群：565908696）
+[Midjourney Community Group](https://qm.qq.com/q/k88clCkyMS) (QQ Group: 565908696)
 
-<img src="./docs/screenshots/565908696.png" alt="欢迎" width="360"/>
+<img src="./docs/screenshots/565908696.png" alt="Welcome" width="360"/>
 
-## Midjourney 官网绘图接入文档
+## Backend Integration Guides
 
-- https://trueai-org.feishu.cn/docx/ZDeUdPCBho4IE0xJHxpcXbdYnKd
+- Midjourney official website: <https://trueai-org.feishu.cn/docx/ZDeUdPCBho4IE0xJHxpcXbdYnKd>
+- YouChuan: <https://trueai-org.feishu.cn/docx/KrdIdOKm4otVmwxdv3AcLjsEnXf>
 
-## 悠船接入文档
+<img src="./docs/screenshots/youchuanhezuo.jpg" alt="YouChuan partner group" width="360"/>
 
-- https://trueai-org.feishu.cn/docx/KrdIdOKm4otVmwxdv3AcLjsEnXf
- 
-<img src="./docs/screenshots/youchuanhezuo.jpg" alt="悠船合作群" width="360"/>
+## Main Features
 
-## 主要功能
+- [x] Discord drawing.
+- [x] YouChuan drawing.
+- [x] Midjourney official website drawing.
+- [x] Distributed deployment.
+- [x] Online upgrade.
+- [x] Online restart.
+- [x] Elastic deployment with load balancing and Consul as the configuration center.
+- [x] Imagine command and related actions [V1/V2.../U1/U2.../R].
+- [x] Base64 reference images when submitting Imagine.
+- [x] Blend (image mixing), Describe (image to text) and Shorten (prompt analysis) commands.
+- [x] Real-time task progress.
+- [x] Chinese prompt translation, configurable through Baidu Translate or GPT.
+- [x] Prompt sensitive-word pre-detection with overridable rules.
+- [x] User-token WSS connection for error messages and the full command set.
+- [x] Focus shift: Pan ⬅️➡⬆️⬇️.
+- [x] Partial redraw: Vary (Region) 🖌.
+- [x] All associated button actions.
+- [x] Image zoom and custom zoom 🔍.
+- [x] Retrieve the seed of a generated image.
+- [x] Per-account generation speed mode: RELAX | FAST | TURBO.
+- [x] Multi-account configuration with a dedicated task queue per account and selectable account strategies: BestWaitIdle | Random | Weight | Polling.
+- [x] Persistent account pool with dynamic maintenance.
+- [x] Fetch account `/info` and `/settings` details.
+- [x] Account settings management.
+- [x] Both the niji・journey Bot and the Midjourney Bot.
+- [x] Safe compressed transport with zlib-stream <https://discord.com/developers/docs/topics/gateway>.
+- [x] Embedded MJ admin console with multi-language support <https://github.com/trueai-org/midjourney-proxy-webui>.
+- [x] Create, read, update and delete MJ accounts.
+- [x] Detailed account information and account synchronization.
+- [x] Per-account concurrency and queue settings.
+- [x] Task queries for MJ jobs.
+- [x] A complete drawing test page.
+- [x] Compatible with mainstream drawing clients and API calls.
+- [x] Parent task id in task payload.
+- [x] 🎛️ Remix mode and automatic Remix submission.
+- [x] Built-in local image storage and built-in CDN acceleration.
+- [x] Automatically simulates reading unread messages when too many are pending.
+- [x] BOOKMARK and other commands.
+- [x] Target a specific instance, filter accounts by speed, filter `remix` accounts and more — see the Swagger `accountFilter` field.
+- [x] Reverse-generate task information from a job id or an image.
+- [x] Account sorting, parallelism, queue count, max queue size and task interval settings.
+- [x] Client path modes: default `https://{BASE_URL}/mj/submit/imagine`, `/mj-turbo/mj` for turbo mode, `/mj-relax/mj` for relax mode, `/mj-fast/mj` for fast mode, `/mj` for no mode.
+- [x] CloudFlare manual human verification: the account is locked automatically when triggered, then verified through the GUI or an email notification.
+- [x] CloudFlare automatic human verification with a configurable verification server (the auto-verifier only runs on Windows).
+- [x] Working-hour windows — drawing around the clock can trigger warnings, so 8–10 hours of rest is recommended, e.g. `09:10-23:55, 13:00-08:10`.
+- [x] Built-in IP rate limiting, IP-range limiting, blacklists, whitelists and automatic blacklisting.
+- [x] Daily drawing limit; once reached, no new jobs are accepted but variations and redraws still work.
+- [x] Registration and guest access toggles.
+- [x] Visual configuration.
+- [x] Swagger documentation can be exposed independently.
+- [x] Bot token is optional — the service works without a bot.
+- [x] Improved command and progress display.
+- [x] Idle-time configuration with a relaxed ("salted fish") mode per account to avoid high-frequency operation (no new drawings in that window, other commands still work, multiple time windows supported).
+- [x] Vertical account categories: each account can be restricted to one kind of work, e.g. landscapes only or portraits only.
+- [x] Shared channels and sub-channels: if an account is banned, earlier drawings can continue by using its channel as a sub-channel of a healthy account, with permanent invite and sub-channel links and batch editing.
+- [x] SQLite (default), MySQL/MariaDB, PostgreSQL and SQL Server; about 500,000 task records are retained by default (database support sponsored by `@如风`).
+- [x] One-click migration from `mjplus` or other services, including accounts and tasks.
+- [x] Built-in forbidden-word management with grouped entries.
+- [x] Non-official links in prompts are rewritten to official ones, so domestic or custom reference links do not trigger verification.
+- [x] When fast hours run out, switch to relax mode automatically (opt-in) and restore fast mode after a top-up or renewal.
+- [x] Image storage on Alibaba Cloud OSS with custom CDN, custom styles and thumbnails (OSS is recommended: separated from the origin and faster to load).
+- [x] Shorten-based prompt analysis regeneration.
+- [x] Image face swap — comply with local laws and never use it for illegal purposes.
+- [x] Video face swap — comply with local laws and never use it for illegal purposes.
+- [x] Automatic switching between relax and fast mode, plus automatic relax configuration.
+- [x] No DM channel id needed — it is fetched automatically at startup.
+- [x] Automatic handling of "Tos not accepted".
+- [x] 2FA authenticator, e.g. `http://47.76.110.222:8081/code`, details: `http://47.76.110.222:8081/swagger/index.html`.
+- [x] Storage backends: Alibaba Cloud OSS, Tencent Cloud COS, local storage, S3 (thanks to `@八级大狂风` for sponsoring) and Cloudflare R2 (no egress fees, see <https://developers.cloudflare.com/r2/>).
+- [x] Independent translation configuration for MJ and NIJI.
+- [x] Convert Niji to MJ: Niji・journey jobs are submitted to Midjourney with a `--niji` suffix, so the Niji bot is not required.
+- [x] Convert `--niji` to the Niji Bot: prompts containing `--niji` are routed to the Niji・journey Bot automatically.
+- [x] Automatic account login (enable 2FA on the Discord account <https://github.com/trueai-org/midjourney-proxy/wiki/2FAopen> and configure `YesCaptchaKey` on the login service <https://yescaptcha.com/i/4pizLQ>).
+- [x] Account limits, concurrency and validity periods — thanks to `@TOOM` for sponsoring this feature.
+- [x] Video generation.
+- [x] YouChuan account import from .xlsx (up to 20 MB and 2,000 rows).
+- [x] Multiple auth headers: Authorization, mj-api-secret, x-api-key and api-key.
+- [x] Redis pipeline for account runtime snapshots.
+- [x] HEAD probing for image URL suffix when the URL has a query string or no extension.
 
-- [x] 支持 Discord 绘图。
-- [x] 支持悠船绘图。
-- [x] 支持官网 Midjourney 绘图。
-- [x] 支持分布式部署。
-- [x] 增加在线升级功能。
-- [x] 增加在线重启功能。
-- [x] 支持弹性部署，负载均衡，支持 Consul 配置中心。
-- [x] 支持 Imagine 指令和相关动作 [V1/V2.../U1/U2.../R]
-- [x] Imagine 时支持添加图片 base64，作为垫图
-- [x] 支持 Blend (图片混合)、Describe (图生文) 指令、Shorten (提示词分析) 指令
-- [x] 支持任务实时进度
-- [x] 支持中文 prompt 翻译，需配置百度翻译、GPT 翻译
-- [x] prompt 敏感词预检测，支持覆盖调整
-- [x] user-token 连接 wss，可以获取错误信息和完整功能
-- [x] 支持 Shorten(prompt分析) 指令
-- [x] 支持焦点移动：Pan ⬅️➡⬆️⬇️
-- [x] 支持局部重绘：Vary (Region) 🖌
-- [x] 支持所有的关联按钮动作
-- [x] 支持图片变焦，自定义变焦 Zoom 🔍
-- [x] 支持获取图片的 seed 值
-- [x] 支持账号指定生成速度模式 RELAX | FAST | TURBO 
-- [x] 支持多账号配置，每个账号可设置对应的任务队列，支持账号选择模式 BestWaitIdle | Random | Weight | Polling
-- [x] 账号池持久化，动态维护
-- [x] 支持获取账号 /info、/settings 信息
-- [x] 账号 settings 设置
-- [x] 支持 niji・journey Bot 和 Midjourney Bot
-- [x] zlib-stream 安全压缩传输 <https://discord.com/developers/docs/topics/gateway>
-- [x] 内嵌MJ管理后台页面，支持多语言 <https://github.com/trueai-org/midjourney-proxy-webui>
-- [x] 支持MJ账号的增删改查功能
-- [x] 支持MJ账号的详细信息查询和账号同步操作
-- [x] 支持MJ账号的并发队列设置
-- [x] 支持MJ的账号settings设置
-- [x] 支持MJ的任务查询
-- [x] 提供功能齐全的绘图测试页面
-- [x] 兼容支持市面上主流绘图客户端和 API 调用
-- [x] 任务增加父级任务信息等
-- [x] 🎛️ Remix 模式和 Remix 模式自动提交
-- [x] 内置图片保存到本地、内置 CDN 加速
-- [x] 绘图时当未读消息过多时，自动模拟读未读消息
-- [x] 图生文之再生图 PicReader、Picread 指令支持，以及批量再生图指令支持（无需 fast 模式）
-- [x] 支持 BOOKMARK 等指令
-- [x] 支持指定实例绘图，支持过滤指定速度的账号绘图，支持过滤 `remix` 模式账号绘图等，详情参考 Swagger `accountFilter` 字段
-- [x] 逆向根据 job id 或 图片生成系统任务信息
-- [x] 支持账号排序、并行数、队列数、最大队列数、任务执行间隔等配置
-- [x] 支持客户端路径指定模式，默认地址例子 https://{BASE_URL}/mj/submit/imagine, /mj-turbo/mj 是 turbo mode, /mj-relax/mj 是 relax mode, /mj-fast/mj 是 fast mode, /mj 不指定模式
-- [x] CloudFlare 手动真人验证，触发后自动锁定账号，通过 GUI 直接验证或通过邮件通知验证
-- [x] CloudFlare 自动真人验证，配置验证服务器地址（自动验证器仅支持 Windows 部署）
-- [x] 支持工作时间段配置，连续 24 小时不间断绘图可能会触发警告，建议休息 8~10 小时，示例：`09:10-23:55, 13:00-08:10`
-- [x] 内置 IP 限流、IP 段限流、黑名单、白名单、自动黑名单等功能
-- [x] 单日绘图上限支持，超出上限后不在进行新的绘图任务，仍可以进行变化、重绘等操作
-- [x] 开启注册、开启访客
-- [x] 可视化配置功能
-- [x] 支持 Swagger 文档独立开启
-- [x] 配置机器人 Token 可选配置，不配置机器人也可以使用
-- [x] 优化指令和状态进度显示
-- [x] 摸鱼时间配置，账号增加咸鱼模式/放松模式，避免高频作业（此模式下不可创建新的绘图，仍可以执行其他命令，可以配置为多个时间段等策略）
-- [x] 账号垂直分类支持，账号支持词条配置，每个账号只做某一类作品，例如：只做风景、只做人物
-- [x] 允许共享频道或子频道绘画，即便账号被封，也可以继续之前的绘画，将被封的账号频道作为正常账号的子频道即可，保存永久邀请链接，和子频道链接，支持批量修改。
-- [x] 多数据库支持本地数据库、MongoDB 等，如果你的任务数据超过 10万条，则建议使用 MongoDB 存储任务（默认保留 100万条记录），支持数据自动迁移。
-- [x] 支持 `mjplus` 或其他服务一键迁移到本服务，支持迁移账号、任务等
-- [x] 内置违禁词管理，支持多词条分组
-- [x] Prompt 中非官方链接自动转为官方链接，允许国内或自定义参考链接，以避免触发验证等问题。
-- [x] 支持快速模式时长用完时，自动切换到慢速模式，可自定义开启，当购买快速时长或到期续订时将会自动恢复。
-- [x] 支持图片存储到阿里云 OSS，支持自定义 CDN，支持自定义样式，支持缩略图（推荐使用 OSS，与源站分离，加载更快）
-- [x] 支持 Shorten 分析 Prompt 之再生图指令
-- [x] 支持图片换脸，请遵守相关法律法规，不得用于违法用途
-- [x] 支持视频换脸，请遵守相关法律法规，不得用于违法用途
-- [x] 支持自动切换到慢速模式、支持自动切快速模式、支持自动设置慢速
-- [x] 私信 ID 免配置，服务启动时自动获取私信 ID
-- [x] 自动过 Tos not accepted 验证
-- [x] 2FA 验证器，示例：<http://47.76.110.222:8081/code>，详情：<http://47.76.110.222:8081/swagger/index.html>
-- [x] 赞助账号功能
-- [x] 阿里云存储、腾讯云存储、本地存储、S3存储（感谢`@八级大狂风`赞助支持）、Cloudflare R2（不限流量！详情：<https://developers.cloudflare.com/r2/>）
-- [x] MJ 翻译、NIJI 翻译独立配置
-- [x] 转换 Niji 为 MJ：启用后将 Niji · journey 任务自动转为 Midjourney 任务，并对任务添加 --niji 后缀（转换后出图效果是一致的），即：不添加 Niji 机器人也可以通过 Niji 机器人绘图
-- [x] 转换 --niji 为 Niji Bot：启用后当 prompt 中包含 --niji 时，将会自动转换为 Niji·journey Bot 任务
-- [x] 支持账号自动登录功能（Discord 账号开启 2FA <https://github.com/trueai-org/midjourney-proxy/wiki/2FAopen>，登陆器配置 YesCaptchaKey <https://yescaptcha.com/i/4pizLQ>）
-- [x] 新增 Sqlite、MySQL/MariaDB、SqlServer、PostgreSQL 数据库支持；感谢 `@如风` 赞助此功能！
-- [x] 新增 账号限制、并发、有效期等功能；感谢 `@TOOM` 赞助此功能！
-- [x] 支持生成视频。
-- [x] 支持 Midjourney 官网绘图。
-- [x] 支持 Youchuan 悠船绘图。
-- [ ] 自动加入频道、自动切换频道（暂未支持）
+## Online Preview
 
-## 在线预览
+The public endpoint runs in relax mode and is free to call. The account pool is provided by sponsors — please use it responsibly.
 
-公益接口为慢速模式，接口免费调用，账号池由赞助者提供，请大家合理使用。
+- Admin console: <https://ai.trueai.org>
+- Access: public demo mode (read-only); no credentials are published.
+- Public API: <https://ai.trueai.org/mj>
+- API documentation: <https://ai.trueai.org/swagger> (restored after the public demo site is updated; fixed locally — rely on your actual deployment)
+- Auto verification / auto login server: `http://47.76.110.222:8081`
+- Auto verification / auto login documentation: `http://47.76.110.222:8081/swagger`
 
-- 管理后台：<https://ai.trueai.org>
-- 账号密码：`无`
-- 公益接口：<https://ai.trueai.org/mj>
-- 接口文档：<https://ai.trueai.org/swagger>
-- 接口密钥：`无`
-- 自动验证/自动登录服务器地址：<http://47.76.110.222:8081>
-- 自动验证/自动登录服务器文档：<http://47.76.110.222:8081/swagger>
+> The public verifier has been under heavy malicious attack, so automatic login is currently paused. Deploy your own verifier if you need it.
 
-> 由于公益验证器，受到大量恶意攻击，目前已暂停自动登录服务，如有需要自动登录请自行部署验证器。
+## Preview Screenshots
 
-## 预览截图
+![Drawing](./docs/screenshots/ui9.png)
 
-![绘图](./docs/screenshots/ui9.png)
-
-## 客户端推荐
+## Recommended Clients
 
 - **ChatAny**: <https://github.com/ChatAnyTeam/ChatAny>
-  - 一键拥有你自己的 ChatGPT+StabilityAI+Midjourney 网页服务 -> <https://aidemo.xiazai.zip/#/mj>
-  - 打开网站 -> 设置 -> 自定义接口 -> 模型(Midjourney) -> 接口地址 -> <https://ai.trueai.org/mj>
+  - Get your own ChatGPT + StabilityAI + Midjourney web service in one click: <https://aidemo.xiazai.zip/#/mj>
+  - Open the site → Settings → Custom API → Model (Midjourney) → API URL → <https://ai.trueai.org/mj>
 
 - **GoAmzAI**: <https://github.com/Licoy/GoAmzAI>
 
-- **ChatGPT Web Midjourney Proxy**: <https://github.com/Dooy/chatgpt-web-midjourney-proxy> 
-  - 打开网站 <https://vercel.ddaiai.com> -> 设置 -> MJ 绘画接口地址 -> <https://ai.trueai.org>
+- **ChatGPT Web Midjourney Proxy**: <https://github.com/Dooy/chatgpt-web-midjourney-proxy>
+  - Open <https://vercel.ddaiai.com> → Settings → MJ drawing API URL → <https://ai.trueai.org>
 
 - **GoMaxAI**: <https://github.com/51yuese/GoMaxAI-ChatGPT-Midjourney-Pro>
 
 - **SparkAI**: <https://ai.sparkaigf.com>
 
-## 服务商推荐
+## Recommended Providers
 
 - **GPTNB**: <https://goapi.gptnb.ai>
-- **益丰**: <https://api.ephone.ai>
+- **Yifeng**: <https://api.ephone.ai>
 - **Midjourney API**: <https://api.mjdjourney.cn>
 
-## 安装与使用
+## Installation and Usage
 
-> 提示：如果您是私有化部署，请务必关闭演示模式、关闭注册、关闭访客功能，避免 API 被滥用。
+> Note: for a private deployment, always turn off demo mode, registration and guest access so the API cannot be abused.
 
-> 提示：Windows 平台直接下载启动即可，详情参考下方说明。
+> Note: on Windows, download the portable package and start it directly — see below.
 
-### 快速启动
+### Quick Start
 
-> 帮助文档：[WIKI](https://github.com/trueai-org/midjourney-proxy/wiki)
+> Help: [WIKI](https://github.com/trueai-org/midjourney-proxy/wiki)
 
-> Docker 版本
+> Docker
 
-- [Bilibili Midjourney API Docker 部署视频教程](https://www.bilibili.com/video/BV1NQpQezEu4/)
-- [抖音 Midjourney API Docker 部署视频教程](https://v.douyin.com/irvnDGfo/)
+- [Bilibili: Midjourney API Docker deployment video](https://www.bilibili.com/video/BV1NQpQezEu4/)
+- [Douyin: Midjourney API Docker deployment video](https://v.douyin.com/irvnDGfo/)
 
-注意：一定确认映射文件和路径不要出错⚠
+Note: double-check that the mapped files and paths are correct ⚠
 
 ```bash
-# 提示：官方镜像需要更多内存，服务器最低：2GB 内存
-# 官方镜像（完整版，支持Discord、悠船、官方绘图，包含更多依赖）
-# 自动安装并启动
-# 推荐使用一键升级脚本
-# 1.首次下载（下载后可以编辑此脚本，进行自定义配置，例如：路径、端口、内存等配置，默认8086端口）
+# Note: the official image needs more memory — 2 GB minimum on the server
+# Official image (full: Discord, YouChuan and official website drawing, more dependencies)
+# Installs and starts automatically
+# The one-click upgrade script is recommended
+# 1. First download (edit the script afterwards to customize path, port, memory, etc. — default port is 8086)
 wget -O docker-upgrade.sh https://raw.githubusercontent.com/trueai-org/midjourney-proxy/main/scripts/docker-upgrade.sh && bash docker-upgrade.sh
 
-# 2.更新升级（以后升级只需要执行此脚本即可）
+# 2. Upgrade later by running the same script
 sh docker-upgrade.sh
 
-# 3. Docker 环境变量（默认不需要配置）
-# 节点最大任务并行数：-e CONCURRENT=10
-# 配置宿主私网 IP：-e HOST_IP=10.0.0.1
+# 3. Docker environment variables (optional)
+# Max concurrent tasks per node: -e CONCURRENT=10
+# Host private IP: -e HOST_IP=10.0.0.1
 
-# 4. Kestrel 环境变量（默认不需要配置）
-# KESTREL_MIN_REQUEST_BODY_BYTES_PER_SECOND：最小请求体数据速率，单位字节/秒，默认：240，推荐：10 - 1000
-# KESTREL_SLOW_BUFFER_SECONDS：允许的缓冲时间，单位秒，默认：5，推荐：5 - 30
-# KESTREL_MAX_REQUEST_BODY_SIZE：最大请求体大小，单位 MB，默认：30，推荐：10 - 100
+# 4. Kestrel environment variables (optional)
+# KESTREL_MIN_REQUEST_BODY_BYTES_PER_SECOND: minimum request body data rate in bytes per second, default 240, recommended 10 - 1000
+# KESTREL_SLOW_BUFFER_SECONDS: allowed buffering time in seconds, default 5, recommended 5 - 30
+# KESTREL_MAX_REQUEST_BODY_SIZE: maximum request body size in MB, default 30, recommended 10 - 100
 ```
 
-> [所有服务启动文档 Docker Compose](https://github.com/trueai-org/midjourney-proxy/wiki/Docker-Compose-Doc)
+> [Docker Compose documentation for all services](https://github.com/trueai-org/midjourney-proxy/wiki/Docker-Compose-Doc)
 
-> [数据库/Redis部署教程/容器互通文档](https://github.com/trueai-org/midjourney-proxy/wiki/Docker-Doc)
+> [Database / Redis deployment and container networking](https://github.com/trueai-org/midjourney-proxy/wiki/Docker-Doc)
 
-> [数据库性能评测文档](https://github.com/trueai-org/simple-database-benchmark)
+> [Database benchmark report](https://github.com/trueai-org/simple-database-benchmark)
 
-- `Redis`：必须配置，示例：`mjopen-redis:6379,password=***,defaultDatabase=1,prefix=mjopen:`
-- `Sqlite3`：本地默认数据库，默认存储位置：`data/mj_sqlite.db`
-- `MySQL8.4/MariaDB11`：数据库连接字符串，示例：`Data Source=mjopen-mysql;Port=3306;User ID=root;Password=***;Initial Catalog=mjopen;SslMode=none;AllowPublicKeyRetrieval=true;Min pool size=1;Default Command Timeout=120;Connection Timeout=30`
-- `SQLServer2022/2025`：数据库连接字符串，示例：`Data Source=mjopen-sqlserver;User Id=sa;Password==***;Initial Catalog=mjopen;Encrypt=True;TrustServerCertificate=True;Pooling=true;Min Pool Size=1`
-- `PostgreSQL16/17/18`：数据库连接字符串，示例：`Host=mjopen-postgres;Port=5432;Username=mj;Password==***;Database=mjopen;ArrayNullabilityMode=Always;Pooling=true;Minimum Pool Size=1`
+- `Redis`: required, e.g. `mjopen-redis:6379,password=***,defaultDatabase=1,prefix=mjopen:`
+- `Sqlite3`: default local database, stored at `data/mj_sqlite.db`
+- `MySQL8.4/MariaDB11`: connection string, e.g. `Data Source=mjopen-mysql;Port=3306;User ID=root;Password=***;Initial Catalog=mjopen;SslMode=none;AllowPublicKeyRetrieval=true;Min pool size=1;Default Command Timeout=120;Connection Timeout=30`
+- `SQLServer2022/2025`: connection string, e.g. `Data Source=mjopen-sqlserver;User Id=sa;Password=***;Initial Catalog=mjopen;Encrypt=True;TrustServerCertificate=True;Pooling=true;Min Pool Size=1`
+- `PostgreSQL16/17/18`: connection string, e.g. `Host=mjopen-postgres;Port=5432;Username=mj;Password=***;Database=mjopen;ArrayNullabilityMode=Always;Pooling=true;Minimum Pool Size=1`
 
 ```bash
-# 通过 dokcker-compose 启动
-# 下载 docker-compose.yml 文件
+# Start with docker-compose
+# Download docker-compose.yml
 wget -O docker-compose.yml https://raw.githubusercontent.com/trueai-org/midjourney-proxy/main/scripts/docker-compose.yml
 
-# 启动容器和所有服务（启动前可编辑 docker-compose.yml 进行自定义配置，例如：路径、端口、内存、密码等配置，默认8086端口）
-# 默认：仅启动 MySQL
+# Start the container and its services (edit docker-compose.yml first to customize path, port, memory, passwords, etc. — default port is 8086)
+# Default: MySQL only
 docker compose up -d
 
-# 使用 PostgreSQL
+# Use PostgreSQL
 docker compose --profile postgres up -d
 
-# 使用 SQL Server（修改为强密码）
+# Use SQL Server (change to a strong password)
 docker compose --profile sqlserver up -d
 
-# 同时启动多个 profile
+# Start several profiles at once
 docker compose --profile postgres --profile sqlserver up -d
 
-# 停止服务
+# Stop services
 docker-compose down
 
-# 查看所有服务日志
+# Follow all service logs
 docker-compose logs -f
 
-# 查看特定服务日志
+# Follow a specific service
 docker-compose logs -f mjopen
 docker-compose logs -f mjopen-redis
 docker-compose logs -f mjopen-mysql
 
-# 重启所有服务
+# Restart all services
 docker-compose restart
 
-# 重启特定服务
+# Restart a specific service
 docker-compose restart mjopen
 ```
 
 ```bash
-# 基础镜像（轻量版，支持Discord、悠船绘图）
+# Lite image (Discord and YouChuan drawing only)
 docker pull registry.cn-guangzhou.aliyuncs.com/trueai-org/midjourney-proxy:lite
 docker pull registry.cn-guangzhou.aliyuncs.com/trueai-org/midjourney-proxy:lite-{version}
 ```
 
 ```bash
-# 手动安装并启动
-# 阿里云镜像（推荐国内使用）
+# Manual install and start
+# Alibaba Cloud image (recommended in mainland China)
 docker pull registry.cn-guangzhou.aliyuncs.com/trueai-org/midjourney-proxy
 
-# 1.下载并重命名配置文件（示例配置）
-# 提示：3.x 版本无需配置文件
-# wget -O /root/mjopen/appsettings.Production.json https://raw.githubusercontent.com/trueai-org/midjourney-proxy/main/src/Midjourney.API/appsettings.json
-# curl -o /root/mjopen/appsettings.Production.json https://raw.githubusercontent.com/trueai-org/midjourney-proxy/main/src/Midjourney.API/appsettings.json
+# 1. Business configuration is written to `data/mj.json` by the admin console; no appsettings template download is needed.
 
-# 2.停止并移除旧的 Docker 容器
+# 2. Stop and remove the old container
 docker stop mjopen && docker rm mjopen
 
-# 3.启动容器
+# 3. Start the container
 docker run --name mjopen -d --restart=always \
  -p 8086:8080 --user root \
  -v /root/mjopen/logs:/app/logs:rw \
@@ -298,7 +299,7 @@ docker run --name mjopen -d --restart=always \
  -v /etc/timezone:/etc/timezone:ro \
  registry.cn-guangzhou.aliyuncs.com/trueai-org/midjourney-proxy
 
-# GitHub 镜像
+# GitHub mirror
 docker pull ghcr.io/trueai-org/midjourney-proxy
 docker run --name mjopen -d --restart=always \
  -p 8086:8080 --user root \
@@ -311,7 +312,7 @@ docker run --name mjopen -d --restart=always \
  -v /etc/timezone:/etc/timezone:ro \
  ghcr.io/trueai-org/midjourney-proxy
 
-# DockerHub 镜像
+# Docker Hub mirror
 docker pull trueaiorg/midjourney-proxy
 docker run --name mjopen -d --restart=always \
  -p 8086:8080 --user root \
@@ -325,63 +326,73 @@ docker run --name mjopen -d --restart=always \
  trueaiorg/midjourney-proxy
 ```
 
-> Windows 版本（arm版本停止支持）
+> Windows (ARM builds are no longer supported)
 
 ```bash
-a. 通过 https://github.com/trueai-org/midjourney-proxy/releases 下载 windows 最新免安装版，例如：midjourney-proxy-win-x64.zip
-b. 解压并执行 Midjourney.API.exe
-c. 打开网站 http://localhost:8080
-d. 部署到 IIS（可选），在 IIS 添加网站，将文件夹部署到 IIS，配置应用程序池为`无托管代码`，启动网站。
-e. 使用系统自带的 `任务计划程序`（可选），创建基本任务，选择 `.exe` 程序即可，请选择`请勿启动多个实例`，保证只有一个任务执行即可。
+a. Download the latest portable build for Windows from https://github.com/trueai-org/midjourney-proxy/releases, e.g. midjourney-proxy-win-x64.zip
+b. Extract it and run Midjourney.API.exe
+c. Open http://localhost:8080
+d. (Optional) Deploy to IIS: add the folder as a website, set the application pool to "No Managed Code" and start the site.
+e. (Optional) Use the built-in Task Scheduler to create a basic task that runs the .exe, and choose "Do not start a new instance" so only one instance runs.
 ```
 
-> Linux 版本（arm版本停止支持）
+> Linux (ARM builds are no longer supported)
 
 ```bash
-a. 通过 https://github.com/trueai-org/midjourney-proxy/releases 下载 linux 最新免安装版，例如：midjourney-proxy-linux-x64.zip
-b. 解压到当前目录: tar -xzf midjourney-proxy-linux-x64-<VERSION>.tar.gz
-c. 执行: run_app.sh
-c. 启动方式1: sh run_app.sh
-d. 启动方式2: chmod +x run_app.sh && ./run_app.sh
+a. Download the latest portable build for Linux from https://github.com/trueai-org/midjourney-proxy/releases, e.g. midjourney-proxy-linux-x64.zip
+b. Extract it in the current directory: tar -xzf midjourney-proxy-linux-x64-<VERSION>.tar.gz
+c. The entry point is run_app.sh
+c. Start method 1: sh run_app.sh
+d. Start method 2: chmod +x run_app.sh && ./run_app.sh
 ```
 
-> macOS 版本（arm版本停止支持）
+> macOS (ARM builds are no longer supported)
 
 ```bash
-a. 通过 https://github.com/trueai-org/midjourney-proxy/releases 下载 macOS 最新免安装版，例如：midjourney-proxy-osx-x64.zip
-b. 解压到当前目录: tar -xzf midjourney-proxy-osx-x64-<VERSION>.tar.gz
-c. 执行: run_app_osx.sh
-c. 启动方式1: sh run_app_osx.sh
-d. 启动方式2: chmod +x run_app_osx.sh && ./run_app_osx.sh
+a. Download the latest portable build for macOS from https://github.com/trueai-org/midjourney-proxy/releases, e.g. midjourney-proxy-osx-x64.zip
+b. Extract it in the current directory: tar -xzf midjourney-proxy-osx-x64-<VERSION>.tar.gz
+c. The entry point is run_app_osx.sh
+c. Start method 1: sh run_app_osx.sh
+d. Start method 2: chmod +x run_app_osx.sh && ./run_app_osx.sh
 ```
 
-## 路径说明
+> Linux one-click install script (❤ thanks to [@dbccccccc](https://github.com/dbccccccc))
 
-- `/app/data` 数据目录，存放账号、任务等数据
-    - `/app/data/mj.json` 配置文件
-- `/app/logs` 日志目录
-- `/app/wwwroot` 静态文件目录
-    - `/app/wwwroot/attachments` 绘图文件目录
-    - `/app/wwwroot/ephemeral-attachments` describe 生成图片目录
+```bash
+# Method 1
+wget -N --no-check-certificate https://raw.githubusercontent.com/trueai-org/midjourney-proxy/main/scripts/linux_install.sh && chmod +x linux_install.sh && bash linux_install.sh
 
-### 角色说明
+# Method 2
+curl -o linux_install.sh https://raw.githubusercontent.com/trueai-org/midjourney-proxy/main/scripts/linux_install.sh && chmod +x linux_install.sh && bash linux_install.sh
+```
 
-- `普通用户`：只可用于绘图接口，无法登录后台。
-- `管理员`：可以登录后台，可以查看任务、配置等。
+## Paths
 
-### 默认用户
+- `/app/data` — data directory for accounts, tasks and other state
+  - `/app/data/mj.json` — configuration file
+- `/app/logs` — log directory
+- `/app/wwwroot` — static files
+  - `/app/wwwroot/attachments` — generated drawings
+  - `/app/wwwroot/ephemeral-attachments` — images produced by describe
 
-- 首次启动站点，默认管理员 token 为：`admin`，登录后请重置 `token`
+### Roles
 
-### 阿里云 OSS 配置项
+- `Regular user`: drawing API only, cannot sign in to the console.
+- `Admin`: can sign in to the console, inspect tasks and change settings.
+
+### Default User
+
+- Inject a strong administrator token through `AdminToken` before first startup; rotate it immediately after the first login.
+
+### Alibaba Cloud OSS Configuration
 
 ```json
 {
-  "bucketName": "mjopen",// 创建的OSS名称
-  "accessKeyId": "LTAIa***",// OSS的accesskeyID
-  "accessKeySecret": "QGqO7***",// OSS的密钥
-  "endpoint": "oss-cn-hongkong-internal.aliyuncs.com",// OSS的域名
-  "customCdn": "自定义加速域名",
+  "bucketName": "mjopen", // OSS bucket name
+  "accessKeyId": "LTAI***", // OSS access key id
+  "accessKeySecret": "<YOUR_OSS_SECRET>", // OSS access key secret
+  "endpoint": "oss-cn-hongkong-internal.aliyuncs.com", // OSS endpoint
+  "customCdn": "custom CDN domain",
   "imageStyle": null,
   "thumbnailImageStyle": null,
   "videoSnapshotStyle": null,
@@ -389,9 +400,9 @@ d. 启动方式2: chmod +x run_app_osx.sh && ./run_app_osx.sh
 }
 ```
 
-### 换脸配置
+### Face Swap Configuration
 
-- 打开官网注册并复制 Token: https://replicate.com/cdingram/face-swap
+- Register on the official site and copy the token: https://replicate.com/cdingram/face-swap
 
 ```json
 {
@@ -412,9 +423,9 @@ d. 启动方式2: chmod +x run_app_osx.sh && ./run_app_osx.sh
 }
 ```
 
-### Banned prompt 限流配置
+### Banned Prompt Rate Limiting
 
-- 当日触发触发 `Banned prompt detected` n 次后，封锁用户的时长（分钟）配置（白名单用户除外）。
+- Configures how long (in minutes) a user is blocked after `Banned prompt detected` is triggered `n` times in one day. Whitelisted users are excluded.
 
 ```json
 {
@@ -426,177 +437,180 @@ d. 启动方式2: chmod +x run_app_osx.sh && ./run_app_osx.sh
   }
 }
 ```
-## 开发调试
 
-- 由于 v8 采用授权策略，在 Windows 上开发调试时如无法调试请移除项目的 `Midjourney.License.dll` 引用，Linux 平台不受影响。
+### Bot Token (optional)
 
-## CloudFlare 人机验证
+The bot token is used to connect to Discord over WSS and gives you error messages and the full feature set.
 
-免费自动过人机验证，CloudFlare 自动验证配置示例。
+[Bot token configuration guide](./docs/en/api.md)
 
-- `CaptchaServer` 验证器地址
-- `CaptchaNotifyHook` 验证完成通知回调，默认为你的域名
+## Development
+
+Requirements: .NET 8 SDK; the solution targets `net8.0`.
+
+```bash
+# Restore and build
+dotnet restore Midjourney.sln
+dotnet build Midjourney.sln
+
+# Run the API (Development profile)
+dotnet run --project src/Midjourney.API/Midjourney.API.csproj
+
+# Run the tests
+dotnet test src/Midjourney.Tests/Midjourney.Tests.csproj
+```
+
+- Logs are written to the `logs` directory next to the executable; inside the container they go to `/app/logs`.
+- With the Development profile the console and Swagger UI are served on `http://localhost:5229`; in Docker the service listens on `8080`, mapped to `8086` by the commands above.
+
+## CloudFlare CAPTCHA Verification
+
+Free automatic CAPTCHA handling. Example CloudFlare auto-verification configuration:
+
+- `CaptchaServer`: address of the verification server.
+- `CaptchaNotifyHook`: callback fired when verification completes; defaults to your domain.
 
 ```json
 "CaptchaServer": "http://47.76.110.222:8081",
 "CaptchaNotifyHook": "https://ai.trueai.org"
 ```
 
-## CloudFlare 验证器/自动登录器
+## CloudFlare Verifier / Auto Login
 
-仅支持 Windows 部署（并且支持 TLS 1.3，系统要求 Windows11 或 Windows Server 2022），由于 CloudFlare 验证器需要使用到 Chrome 浏览器，所以需要在 Windows 环境下部署，而在 Linux 环境下部署会依赖很多库，所以暂时不支持 Linux 部署。
+Windows only (TLS 1.3 supported; requires Windows 11 or Windows Server 2022). The verifier drives Chrome, so it has to run on Windows — a Linux deployment would need too many extra libraries.
 
-推荐使用：<https://yescaptcha.com/i/4pizLQ>
+Recommended: <https://yescaptcha.com/i/4pizLQ>
 
-注意：2captcha 暂不稳定，自行部署需提供 2captcha.com 的 API Key，否则无法使用，价格：1000次/9元，官网：<https://2captcha.cn/p/cloudflare-turnstile>
+Note: 2captcha is currently unstable. Self-hosting requires a 2captcha.com API key, otherwise it will not work. Pricing: 1000 verifications / 9 CNY, site: <https://2captcha.cn/p/cloudflare-turnstile>.
 
-提示：首次启动会下载 Chrome 浏览器，会比较慢，请耐心等待。
+Tip: the first startup downloads Chrome, which can take a while.
 
-> `appsettings.json` 配置参考
+> Sample verifier `appsettings.json` (verifier service configuration, not the main application configuration)
 
 ```json
 {
-  "Demo": null, // 网站配置为演示模式
   "Captcha": {
-    "IsLoginService": true, // 是否启用登录服务
-    "Concurrent": 1, // 并发数
-    "Headless": true, // chrome 是否后台运行
-    "TwoCaptchaKey": "", // 2captcha.com 的 API Key
-    "YesCaptchaKey": "" // yescaptcha.com 的 API Key
+    "IsLoginService": true, // enable the login service
+    "Concurrent": 1, // concurrency
+    "Headless": true, // run Chrome headless
+    "TwoCaptchaKey": "", // 2captcha.com API key
+    "YesCaptchaKey": "" // yescaptcha.com API key
   },
-  "urls": "http://*:8081" // 默认端口
+  "urls": "http://*:8081" // default port
 }
 ```
-## 作图频繁预防警告
 
-- 任务间隔 30~180 秒，执行前间隔 3.6 秒以上
-- 每日最大 200 张
-- 每日工作时间，建议 9：10~22：50
-- 如果有多个账号，则建议开启垂直领域功能，每个账号只做某一类作品
+## Preventing Warning on Frequent Drawing
 
-## Consul 配置
+- Keep the task interval between 30 and 180 seconds, with at least 3.6 seconds before execution.
+- At most 200 images per day.
+- Recommended working hours: 09:10–22:50.
+- With multiple accounts, enable vertical categories so each account only produces one kind of work.
 
-技术方案
+## Consul Configuration
 
-> Caddy -> [Yarp | Traefik | Ocelot] -> Midjourney API -> Consul <-> [Yarp | Traefik | Ocelot]
+Technical layout
 
-```txt
-TODO
-集群方案 -> redis / memerycache
-redis 锁, lock:{id}:1, lock:{id}:2, ... lock:{id}:n
-队列调整为预处理, 然后持久化, 最后将队列持久化到 redis
+> Caddy -> [Yarp | Traefik] -> Midjourney API -> Consul <-> [Yarp | Traefik]
 
-todo 显示 yarp 每个节点目前的连接数
-支持自动切换到最新版
-自动删除旧版（无连接数且超过 n 分后自动下线）
-```
+Multiple nodes share the same Redis; Consul serves as the configuration center and for service discovery; the gateway can be YARP or Traefik. Node IPs, ports and tokens depend on the deployment environment.
 
 ```bash
 
+# Stop and remove the old container
 docker stop consul && docker rm consul
-docker run -d --name consul --restart always --network host hashicorp/consul agent -server -ui -node=server-1 -bootstrap-expect=1 -client=0.0.0.0 -bind=172.17.1.99
 
-docker run -d --name consul --network host hashicorp/consul agent -server -ui -node=server-1 -bootstrap-expect=1 -client=0.0.0.0 -bind=172.19.38.1
+# Host network (sample node address: 192.168.3.241)
+docker run -d --name consul --restart always --network host hashicorp/consul agent -server -ui -node=server-1 -bootstrap-expect=1 -client=0.0.0.0 -bind=192.168.3.241
 
-docker run -d --name consul -p 9500:8500 -p 9600:8600/udp hashicorp/consul agent -server -ui -node=server-1 -bootstrap-expect=1 -client=0.0.0.0 -bind=0.0.0.0
-
-docker run -d --name consul -p 9500:8500 -p 9600:8600/udp hashicorp/consul agent -server -ui -node=server-1 -bootstrap-expect=1 -client=0.0.0.0 -bind=172.19.38.1
-
-docker run -d --name consul --network host hashicorp/consul:latest agent -server -ui -node=server-1 -bootstrap-expect=1 -client=0.0.0.0 -bind=172.19.38.1
-
-docker run -d --name consul --network host hashicorp/consul:latest agent -server -ui -node=server-1 -bootstrap-expect=1 -client=0.0.0.0 -bind=192.168.3.241
-
-docker run -d --name consul --network host hashicorp/consul:latest agent -server -ui -node=server-1 -bootstrap-expect=1 "-client=0.0.0.0"
-
-docker run -d --name consul -p 8500:8500 -p 8600:8600/udp hashicorp/consul:latest agent -server -ui -node=server-1 -bootstrap-expect=1 "-client=0.0.0.0"
-
-docker run -d --name consul -p 8500:8500 -p 8600:8600/udp consul:latest agent -server -ui -node=server-1 -bootstrap-expect=1 "-client=0.0.0.0"
+# Port mapping
+docker run -d --name consul --restart always -p 8500:8500 -p 8600:8600/udp hashicorp/consul agent -server -ui -node=server-1 -bootstrap-expect=1 -client=0.0.0.0 -bind=0.0.0.0
 ```
-## S3 - MINIO
+
+## S3 - MinIO
 
 https://min.io/docs/minio/linux/reference/minio-mc-admin/mc-admin-user.html
 
-> 示例
+> Example
 
 ```bash
-# 启动容器
+# Start the container
 docker run -d -p 9000:9000 -p 9001:9001 \
   --name minio-test \
-  -e "MINIO_ROOT_USER=minioadmin" \
-  -e "MINIO_ROOT_PASSWORD=minioadmin" \
+  -e "MINIO_ROOT_USER=<YOUR_MINIO_USER>" \
+  -e "MINIO_ROOT_PASSWORD=<YOUR_MINIO_PASSWORD>" \
   quay.io/minio/minio:latest server /data --console-address ":9001"
 
-# 你必须先用 mc 设置 MinIO 服务的别名，并且该别名要指向你的 MinIO 服务地址。
-mc alias set myminio http://192.168.3.241:9000 minioadmin minioadmin
+# Set an mc alias that points to your MinIO service first.
+mc alias set myminio http://192.168.3.241:9000 "<YOUR_MINIO_USER>" "<YOUR_MINIO_PASSWORD>"
 
-# 命令确认
+# Verify
 mc ls myminio
 
-# 如果没有 test 桶，需要先创建
+# Create the test bucket if it does not exist
 mc mb myminio/test
 
-# 设置匿名只读策略
+# Allow anonymous read-only access
 mc anonymous set download myminio/test
 ```
 
-## 图片加速说明（仅供参考）
+## Image Acceleration Notes (Reference Only)
 
-如何选择正确的加速方式，以适用于多种客户需求？
+How do you choose the right acceleration for different client needs?
 
-测试地址：https://boce.aliyun.com/detect/http
+Test tool: https://boce.aliyun.com/detect/http
 
-- 国内用户推荐使用国内 CDN 加速，响应速度最快，稳定性最高，最便宜。
-- 国外用户推荐使用全球 CDN 加速，响应速度较快，稳定性较高，最便宜。
-
+- Users in mainland China: a domestic CDN is the fastest, most stable and cheapest option.
+- Users abroad: a global CDN is faster, more stable and cheaper.
 
 ```
-MJ 官网 CDN，受 CF 防火墙影响，平均 3s 左右，可能超时
+Midjourney CDN, behind the CloudFlare firewall, ~3s on average, may time out
 https://cdn.midjourney.com/4872b862-7aeb-4346-a87d-16e077a2935d/0_2.png
 
-源站加速，OSS 源站（0.5元/G），平均响应时长 2s ~ 3s，可能超时
+Origin acceleration via OSS bucket (0.5 CNY/GB), 2s ~ 3s on average, may time out
 https://mjopen.oss-cn-hongkong.aliyuncs.com/attachments/4872b862-7aeb-4346-a87d-16e077a2935d/0_2.png
 
-传输加速（全球 CDN -  1T/126元，国内外都能访问，但是国内访问的话稍微慢一下)，平均响应时长 1s ~ 3s，一般都能响应
+Transfer acceleration (global CDN, 1 TB/126 CNY, reachable at home and abroad, slightly slower in mainland China), 1s ~ 3s on average, usually responds
 https://mjcdn.googlec.cc/attachments/4872b862-7aeb-4346-a87d-16e077a2935d/0_2.png
 
-传输加速（国内 CDN -  1T/126元，国内极速访问)，平均响应时长 30ms ~ 200ms，极速响应
+Transfer acceleration (domestic CDN, 1 TB/126 CNY, fastest in mainland China), 30ms ~ 200ms on average
 https://mjcn-midjourney.googlec.cc/attachments/4872b862-7aeb-4346-a87d-16e077a2935d/0_2.png
 
-传输加速（0.5~1.25元/G，动态加速，非 CDN 节点)，平均响应时长 150ms ~ 500ms，极速响应
+Transfer acceleration (0.5 ~ 1.25 CNY/GB, dynamic acceleration, not CDN nodes), 150ms ~ 500ms on average
 https://mjopen.oss-accelerate.aliyuncs.com/attachments/4872b862-7aeb-4346-a87d-16e077a2935d/0_2.png
 
-腾讯云edge one，免费套餐，无限流量，测试专用，平均响应时长 300ms ~ 1s，快速响应
+Tencent Cloud EdgeOne, free plan, unlimited traffic, test only, 300ms ~ 1s on average
 http://img.aitop3000.com/attachments/4872b862-7aeb-4346-a87d-16e077a2935d/0_2.png
 
-其他方式：代理、自建、本地等
+Other options: a proxy, self-hosted storage, local storage, etc.
 ```
 
-## 支持与赞助
+## Support and Sponsorship
 
-- 如果觉得这个项目对您有所帮助，请帮忙点个 Star⭐
-- 您也可以提供暂时空闲的绘画公益账号（赞助 1 个慢速队列），支持此项目的发展😀
-- 如果您有更多想法和创意，欢迎提交 PR 或 Issus、Discussions，以及加入 QQ 群一起讨论
+- If this project helps you, please give it a Star ⭐.
+- You can also donate an idle drawing account (one relax queue) to support the project 😀.
+- For ideas and feedback, open a PR, an Issue or a Discussion, or join the QQ group.
 
-## 赞助商
+## Sponsors
 
-非常感谢赞助商和群友的帮助和支持！
+Many thanks to the sponsors and community members for their help and support!
 
+<a href="https://huanwangai.com" target="_blank">HuanWang AI</a>
 <a href="https://goapi.gptnb.ai"><img src="https://pic.scdn.app/images/2023/06/26/favicon.png" style="width: 90px;"></a>
 <a href="https://d.goamzai.com" target="_blank"><img src="https://d.goamzai.com/logo.png" style="width: 90px;"></a>
-<a href="https://api.ephone.ai" target="_blank"><img src="https://img.fy6b.com/2024/10/25/a0bc4cac5e72f.png" style="width: 90px;"></a>
-<a href="https://www.bzu.cn"><img src="https://image.bzu.cn/web_img/202502/2efb28c16704c17.png" style="height: 90px;"></a>
-<a href="https://rixapi.com" target="_blank"><img src="https://img.fy6b.com/2024/08/23/53d7e54cc31a2.png" style="width: 90px;"></a>
-<a href="https://api.mjdjourney.cn" target="_blank"><img src="https://api.mjdjourney.cn/fileSystem/download/20241220/1b2dd3d0-99ef-40c4-89b3-db11956a3299.png" style="width: 90px;"></a>
+<a href="https://api.ephone.ai" target="_blank">https://api.ephone.ai</a>
+<a href="https://www.bzu.cn" target="_blank">https://www.bzu.cn</a>
+<a href="https://api.mjdjourney.cn" target="_blank">https://api.mjdjourney.cn</a>
 <a href="https://ai.midjourneye.com" target="_blank"><img src="https://gofunai-1328239556.cos.accelerate.myqcloud.com/gofunai/logo.jpg" style="width: 90px;"></a>
 
-## 安全协议
+## Security Policy
 
-> 由于部分开源作者被请去喝茶，使用本项目不得用于违法犯罪用途。
+> Some open-source authors have faced legal consequences, so this project must not be used for illegal purposes.
 
-- 请务必遵守国家法律，任何用于违法犯罪的行为将由使用者自行承担。
-- 本项目遵循 GPL 协议，允许个人和商业用途，但必须经作者允许且保留版权信息。
-- 请遵守当地国家法律法规，不得用于违法用途。
-- 请勿用于非法用途。
+- Follow national laws. Any illegal use is the sole responsibility of the user.
+- This project is released under the GPL. Personal and commercial use are allowed, but permission from the author is required and copyright notices must be kept.
+- Follow local laws and regulations; do not use it for illegal purposes.
+- Do not use it for illegal activities.
 
 ## Star History
 

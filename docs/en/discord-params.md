@@ -1,7 +1,7 @@
 ## Getting Discord Configuration Parameters
 
 ### 1. Obtaining User Token
-Enter the channel, open the network tab, refresh the page, and find the request for `messages`. The authorization here is the user token, which should be set to `mj.discord.user-token` later.
+Enter the channel, open the network tab, refresh the page, and find the request for `messages`. The authorization here is the user token; enter it as the User Token when adding a Discord account in the admin console.
 
 ![User Token](../img_8.png)
 

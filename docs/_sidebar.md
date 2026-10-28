@@ -1,4 +1,6 @@
 * [介绍](https://dbccccccc.github.io/midjourney-proxy/#/?id=介绍)
+* [使用手册](/manual/index.md)
+* [Manual (English)](/manual/en/README.md)
 * [安装](/install)
 * [API](/api)
 * [参数配置](/appsettings)

@@ -15,7 +15,7 @@ The client_id can be found on the application details page, which is the APPLICA
 
 https://discord.com/oauth2/authorize?client_id=xxx&permissions=8&scope=bot
 
-4. Copy or reset the Bot Token to the configuration file
+4. Copy or reset the Bot Token, then fill it in the Discord account form of the admin console (optional)
 ```
 
 Set application permissions (ensure you have read content permissions, refer to the screenshot)

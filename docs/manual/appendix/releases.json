@@ -1,0 +1,5050 @@
+[
+  {
+    "tag": "v1.0.0-alpha.1",
+    "date": "2024-07-08",
+    "commit": "516eb14",
+    "subject": "fix: queue",
+    "commitCount": 8,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v1.0.0-alpha.1"
+  },
+  {
+    "tag": "v1.0.0-alpha.2",
+    "date": "2024-07-08",
+    "commit": "64d3ad9",
+    "subject": "docker build",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v1.0.0-alpha.2"
+  },
+  {
+    "tag": "v1.0.0-alpha.3",
+    "date": "2024-07-08",
+    "commit": "64d3ad9",
+    "subject": "docker build",
+    "commitCount": 0,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v1.0.0-alpha.3"
+  },
+  {
+    "tag": "v1.0.0-alpha.4",
+    "date": "2024-07-09",
+    "commit": "b7ca96b",
+    "subject": "mj action",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v1.0.0-alpha.4"
+  },
+  {
+    "tag": "v1.0.0-alpha.5",
+    "date": "2024-07-09",
+    "commit": "b7ca96b",
+    "subject": "mj action",
+    "commitCount": 0,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v1.0.0-alpha.5"
+  },
+  {
+    "tag": "v1.0.0-alpha.6",
+    "date": "2024-07-09",
+    "commit": "91a5a95",
+    "subject": "add action prompt",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v1.0.0-alpha.6"
+  },
+  {
+    "tag": "v1.0.0-alpha.7",
+    "date": "2024-07-09",
+    "commit": "43de628",
+    "subject": "add bot type, and message content",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v1.0.0-alpha.7"
+  },
+  {
+    "tag": "v1.0.0-alpha.8",
+    "date": "2024-07-09",
+    "commit": "dd4896c",
+    "subject": "fix: custom id null",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v1.0.0-alpha.8"
+  },
+  {
+    "tag": "v1.0.0-alpha.9",
+    "date": "2024-07-09",
+    "commit": "d807b51",
+    "subject": "upscale message content",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v1.0.0-alpha.9"
+  },
+  {
+    "tag": "v1.0.0-alpha.10",
+    "date": "2024-07-10",
+    "commit": "c613bcd",
+    "subject": "add zoom, add inpaint, add region",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v1.0.0-alpha.10"
+  },
+  {
+    "tag": "v1.0.0-alpha.11",
+    "date": "2024-07-10",
+    "commit": "ebadc18",
+    "subject": "submit region",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v1.0.0-alpha.11"
+  },
+  {
+    "tag": "v1.0.0-alpha.12",
+    "date": "2024-07-10",
+    "commit": "666310f",
+    "subject": "INPAINT",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v1.0.0-alpha.12"
+  },
+  {
+    "tag": "v1.0.0-alpha.13",
+    "date": "2024-07-10",
+    "commit": "9a630b7",
+    "subject": "mj action",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v1.0.0-alpha.13"
+  },
+  {
+    "tag": "v1.0.0-alpha.14",
+    "date": "2024-07-10",
+    "commit": "ff5ad76",
+    "subject": "INPAINT",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v1.0.0-alpha.14"
+  },
+  {
+    "tag": "v1.0.0-alpha.15",
+    "date": "2024-07-10",
+    "commit": "f04923f",
+    "subject": "INPAINT SET NULL",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v1.0.0-alpha.15"
+  },
+  {
+    "tag": "v1.0.0-alpha.16",
+    "date": "2024-07-10",
+    "commit": "c698c65",
+    "subject": "default status null",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v1.0.0-alpha.16"
+  },
+  {
+    "tag": "v1.0.0-alpha.17",
+    "date": "2024-07-10",
+    "commit": "4deb54f",
+    "subject": "status to string",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v1.0.0-alpha.17"
+  },
+  {
+    "tag": "v1.0.0-alpha.18",
+    "date": "2024-07-10",
+    "commit": "dd4e188",
+    "subject": "status bug",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v1.0.0-alpha.18"
+  },
+  {
+    "tag": "v1.0.0-alpha.19",
+    "date": "2024-07-10",
+    "commit": "e255bd7",
+    "subject": "INPAINT",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v1.0.0-alpha.19"
+  },
+  {
+    "tag": "v1.0.0-alpha.20",
+    "date": "2024-07-10",
+    "commit": "7f058bc",
+    "subject": "status add modal",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v1.0.0-alpha.20"
+  },
+  {
+    "tag": "v1.1.0",
+    "date": "2024-07-10",
+    "commit": "acf4e2a",
+    "subject": "readme",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v1.1.0"
+  },
+  {
+    "tag": "v1.2.0",
+    "date": "2024-07-11",
+    "commit": "3d612b8",
+    "subject": "add seed",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v1.2.0"
+  },
+  {
+    "tag": "v1.3.0",
+    "date": "2024-07-11",
+    "commit": "dd4f758",
+    "subject": "readme",
+    "commitCount": 7,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v1.3.0"
+  },
+  {
+    "tag": "v2.0.0-alpha.1",
+    "date": "2024-07-14",
+    "commit": "cc234fd",
+    "subject": "readme",
+    "commitCount": 25,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.0.0-alpha.1"
+  },
+  {
+    "tag": "v2.0.0-alpha.2",
+    "date": "2024-07-14",
+    "commit": "5284665",
+    "subject": "fix: demo login, account edit, niji, readme, docker",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.0.0-alpha.2"
+  },
+  {
+    "tag": "v2.0.0",
+    "date": "2024-07-14",
+    "commit": "fd84371",
+    "subject": "fix: log bug",
+    "commitCount": 6,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.0.0"
+  },
+  {
+    "tag": "v2.1.0",
+    "date": "2024-07-14",
+    "commit": "c827a80",
+    "subject": "feat: task delte v2.1.0",
+    "commitCount": 7,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.1.0"
+  },
+  {
+    "tag": "v2.1.1",
+    "date": "2024-07-14",
+    "commit": "d5e44fc",
+    "subject": "v2.1.1",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.1.1"
+  },
+  {
+    "tag": "v2.1.2",
+    "date": "2024-07-15",
+    "commit": "da67267",
+    "subject": "wss retry error",
+    "commitCount": 4,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.1.2"
+  },
+  {
+    "tag": "v2.1.3",
+    "date": "2024-07-15",
+    "commit": "782a55d",
+    "subject": "2.1.3, Unrecognized parameter, and cancel tasj",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.1.3"
+  },
+  {
+    "tag": "v2.2.0",
+    "date": "2024-07-15",
+    "commit": "a25851f",
+    "subject": "v2.2.0, win, mac, linux",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.2.0"
+  },
+  {
+    "tag": "v2.2.1",
+    "date": "2024-07-15",
+    "commit": "2726bf8",
+    "subject": "default port, v2.2.1",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.2.1"
+  },
+  {
+    "tag": "v2.2.2",
+    "date": "2024-07-16",
+    "commit": "8752362",
+    "subject": "fix: heart",
+    "commitCount": 5,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.2.2"
+  },
+  {
+    "tag": "v2.2.3",
+    "date": "2024-07-16",
+    "commit": "00ea991",
+    "subject": "fix: none msg",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.2.3"
+  },
+  {
+    "tag": "v2.2.4",
+    "date": "2024-07-16",
+    "commit": "37f96ae",
+    "subject": "requested only when NIJI is configured, fix niji task info, debug log",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.2.4"
+  },
+  {
+    "tag": "v2.2.5",
+    "date": "2024-07-17",
+    "commit": "92ac91d",
+    "subject": "wss bug",
+    "commitCount": 6,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.2.5"
+  },
+  {
+    "tag": "v2.2.6",
+    "date": "2024-07-17",
+    "commit": "dfc185d",
+    "subject": "recontact",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.2.6"
+  },
+  {
+    "tag": "v2.2.7",
+    "date": "2024-07-17",
+    "commit": "41b3af8",
+    "subject": "wss bug",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.2.7"
+  },
+  {
+    "tag": "v2.2.8",
+    "date": "2024-07-17",
+    "commit": "834dc13",
+    "subject": "v2.2.8",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.2.8"
+  },
+  {
+    "tag": "v2.2.9",
+    "date": "2024-07-17",
+    "commit": "0e6e8e6",
+    "subject": "v2.2.9",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.2.9"
+  },
+  {
+    "tag": "v2.2.10",
+    "date": "2024-07-17",
+    "commit": "db45791",
+    "subject": "v2.2.10",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.2.10"
+  },
+  {
+    "tag": "v2.2.11",
+    "date": "2024-07-17",
+    "commit": "c79adf9",
+    "subject": "v2.2.11",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.2.11"
+  },
+  {
+    "tag": "v2.2.12",
+    "date": "2024-07-17",
+    "commit": "1714bee",
+    "subject": "v2.2.12",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.2.12"
+  },
+  {
+    "tag": "v2.2.13",
+    "date": "2024-07-17",
+    "commit": "b2b16c8",
+    "subject": "v2.2.13",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.2.13"
+  },
+  {
+    "tag": "v2.2.14",
+    "date": "2024-07-18",
+    "commit": "be7db9a",
+    "subject": "v2.2.14",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.2.14"
+  },
+  {
+    "tag": "v2.2.15",
+    "date": "2024-07-18",
+    "commit": "9c93287",
+    "subject": "v2.2.15",
+    "commitCount": 4,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.2.15"
+  },
+  {
+    "tag": "v2.2.16",
+    "date": "2024-07-18",
+    "commit": "2b25cf4",
+    "subject": "v2.2.16",
+    "commitCount": 4,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.2.16"
+  },
+  {
+    "tag": "v2.2.17",
+    "date": "2024-07-18",
+    "commit": "de360f6",
+    "subject": "v2.2.17",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.2.17"
+  },
+  {
+    "tag": "v2.2.18",
+    "date": "2024-07-18",
+    "commit": "4d69ee2",
+    "subject": "v2.2.18",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.2.18"
+  },
+  {
+    "tag": "v2.2.19",
+    "date": "2024-07-18",
+    "commit": "e1a1ba6",
+    "subject": "add runing status",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.2.19"
+  },
+  {
+    "tag": "v2.2.20",
+    "date": "2024-07-18",
+    "commit": "bc23248",
+    "subject": "v2.2.20",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.2.20"
+  },
+  {
+    "tag": "v2.2.21",
+    "date": "2024-07-18",
+    "commit": "0ce459e",
+    "subject": "resume",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.2.21"
+  },
+  {
+    "tag": "v2.2.22",
+    "date": "2024-07-18",
+    "commit": "46b3a0a",
+    "subject": "recaontact v2.2.22",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.2.22"
+  },
+  {
+    "tag": "v2.2.23",
+    "date": "2024-07-19",
+    "commit": "182022f",
+    "subject": "v2.2.23",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.2.23"
+  },
+  {
+    "tag": "v2.2.24",
+    "date": "2024-07-19",
+    "commit": "ecb854d",
+    "subject": "v2.2.24",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.2.24"
+  },
+  {
+    "tag": "v2.3.0",
+    "date": "2024-07-19",
+    "commit": "d81dc89",
+    "subject": "error msg",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.3.0"
+  },
+  {
+    "tag": "v2.3.1",
+    "date": "2024-07-23",
+    "commit": "f7d0eac",
+    "subject": "v2.3.1",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.3.1"
+  },
+  {
+    "tag": "v2.3.2",
+    "date": "2024-07-23",
+    "commit": "8e1dc00",
+    "subject": "v2.3.2",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.3.2"
+  },
+  {
+    "tag": "v2.3.3",
+    "date": "2024-07-23",
+    "commit": "c577334",
+    "subject": "v2.3.3, fix regex format url",
+    "commitCount": 6,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.3.3"
+  },
+  {
+    "tag": "v2.3.4",
+    "date": "2024-07-23",
+    "commit": "e5f218f",
+    "subject": "v2.3.4",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.3.4"
+  },
+  {
+    "tag": "v2.3.5",
+    "date": "2024-07-23",
+    "commit": "a686a39",
+    "subject": "v2.3.5 format prompt remove all --params to lower",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.3.5"
+  },
+  {
+    "tag": "v2.3.6",
+    "date": "2024-07-23",
+    "commit": "fc9b3c2",
+    "subject": "v2.3.6",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.3.6"
+  },
+  {
+    "tag": "v2.3.7",
+    "date": "2024-07-23",
+    "commit": "5d2a590",
+    "subject": "Blend process v2.3.7",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.3.7"
+  },
+  {
+    "tag": "v2.4.0",
+    "date": "2024-07-25",
+    "commit": "0391cfa",
+    "subject": "v2.4.0",
+    "commitCount": 6,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.4.0"
+  },
+  {
+    "tag": "v2.4.1",
+    "date": "2024-07-25",
+    "commit": "f6e046a",
+    "subject": "v2.4.1",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.4.1"
+  },
+  {
+    "tag": "v2.4.2",
+    "date": "2024-07-25",
+    "commit": "11b8293",
+    "subject": "fix: remix mode style, v2.4.2",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.4.2"
+  },
+  {
+    "tag": "v2.4.3",
+    "date": "2024-07-25",
+    "commit": "e63782c",
+    "subject": "v2.4.3",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.4.3"
+  },
+  {
+    "tag": "v2.5.0",
+    "date": "2024-07-25",
+    "commit": "127221d",
+    "subject": "readme",
+    "commitCount": 5,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.5.0"
+  },
+  {
+    "tag": "v2.5.1",
+    "date": "2024-07-25",
+    "commit": "f6d0156",
+    "subject": "fix: remix mode",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.5.1"
+  },
+  {
+    "tag": "v2.5.2",
+    "date": "2024-07-26",
+    "commit": "baa6982",
+    "subject": "readme",
+    "commitCount": 13,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.5.2"
+  },
+  {
+    "tag": "v2.6.0",
+    "date": "2024-07-26",
+    "commit": "2b1c524",
+    "subject": "v2.6.0",
+    "commitCount": 9,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.6.0"
+  },
+  {
+    "tag": "v2.6.1",
+    "date": "2024-07-26",
+    "commit": "3011abe",
+    "subject": "save to local, v2.6.1",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.6.1"
+  },
+  {
+    "tag": "v2.6.2",
+    "date": "2024-07-26",
+    "commit": "62ef535",
+    "subject": "v2.6.2",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.6.2"
+  },
+  {
+    "tag": "v2.6.3",
+    "date": "2024-07-26",
+    "commit": "075e9cb",
+    "subject": "describe save to local, v2.6.3",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.6.3"
+  },
+  {
+    "tag": "v2.6.4",
+    "date": "2024-07-26",
+    "commit": "56ff0f3",
+    "subject": "v2.6.4, \" -- \" params bug",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.6.4"
+  },
+  {
+    "tag": "v2.6.5",
+    "date": "2024-07-26",
+    "commit": "dafb6fb",
+    "subject": "v2.6.5",
+    "commitCount": 4,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.6.5"
+  },
+  {
+    "tag": "v2.6.6",
+    "date": "2024-07-26",
+    "commit": "cfae20a",
+    "subject": "realip, v2.6.6",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.6.6"
+  },
+  {
+    "tag": "v2.6.7",
+    "date": "2024-07-27",
+    "commit": "1530c22",
+    "subject": "auto read msg",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.6.7"
+  },
+  {
+    "tag": "v2.6.8",
+    "date": "2024-07-27",
+    "commit": "572a02c",
+    "subject": "auto read msg",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.6.8"
+  },
+  {
+    "tag": "v2.6.9",
+    "date": "2024-07-27",
+    "commit": "d64f5ac",
+    "subject": "success only one",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.6.9"
+  },
+  {
+    "tag": "v2.7.0",
+    "date": "2024-07-28",
+    "commit": "cc5e7eb",
+    "subject": "html",
+    "commitCount": 5,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.7.0"
+  },
+  {
+    "tag": "v2.7.1",
+    "date": "2024-07-28",
+    "commit": "78968b7",
+    "subject": "v2.7.1",
+    "commitCount": 4,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.7.1"
+  },
+  {
+    "tag": "v2.8.0",
+    "date": "2024-07-28",
+    "commit": "a649e89",
+    "subject": "readme",
+    "commitCount": 5,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.8.0"
+  },
+  {
+    "tag": "v2.8.1-beta.1",
+    "date": "2024-07-30",
+    "commit": "2866a01",
+    "subject": "v2.8.1.beta1, bot validate",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.8.1-beta.1"
+  },
+  {
+    "tag": "v2.8.1-beta.2",
+    "date": "2024-07-30",
+    "commit": "171762d",
+    "subject": "account cache",
+    "commitCount": 7,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.8.1-beta.2"
+  },
+  {
+    "tag": "v2.8.1-beta.3",
+    "date": "2024-07-30",
+    "commit": "ebc82f9",
+    "subject": "v2.8.1-beta.3",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.8.1-beta.3"
+  },
+  {
+    "tag": "v2.8.2-beta.1",
+    "date": "2024-07-30",
+    "commit": "318fa19",
+    "subject": "fix: account update bug",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.8.2-beta.1"
+  },
+  {
+    "tag": "v2.8.2-beta.2",
+    "date": "2024-07-30",
+    "commit": "740e58b",
+    "subject": "v2.8.2-beta.2",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.8.2-beta.2"
+  },
+  {
+    "tag": "v2.8.2-beta.3",
+    "date": "2024-07-30",
+    "commit": "c9b2afe",
+    "subject": "cf, sort",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.8.2-beta.3"
+  },
+  {
+    "tag": "v2.8.2-beta.4",
+    "date": "2024-07-31",
+    "commit": "cebd5da",
+    "subject": "v2.8.2-beta.4",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.8.2-beta.4"
+  },
+  {
+    "tag": "v2.8.2-beta.5",
+    "date": "2024-07-31",
+    "commit": "bccff71",
+    "subject": "v2.8.2-beta.5",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.8.2-beta.5"
+  },
+  {
+    "tag": "v2.8.2-beta.6",
+    "date": "2024-07-31",
+    "commit": "b5981e3",
+    "subject": "v2.8.2-beta.6",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.8.2-beta.6"
+  },
+  {
+    "tag": "v2.8.3",
+    "date": "2024-07-31",
+    "commit": "5bdc762",
+    "subject": "v2.8.3",
+    "commitCount": 4,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.8.3"
+  },
+  {
+    "tag": "v2.8.4-beta.1",
+    "date": "2024-07-31",
+    "commit": "60f4eac",
+    "subject": "describe mode",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.8.4-beta.1"
+  },
+  {
+    "tag": "v2.8.4-beta.2",
+    "date": "2024-07-31",
+    "commit": "755ec42",
+    "subject": "v2.8.4-beta.2",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.8.4-beta.2"
+  },
+  {
+    "tag": "v2.8.5",
+    "date": "2024-07-31",
+    "commit": "11155d8",
+    "subject": "v2.8.5, cf and mj path",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.8.5"
+  },
+  {
+    "tag": "v2.8.6-beta.1",
+    "date": "2024-07-31",
+    "commit": "ebcc32e",
+    "subject": "v2.8.6-beta.1",
+    "commitCount": 8,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.8.6-beta.1"
+  },
+  {
+    "tag": "v2.8.6-beta.2",
+    "date": "2024-07-31",
+    "commit": "2677c26",
+    "subject": "yml",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.8.6-beta.2"
+  },
+  {
+    "tag": "v2.8.7",
+    "date": "2024-07-31",
+    "commit": "0bdffda",
+    "subject": "v2.8.7",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.8.7"
+  },
+  {
+    "tag": "v2.8.8",
+    "date": "2024-07-31",
+    "commit": "7af8f4e",
+    "subject": "cf verfy v2.8.8",
+    "commitCount": 7,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.8.8"
+  },
+  {
+    "tag": "v2.8.9",
+    "date": "2024-07-31",
+    "commit": "ac60299",
+    "subject": "v2.8.9",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.8.9"
+  },
+  {
+    "tag": "v2.8.10",
+    "date": "2024-07-31",
+    "commit": "d4ab92c",
+    "subject": "cf auto val",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.8.10"
+  },
+  {
+    "tag": "v2.8.11",
+    "date": "2024-08-01",
+    "commit": "c1dd41b",
+    "subject": "v2.8.11",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.8.11"
+  },
+  {
+    "tag": "v2.8.12",
+    "date": "2024-08-01",
+    "commit": "961636f",
+    "subject": "work time",
+    "commitCount": 5,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.8.12"
+  },
+  {
+    "tag": "v2.8.13",
+    "date": "2024-08-01",
+    "commit": "6fde51f",
+    "subject": "in work time, v2.8.13",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.8.13"
+  },
+  {
+    "tag": "v2.8.14",
+    "date": "2024-08-01",
+    "commit": "f0ad9ae",
+    "subject": "allow modes",
+    "commitCount": 5,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.8.14"
+  },
+  {
+    "tag": "v2.8.15",
+    "date": "2024-08-02",
+    "commit": "1e23e81",
+    "subject": "v2.8.15",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.8.15"
+  },
+  {
+    "tag": "v2.8.16",
+    "date": "2024-08-02",
+    "commit": "e371b5b",
+    "subject": "v2.8.16",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.8.16"
+  },
+  {
+    "tag": "v2.8.17",
+    "date": "2024-08-02",
+    "commit": "344ef76",
+    "subject": "v2.8.17",
+    "commitCount": 5,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.8.17"
+  },
+  {
+    "tag": "v2.8.18",
+    "date": "2024-08-02",
+    "commit": "c2dfef7",
+    "subject": "bot proxy",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.8.18"
+  },
+  {
+    "tag": "v2.8.19",
+    "date": "2024-08-02",
+    "commit": "3a329fc",
+    "subject": "v2.8.19, ip limit",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.8.19"
+  },
+  {
+    "tag": "v2.8.20",
+    "date": "2024-08-03",
+    "commit": "e47c4df",
+    "subject": "IpRateLimiting",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.8.20"
+  },
+  {
+    "tag": "v2.8.21",
+    "date": "2024-08-03",
+    "commit": "95e296d",
+    "subject": "rate limit",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.8.21"
+  },
+  {
+    "tag": "v2.8.22",
+    "date": "2024-08-03",
+    "commit": "3edb8c7",
+    "subject": "ratelimiter",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.8.22"
+  },
+  {
+    "tag": "v2.8.23",
+    "date": "2024-08-03",
+    "commit": "841b34a",
+    "subject": "en readme",
+    "commitCount": 28,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v2.8.23"
+  },
+  {
+    "tag": "v3.0.0-beta.1",
+    "date": "2024-08-06",
+    "commit": "e11202d",
+    "subject": "readme",
+    "commitCount": 10,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.0.0-beta.1"
+  },
+  {
+    "tag": "v3.0.0-beta.2",
+    "date": "2024-08-06",
+    "commit": "13eed92",
+    "subject": "fix: save setting, user id",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.0.0-beta.2"
+  },
+  {
+    "tag": "v3.0.0-beta.4",
+    "date": "2024-08-06",
+    "commit": "ae4ce55",
+    "subject": "v3.0.0-beta.4",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.0.0-beta.4"
+  },
+  {
+    "tag": "v3.0.0-beta.5",
+    "date": "2024-08-06",
+    "commit": "3cc0314",
+    "subject": "ip network, json ignore",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.0.0-beta.5"
+  },
+  {
+    "tag": "v3.0.0-beta.6",
+    "date": "2024-08-06",
+    "commit": "bc9e1c8",
+    "subject": "v3.0.0-beta.6",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.0.0-beta.6"
+  },
+  {
+    "tag": "v3.0.0-beta.7",
+    "date": "2024-08-06",
+    "commit": "d48263e",
+    "subject": "v3.0.0-beta.7",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.0.0-beta.7"
+  },
+  {
+    "tag": "v3.0.0-beta.8",
+    "date": "2024-08-06",
+    "commit": "3bbccc5",
+    "subject": "v3.0.0-beta.8",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.0.0-beta.8"
+  },
+  {
+    "tag": "v3.0.0-beta.9",
+    "date": "2024-08-07",
+    "commit": "44f5137",
+    "subject": "top10",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.0.0-beta.9"
+  },
+  {
+    "tag": "v3.0.0-beta.10",
+    "date": "2024-08-07",
+    "commit": "8058d7d",
+    "subject": "v3.0.0-beta.10",
+    "commitCount": 63,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.0.0-beta.10"
+  },
+  {
+    "tag": "v3.0.0-beta.11",
+    "date": "2024-08-07",
+    "commit": "f7de112",
+    "subject": "v3.0.0-beta.11",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.0.0-beta.11"
+  },
+  {
+    "tag": "v3.0.0-beta.12",
+    "date": "2024-08-07",
+    "commit": "322d7cb",
+    "subject": "fix: message id bug",
+    "commitCount": 5,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.0.0-beta.12"
+  },
+  {
+    "tag": "v3.0.0-beta.13",
+    "date": "2024-08-07",
+    "commit": "a84871b",
+    "subject": "v3.0.0-beta.13",
+    "commitCount": 4,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.0.0-beta.13"
+  },
+  {
+    "tag": "v3.0.0-beta.14",
+    "date": "2024-08-07",
+    "commit": "ea92aca",
+    "subject": "v3.0.0-beta.14",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.0.0-beta.14"
+  },
+  {
+    "tag": "v3.0.0-beta.15",
+    "date": "2024-08-07",
+    "commit": "6604c58",
+    "subject": "v3.0.0-beta.15",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.0.0-beta.15"
+  },
+  {
+    "tag": "v3.0.0-beta.16",
+    "date": "2024-08-07",
+    "commit": "2f63ff8",
+    "subject": "fishtiming",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.0.0-beta.16"
+  },
+  {
+    "tag": "v3.0.1",
+    "date": "2024-08-07",
+    "commit": "d031e59",
+    "subject": "v3.0.1",
+    "commitCount": 4,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.0.1"
+  },
+  {
+    "tag": "v3.0.2",
+    "date": "2024-08-08",
+    "commit": "a0329f4",
+    "subject": "v3.0.2",
+    "commitCount": 5,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.0.2"
+  },
+  {
+    "tag": "v3.0.3",
+    "date": "2024-08-08",
+    "commit": "efd884b",
+    "subject": "add after span",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.0.3"
+  },
+  {
+    "tag": "v3.0.4",
+    "date": "2024-08-08",
+    "commit": "6e75442",
+    "subject": "user white,",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.0.4"
+  },
+  {
+    "tag": "v3.0.5",
+    "date": "2024-08-08",
+    "commit": "85c5e7c",
+    "subject": "cf validate",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.0.5"
+  },
+  {
+    "tag": "v3.0.6",
+    "date": "2024-08-08",
+    "commit": "5491275",
+    "subject": "v3.0.6",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.0.6"
+  },
+  {
+    "tag": "v3.0.7",
+    "date": "2024-08-08",
+    "commit": "f982f32",
+    "subject": "v3.0.7",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.0.7"
+  },
+  {
+    "tag": "v3.0.8",
+    "date": "2024-08-08",
+    "commit": "6aa19a3",
+    "subject": "cf async lock bug",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.0.8"
+  },
+  {
+    "tag": "v3.0.9",
+    "date": "2024-08-09",
+    "commit": "9e42e3b",
+    "subject": "v3.0.9",
+    "commitCount": 10,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.0.9"
+  },
+  {
+    "tag": "v3.0.10",
+    "date": "2024-08-09",
+    "commit": "ef965a7",
+    "subject": "v3.0.10",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.0.10"
+  },
+  {
+    "tag": "v3.0.11",
+    "date": "2024-08-09",
+    "commit": "96af11c",
+    "subject": "v3.0.11",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.0.11"
+  },
+  {
+    "tag": "v3.0.12",
+    "date": "2024-08-09",
+    "commit": "fafa18c",
+    "subject": "v3.0.12",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.0.12"
+  },
+  {
+    "tag": "v3.0.13",
+    "date": "2024-08-09",
+    "commit": "a64aa44",
+    "subject": "v3.0.13",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.0.13"
+  },
+  {
+    "tag": "v3.0.14",
+    "date": "2024-08-09",
+    "commit": "d723264",
+    "subject": "fix: ip rate",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.0.14"
+  },
+  {
+    "tag": "v3.0.15",
+    "date": "2024-08-10",
+    "commit": "3dc9ea6",
+    "subject": "v3.0.15",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.0.15"
+  },
+  {
+    "tag": "v3.1.0",
+    "date": "2024-08-10",
+    "commit": "346730a",
+    "subject": "subchannel",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.1.0"
+  },
+  {
+    "tag": "v3.1.1",
+    "date": "2024-08-10",
+    "commit": "aa687e9",
+    "subject": "v3.1.1",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.1.1"
+  },
+  {
+    "tag": "v3.1.2",
+    "date": "2024-08-10",
+    "commit": "9dbaea3",
+    "subject": "account filter",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.1.2"
+  },
+  {
+    "tag": "v3.1.3",
+    "date": "2024-08-10",
+    "commit": "524b3cf",
+    "subject": "action prompt",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.1.3"
+  },
+  {
+    "tag": "v3.2.0",
+    "date": "2024-08-11",
+    "commit": "319c362",
+    "subject": "v3.2.0",
+    "commitCount": 14,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.2.0"
+  },
+  {
+    "tag": "v3.2.1",
+    "date": "2024-08-11",
+    "commit": "9525132",
+    "subject": "v3.2.1",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.2.1"
+  },
+  {
+    "tag": "v3.2.2",
+    "date": "2024-08-11",
+    "commit": "2eb65b5",
+    "subject": "v3.2.2",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.2.2"
+  },
+  {
+    "tag": "v3.2.3",
+    "date": "2024-08-11",
+    "commit": "273f3a0",
+    "subject": "v3.2.3",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.2.3"
+  },
+  {
+    "tag": "v3.2.4",
+    "date": "2024-08-11",
+    "commit": "f462160",
+    "subject": "v3.2.4",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.2.4"
+  },
+  {
+    "tag": "v3.3.0",
+    "date": "2024-08-11",
+    "commit": "8cf23f8",
+    "subject": "readme",
+    "commitCount": 4,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.3.0"
+  },
+  {
+    "tag": "v3.4.0",
+    "date": "2024-08-12",
+    "commit": "cb059be",
+    "subject": "v3.4.0",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.4.0"
+  },
+  {
+    "tag": "v3.5.0",
+    "date": "2024-08-13",
+    "commit": "27d5102",
+    "subject": "v3.5.0",
+    "commitCount": 7,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.5.0"
+  },
+  {
+    "tag": "v3.5.1",
+    "date": "2024-08-14",
+    "commit": "906cefb",
+    "subject": "v3.5.1",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.5.1"
+  },
+  {
+    "tag": "v3.6.0",
+    "date": "2024-08-15",
+    "commit": "4d17dd0",
+    "subject": "v3.6.0",
+    "commitCount": 13,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.6.0"
+  },
+  {
+    "tag": "v3.7.0",
+    "date": "2024-08-15",
+    "commit": "2ee890a",
+    "subject": "readme",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.7.0"
+  },
+  {
+    "tag": "v3.8.0",
+    "date": "2024-08-16",
+    "commit": "b9885ee",
+    "subject": "v3.8.0",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.8.0"
+  },
+  {
+    "tag": "v3.9.0-beta.1",
+    "date": "2024-08-16",
+    "commit": "94bc5da",
+    "subject": "v3.9.0-beta.1",
+    "commitCount": 5,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.9.0-beta.1"
+  },
+  {
+    "tag": "v3.9.0-beta.2",
+    "date": "2024-08-16",
+    "commit": "34eeee9",
+    "subject": "v3.9.0-beta.2",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.9.0-beta.2"
+  },
+  {
+    "tag": "v3.9.0-beta.3",
+    "date": "2024-08-16",
+    "commit": "e26905e",
+    "subject": "v3.9.0-beta.3",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.9.0-beta.3"
+  },
+  {
+    "tag": "v3.9.0-beta.4",
+    "date": "2024-08-16",
+    "commit": "c5846d6",
+    "subject": "v3.9.0-beta.4",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.9.0-beta.4"
+  },
+  {
+    "tag": "v3.9.1",
+    "date": "2024-08-16",
+    "commit": "f76eced",
+    "subject": "v3.9.1",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.9.1"
+  },
+  {
+    "tag": "v3.9.2",
+    "date": "2024-08-17",
+    "commit": "a6c3464",
+    "subject": "readme",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.9.2"
+  },
+  {
+    "tag": "v3.9.3",
+    "date": "2024-08-17",
+    "commit": "8803d0c",
+    "subject": "v3.9.3",
+    "commitCount": 4,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.9.3"
+  },
+  {
+    "tag": "v3.9.4",
+    "date": "2024-08-17",
+    "commit": "2a02ab2",
+    "subject": "v3.9.4",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.9.4"
+  },
+  {
+    "tag": "v3.9.5",
+    "date": "2024-08-17",
+    "commit": "142db64",
+    "subject": "v3.9.5",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.9.5"
+  },
+  {
+    "tag": "v3.9.6",
+    "date": "2024-08-17",
+    "commit": "9998023",
+    "subject": "v3.9.6",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.9.6"
+  },
+  {
+    "tag": "v3.9.7",
+    "date": "2024-08-18",
+    "commit": "e245a70",
+    "subject": "v3.9.7",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v3.9.7"
+  },
+  {
+    "tag": "v4.0.0-beta.1",
+    "date": "2024-08-18",
+    "commit": "11582f1",
+    "subject": "readme",
+    "commitCount": 4,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v4.0.0-beta.1"
+  },
+  {
+    "tag": "v4.0.0-beta.2",
+    "date": "2024-08-18",
+    "commit": "757fa45",
+    "subject": "v4.0.0-beta.2",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v4.0.0-beta.2"
+  },
+  {
+    "tag": "v4.0.0-beta.3",
+    "date": "2024-08-18",
+    "commit": "de579a7",
+    "subject": "v4.0.0-beta.3",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v4.0.0-beta.3"
+  },
+  {
+    "tag": "v5.0.0",
+    "date": "2024-08-19",
+    "commit": "2365853",
+    "subject": "v5.0.0",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.0.0"
+  },
+  {
+    "tag": "v5.0.1",
+    "date": "2024-08-19",
+    "commit": "eece661",
+    "subject": "v5.0.1",
+    "commitCount": 6,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.0.1"
+  },
+  {
+    "tag": "v5.0.2",
+    "date": "2024-08-19",
+    "commit": "c859ba5",
+    "subject": "v5.0.2",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.0.2"
+  },
+  {
+    "tag": "v5.0.3-beta.1",
+    "date": "2024-08-20",
+    "commit": "3ecf59c",
+    "subject": "v5.0.3-beta.1",
+    "commitCount": 6,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.0.3-beta.1"
+  },
+  {
+    "tag": "v5.1.0",
+    "date": "2024-08-20",
+    "commit": "52635d8",
+    "subject": "v5.1.0",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.1.0"
+  },
+  {
+    "tag": "v5.2.0",
+    "date": "2024-08-20",
+    "commit": "085d049",
+    "subject": "v5.2.0",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.2.0"
+  },
+  {
+    "tag": "v5.2.1-beta.1",
+    "date": "2024-08-20",
+    "commit": "7e5e7da",
+    "subject": "v5.2.1-beta.1",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.2.1-beta.1"
+  },
+  {
+    "tag": "v5.2.2",
+    "date": "2024-08-20",
+    "commit": "978e621",
+    "subject": "v5.2.2",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.2.2"
+  },
+  {
+    "tag": "v5.2.3",
+    "date": "2024-08-21",
+    "commit": "38dd57c",
+    "subject": "v5.2.3",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.2.3"
+  },
+  {
+    "tag": "v5.2.4",
+    "date": "2024-08-21",
+    "commit": "5d67799",
+    "subject": "v5.2.4",
+    "commitCount": 20,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.2.4"
+  },
+  {
+    "tag": "v5.2.5",
+    "date": "2024-08-21",
+    "commit": "f316b6f",
+    "subject": "account bug",
+    "commitCount": 4,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.2.5"
+  },
+  {
+    "tag": "v5.2.6",
+    "date": "2024-08-21",
+    "commit": "15d09ac",
+    "subject": "v5.2.6",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.2.6"
+  },
+  {
+    "tag": "v5.2.7",
+    "date": "2024-08-21",
+    "commit": "c8bcbb2",
+    "subject": "v5.2.7",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.2.7"
+  },
+  {
+    "tag": "v5.2.8",
+    "date": "2024-08-22",
+    "commit": "9c7cc67",
+    "subject": "v5.2.8",
+    "commitCount": 4,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.2.8"
+  },
+  {
+    "tag": "v5.2.9",
+    "date": "2024-08-22",
+    "commit": "d17acd3",
+    "subject": "v5.3.0",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.2.9"
+  },
+  {
+    "tag": "v5.3.0",
+    "date": "2024-08-22",
+    "commit": "d17acd3",
+    "subject": "v5.3.0",
+    "commitCount": 0,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.3.0"
+  },
+  {
+    "tag": "v5.3.1",
+    "date": "2024-08-22",
+    "commit": "be7328f",
+    "subject": "v5.3.1",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.3.1"
+  },
+  {
+    "tag": "v5.3.2",
+    "date": "2024-08-22",
+    "commit": "005c9c2",
+    "subject": "v5.3.2",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.3.2"
+  },
+  {
+    "tag": "v5.4.0",
+    "date": "2024-08-23",
+    "commit": "1fe6d19",
+    "subject": "readme",
+    "commitCount": 6,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.4.0"
+  },
+  {
+    "tag": "v5.4.1",
+    "date": "2024-08-23",
+    "commit": "318ab4c",
+    "subject": "SemaphoreSlim bug",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.4.1"
+  },
+  {
+    "tag": "v5.4.2",
+    "date": "2024-08-23",
+    "commit": "50c1b8a",
+    "subject": "attachments",
+    "commitCount": 4,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.4.2"
+  },
+  {
+    "tag": "v5.4.3",
+    "date": "2024-08-23",
+    "commit": "f6038c7",
+    "subject": "v5.4.3",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.4.3"
+  },
+  {
+    "tag": "v5.4.4",
+    "date": "2024-08-24",
+    "commit": "24a6c06",
+    "subject": "v5.4.4",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.4.4"
+  },
+  {
+    "tag": "v5.5.0",
+    "date": "2024-08-24",
+    "commit": "fe58605",
+    "subject": "v5.5.0",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.5.0"
+  },
+  {
+    "tag": "v5.5.1",
+    "date": "2024-08-24",
+    "commit": "d890071",
+    "subject": "v5.5.1",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.5.1"
+  },
+  {
+    "tag": "v5.5.2",
+    "date": "2024-08-24",
+    "commit": "b94b081",
+    "subject": "readme",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.5.2"
+  },
+  {
+    "tag": "v5.5.3",
+    "date": "2024-08-26",
+    "commit": "7876ec0",
+    "subject": "v5.5.3",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.5.3"
+  },
+  {
+    "tag": "v5.5.5",
+    "date": "2024-08-27",
+    "commit": "54bfef2",
+    "subject": "v5.5.5",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.5.5"
+  },
+  {
+    "tag": "v5.5.6",
+    "date": "2024-08-27",
+    "commit": "3443e1e",
+    "subject": "v5.5.6",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.5.6"
+  },
+  {
+    "tag": "v5.5.7",
+    "date": "2024-08-28",
+    "commit": "81b516e",
+    "subject": "v5.5.7",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.5.7"
+  },
+  {
+    "tag": "v5.5.8",
+    "date": "2024-08-31",
+    "commit": "f0e83f7",
+    "subject": "v5.5.8",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.5.8"
+  },
+  {
+    "tag": "v5.5.9",
+    "date": "2024-08-31",
+    "commit": "632da44",
+    "subject": "TooManyRequests retry",
+    "commitCount": 6,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.5.9"
+  },
+  {
+    "tag": "v5.5.10",
+    "date": "2024-08-31",
+    "commit": "1014145",
+    "subject": "fix: filter fast",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.5.10"
+  },
+  {
+    "tag": "v5.5.11",
+    "date": "2024-09-02",
+    "commit": "08cebed",
+    "subject": "v5.5.11",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.5.11"
+  },
+  {
+    "tag": "v5.5.12",
+    "date": "2024-09-02",
+    "commit": "0599560",
+    "subject": "task fail full error",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.5.12"
+  },
+  {
+    "tag": "v5.5.13",
+    "date": "2024-09-02",
+    "commit": "88fc2c9",
+    "subject": "v5.5.13",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.5.13"
+  },
+  {
+    "tag": "v5.6.0",
+    "date": "2024-09-05",
+    "commit": "b1224ce",
+    "subject": "v5.6.0",
+    "commitCount": 4,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.6.0"
+  },
+  {
+    "tag": "v5.6.1",
+    "date": "2024-09-05",
+    "commit": "7aba36f",
+    "subject": "v5.6.1",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.6.1"
+  },
+  {
+    "tag": "v5.6.2",
+    "date": "2024-09-05",
+    "commit": "5a41e98",
+    "subject": "403 error, v5.6.2",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.6.2"
+  },
+  {
+    "tag": "v5.6.3",
+    "date": "2024-09-06",
+    "commit": "d14d0b7",
+    "subject": "v5.6.3, account sort",
+    "commitCount": 4,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.6.3"
+  },
+  {
+    "tag": "v5.7.0",
+    "date": "2024-09-06",
+    "commit": "b4fbb96",
+    "subject": "v5.7.0, cf validate",
+    "commitCount": 6,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.7.0"
+  },
+  {
+    "tag": "v5.7.1",
+    "date": "2024-09-06",
+    "commit": "532d497",
+    "subject": "v5.7.1",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.7.1"
+  },
+  {
+    "tag": "v5.7.2",
+    "date": "2024-09-06",
+    "commit": "c4974b3",
+    "subject": "v5.7.2",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.7.2"
+  },
+  {
+    "tag": "v5.8.0",
+    "date": "2024-09-07",
+    "commit": "ee39743",
+    "subject": "v5.8.0",
+    "commitCount": 6,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.8.0"
+  },
+  {
+    "tag": "v5.8.1",
+    "date": "2024-09-07",
+    "commit": "1af61d3",
+    "subject": "v5.8.1",
+    "commitCount": 4,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.8.1"
+  },
+  {
+    "tag": "v5.8.2",
+    "date": "2024-09-07",
+    "commit": "18d0980",
+    "subject": "v5.8.2",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.8.2"
+  },
+  {
+    "tag": "v5.8.3",
+    "date": "2024-09-07",
+    "commit": "0391e48",
+    "subject": "v5.8.3",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.8.3"
+  },
+  {
+    "tag": "v5.8.4",
+    "date": "2024-09-07",
+    "commit": "6bc0d37",
+    "subject": "type bug, v5.8.4",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.8.4"
+  },
+  {
+    "tag": "v5.8.5",
+    "date": "2024-09-07",
+    "commit": "71fb619",
+    "subject": "v5.8.5, fix recontact",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.8.5"
+  },
+  {
+    "tag": "v5.8.6",
+    "date": "2024-09-09",
+    "commit": "c918d86",
+    "subject": "v5.8.6",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.8.6"
+  },
+  {
+    "tag": "v5.8.7",
+    "date": "2024-09-09",
+    "commit": "04c08c1",
+    "subject": "v5.8.7",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.8.7"
+  },
+  {
+    "tag": "v5.8.8",
+    "date": "2024-09-21",
+    "commit": "ceab287",
+    "subject": "v5.8.8",
+    "commitCount": 14,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.8.8"
+  },
+  {
+    "tag": "v5.8.9",
+    "date": "2024-09-28",
+    "commit": "8cfeb15",
+    "subject": "Merge pull request #49 from dbccccccc/main",
+    "commitCount": 16,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.8.9"
+  },
+  {
+    "tag": "v5.8.10",
+    "date": "2024-09-30",
+    "commit": "ee161a8",
+    "subject": "v5.8.10, fix timeout error, describe error",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.8.10"
+  },
+  {
+    "tag": "v5.8.11",
+    "date": "2024-09-30",
+    "commit": "6c30a72",
+    "subject": "v5.8.11",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.8.11"
+  },
+  {
+    "tag": "v5.8.12",
+    "date": "2024-10-02",
+    "commit": "e38381c",
+    "subject": "v5.8.12",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.8.12"
+  },
+  {
+    "tag": "v5.8.13",
+    "date": "2024-10-08",
+    "commit": "dca76b7",
+    "subject": "v5.8.13",
+    "commitCount": 25,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.8.13"
+  },
+  {
+    "tag": "v5.8.14",
+    "date": "2024-10-10",
+    "commit": "783fa8b",
+    "subject": "v5.8.14",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.8.14"
+  },
+  {
+    "tag": "v5.8.15",
+    "date": "2024-10-14",
+    "commit": "c4d71cb",
+    "subject": "v5.8.15",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.8.15"
+  },
+  {
+    "tag": "v5.8.16",
+    "date": "2024-10-15",
+    "commit": "29b3d57",
+    "subject": "v5.8.16",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.8.16"
+  },
+  {
+    "tag": "v5.8.17",
+    "date": "2024-10-15",
+    "commit": "a166ee6",
+    "subject": "fix: Random",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.8.17"
+  },
+  {
+    "tag": "v5.9.0",
+    "date": "2024-10-15",
+    "commit": "47f8c9e",
+    "subject": "v5.9.0",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.9.0"
+  },
+  {
+    "tag": "v5.9.2",
+    "date": "2024-10-17",
+    "commit": "79801fa",
+    "subject": "v5.9.2",
+    "commitCount": 4,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.9.2"
+  },
+  {
+    "tag": "v5.9.3",
+    "date": "2024-10-17",
+    "commit": "79801fa",
+    "subject": "v5.9.2",
+    "commitCount": 0,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.9.3"
+  },
+  {
+    "tag": "v5.9.4",
+    "date": "2024-10-17",
+    "commit": "d2cfe8d",
+    "subject": "禁用",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.9.4"
+  },
+  {
+    "tag": "v5.9.6",
+    "date": "2024-10-18",
+    "commit": "e22eb6d",
+    "subject": "v5.9.6",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.9.6"
+  },
+  {
+    "tag": "v5.9.7",
+    "date": "2024-10-18",
+    "commit": "74214d7",
+    "subject": "v5.9.7",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.9.7"
+  },
+  {
+    "tag": "v5.9.8",
+    "date": "2024-10-18",
+    "commit": "4cd202d",
+    "subject": "v5.9.8",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.9.8"
+  },
+  {
+    "tag": "v5.9.9",
+    "date": "2024-10-21",
+    "commit": "f8a60bb",
+    "subject": "v5.9.9",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.9.9"
+  },
+  {
+    "tag": "v5.9.10",
+    "date": "2024-10-30",
+    "commit": "555be94",
+    "subject": "guest drawl limiter",
+    "commitCount": 5,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.9.10"
+  },
+  {
+    "tag": "v5.10.0",
+    "date": "2024-11-04",
+    "commit": "3380230",
+    "subject": "readme",
+    "commitCount": 5,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.10.0"
+  },
+  {
+    "tag": "v5.10.1",
+    "date": "2024-11-05",
+    "commit": "433d641",
+    "subject": "v5.10.1",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.10.1"
+  },
+  {
+    "tag": "v5.10.2",
+    "date": "2024-11-05",
+    "commit": "106dad7",
+    "subject": "v5.10.2",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.10.2"
+  },
+  {
+    "tag": "v5.11.0",
+    "date": "2024-11-07",
+    "commit": "9cf4a3a",
+    "subject": "v5.11.0",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.11.0"
+  },
+  {
+    "tag": "v5.11.1",
+    "date": "2024-11-07",
+    "commit": "9864b11",
+    "subject": "v5.11.1",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.11.1"
+  },
+  {
+    "tag": "v5.11.2",
+    "date": "2024-11-08",
+    "commit": "e123f89",
+    "subject": "v5.11.2",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.11.2"
+  },
+  {
+    "tag": "v5.11.3",
+    "date": "2024-11-09",
+    "commit": "7ecc586",
+    "subject": "v5.11.3",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.11.3"
+  },
+  {
+    "tag": "v5.12.0",
+    "date": "2024-11-09",
+    "commit": "5af938f",
+    "subject": "v5.12.0",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.12.0"
+  },
+  {
+    "tag": "v5.12.1",
+    "date": "2024-11-11",
+    "commit": "eed509c",
+    "subject": "v5.12.1",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.12.1"
+  },
+  {
+    "tag": "v5.12.2",
+    "date": "2024-11-11",
+    "commit": "cd02e75",
+    "subject": "v5.12.2",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v5.12.2"
+  },
+  {
+    "tag": "v6.0.0-beta.1",
+    "date": "2024-11-15",
+    "commit": "8c70347",
+    "subject": "v6.0.0-beta.1",
+    "commitCount": 5,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v6.0.0-beta.1"
+  },
+  {
+    "tag": "v6.0.0-beta.2",
+    "date": "2024-11-15",
+    "commit": "338a8c8",
+    "subject": "v6.0.0-beta.2",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v6.0.0-beta.2"
+  },
+  {
+    "tag": "v6.0.0-beta.3",
+    "date": "2024-11-15",
+    "commit": "2c7d05e",
+    "subject": "v6.0.0-beta.3",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v6.0.0-beta.3"
+  },
+  {
+    "tag": "v6.0.0-beta.4",
+    "date": "2024-11-15",
+    "commit": "f783931",
+    "subject": "v6.0.0-beta.4",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v6.0.0-beta.4"
+  },
+  {
+    "tag": "v6.0.0-beta.5",
+    "date": "2024-11-17",
+    "commit": "b64e1db",
+    "subject": "mongo date time",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v6.0.0-beta.5"
+  },
+  {
+    "tag": "v6.0.0-beta.6",
+    "date": "2024-11-18",
+    "commit": "1e11225",
+    "subject": "v6.0.0-beta.6",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v6.0.0-beta.6"
+  },
+  {
+    "tag": "v6.0.0-beta.7",
+    "date": "2024-11-19",
+    "commit": "3228d9d",
+    "subject": "v6.0.0-beta.7",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v6.0.0-beta.7"
+  },
+  {
+    "tag": "v6.0.0-beta.8",
+    "date": "2024-11-22",
+    "commit": "584814b",
+    "subject": "v6.0.0-beta.8",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v6.0.0-beta.8"
+  },
+  {
+    "tag": "v6.0.0-beta.9",
+    "date": "2024-11-29",
+    "commit": "c5e3d9e",
+    "subject": "mono verify",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v6.0.0-beta.9"
+  },
+  {
+    "tag": "v6.0.0-beta.10",
+    "date": "2025-01-21",
+    "commit": "6bb5760",
+    "subject": "2fa",
+    "commitCount": 5,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v6.0.0-beta.10"
+  },
+  {
+    "tag": "v6.0.0-beta.11",
+    "date": "2025-01-21",
+    "commit": "4b0a78f",
+    "subject": "v6.0.0-beta.11",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v6.0.0-beta.11"
+  },
+  {
+    "tag": "v6.0.0-beta.12",
+    "date": "2025-01-21",
+    "commit": "68f3060",
+    "subject": "feat: login time out, v6.0.0-beta.12",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v6.0.0-beta.12"
+  },
+  {
+    "tag": "v6.0.0-beta.13",
+    "date": "2025-01-21",
+    "commit": "5456d49",
+    "subject": "v6.0.0-beta.13, Fixed the mongodb configuration error caused by saving the configuration",
+    "commitCount": 5,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v6.0.0-beta.13"
+  },
+  {
+    "tag": "v6.1.0",
+    "date": "2025-01-21",
+    "commit": "ffb7f93",
+    "subject": "v6.1.0",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v6.1.0"
+  },
+  {
+    "tag": "v6.1.1",
+    "date": "2025-01-21",
+    "commit": "6bf46f7",
+    "subject": "v6.1.1, upgrade plugs version",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v6.1.1"
+  },
+  {
+    "tag": "v6.1.2",
+    "date": "2025-01-22",
+    "commit": "bd0c5d4",
+    "subject": "v6.1.2",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v6.1.2"
+  },
+  {
+    "tag": "v6.2.0-beta.1",
+    "date": "2025-02-20",
+    "commit": "c735407",
+    "subject": "v6.2.0-beta.1",
+    "commitCount": 13,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v6.2.0-beta.1"
+  },
+  {
+    "tag": "v6.2.0-beta.2",
+    "date": "2025-02-22",
+    "commit": "9f1b982",
+    "subject": "fix: database string",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v6.2.0-beta.2"
+  },
+  {
+    "tag": "v6.2.1",
+    "date": "2025-02-26",
+    "commit": "5487526",
+    "subject": "v6.2.1",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v6.2.1"
+  },
+  {
+    "tag": "v6.2.2",
+    "date": "2025-03-05",
+    "commit": "7171ee7",
+    "subject": "fix: --sref xxx --no xxx",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v6.2.2"
+  },
+  {
+    "tag": "v6.2.3",
+    "date": "2025-04-15",
+    "commit": "98a8d04",
+    "subject": "fix: Parallel Lock, v6.2.3",
+    "commitCount": 6,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v6.2.3"
+  },
+  {
+    "tag": "v6.2.4",
+    "date": "2025-04-15",
+    "commit": "2a73099",
+    "subject": "v6.2.4",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v6.2.4"
+  },
+  {
+    "tag": "v6.2.5",
+    "date": "2025-04-15",
+    "commit": "749e32d",
+    "subject": "v6.2.5",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v6.2.5"
+  },
+  {
+    "tag": "v6.2.6",
+    "date": "2025-04-15",
+    "commit": "4286129",
+    "subject": "v6.2.6",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v6.2.6"
+  },
+  {
+    "tag": "v6.2.7",
+    "date": "2025-04-15",
+    "commit": "59f98fd",
+    "subject": "v6.2.7",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v6.2.7"
+  },
+  {
+    "tag": "v6.2.8",
+    "date": "2025-04-16",
+    "commit": "ffe186f",
+    "subject": "fix: MYSQL Allow Modes",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v6.2.8"
+  },
+  {
+    "tag": "v6.3.0",
+    "date": "2025-04-16",
+    "commit": "309c863",
+    "subject": "v6.3.0",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v6.3.0"
+  },
+  {
+    "tag": "v6.3.1",
+    "date": "2025-04-16",
+    "commit": "f8cc3cc",
+    "subject": "fix: Idle Queue bug",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v6.3.1"
+  },
+  {
+    "tag": "v6.3.2",
+    "date": "2025-04-16",
+    "commit": "aae18f7",
+    "subject": "v6.3.2",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v6.3.2"
+  },
+  {
+    "tag": "v6.4.0",
+    "date": "2025-04-16",
+    "commit": "b49fc56",
+    "subject": "v6.4.0",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v6.4.0"
+  },
+  {
+    "tag": "v6.5.0",
+    "date": "2025-04-16",
+    "commit": "0a51ea6",
+    "subject": "v6.5.0",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v6.5.0"
+  },
+  {
+    "tag": "v6.5.1",
+    "date": "2025-04-16",
+    "commit": "a68f8db",
+    "subject": "v6.5.1",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v6.5.1"
+  },
+  {
+    "tag": "v6.6.0",
+    "date": "2025-04-18",
+    "commit": "ec66a2b",
+    "subject": "lock",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v6.6.0"
+  },
+  {
+    "tag": "v6.6.1",
+    "date": "2025-04-18",
+    "commit": "fb1e8f9",
+    "subject": "v6.6.1",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v6.6.1"
+  },
+  {
+    "tag": "v6.6.2",
+    "date": "2025-04-18",
+    "commit": "5acf7b6",
+    "subject": "exec task wait 30 time.",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v6.6.2"
+  },
+  {
+    "tag": "v6.6.3",
+    "date": "2025-04-18",
+    "commit": "5f91046",
+    "subject": "fix: idle rule",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v6.6.3"
+  },
+  {
+    "tag": "v6.7.0",
+    "date": "2025-04-18",
+    "commit": "47889c2",
+    "subject": "v6.7.0",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v6.7.0"
+  },
+  {
+    "tag": "v7.0.0-beta.1",
+    "date": "2025-04-19",
+    "commit": "9a5bd8f",
+    "subject": "v7.0.0-beta.1",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v7.0.0-beta.1"
+  },
+  {
+    "tag": "v7.0.0-beta.2",
+    "date": "2025-04-19",
+    "commit": "cd2a23d",
+    "subject": "v7.0.0-beta.2",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v7.0.0-beta.2"
+  },
+  {
+    "tag": "v7.0.0-beta.3",
+    "date": "2025-04-19",
+    "commit": "b923216",
+    "subject": "v7.0.0-beta.3",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v7.0.0-beta.3"
+  },
+  {
+    "tag": "v7.0.1",
+    "date": "2025-04-22",
+    "commit": "8076a82",
+    "subject": "v7.0.1",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v7.0.1"
+  },
+  {
+    "tag": "8.0.11",
+    "date": "2025-07-07",
+    "commit": "98c9d58",
+    "subject": "readme",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/8.0.11"
+  },
+  {
+    "tag": "8.0.12",
+    "date": "2025-07-07",
+    "commit": "74e0c2f",
+    "subject": "8.0.12",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/8.0.12"
+  },
+  {
+    "tag": "v8.0.13",
+    "date": "2025-07-07",
+    "commit": "f629e88",
+    "subject": "8.0.13",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.0.13"
+  },
+  {
+    "tag": "v8.0.14",
+    "date": "2025-07-07",
+    "commit": "36d6f30",
+    "subject": "8.0.14",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.0.14"
+  },
+  {
+    "tag": "v8.0.15",
+    "date": "2025-07-07",
+    "commit": "5bcb4a3",
+    "subject": "8.0.15",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.0.15"
+  },
+  {
+    "tag": "v8.0.16",
+    "date": "2025-07-07",
+    "commit": "b1c7f8e",
+    "subject": "8.0.16",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.0.16"
+  },
+  {
+    "tag": "v8.0.18",
+    "date": "2025-07-07",
+    "commit": "d0f872f",
+    "subject": "1",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.0.18"
+  },
+  {
+    "tag": "v8.0.19",
+    "date": "2025-07-07",
+    "commit": "e30b745",
+    "subject": "8.0.19",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.0.19"
+  },
+  {
+    "tag": "v8.0.20",
+    "date": "2025-07-07",
+    "commit": "7593741",
+    "subject": "8.0.20",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.0.20"
+  },
+  {
+    "tag": "v8.0.21",
+    "date": "2025-07-07",
+    "commit": "a2de157",
+    "subject": "8.0.21",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.0.21"
+  },
+  {
+    "tag": "v8.0.22",
+    "date": "2025-07-07",
+    "commit": "9d97ece",
+    "subject": "8.0.22",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.0.22"
+  },
+  {
+    "tag": "v8.0.25",
+    "date": "2025-07-07",
+    "commit": "d00ab51",
+    "subject": "8.0.25",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.0.25"
+  },
+  {
+    "tag": "v8.0.26",
+    "date": "2025-07-07",
+    "commit": "419e70d",
+    "subject": "8.0.26",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.0.26"
+  },
+  {
+    "tag": "v8.1.0",
+    "date": "2025-07-08",
+    "commit": "46e786c",
+    "subject": "8.1.0",
+    "commitCount": 5,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.1.0"
+  },
+  {
+    "tag": "v8.1.1",
+    "date": "2025-07-08",
+    "commit": "b3e4015",
+    "subject": "8.1.1",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.1.1"
+  },
+  {
+    "tag": "v8.1.2",
+    "date": "2025-07-09",
+    "commit": "3d720af",
+    "subject": "8.1.2",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.1.2"
+  },
+  {
+    "tag": "v8.1.3",
+    "date": "2025-07-09",
+    "commit": "d08b41a",
+    "subject": "8.1.3",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.1.3"
+  },
+  {
+    "tag": "v8.1.4",
+    "date": "2025-07-09",
+    "commit": "14d0080",
+    "subject": "8.1.4",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.1.4"
+  },
+  {
+    "tag": "v8.1.5",
+    "date": "2025-07-09",
+    "commit": "b91582a",
+    "subject": "8.1.5",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.1.5"
+  },
+  {
+    "tag": "v8.2.0",
+    "date": "2025-07-10",
+    "commit": "84753dd",
+    "subject": "readme",
+    "commitCount": 5,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.2.0"
+  },
+  {
+    "tag": "v8.2.1",
+    "date": "2025-07-10",
+    "commit": "0a7f97b",
+    "subject": "8.2.1",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.2.1"
+  },
+  {
+    "tag": "v8.2.2",
+    "date": "2025-07-11",
+    "commit": "d4ea08f",
+    "subject": "youchuan auto set relax",
+    "commitCount": 4,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.2.2"
+  },
+  {
+    "tag": "v8.2.3",
+    "date": "2025-07-14",
+    "commit": "75d3654",
+    "subject": "Describe",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.2.3"
+  },
+  {
+    "tag": "v8.3.0",
+    "date": "2025-07-16",
+    "commit": "1a0c49f",
+    "subject": "8.3.0",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.3.0"
+  },
+  {
+    "tag": "v8.3.1",
+    "date": "2025-07-16",
+    "commit": "bb8c4e9",
+    "subject": "8.3.1",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.3.1"
+  },
+  {
+    "tag": "v8.3.2",
+    "date": "2025-07-16",
+    "commit": "29f013d",
+    "subject": "8.3.2",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.3.2"
+  },
+  {
+    "tag": "v8.3.3",
+    "date": "2025-07-16",
+    "commit": "06779ff",
+    "subject": "1",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.3.3"
+  },
+  {
+    "tag": "v8.3.4",
+    "date": "2025-07-16",
+    "commit": "9aaaf1d",
+    "subject": "8.3.4",
+    "commitCount": 4,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.3.4"
+  },
+  {
+    "tag": "v8.3.5",
+    "date": "2025-07-17",
+    "commit": "dc7b7ab",
+    "subject": "8.3.5",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.3.5"
+  },
+  {
+    "tag": "v8.3.6",
+    "date": "2025-07-17",
+    "commit": "9b1c17d",
+    "subject": "8.3.6",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.3.6"
+  },
+  {
+    "tag": "v8.3.7",
+    "date": "2025-07-19",
+    "commit": "626d55c",
+    "subject": "8.3.7",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.3.7"
+  },
+  {
+    "tag": "v8.3.8",
+    "date": "2025-07-19",
+    "commit": "39afebd",
+    "subject": "8.3.8",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.3.8"
+  },
+  {
+    "tag": "v8.3.9",
+    "date": "2025-07-19",
+    "commit": "8b892d6",
+    "subject": "8.3.9",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.3.9"
+  },
+  {
+    "tag": "v8.4.0",
+    "date": "2025-07-19",
+    "commit": "adb32b8",
+    "subject": "8.4.0",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.4.0"
+  },
+  {
+    "tag": "v8.4.1",
+    "date": "2025-07-20",
+    "commit": "a7d781b",
+    "subject": "8.4.1",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.4.1"
+  },
+  {
+    "tag": "v8.4.2",
+    "date": "2025-07-20",
+    "commit": "018972e",
+    "subject": "8.4.2",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.4.2"
+  },
+  {
+    "tag": "v8.4.3",
+    "date": "2025-07-20",
+    "commit": "8aacf86",
+    "subject": "8.4.3",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.4.3"
+  },
+  {
+    "tag": "v8.4.4",
+    "date": "2025-07-20",
+    "commit": "e2c60e2",
+    "subject": "8.4.4",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.4.4"
+  },
+  {
+    "tag": "v8.4.5",
+    "date": "2025-07-20",
+    "commit": "6211487",
+    "subject": "8.4.5",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.4.5"
+  },
+  {
+    "tag": "v8.4.6",
+    "date": "2025-07-21",
+    "commit": "e3b189c",
+    "subject": "8.4.6",
+    "commitCount": 5,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.4.6"
+  },
+  {
+    "tag": "v8.4.7",
+    "date": "2025-07-21",
+    "commit": "e4756d2",
+    "subject": "8.4.7",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.4.7"
+  },
+  {
+    "tag": "v8.5.0",
+    "date": "2025-07-23",
+    "commit": "11648ca",
+    "subject": "8.5.0",
+    "commitCount": 4,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.5.0"
+  },
+  {
+    "tag": "v8.5.1",
+    "date": "2025-07-23",
+    "commit": "94a4186",
+    "subject": "8.5.1",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.5.1"
+  },
+  {
+    "tag": "v8.5.2",
+    "date": "2025-07-23",
+    "commit": "bc0b0c4",
+    "subject": "today counter",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.5.2"
+  },
+  {
+    "tag": "v8.5.3",
+    "date": "2025-07-23",
+    "commit": "01af1a2",
+    "subject": "8.5.3",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.5.3"
+  },
+  {
+    "tag": "v8.5.4",
+    "date": "2025-07-25",
+    "commit": "254d00d",
+    "subject": "8.5.4",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.5.4"
+  },
+  {
+    "tag": "v8.5.5",
+    "date": "2025-07-25",
+    "commit": "c0a34b9",
+    "subject": "QueueSize",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.5.5"
+  },
+  {
+    "tag": "v8.5.6",
+    "date": "2025-07-26",
+    "commit": "115e173",
+    "subject": "8.5.6",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.5.6"
+  },
+  {
+    "tag": "v8.5.7",
+    "date": "2025-07-26",
+    "commit": "7f32dda",
+    "subject": "8.5.7",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.5.7"
+  },
+  {
+    "tag": "v8.5.8",
+    "date": "2025-07-26",
+    "commit": "06f9fe6",
+    "subject": "8.5.8",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.5.8"
+  },
+  {
+    "tag": "v8.5.9",
+    "date": "2025-07-26",
+    "commit": "70de52f",
+    "subject": "8.5.9",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.5.9"
+  },
+  {
+    "tag": "v8.6.0",
+    "date": "2025-07-28",
+    "commit": "2fb8872",
+    "subject": "8.6.0",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.6.0"
+  },
+  {
+    "tag": "v8.6.1",
+    "date": "2025-07-29",
+    "commit": "5a6fed3",
+    "subject": "8.6.1",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.6.1"
+  },
+  {
+    "tag": "v8.6.2",
+    "date": "2025-07-30",
+    "commit": "29c114c",
+    "subject": "8.6.2",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.6.2"
+  },
+  {
+    "tag": "v8.6.3",
+    "date": "2025-07-31",
+    "commit": "e374e87",
+    "subject": "8.6.3",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.6.3"
+  },
+  {
+    "tag": "v8.6.4",
+    "date": "2025-07-31",
+    "commit": "c6afd1b",
+    "subject": "IsLoginService",
+    "commitCount": 4,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.6.4"
+  },
+  {
+    "tag": "v8.6.5",
+    "date": "2025-07-31",
+    "commit": "36dd552",
+    "subject": "8.6.5",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.6.5"
+  },
+  {
+    "tag": "v8.6.6",
+    "date": "2025-08-01",
+    "commit": "212afa3",
+    "subject": "discord add video",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.6.6"
+  },
+  {
+    "tag": "v8.6.7",
+    "date": "2025-08-01",
+    "commit": "cadd9d2",
+    "subject": "video",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.6.7"
+  },
+  {
+    "tag": "v8.6.8",
+    "date": "2025-08-01",
+    "commit": "98d15ce",
+    "subject": "8.6.8",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.6.8"
+  },
+  {
+    "tag": "v8.6.9",
+    "date": "2025-08-01",
+    "commit": "c2a2b31",
+    "subject": "user stats",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.6.9"
+  },
+  {
+    "tag": "v8.6.10",
+    "date": "2025-08-02",
+    "commit": "4b7a741",
+    "subject": "8.6.10",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.6.10"
+  },
+  {
+    "tag": "v8.6.11",
+    "date": "2025-08-03",
+    "commit": "8dd1519",
+    "subject": "8.6.11",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.6.11"
+  },
+  {
+    "tag": "v8.6.12",
+    "date": "2025-08-04",
+    "commit": "56d83b6",
+    "subject": "8.6.12",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.6.12"
+  },
+  {
+    "tag": "v8.6.13",
+    "date": "2025-08-04",
+    "commit": "2b7e9e5",
+    "subject": "8.6.13",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.6.13"
+  },
+  {
+    "tag": "v8.6.14",
+    "date": "2025-08-05",
+    "commit": "ec22231",
+    "subject": "8.6.14",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.6.14"
+  },
+  {
+    "tag": "v8.6.15",
+    "date": "2025-08-05",
+    "commit": "ec8031a",
+    "subject": "8.6.15",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.6.15"
+  },
+  {
+    "tag": "v8.6.16",
+    "date": "2025-08-05",
+    "commit": "d721077",
+    "subject": "8.6.16",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.6.16"
+  },
+  {
+    "tag": "v8.6.17",
+    "date": "2025-08-05",
+    "commit": "9504b8f",
+    "subject": "8.6.17",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.6.17"
+  },
+  {
+    "tag": "v8.6.18",
+    "date": "2025-08-05",
+    "commit": "caf3464",
+    "subject": "8.6.18",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.6.18"
+  },
+  {
+    "tag": "v8.6.19",
+    "date": "2025-08-06",
+    "commit": "e1f4122",
+    "subject": "aliyun oss bug",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.6.19"
+  },
+  {
+    "tag": "v8.6.20",
+    "date": "2025-08-06",
+    "commit": "9fdda61",
+    "subject": "8.6.20",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.6.20"
+  },
+  {
+    "tag": "v8.7.0",
+    "date": "2025-08-06",
+    "commit": "2223c8e",
+    "subject": "8.7.0",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.7.0"
+  },
+  {
+    "tag": "v8.7.1",
+    "date": "2025-08-07",
+    "commit": "e5b3c19",
+    "subject": "8.7.1",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.7.1"
+  },
+  {
+    "tag": "v8.7.2",
+    "date": "2025-08-07",
+    "commit": "bbd972a",
+    "subject": "fix: upscaler, index, bug, feat: request mode",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.7.2"
+  },
+  {
+    "tag": "v8.7.3",
+    "date": "2025-08-07",
+    "commit": "2d03f4f",
+    "subject": "fix: defalut v7",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.7.3"
+  },
+  {
+    "tag": "v8.7.4",
+    "date": "2025-08-08",
+    "commit": "9a48adc",
+    "subject": "8.7.4",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.7.4"
+  },
+  {
+    "tag": "v8.7.5",
+    "date": "2025-08-08",
+    "commit": "c26ac5d",
+    "subject": "8.7.5",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.7.5"
+  },
+  {
+    "tag": "v8.7.6",
+    "date": "2025-08-08",
+    "commit": "6d3be25",
+    "subject": "fix 302",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.7.6"
+  },
+  {
+    "tag": "v8.7.7",
+    "date": "2025-08-09",
+    "commit": "44f6c03",
+    "subject": "test",
+    "commitCount": 4,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.7.7"
+  },
+  {
+    "tag": "v8.7.8",
+    "date": "2025-08-09",
+    "commit": "1487ac9",
+    "subject": "8.7.8",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.7.8"
+  },
+  {
+    "tag": "v8.7.9",
+    "date": "2025-08-10",
+    "commit": "fddb9a7",
+    "subject": "counter",
+    "commitCount": 4,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.7.9"
+  },
+  {
+    "tag": "v8.7.10",
+    "date": "2025-08-10",
+    "commit": "12f4c3b",
+    "subject": "8.7.10",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.7.10"
+  },
+  {
+    "tag": "v8.7.11",
+    "date": "2025-08-11",
+    "commit": "07c4cd5",
+    "subject": "fix: upscale",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.7.11"
+  },
+  {
+    "tag": "v8.7.12",
+    "date": "2025-08-13",
+    "commit": "d945861",
+    "subject": "8.7.12",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.7.12"
+  },
+  {
+    "tag": "v8.7.13",
+    "date": "2025-08-14",
+    "commit": "81ea09d",
+    "subject": "8.7.13",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.7.13"
+  },
+  {
+    "tag": "v8.7.14",
+    "date": "2025-08-14",
+    "commit": "8ad3461",
+    "subject": "8.7.14 rix api",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.7.14"
+  },
+  {
+    "tag": "v8.7.15",
+    "date": "2025-08-14",
+    "commit": "8ddc2ad",
+    "subject": "8.7.15",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.7.15"
+  },
+  {
+    "tag": "v8.7.16",
+    "date": "2025-08-14",
+    "commit": "dd41fda",
+    "subject": "offical expiring credit",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.7.16"
+  },
+  {
+    "tag": "v8.7.17",
+    "date": "2025-08-15",
+    "commit": "504a983",
+    "subject": "sort bug",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.7.17"
+  },
+  {
+    "tag": "v8.7.18",
+    "date": "2025-08-19",
+    "commit": "f3a1f31",
+    "subject": "8.7.18",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.7.18"
+  },
+  {
+    "tag": "v8.7.19",
+    "date": "2025-08-20",
+    "commit": "2be5a24",
+    "subject": "8.7.19",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.7.19"
+  },
+  {
+    "tag": "v8.7.20",
+    "date": "2025-08-20",
+    "commit": "1c75b93",
+    "subject": "8.7.20",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.7.20"
+  },
+  {
+    "tag": "v8.7.21",
+    "date": "2025-08-20",
+    "commit": "972d814",
+    "subject": "8.7.21",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.7.21"
+  },
+  {
+    "tag": "v8.7.22",
+    "date": "2025-08-26",
+    "commit": "094532f",
+    "subject": "progress",
+    "commitCount": 7,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.7.22"
+  },
+  {
+    "tag": "v8.7.23",
+    "date": "2025-08-27",
+    "commit": "5b5c2d9",
+    "subject": "8.7.23",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.7.23"
+  },
+  {
+    "tag": "v8.8.0",
+    "date": "2025-08-27",
+    "commit": "16cff51",
+    "subject": "8.8.0",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.8.0"
+  },
+  {
+    "tag": "v8.8.1",
+    "date": "2025-08-28",
+    "commit": "be903f8",
+    "subject": "8.8.1",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.8.1"
+  },
+  {
+    "tag": "v8.8.2",
+    "date": "2025-09-16",
+    "commit": "5e3c65a",
+    "subject": "fix: account cache",
+    "commitCount": 5,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.8.2"
+  },
+  {
+    "tag": "v8.8.3",
+    "date": "2025-09-16",
+    "commit": "9263ec9",
+    "subject": "8.8.3",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.8.3"
+  },
+  {
+    "tag": "v8.8.4",
+    "date": "2025-09-16",
+    "commit": "f73ec9a",
+    "subject": "8.8.4",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.8.4"
+  },
+  {
+    "tag": "v8.8.5",
+    "date": "2025-09-16",
+    "commit": "597de35",
+    "subject": "proj",
+    "commitCount": 4,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.8.5"
+  },
+  {
+    "tag": "v8.8.6",
+    "date": "2025-09-19",
+    "commit": "27da9d4",
+    "subject": "8.8.6",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.8.6"
+  },
+  {
+    "tag": "v8.8.7",
+    "date": "2025-09-19",
+    "commit": "8b6c102",
+    "subject": "8.8.7",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.8.7"
+  },
+  {
+    "tag": "v8.8.8",
+    "date": "2025-09-19",
+    "commit": "d3eb708",
+    "subject": "8.8.8",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.8.8"
+  },
+  {
+    "tag": "v8.9.0",
+    "date": "2025-10-11",
+    "commit": "2aee074",
+    "subject": "8.9.0",
+    "commitCount": 9,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.9.0"
+  },
+  {
+    "tag": "v8.9.1",
+    "date": "2025-10-14",
+    "commit": "b42d183",
+    "subject": "profile",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.9.1"
+  },
+  {
+    "tag": "v8.9.2",
+    "date": "2025-10-14",
+    "commit": "d596d4e",
+    "subject": "8.9.2",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.9.2"
+  },
+  {
+    "tag": "v8.9.3",
+    "date": "2025-10-20",
+    "commit": "cb935fd",
+    "subject": "8.9.3",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.9.3"
+  },
+  {
+    "tag": "v8.9.4",
+    "date": "2025-10-23",
+    "commit": "a923aa0",
+    "subject": "8.9.4",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.9.4"
+  },
+  {
+    "tag": "v8.9.6",
+    "date": "2025-10-26",
+    "commit": "60d4eb8",
+    "subject": "8.9.6",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.9.6"
+  },
+  {
+    "tag": "v8.9.7",
+    "date": "2025-10-26",
+    "commit": "3c3237c",
+    "subject": "8.9.7",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.9.7"
+  },
+  {
+    "tag": "v8.9.8",
+    "date": "2025-10-30",
+    "commit": "59f7b10",
+    "subject": "8.9.8",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.9.8"
+  },
+  {
+    "tag": "v8.9.9",
+    "date": "2025-11-05",
+    "commit": "154a146",
+    "subject": "8.9.9",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.9.9"
+  },
+  {
+    "tag": "8.9.10",
+    "date": "2025-11-05",
+    "commit": "712ce08",
+    "subject": "8.9.10",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/8.9.10"
+  },
+  {
+    "tag": "8.9.11",
+    "date": "2025-11-05",
+    "commit": "593e664",
+    "subject": "8.9.11",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/8.9.11"
+  },
+  {
+    "tag": "8.9.12",
+    "date": "2025-11-05",
+    "commit": "f643a42",
+    "subject": "8.9.12",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/8.9.12"
+  },
+  {
+    "tag": "v8.9.13",
+    "date": "2025-11-05",
+    "commit": "c3f1cc2",
+    "subject": "8.9.13",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.9.13"
+  },
+  {
+    "tag": "v8.9.14",
+    "date": "2025-11-08",
+    "commit": "54980bc",
+    "subject": "8.9.14",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.9.14"
+  },
+  {
+    "tag": "v8.9.15",
+    "date": "2025-11-17",
+    "commit": "679661d",
+    "subject": "Merge branch 'main' of https://github.com/trueai-org/midjourney-proxy",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.9.15"
+  },
+  {
+    "tag": "v8.9.16",
+    "date": "2025-11-17",
+    "commit": "664cfba",
+    "subject": "8.9.16",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.9.16"
+  },
+  {
+    "tag": "v8.9.17",
+    "date": "2025-11-17",
+    "commit": "7b2d8ff",
+    "subject": "8.9.17",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.9.17"
+  },
+  {
+    "tag": "v8.9.18",
+    "date": "2025-11-17",
+    "commit": "1ad4c58",
+    "subject": "Consul Enable Version Check",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.9.18"
+  },
+  {
+    "tag": "v8.9.19",
+    "date": "2025-11-17",
+    "commit": "1ad4c58",
+    "subject": "Consul Enable Version Check",
+    "commitCount": 0,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.9.19"
+  },
+  {
+    "tag": "v8.9.20",
+    "date": "2025-11-17",
+    "commit": "02b9996",
+    "subject": "8.9.20",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.9.20"
+  },
+  {
+    "tag": "v8.10.0",
+    "date": "2025-11-18",
+    "commit": "07b745a",
+    "subject": "8.10.0",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.10.0"
+  },
+  {
+    "tag": "v8.10.1",
+    "date": "2025-11-22",
+    "commit": "097f799",
+    "subject": "8.10.1",
+    "commitCount": 6,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.10.1"
+  },
+  {
+    "tag": "v8.10.2",
+    "date": "2025-11-22",
+    "commit": "57cd713",
+    "subject": "8.10.2",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.10.2"
+  },
+  {
+    "tag": "v8.10.3",
+    "date": "2025-11-23",
+    "commit": "cae4476",
+    "subject": "8.10.3",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.10.3"
+  },
+  {
+    "tag": "v8.10.4",
+    "date": "2025-11-23",
+    "commit": "94b2df0",
+    "subject": "8.10.4",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.10.4"
+  },
+  {
+    "tag": "v8.10.5",
+    "date": "2025-11-23",
+    "commit": "9da5b18",
+    "subject": "8.10.5",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.10.5"
+  },
+  {
+    "tag": "v8.10.6",
+    "date": "2025-11-23",
+    "commit": "63469fb",
+    "subject": "8.10.6",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.10.6"
+  },
+  {
+    "tag": "v8.10.7",
+    "date": "2025-11-23",
+    "commit": "b679de3",
+    "subject": "8.10.7",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.10.7"
+  },
+  {
+    "tag": "v8.10.8",
+    "date": "2025-11-24",
+    "commit": "ebc3e9a",
+    "subject": "8.10.8",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.10.8"
+  },
+  {
+    "tag": "v8.10.10",
+    "date": "2025-11-26",
+    "commit": "db162ac",
+    "subject": "8.10.10",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v8.10.10"
+  },
+  {
+    "tag": "v9.0.1-beta.1",
+    "date": "2025-11-27",
+    "commit": "79fbb4d",
+    "subject": "9.0.1",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.0.1-beta.1"
+  },
+  {
+    "tag": "v9.0.2-beta.1",
+    "date": "2025-11-27",
+    "commit": "99e30e8",
+    "subject": "9.0.2",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.0.2-beta.1"
+  },
+  {
+    "tag": "v9.0.3-beta.1",
+    "date": "2025-11-27",
+    "commit": "51b53f6",
+    "subject": "9.0.3",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.0.3-beta.1"
+  },
+  {
+    "tag": "v9.0.4-beta.1",
+    "date": "2025-11-27",
+    "commit": "51b53f6",
+    "subject": "9.0.3",
+    "commitCount": 0,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.0.4-beta.1"
+  },
+  {
+    "tag": "v9.0.5-beta.1",
+    "date": "2025-11-27",
+    "commit": "ae9995b",
+    "subject": "9.0.5",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.0.5-beta.1"
+  },
+  {
+    "tag": "v9.0.6-beta.1",
+    "date": "2025-11-27",
+    "commit": "7c52752",
+    "subject": "doc",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.0.6-beta.1"
+  },
+  {
+    "tag": "v9.0.7-beta.1",
+    "date": "2025-11-27",
+    "commit": "0ef31ad",
+    "subject": "9.0.7",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.0.7-beta.1"
+  },
+  {
+    "tag": "v9.0.8-beta.1",
+    "date": "2025-11-28",
+    "commit": "d5b3988",
+    "subject": "9.0.8",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.0.8-beta.1"
+  },
+  {
+    "tag": "v9.0.9-beta.1",
+    "date": "2025-11-28",
+    "commit": "02c38f3",
+    "subject": "9.0.9",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.0.9-beta.1"
+  },
+  {
+    "tag": "v9.0.10-beta.1",
+    "date": "2025-11-29",
+    "commit": "bb7a0d6",
+    "subject": "global lock, global limit, setting db, setting kv,",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.0.10-beta.1"
+  },
+  {
+    "tag": "v9.0.11-beta.1",
+    "date": "2025-11-29",
+    "commit": "b5b6d48",
+    "subject": "9.0.11",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.0.11-beta.1"
+  },
+  {
+    "tag": "v9.0.12-beta.1",
+    "date": "2025-11-30",
+    "commit": "3e6df39",
+    "subject": "9.0.12",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.0.12-beta.1"
+  },
+  {
+    "tag": "v9.0.13-beta.1",
+    "date": "2025-11-30",
+    "commit": "8f1f2dc",
+    "subject": "9.0.13",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.0.13-beta.1"
+  },
+  {
+    "tag": "v9.0.14-beta.1",
+    "date": "2025-11-30",
+    "commit": "b40e066",
+    "subject": "9.0.14",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.0.14-beta.1"
+  },
+  {
+    "tag": "v9.0.15-beta.1",
+    "date": "2025-11-30",
+    "commit": "fed8135",
+    "subject": "local ip",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.0.15-beta.1"
+  },
+  {
+    "tag": "v9.1.0",
+    "date": "2025-11-30",
+    "commit": "1fe0856",
+    "subject": "9.1.0",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.1.0"
+  },
+  {
+    "tag": "v9.1.1",
+    "date": "2025-11-30",
+    "commit": "2a9bb27",
+    "subject": "9.1.1",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.1.1"
+  },
+  {
+    "tag": "v9.1.2",
+    "date": "2025-11-30",
+    "commit": "036708e",
+    "subject": "9.1.2",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.1.2"
+  },
+  {
+    "tag": "v9.1.3",
+    "date": "2025-12-01",
+    "commit": "d22532b",
+    "subject": "9.1.3",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.1.3"
+  },
+  {
+    "tag": "v9.1.4",
+    "date": "2025-12-01",
+    "commit": "959662c",
+    "subject": "9.1.4",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.1.4"
+  },
+  {
+    "tag": "v9.1.5",
+    "date": "2025-12-01",
+    "commit": "95fa1e2",
+    "subject": "9.1.5",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.1.5"
+  },
+  {
+    "tag": "v9.1.6",
+    "date": "2025-12-01",
+    "commit": "375f036",
+    "subject": "9.1.6",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.1.6"
+  },
+  {
+    "tag": "v9.1.7",
+    "date": "2025-12-02",
+    "commit": "cc018af",
+    "subject": "9.1.7",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.1.7"
+  },
+  {
+    "tag": "v9.1.8",
+    "date": "2025-12-02",
+    "commit": "974d52a",
+    "subject": "9.1.8",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.1.8"
+  },
+  {
+    "tag": "v9.1.9",
+    "date": "2025-12-02",
+    "commit": "b89a18b",
+    "subject": "9.1.9",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.1.9"
+  },
+  {
+    "tag": "v9.2.0",
+    "date": "2025-12-02",
+    "commit": "d74cc62",
+    "subject": "9.2.0",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.2.0"
+  },
+  {
+    "tag": "v9.2.1",
+    "date": "2025-12-02",
+    "commit": "279d248",
+    "subject": "9.2.1",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.2.1"
+  },
+  {
+    "tag": "v9.2.2",
+    "date": "2025-12-03",
+    "commit": "6a2f7d5",
+    "subject": "Reduce the synchronization frequency, exception handling, lock",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.2.2"
+  },
+  {
+    "tag": "v9.2.3",
+    "date": "2025-12-03",
+    "commit": "7eab54d",
+    "subject": "9.2.3",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.2.3"
+  },
+  {
+    "tag": "v9.2.4",
+    "date": "2025-12-03",
+    "commit": "661c1e4",
+    "subject": "9.2.4",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.2.4"
+  },
+  {
+    "tag": "v9.2.5",
+    "date": "2025-12-03",
+    "commit": "4098dc9",
+    "subject": "9.2.5",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.2.5"
+  },
+  {
+    "tag": "v9.2.6",
+    "date": "2025-12-03",
+    "commit": "47db1fb",
+    "subject": "feat: add bandwords clear, blocked by mj, mongodb move",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.2.6"
+  },
+  {
+    "tag": "v9.2.7",
+    "date": "2025-12-04",
+    "commit": "89cf936",
+    "subject": "9.2.7",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.2.7"
+  },
+  {
+    "tag": "v9.2.8",
+    "date": "2025-12-04",
+    "commit": "7bbaba7",
+    "subject": "9.2.8",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.2.8"
+  },
+  {
+    "tag": "v9.2.9",
+    "date": "2025-12-04",
+    "commit": "5a48124",
+    "subject": "9.2.9",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.2.9"
+  },
+  {
+    "tag": "v9.2.10",
+    "date": "2025-12-05",
+    "commit": "5487268",
+    "subject": "v9.2.10",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.2.10"
+  },
+  {
+    "tag": "v9.2.11",
+    "date": "2025-12-06",
+    "commit": "1b52082",
+    "subject": "Redis Enqueue",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.2.11"
+  },
+  {
+    "tag": "v9.3.0",
+    "date": "2025-12-07",
+    "commit": "87bc200",
+    "subject": "9.3.0",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.3.0"
+  },
+  {
+    "tag": "v9.3.1",
+    "date": "2025-12-08",
+    "commit": "0f45415",
+    "subject": "9.3.1",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.3.1"
+  },
+  {
+    "tag": "v9.3.2",
+    "date": "2025-12-08",
+    "commit": "925b134",
+    "subject": "youchuan login bug 9.3.2",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.3.2"
+  },
+  {
+    "tag": "v9.3.3",
+    "date": "2025-12-08",
+    "commit": "4f2a78a",
+    "subject": "9.3.3",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.3.3"
+  },
+  {
+    "tag": "v9.3.4",
+    "date": "2025-12-08",
+    "commit": "fc6ce33",
+    "subject": "9.3.4",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.3.4"
+  },
+  {
+    "tag": "v9.3.5",
+    "date": "2025-12-08",
+    "commit": "ac70a0d",
+    "subject": "9.3.5",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.3.5"
+  },
+  {
+    "tag": "v9.3.6",
+    "date": "2025-12-08",
+    "commit": "2573d6c",
+    "subject": "9.3.6",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.3.6"
+  },
+  {
+    "tag": "v9.3.7",
+    "date": "2025-12-09",
+    "commit": "03cea53",
+    "subject": "restart all",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.3.7"
+  },
+  {
+    "tag": "v9.3.8",
+    "date": "2025-12-09",
+    "commit": "03cea53",
+    "subject": "restart all",
+    "commitCount": 0,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.3.8"
+  },
+  {
+    "tag": "v9.3.9",
+    "date": "2025-12-10",
+    "commit": "35b4b7a",
+    "subject": "9.3.9",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.3.9"
+  },
+  {
+    "tag": "v9.3.10",
+    "date": "2025-12-11",
+    "commit": "159e86b",
+    "subject": "9.3.10",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.3.10"
+  },
+  {
+    "tag": "v9.3.11",
+    "date": "2025-12-11",
+    "commit": "5419869",
+    "subject": "info bug",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.3.11"
+  },
+  {
+    "tag": "v9.4.0",
+    "date": "2025-12-12",
+    "commit": "762cabf",
+    "subject": "discord no validate token",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.4.0"
+  },
+  {
+    "tag": "v9.4.1",
+    "date": "2025-12-12",
+    "commit": "2742561",
+    "subject": "9.4.1",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.4.1"
+  },
+  {
+    "tag": "v9.4.2",
+    "date": "2025-12-12",
+    "commit": "be68e27",
+    "subject": "9.4.2",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.4.2"
+  },
+  {
+    "tag": "v9.4.3",
+    "date": "2025-12-12",
+    "commit": "9f359b4",
+    "subject": "9.4.3",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.4.3"
+  },
+  {
+    "tag": "v9.4.4",
+    "date": "2025-12-12",
+    "commit": "97f2027",
+    "subject": "9.4.4",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.4.4"
+  },
+  {
+    "tag": "v9.4.5",
+    "date": "2025-12-12",
+    "commit": "25d96b4",
+    "subject": "9.4.5",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.4.5"
+  },
+  {
+    "tag": "v9.4.6",
+    "date": "2025-12-14",
+    "commit": "d2105fe",
+    "subject": "9.4.6",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.4.6"
+  },
+  {
+    "tag": "v9.4.7",
+    "date": "2025-12-14",
+    "commit": "eeeeda9",
+    "subject": "9.4.7",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.4.7"
+  },
+  {
+    "tag": "v9.4.8",
+    "date": "2025-12-14",
+    "commit": "9e1c7c5",
+    "subject": "9.4.8",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.4.8"
+  },
+  {
+    "tag": "v9.4.9",
+    "date": "2025-12-14",
+    "commit": "9af79bd",
+    "subject": "9.4.9",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.4.9"
+  },
+  {
+    "tag": "v9.5.0",
+    "date": "2025-12-15",
+    "commit": "8629c47",
+    "subject": "feat: draft, 9.5.0",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v9.5.0"
+  },
+  {
+    "tag": "v10.0.0-beta.1",
+    "date": "2025-12-20",
+    "commit": "835ae5e",
+    "subject": "v10.0.0",
+    "commitCount": 4,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v10.0.0-beta.1"
+  },
+  {
+    "tag": "v10.0.1-beta.1",
+    "date": "2025-12-21",
+    "commit": "597037b",
+    "subject": "10.0.1",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v10.0.1-beta.1"
+  },
+  {
+    "tag": "v10.0.2",
+    "date": "2025-12-22",
+    "commit": "3cfae26",
+    "subject": "10.0.2",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v10.0.2"
+  },
+  {
+    "tag": "v10.0.3",
+    "date": "2025-12-23",
+    "commit": "d5637c9",
+    "subject": "10.0.3",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v10.0.3"
+  },
+  {
+    "tag": "v10.0.4",
+    "date": "2025-12-24",
+    "commit": "99418eb",
+    "subject": "10.0.4",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v10.0.4"
+  },
+  {
+    "tag": "v10.0.5",
+    "date": "2025-12-24",
+    "commit": "5026a9c",
+    "subject": "10.0.5",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v10.0.5"
+  },
+  {
+    "tag": "v10.0.6",
+    "date": "2025-12-24",
+    "commit": "91e971e",
+    "subject": "10.0.6",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v10.0.6"
+  },
+  {
+    "tag": "v10.0.7",
+    "date": "2025-12-24",
+    "commit": "78cc54e",
+    "subject": "10.0.7",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v10.0.7"
+  },
+  {
+    "tag": "v10.0.8",
+    "date": "2025-12-24",
+    "commit": "78cc54e",
+    "subject": "10.0.7",
+    "commitCount": 0,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v10.0.8"
+  },
+  {
+    "tag": "v10.0.9",
+    "date": "2025-12-25",
+    "commit": "a0fa950",
+    "subject": "10.0.9",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v10.0.9"
+  },
+  {
+    "tag": "v10.0.10",
+    "date": "2025-12-25",
+    "commit": "4469278",
+    "subject": "10.0.10",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v10.0.10"
+  },
+  {
+    "tag": "v10.0.11",
+    "date": "2025-12-25",
+    "commit": "11bdc37",
+    "subject": "10.0.11",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v10.0.11"
+  },
+  {
+    "tag": "v10.0.12",
+    "date": "2025-12-25",
+    "commit": "a696e53",
+    "subject": "10.0.12",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v10.0.12"
+  },
+  {
+    "tag": "v10.1.0",
+    "date": "2025-12-25",
+    "commit": "ca50878",
+    "subject": "10.1.0",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v10.1.0"
+  },
+  {
+    "tag": "v10.1.1",
+    "date": "2025-12-25",
+    "commit": "f36d5c0",
+    "subject": "10.1.1",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v10.1.1"
+  },
+  {
+    "tag": "v10.1.2",
+    "date": "2025-12-25",
+    "commit": "3db21f8",
+    "subject": "fix: action bug",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v10.1.2"
+  },
+  {
+    "tag": "v10.2.0",
+    "date": "2025-12-25",
+    "commit": "1647807",
+    "subject": "10.2.0",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v10.2.0"
+  },
+  {
+    "tag": "v10.3.0",
+    "date": "2025-12-25",
+    "commit": "6889dfd",
+    "subject": "10.3.0",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v10.3.0"
+  },
+  {
+    "tag": "v10.4.0",
+    "date": "2025-12-26",
+    "commit": "4d677f7",
+    "subject": "10.4.0",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v10.4.0"
+  },
+  {
+    "tag": "v10.5.0",
+    "date": "2025-12-26",
+    "commit": "eddde09",
+    "subject": "10.5.0",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v10.5.0"
+  },
+  {
+    "tag": "v10.6.0",
+    "date": "2025-12-26",
+    "commit": "f970262",
+    "subject": "10.6.0",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v10.6.0"
+  },
+  {
+    "tag": "v10.7.0",
+    "date": "2025-12-26",
+    "commit": "50c3b46",
+    "subject": "10.7.0",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v10.7.0"
+  },
+  {
+    "tag": "v10.7.1",
+    "date": "2025-12-26",
+    "commit": "aad1996",
+    "subject": "10.7.1",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v10.7.1"
+  },
+  {
+    "tag": "v10.8.0",
+    "date": "2025-12-28",
+    "commit": "2b1be23",
+    "subject": "v10.8.0",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v10.8.0"
+  },
+  {
+    "tag": "v10.8.1",
+    "date": "2025-12-29",
+    "commit": "1e78a22",
+    "subject": "v10.8.1",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v10.8.1"
+  },
+  {
+    "tag": "v10.8.2",
+    "date": "2025-12-29",
+    "commit": "51feb61",
+    "subject": "10.8.2",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v10.8.2"
+  },
+  {
+    "tag": "v10.8.3",
+    "date": "2025-12-30",
+    "commit": "cc59b2d",
+    "subject": "seed",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v10.8.3"
+  },
+  {
+    "tag": "v10.8.4",
+    "date": "2025-12-30",
+    "commit": "5fe261a",
+    "subject": "10.8.4",
+    "commitCount": 5,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v10.8.4"
+  },
+  {
+    "tag": "v10.8.5",
+    "date": "2025-12-31",
+    "commit": "45ad994",
+    "subject": "10.8.5",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v10.8.5"
+  },
+  {
+    "tag": "v11.0.0",
+    "date": "2026-01-05",
+    "commit": "6dbc0f6",
+    "subject": "feat: home stats",
+    "commitCount": 6,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.0.0"
+  },
+  {
+    "tag": "v11.0.1",
+    "date": "2026-01-05",
+    "commit": "7844262",
+    "subject": "11.0.1",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.0.1"
+  },
+  {
+    "tag": "v11.0.2",
+    "date": "2026-01-05",
+    "commit": "c16e86c",
+    "subject": "doc",
+    "commitCount": 4,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.0.2"
+  },
+  {
+    "tag": "v11.0.3",
+    "date": "2026-01-05",
+    "commit": "7b07c6a",
+    "subject": "11.0.3",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.0.3"
+  },
+  {
+    "tag": "v11.0.4",
+    "date": "2026-01-06",
+    "commit": "1c64270",
+    "subject": "feat: global cdn",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.0.4"
+  },
+  {
+    "tag": "v11.0.5",
+    "date": "2026-01-06",
+    "commit": "5f416ed",
+    "subject": "11.0.5",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.0.5"
+  },
+  {
+    "tag": "v11.1.0",
+    "date": "2026-01-07",
+    "commit": "2f50d41",
+    "subject": "11.1.0",
+    "commitCount": 7,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.1.0"
+  },
+  {
+    "tag": "v11.1.1",
+    "date": "2026-01-07",
+    "commit": "356c1c6",
+    "subject": "11.1.1",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.1.1"
+  },
+  {
+    "tag": "v11.1.2",
+    "date": "2026-01-07",
+    "commit": "14842bb",
+    "subject": "11.1.2",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.1.2"
+  },
+  {
+    "tag": "v11.1.3",
+    "date": "2026-01-07",
+    "commit": "8861573",
+    "subject": "11.1.3",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.1.3"
+  },
+  {
+    "tag": "v11.1.4",
+    "date": "2026-01-08",
+    "commit": "9a570f7",
+    "subject": "11.1.4",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.1.4"
+  },
+  {
+    "tag": "v11.1.5",
+    "date": "2026-01-08",
+    "commit": "f61ab9f",
+    "subject": "11.1.5",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.1.5"
+  },
+  {
+    "tag": "v11.1.6",
+    "date": "2026-01-08",
+    "commit": "4b72829",
+    "subject": "11.1.6",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.1.6"
+  },
+  {
+    "tag": "v11.1.7",
+    "date": "2026-01-08",
+    "commit": "a6e5f22",
+    "subject": "11.1.7",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.1.7"
+  },
+  {
+    "tag": "v11.1.9",
+    "date": "2026-01-08",
+    "commit": "42044e5",
+    "subject": "11.1.9",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.1.9"
+  },
+  {
+    "tag": "v11.2.0",
+    "date": "2026-01-08",
+    "commit": "6fade12",
+    "subject": "11.2.0",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.2.0"
+  },
+  {
+    "tag": "v11.2.1",
+    "date": "2026-01-09",
+    "commit": "e722f3b",
+    "subject": "11.2.1",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.2.1"
+  },
+  {
+    "tag": "v11.2.2",
+    "date": "2026-01-12",
+    "commit": "4768539",
+    "subject": "feat: MariaDB",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.2.2"
+  },
+  {
+    "tag": "v11.2.3",
+    "date": "2026-01-14",
+    "commit": "dc49a8c",
+    "subject": "pgsql upgrade, sub channels",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.2.3"
+  },
+  {
+    "tag": "v11.2.4",
+    "date": "2026-01-15",
+    "commit": "2b1efd9",
+    "subject": "11.2.4",
+    "commitCount": 6,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.2.4"
+  },
+  {
+    "tag": "v11.2.5",
+    "date": "2026-01-15",
+    "commit": "3a5e3db",
+    "subject": "11.2.5, alert notify",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.2.5"
+  },
+  {
+    "tag": "v11.2.6",
+    "date": "2026-01-20",
+    "commit": "923d22b",
+    "subject": "11.2.6",
+    "commitCount": 4,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.2.6"
+  },
+  {
+    "tag": "v11.2.7",
+    "date": "2026-01-21",
+    "commit": "6ded0ac",
+    "subject": "11.2.7",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.2.7"
+  },
+  {
+    "tag": "v11.2.8",
+    "date": "2026-01-22",
+    "commit": "5c8862c",
+    "subject": "11.2.8, band words",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.2.8"
+  },
+  {
+    "tag": "v11.2.9",
+    "date": "2026-01-22",
+    "commit": "8f078f1",
+    "subject": "11.2.9, --niji 7",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.2.9"
+  },
+  {
+    "tag": "v11.3.0",
+    "date": "2026-01-23",
+    "commit": "a6de735",
+    "subject": "Kestrel",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.3.0"
+  },
+  {
+    "tag": "v11.3.1",
+    "date": "2026-01-23",
+    "commit": "cbaddb0",
+    "subject": "11.3.1",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.3.1"
+  },
+  {
+    "tag": "v11.3.2",
+    "date": "2026-01-24",
+    "commit": "8646958",
+    "subject": "11.3.2, action video",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.3.2"
+  },
+  {
+    "tag": "v11.3.3",
+    "date": "2026-01-24",
+    "commit": "e8447b4",
+    "subject": "11.3.3",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.3.3"
+  },
+  {
+    "tag": "v11.3.4",
+    "date": "2026-01-24",
+    "commit": "f8c3a48",
+    "subject": "11.3.4",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.3.4"
+  },
+  {
+    "tag": "v11.3.5",
+    "date": "2026-01-24",
+    "commit": "d35ec90",
+    "subject": "11.3.5",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.3.5"
+  },
+  {
+    "tag": "v11.3.6",
+    "date": "2026-01-24",
+    "commit": "9cbb2ff",
+    "subject": "fix, blend bug, 11.3.6",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.3.6"
+  },
+  {
+    "tag": "v11.3.7",
+    "date": "2026-01-24",
+    "commit": "ad6f0aa",
+    "subject": "11.3.7, fix: video remix auto submit",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.3.7"
+  },
+  {
+    "tag": "v11.3.8",
+    "date": "2026-01-25",
+    "commit": "0d4970b",
+    "subject": "11.3.8, add node switch",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.3.8"
+  },
+  {
+    "tag": "v11.3.9",
+    "date": "2026-01-25",
+    "commit": "33dd449",
+    "subject": "11.3.9",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.3.9"
+  },
+  {
+    "tag": "v11.3.10",
+    "date": "2026-01-25",
+    "commit": "ed438bd",
+    "subject": "11.3.10",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.3.10"
+  },
+  {
+    "tag": "v11.3.11",
+    "date": "2026-01-25",
+    "commit": "88e812d",
+    "subject": "11.3.11, notify",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.3.11"
+  },
+  {
+    "tag": "v11.3.12",
+    "date": "2026-01-25",
+    "commit": "cf5c53f",
+    "subject": "11.3.12, fix video api remix bug",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.3.12"
+  },
+  {
+    "tag": "v11.3.13",
+    "date": "2026-01-26",
+    "commit": "b71a977",
+    "subject": "11.3.13",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.3.13"
+  },
+  {
+    "tag": "v11.3.14",
+    "date": "2026-01-27",
+    "commit": "a83eed6",
+    "subject": "11.3.14",
+    "commitCount": 4,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.3.14"
+  },
+  {
+    "tag": "v11.3.15",
+    "date": "2026-01-28",
+    "commit": "906653a",
+    "subject": "feat: account fill mode",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.3.15"
+  },
+  {
+    "tag": "v11.3.16",
+    "date": "2026-02-03",
+    "commit": "b2eaf20",
+    "subject": "11.3.16",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.3.16"
+  },
+  {
+    "tag": "v11.3.17",
+    "date": "2026-02-04",
+    "commit": "26a6272",
+    "subject": "11.3.17",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.3.17"
+  },
+  {
+    "tag": "v11.3.18",
+    "date": "2026-02-05",
+    "commit": "f14256f",
+    "subject": "11.3.18",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.3.18"
+  },
+  {
+    "tag": "v11.3.19",
+    "date": "2026-02-08",
+    "commit": "18f3898",
+    "subject": "fix: mysql limit, 11.3.19",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.3.19"
+  },
+  {
+    "tag": "v11.3.20",
+    "date": "2026-02-27",
+    "commit": "47edf18",
+    "subject": "11.3.20",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.3.20"
+  },
+  {
+    "tag": "v11.4.0",
+    "date": "2026-02-28",
+    "commit": "3486b66",
+    "subject": "11.4.0",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.4.0"
+  },
+  {
+    "tag": "v11.4.1",
+    "date": "2026-03-04",
+    "commit": "9fd468d",
+    "subject": "delete 1000+",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.4.1"
+  },
+  {
+    "tag": "v11.4.2",
+    "date": "2026-03-07",
+    "commit": "bd0e95d",
+    "subject": "user stats, 11.4.2",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.4.2"
+  },
+  {
+    "tag": "v11.4.3",
+    "date": "2026-03-07",
+    "commit": "534ae1a",
+    "subject": "11.4.3",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.4.3"
+  },
+  {
+    "tag": "v11.4.4",
+    "date": "2026-03-07",
+    "commit": "c3b74d6",
+    "subject": "11.4.4",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.4.4"
+  },
+  {
+    "tag": "v11.4.5",
+    "date": "2026-03-09",
+    "commit": "daed57a",
+    "subject": "11.4.5",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.4.5"
+  },
+  {
+    "tag": "v11.4.6",
+    "date": "2026-03-09",
+    "commit": "a3437ab",
+    "subject": "add IsThirdParty, add tools",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.4.6"
+  },
+  {
+    "tag": "v11.4.7",
+    "date": "2026-03-12",
+    "commit": "e0b5307",
+    "subject": "11.4.7",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.4.7"
+  },
+  {
+    "tag": "v11.5.0",
+    "date": "2026-03-13",
+    "commit": "bb6ce0a",
+    "subject": "11.5.0",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.5.0"
+  },
+  {
+    "tag": "v11.6.0",
+    "date": "2026-03-21",
+    "commit": "66d07a3",
+    "subject": "Merge branch 'main' of https://github.com/trueai-org/midjourney-proxy",
+    "commitCount": 4,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.6.0"
+  },
+  {
+    "tag": "v11.6.1",
+    "date": "2026-03-21",
+    "commit": "f68889f",
+    "subject": "11.6.1",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.6.1"
+  },
+  {
+    "tag": "v11.6.2",
+    "date": "2026-03-24",
+    "commit": "6214b28",
+    "subject": "11.6.2",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.6.2"
+  },
+  {
+    "tag": "v11.6.3",
+    "date": "2026-03-25",
+    "commit": "3c0c84f",
+    "subject": "11.6.3",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.6.3"
+  },
+  {
+    "tag": "v11.6.4",
+    "date": "2026-03-25",
+    "commit": "b40b1ab",
+    "subject": "11.6.4",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.6.4"
+  },
+  {
+    "tag": "v11.6.5",
+    "date": "2026-03-25",
+    "commit": "c862d4f",
+    "subject": "11.6.5",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.6.5"
+  },
+  {
+    "tag": "v11.6.6",
+    "date": "2026-03-26",
+    "commit": "e1e9c85",
+    "subject": "11.6.6",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.6.6"
+  },
+  {
+    "tag": "v11.6.7",
+    "date": "2026-03-26",
+    "commit": "f934be4",
+    "subject": "11.6.7",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.6.7"
+  },
+  {
+    "tag": "v11.6.8",
+    "date": "2026-03-27",
+    "commit": "2105847",
+    "subject": "11.6.8",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.6.8"
+  },
+  {
+    "tag": "v11.6.9",
+    "date": "2026-03-28",
+    "commit": "97d866a",
+    "subject": "11.6.9",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.6.9"
+  },
+  {
+    "tag": "v11.7.0",
+    "date": "2026-03-29",
+    "commit": "f6a8456",
+    "subject": "11.7.0",
+    "commitCount": 4,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.7.0"
+  },
+  {
+    "tag": "v11.7.1",
+    "date": "2026-03-31",
+    "commit": "8ff8603",
+    "subject": "11.7.1",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.7.1"
+  },
+  {
+    "tag": "v11.7.2",
+    "date": "2026-04-01",
+    "commit": "dd56c70",
+    "subject": "pgsql index",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.7.2"
+  },
+  {
+    "tag": "v11.7.3",
+    "date": "2026-04-02",
+    "commit": "1bf0f33",
+    "subject": "freesql verify by redis",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.7.3"
+  },
+  {
+    "tag": "v11.7.5",
+    "date": "2026-04-02",
+    "commit": "5538cf5",
+    "subject": "11.7.5",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.7.5"
+  },
+  {
+    "tag": "v11.7.6",
+    "date": "2026-04-03",
+    "commit": "434e7f4",
+    "subject": "freesql init retry, youchuan relax action, defalut bandwords",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.7.6"
+  },
+  {
+    "tag": "v11.8.0",
+    "date": "2026-04-03",
+    "commit": "754845d",
+    "subject": "youchun offi x5, 11.8.0",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.8.0"
+  },
+  {
+    "tag": "v11.8.1",
+    "date": "2026-04-15",
+    "commit": "4a352e5",
+    "subject": "11.8.1",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.8.1"
+  },
+  {
+    "tag": "v11.8.2",
+    "date": "2026-04-17",
+    "commit": "f9f33c1",
+    "subject": "fix: 11.8.2, offi describe, 429, error",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.8.2"
+  },
+  {
+    "tag": "v11.8.3",
+    "date": "2026-04-20",
+    "commit": "27e5a3d",
+    "subject": "11.8.3",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.8.3"
+  },
+  {
+    "tag": "v11.8.5",
+    "date": "2026-04-24",
+    "commit": "e9aa2d5",
+    "subject": "11.8.5",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.8.5"
+  },
+  {
+    "tag": "v11.9.0",
+    "date": "2026-05-08",
+    "commit": "bed48e3",
+    "subject": "v8/v8.1",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.9.0"
+  },
+  {
+    "tag": "v11.9.1",
+    "date": "2026-05-09",
+    "commit": "457e6d3",
+    "subject": "accounts enable, 11.9.1",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.9.1"
+  },
+  {
+    "tag": "v11.9.2",
+    "date": "2026-05-14",
+    "commit": "8ff30d2",
+    "subject": "v11.9.2",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.9.2"
+  },
+  {
+    "tag": "v11.9.3",
+    "date": "2026-05-14",
+    "commit": "c768c56",
+    "subject": "11.9.3",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.9.3"
+  },
+  {
+    "tag": "v11.9.4",
+    "date": "2026-05-29",
+    "commit": "844b892",
+    "subject": "11.9.4",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.9.4"
+  },
+  {
+    "tag": "v11.9.5",
+    "date": "2026-05-30",
+    "commit": "e43a1a0",
+    "subject": "s3",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.9.5"
+  },
+  {
+    "tag": "v11.9.6",
+    "date": "2026-06-01",
+    "commit": "c0c453f",
+    "subject": "fix: seed bug, 11.9.6",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.9.6"
+  },
+  {
+    "tag": "v11.9.7",
+    "date": "2026-06-09",
+    "commit": "75ebcc6",
+    "subject": "11.9.7",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.9.7"
+  },
+  {
+    "tag": "v11.9.8",
+    "date": "2026-06-16",
+    "commit": "7c8dcdc",
+    "subject": "11.9.8",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.9.8"
+  },
+  {
+    "tag": "v11.9.9",
+    "date": "2026-07-01",
+    "commit": "507c83c",
+    "subject": "Merge branch 'main' of https://github.com/trueai-org/midjourney-proxy",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.9.9"
+  },
+  {
+    "tag": "v11.9.10",
+    "date": "2026-07-01",
+    "commit": "5b05b72",
+    "subject": "11.9.10",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.9.10"
+  },
+  {
+    "tag": "v11.9.11",
+    "date": "2026-07-01",
+    "commit": "c374444",
+    "subject": "11.9.11",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.9.11"
+  },
+  {
+    "tag": "v11.9.12",
+    "date": "2026-07-01",
+    "commit": "8d85407",
+    "subject": "Merge branch 'main' of https://github.com/trueai-org/midjourney-proxy",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.9.12"
+  },
+  {
+    "tag": "v11.9.13",
+    "date": "2026-07-06",
+    "commit": "5e6490a",
+    "subject": "fix: youchuan cdn2",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.9.13"
+  },
+  {
+    "tag": "v11.10.1",
+    "date": "2026-07-07",
+    "commit": "b4d65e5",
+    "subject": "11.10.1",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.10.1"
+  },
+  {
+    "tag": "v11.10.2",
+    "date": "2026-08-03",
+    "commit": "b04beaf",
+    "subject": "11.10.2",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.10.2"
+  },
+  {
+    "tag": "v11.10.3",
+    "date": "2026-08-03",
+    "commit": "ed32197",
+    "subject": "11.10.3",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.10.3"
+  },
+  {
+    "tag": "v11.10.4",
+    "date": "2026-08-10",
+    "commit": "e07277e",
+    "subject": "11.10.4",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.10.4"
+  },
+  {
+    "tag": "v11.11.0",
+    "date": "2026-09-01",
+    "commit": "224bae2",
+    "subject": "11.11.0",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.11.0"
+  },
+  {
+    "tag": "v11.11.1",
+    "date": "2026-09-10",
+    "commit": "4bed81b",
+    "subject": "11.11.1",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.11.1"
+  },
+  {
+    "tag": "v11.11.2",
+    "date": "2026-09-16",
+    "commit": "0f87175",
+    "subject": "feat(setting): 添加自定义垫图替换规则",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.11.2"
+  },
+  {
+    "tag": "v11.11.3",
+    "date": "2026-10-09",
+    "commit": "3c64f99",
+    "subject": "feat(setting): 添加自定义垫图替换规则",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.11.3"
+  },
+  {
+    "tag": "v11.11.4",
+    "date": "2026-10-20",
+    "commit": "943a678",
+    "subject": "feat(setting): 添加输出链接替换规则",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.11.4"
+  },
+  {
+    "tag": "v11.11.5",
+    "date": "2026-10-22",
+    "commit": "d7e2a4e",
+    "subject": "chore(version): 升级程序集版本号至 11.11.5",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v11.11.5"
+  },
+  {
+    "tag": "v12.0.1",
+    "date": "2026-10-22",
+    "commit": "75b4e88",
+    "subject": "fix(youchuan): 修正编辑画布尺寸与高清操作",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v12.0.1"
+  },
+  {
+    "tag": "v12.0.2",
+    "date": "2026-10-22",
+    "commit": "646f0bc",
+    "subject": "（提交说明已按文档规范省略）",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v12.0.2"
+  },
+  {
+    "tag": "v12.0.3",
+    "date": "2026-10-24",
+    "commit": "33de773",
+    "subject": "fix(image): 带 query 的 URL 优先 HEAD 探测图片后缀",
+    "commitCount": 6,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v12.0.3"
+  },
+  {
+    "tag": "v12.0.4",
+    "date": "2026-10-24",
+    "commit": "c414ba3",
+    "subject": "feat(account|api): 支持悠船账号 Excel 导入并兼容多认证头",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v12.0.4"
+  },
+  {
+    "tag": "v12.1.0",
+    "date": "2026-10-26",
+    "commit": "3cb9d9b",
+    "subject": "build(config): 清理 csproj 中的重复版本配置并将程序集版本对齐至 12.1.0",
+    "commitCount": 5,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v12.1.0"
+  },
+  {
+    "tag": "v12.1.1",
+    "date": "2026-10-26",
+    "commit": "2cbee37",
+    "subject": "perf(account): 通过 Redis pipeline 批量加载账号列表运行态快照",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v12.1.1"
+  },
+  {
+    "tag": "v12.1.2",
+    "date": "2026-10-26",
+    "commit": "3dd4b5d",
+    "subject": "chore(build): 解决方案接入 Redis 测试项目并更新子模块",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v12.1.2"
+  },
+  {
+    "tag": "v12.1.3",
+    "date": "2026-10-27",
+    "commit": "51dbaff",
+    "subject": "perf(services): 领导选举改用 TryLock 避免 Redis 命令风暴",
+    "commitCount": 1,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v12.1.3"
+  },
+  {
+    "tag": "v12.1.4",
+    "date": "2026-10-27",
+    "commit": "c3318f7",
+    "subject": "（提交说明已按文档规范省略）",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v12.1.4"
+  },
+  {
+    "tag": "v12.1.5",
+    "date": "2026-10-28",
+    "commit": "4ed33d4",
+    "subject": "12.1.5",
+    "commitCount": 3,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v12.1.5"
+  },
+  {
+    "tag": "v12.1.6",
+    "date": "2026-10-28",
+    "commit": "22bc95b",
+    "subject": "build(api): 升级版本号至 12.1.6 并同步前端构建产物",
+    "commitCount": 2,
+    "url": "https://github.com/trueai-org/midjourney-proxy/releases/tag/v12.1.6"
+  }
+]

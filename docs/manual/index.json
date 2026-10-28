@@ -1,0 +1,167 @@
+[
+  {
+    "id": "en-entry",
+    "title": "Manual (English Entry)",
+    "path": "en/README.md",
+    "lang": "en",
+    "tags": ["entry", "navigation", "english"],
+    "summary": "英文入口页，提供手册导航与快速开始摘要。",
+    "order": 0,
+    "version": "v12.1.6",
+    "lastUpdated": "2026-10-28"
+  },
+  {
+    "id": "index",
+    "title": "Midjourney Proxy 使用手册",
+    "path": "index.md",
+    "lang": "zh-CN",
+    "tags": ["首页", "导航", "阅读路径"],
+    "summary": "手册首页，说明适用版本、读者、前置条件、阅读路径与章节导航。",
+    "order": 1,
+    "version": "v12.1.6",
+    "lastUpdated": "2026-10-28"
+  },
+  {
+    "id": "01-overview",
+    "title": "01 产品概览",
+    "path": "01-overview.md",
+    "lang": "zh-CN",
+    "tags": ["产品定位", "绘图后端", "能力矩阵", "运行形态", "仓库结构"],
+    "summary": "介绍产品定位、三种绘图后端、能力矩阵、运行形态与仓库结构。",
+    "order": 2,
+    "version": "v12.1.6",
+    "lastUpdated": "2026-10-28"
+  },
+  {
+    "id": "02-quick-start",
+    "title": "02 快速开始",
+    "path": "02-quick-start.md",
+    "lang": "zh-CN",
+    "tags": ["快速开始", "免安装包", "Docker", "首次登录", "安全初始化"],
+    "summary": "从零启动服务，完成首次登录与安全初始化，并做最小可用验证。",
+    "order": 3,
+    "version": "v12.1.6",
+    "lastUpdated": "2026-10-28"
+  },
+  {
+    "id": "03-deployment",
+    "title": "03 部署",
+    "path": "03-deployment.md",
+    "lang": "zh-CN",
+    "tags": ["部署", "Docker Compose", "端口", "挂载", "反向代理", "Consul", "集群", "IIS"],
+    "summary": "覆盖容器编排、镜像与端口、目录挂载、反向代理、集群部署与在线升级。",
+    "order": 4,
+    "version": "v12.1.6",
+    "lastUpdated": "2026-10-28"
+  },
+  {
+    "id": "04-configuration",
+    "title": "04 配置",
+    "path": "04-configuration.md",
+    "lang": "zh-CN",
+    "tags": ["配置", "数据库", "Redis", "存储", "代理", "翻译", "通知", "限流", "演示模式"],
+    "summary": "说明配置来源与优先级，以及数据库、Redis、存储、代理、限流等配置域。",
+    "order": 5,
+    "version": "v12.1.6",
+    "lastUpdated": "2026-10-28"
+  },
+  {
+    "id": "05-accounts",
+    "title": "05 账号管理",
+    "path": "05-accounts.md",
+    "lang": "zh-CN",
+    "tags": ["账号", "账号池", "并发", "队列", "速度模式", "垂直领域", "Cloudflare", "2FA", "Excel 导入"],
+    "summary": "说明三类账号接入、账号池与选号、并发队列、验证码与批量导入等维护动作。",
+    "order": 6,
+    "version": "v12.1.6",
+    "lastUpdated": "2026-10-28"
+  },
+  {
+    "id": "06-api-reference",
+    "title": "06 API 参考",
+    "path": "06-api-reference.md",
+    "lang": "zh-CN",
+    "tags": ["API", "鉴权", "提交接口", "任务查询", "回调", "限流"],
+    "summary": "描述鉴权与路径前缀、提交与任务接口、任务对象、回调以及错误与限流。",
+    "order": 7,
+    "version": "v12.1.6",
+    "lastUpdated": "2026-10-28"
+  },
+  {
+    "id": "07-admin-console",
+    "title": "07 管理后台",
+    "path": "07-admin-console.md",
+    "lang": "zh-CN",
+    "tags": ["管理后台", "账号管理", "用户管理", "任务查询", "系统设置", "日志探针"],
+    "summary": "按页面介绍管理后台的登录、账号与用户管理、任务查询、设置与日志查看。",
+    "order": 8,
+    "version": "v12.1.6",
+    "lastUpdated": "2026-10-28"
+  },
+  {
+    "id": "08-operations",
+    "title": "08 运维",
+    "path": "08-operations.md",
+    "lang": "zh-CN",
+    "tags": ["运维", "日志", "健康检查", "备份", "迁移", "调优", "告警", "升级回滚", "安全加固"],
+    "summary": "覆盖日志、健康检查、备份恢复、数据迁移、性能调优、告警与升级回滚。",
+    "order": 9,
+    "version": "v12.1.6",
+    "lastUpdated": "2026-10-28"
+  },
+  {
+    "id": "09-troubleshooting",
+    "title": "09 故障排查",
+    "path": "09-troubleshooting.md",
+    "lang": "zh-CN",
+    "tags": ["故障排查", "账号上线", "Cloudflare", "任务超时", "队列", "404", "回调"],
+    "summary": "按现象给出账号、验证码、任务、队列、图片访问、依赖与回调的排查路径。",
+    "order": 10,
+    "version": "v12.1.6",
+    "lastUpdated": "2026-10-28"
+  },
+  {
+    "id": "10-architecture",
+    "title": "10 架构说明",
+    "path": "10-architecture.md",
+    "lang": "zh-CN",
+    "tags": ["架构", "请求链路", "任务状态机", "账号选择", "Redis 队列", "分布式", "Consul"],
+    "summary": "说明请求链路、任务状态机、账号选择、队列、分布式部署与存储回调关系。",
+    "order": 11,
+    "version": "v12.1.6",
+    "lastUpdated": "2026-10-28"
+  },
+  {
+    "id": "11-faq-glossary",
+    "title": "11 FAQ 与术语表",
+    "path": "11-faq-glossary.md",
+    "lang": "zh-CN",
+    "tags": ["FAQ", "术语表", "常见问题"],
+    "summary": "汇总高频问题与统一术语，便于快速定位答案与保持表述一致。",
+    "order": 12,
+    "version": "v12.1.6",
+    "lastUpdated": "2026-10-28"
+  },
+  {
+    "id": "maintenance",
+    "title": "手册维护指南",
+    "path": "MAINTENANCE.md",
+    "lang": "zh-CN",
+    "tags": ["维护", "版本", "升级流程", "截图规范", "提交边界"],
+    "summary": "说明版本口径、升级步骤、维护命令、截图规范与提交边界。",
+    "order": 13,
+    "version": "v12.1.6",
+    "lastUpdated": "2026-10-28"
+  },
+  {
+    "id": "agents",
+    "title": "文档维护与 AI 生成规则",
+    "path": "AGENTS.md",
+    "lang": "zh-CN",
+    "tags": ["维护", "AI", "生成规则"],
+    "summary": "约定手册的目录职责、生成与修改规则、定期维护节奏，以及 AI 参与文档工作的步骤与禁止事项。",
+    "order": 14,
+    "version": "v12.1.6",
+    "lastUpdated": "2026-10-28"
+  }
+]

@@ -18,15 +18,13 @@ For drawing requests, contact group admins. Everyone in the group is highly skil
 
 ## Online Preview
 
-The public interface runs in slow mode, with free API access. The account pool is sponsored; please use responsibly.
+Public demo mode (read-only). No credentials are published.
 
 - Admin panel: <https://ai.trueai.org>
-- Account password: `None`
 - Public API: <https://ai.trueai.org/mj>
-- API documentation: <https://ai.trueai.org/swagger>
-- API key: `None`
-- CloudFlare automatic verification server: <http://47.76.110.222:8081>
-- CloudFlare automatic verification server documentation: <http://47.76.110.222:8081/swagger>
+- API documentation: <https://ai.trueai.org/swagger> (restored after the public demo site is updated; fixed locally — rely on your actual deployment)
+- CloudFlare automatic verification server: `http://47.76.110.222:8081`
+- CloudFlare automatic verification server documentation: `http://47.76.110.222:8081/swagger`
 
 ## Preview Screenshots
 
@@ -54,11 +52,11 @@ The public interface runs in slow mode, with free API access. The account pool i
 
 Many thanks to the sponsors and community members for their help and support!
 
+<a href="https://huanwangai.com" target="_blank">HuanWang AI</a>
 <a href="https://goapi.gptnb.ai"><img src="https://img.stqu.me/images/2023/06/26/favicon.png" style="width: 60px;"></a>
 <a href="https://d.goamzai.com" target="_blank"><img src="https://d.goamzai.com/logo.png" style="width: 60px;"></a>
 <a href="https://api.ephone.ai" target="_blank"><img src="https://api.iowen.cn/favicon/supernormal.com.png" style="width: 60px;"></a>
 <a href="https://api.mjdjourney.cn" target="_blank"><img src="https://cdn.optiai.cn/file/upload/2024/08/05/1820477746069901312.png?x-oss-process=image/resize,p_25/format,webp" style="width: 60px;"></a>
-<a href="https://rixapi.com" target="_blank"><img src="https://img.fy6b.com/2024/08/23/53d7e54cc31a2.png" style="width: 60px;"></a>
 
 ## Security Policy
 

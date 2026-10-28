@@ -4,6 +4,13 @@
 
 代理 Midjourney 的 Discord 频道，通过 API 绘图，支持图片、视频一键换脸，公益项目，提供免费绘图接口。
 
+## 使用手册
+
+完整手册覆盖部署、配置、账号管理、API 参考、管理后台、运维、故障排查与架构说明。
+
+- [中文使用手册](manual/index.md)
+- [英文手册入口](manual/en/README.md)
+
 ## 交流群
 
 如果使用上和部署上有什么疑问，欢迎加入交流群，一起讨论和解决问题。
@@ -17,15 +24,13 @@
 
 ## 在线预览
 
-公益接口为慢速模式，接口免费调用，账号池由赞助者提供，请大家合理使用。
+公开演示模式（只读），不公布任何凭据。
 
 - 管理后台：<https://ai.trueai.org>
-- 账号密码：`无`
 - 公益接口：<https://ai.trueai.org/mj>
-- 接口文档：<https://ai.trueai.org/swagger>
-- 接口密钥：`无`
-- CloudFlare 自动验证服务器地址：<http://47.76.110.222:8081>
-- CloudFlare 自动验证服务器文档：<http://47.76.110.222:8081/swagger>
+- 接口文档：<https://ai.trueai.org/swagger>（线上演示站更新后恢复；本地已修复，以实际部署为准）
+- CloudFlare 自动验证服务器地址：`http://47.76.110.222:8081`
+- CloudFlare 自动验证服务器文档：`http://47.76.110.222:8081/swagger`
 
 ## 预览截图
 
@@ -53,11 +58,11 @@
 
 非常感谢赞助商和群友的帮助和支持，万分感谢！
 
+<a href="https://huanwangai.com" target="_blank">HuanWang AI</a>
 <a href="https://goapi.gptnb.ai"><img src="https://img.stqu.me/images/2023/06/26/favicon.png" style="width: 60px;"></a>
 <a href="https://d.goamzai.com" target="_blank"><img src="https://d.goamzai.com/logo.png" style="width: 60px;"></a>
 <a href="https://api.ephone.ai" target="_blank"><img src="https://api.iowen.cn/favicon/supernormal.com.png" style="width: 60px;"></a>
 <a href="https://api.mjdjourney.cn" target="_blank"><img src="https://cdn.optiai.cn/file/upload/2024/08/05/1820477746069901312.png?x-oss-process=image/resize,p_25/format,webp" style="width: 60px;"></a>
-<a href="https://rixapi.com" target="_blank"><img src="https://img.fy6b.com/2024/08/23/53d7e54cc31a2.png" style="width: 60px;"></a>
 
 ## 安全协议
 

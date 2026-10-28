@@ -1,7 +1,7 @@
 ## 获取discord配置参数
 
 ### 1. 获取用户Token
-进入频道，打开network，刷新页面，找到 `messages` 的请求，这里的 authorization 即用户Token，后续设置到 `mj.discord.user-token`
+进入频道，打开network，刷新页面，找到 `messages` 的请求，这里的 authorization 即用户Token，在管理后台添加 Discord 账号时填写 User Token
 
 ![User Token](img_8.png)
 

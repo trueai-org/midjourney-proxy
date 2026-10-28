@@ -1,4 +1,4 @@
-﻿// Midjourney Proxy - Proxy for Midjourney's Discord, enabling AI drawings via API with one-click face swap. A free, non-profit drawing API project.
+﻿﻿// Midjourney Proxy - Proxy for Midjourney's Discord, enabling AI drawings via API with one-click face swap. A free, non-profit drawing API project.
 // Copyright (C) 2024 trueai.org
 
 // This program is free software: you can redistribute it and/or modify
@@ -972,7 +972,9 @@ namespace Midjourney.API.Controllers
         [HttpPost("account-import/youchuan/preview")]
         [Consumes("multipart/form-data")]
         [RequestSizeLimit(YouChuanImportLimits.MaxFileBytes)]
-        public Result<YouChuanImportPreviewResult> PreviewYouChuanAccountImport([FromForm] IFormFile file)
+        // 注意：IFormFile 不能标注 [FromForm]，否则 Swashbuckle 生成文档时报 SwaggerGeneratorException；
+        // [ApiController] 会把 IFormFile 自动推断为表单文件绑定，配合 [Consumes] 行为不受影响。
+        public Result<YouChuanImportPreviewResult> PreviewYouChuanAccountImport(IFormFile file)
         {
             if (_isAnonymous)
             {
