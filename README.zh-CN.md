@@ -2,20 +2,14 @@
 
 代理 Midjourney 的 Discord 频道、悠船与 Midjourney 官网，通过统一的 HTTP API 绘图，支持图片、视频一键换脸，公益项目，提供免费绘图接口。
 
-市面上最强大，最完整，功能最全面、完全免费开源的 Midjourney API 项目。
+全球最大、最完整、功能最全的免费开源 Midjourney API，日绘图 100 万+！
 
-🦄 全球最大的 Midjourney 绘图 API，日绘图 100万+ 🐂！
+## ⚡ 环网 AI · Midjourney 企业级 API
 
-⭐ 如果觉得项目不错，请一定帮忙点个 `Star`，万分感谢！
+**全程 FAST · 120 超高并发 · 永不封号 · 永久留存 · 永远随时衍生**
 
-## 👍👍 Midjourney 企业级 API
-
-**极速响应 · 快速出图 · 价格实惠 · 高并发 · 不封号 · 不删图。**
-
-**企业级全局快速通道稳定出图。**
-
-- https://huanwangai.com
-- https://api.huanwangai.com
+- 官网入口：<https://huanwangai.com>
+- API 控制台：<https://api.huanwangai.com>
 
 <img src="./docs/screenshots/api.huanwangai.com.png" alt="Enterprise API" width="500"/>
 <img src="./docs/screenshots/huanwangai.com.png" alt="Enterprise API" width="500"/>
@@ -39,11 +33,11 @@
 4. 至少添加一个绘图账号，等待账号上线。
 5. 提交一个最小绘图请求，确认任务结果能够正常返回。
 
-## 👍👍 Discord 官方镜像站
+## ⚡ Discord 官方镜像站
 
-**支持 Discord 所有指令！**
+**Discord 全指令支持，开箱即用。**
 
-- <https://trueai.org>
+- 站点入口：<https://trueai.org>
 - 接入指南：<https://trueai-org.feishu.cn/wiki/VvEZwL0X8i14wGkXcfrc85w7nFU>
 
 <img src="./docs/screenshots/trueai.org-mj.png" alt="trueai.org" width="500"/>

@@ -2,20 +2,14 @@
 
 A free, open-source Midjourney API that puts Discord, YouChuan and the Midjourney official website behind one HTTP interface, with one-click face swap for images and videos.
 
-The most powerful, complete and full-featured free open-source Midjourney API project available.
+The world's largest and most complete free open-source Midjourney API — the most powerful and full-featured, generating 1,000,000+ images per day!
 
-🦄 The world's largest Midjourney drawing API, generating 1,000,000+ images per day 🐂!
+## ⚡ Huanwang AI · Enterprise Midjourney API
 
-⭐ If you find this project useful, please give it a `Star` — thank you!
+**Always-on FAST · 120× ultra-high concurrency · Never banned · Permanent retention · Derivatives available anytime, forever**
 
-## 👍👍 Enterprise Midjourney API
-
-**Fast response · Quick rendering · Affordable · High concurrency · No account bans · No image deletion.**
-
-**Stable rendering through the enterprise-grade global fast channel.**
-
-- https://huanwangai.com
-- https://api.huanwangai.com
+- Website: <https://huanwangai.com>
+- API console: <https://api.huanwangai.com>
 
 <img src="./docs/screenshots/api.huanwangai.com.png" alt="Enterprise API" width="500"/>
 <img src="./docs/screenshots/huanwangai.com.png" alt="Enterprise API" width="500"/>
@@ -39,11 +33,11 @@ The most powerful, complete and full-featured free open-source Midjourney API pr
 4. Add at least one drawing account and wait until it comes online.
 5. Submit a minimal drawing request and confirm that the task result comes back.
 
-## 👍👍 Discord Official Mirror
+## ⚡ Discord Official Mirror
 
-**Every Discord command is supported!**
+**Every Discord command, ready out of the box.**
 
-- <https://trueai.org>
+- Site: <https://trueai.org>
 - Integration guide: <https://trueai-org.feishu.cn/wiki/VvEZwL0X8i14wGkXcfrc85w7nFU>
 
 <img src="./docs/screenshots/trueai.org-mj.png" alt="trueai.org" width="500"/>
