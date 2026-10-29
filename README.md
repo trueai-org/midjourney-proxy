@@ -12,7 +12,6 @@ The world's largest and most complete free open-source Midjourney API — the mo
 - API console: <https://api.huanwangai.com>
 
 <img src="./docs/screenshots/api.huanwangai.com.png" alt="Enterprise API" width="500"/>
-<img src="./docs/screenshots/huanwangai.com.png" alt="Enterprise API" width="500"/>
 
 **English** | [中文](README.zh-CN.md)
 
@@ -22,8 +21,8 @@ The world's largest and most complete free open-source Midjourney API — the mo
 - [Chinese manual](docs/manual/index.md)
 - [Documentation maintenance & AI generation rules](docs/manual/AGENTS.md)
 - [Release archive](docs/manual/appendix/releases.md)
-- API reference: [docs/api.md](docs/api.md)
-- Configuration reference: [docs/appsettings.md](docs/appsettings.md)
+- [API reference](docs/manual/06-api-reference.md)
+- [Configuration reference](docs/manual/04-configuration.md)
 
 ### Quick start
 
@@ -35,12 +34,7 @@ The world's largest and most complete free open-source Midjourney API — the mo
 
 ## ⚡ Discord Official Mirror
 
-**Every Discord command, ready out of the box.**
-
-- Site: <https://trueai.org>
-- Integration guide: <https://trueai-org.feishu.cn/wiki/VvEZwL0X8i14wGkXcfrc85w7nFU>
-
-<img src="./docs/screenshots/trueai.org-mj.png" alt="trueai.org" width="500"/>
+All Discord commands supported, ready out of the box: <https://trueai.org>
 
 ## Community
 

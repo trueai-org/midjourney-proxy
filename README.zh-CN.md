@@ -12,7 +12,6 @@
 - API 控制台：<https://api.huanwangai.com>
 
 <img src="./docs/screenshots/api.huanwangai.com.png" alt="Enterprise API" width="500"/>
-<img src="./docs/screenshots/huanwangai.com.png" alt="Enterprise API" width="500"/>
 
 [English](README.md) | **中文**
 
@@ -22,8 +21,8 @@
 - [英文手册入口](docs/manual/en/README.md)
 - [文档维护与 AI 生成规则](docs/manual/AGENTS.md)
 - [发布归档](docs/manual/appendix/releases.md)
-- 接口文档：[docs/api.md](docs/api.md)
-- 参数配置：[docs/appsettings.md](docs/appsettings.md)
+- [接口参考](docs/manual/06-api-reference.md)
+- [参数配置](docs/manual/04-configuration.md)
 
 ### 快速开始摘要
 
@@ -35,12 +34,7 @@
 
 ## ⚡ Discord 官方镜像站
 
-**Discord 全指令支持，开箱即用。**
-
-- 站点入口：<https://trueai.org>
-- 接入指南：<https://trueai-org.feishu.cn/wiki/VvEZwL0X8i14wGkXcfrc85w7nFU>
-
-<img src="./docs/screenshots/trueai.org-mj.png" alt="trueai.org" width="500"/>
+全指令支持，开箱即用：<https://trueai.org>
 
 ## 交流群
 

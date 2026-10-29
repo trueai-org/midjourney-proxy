@@ -477,7 +477,6 @@ function checkReadmes() {
     'https://huanwangai.com',
     'https://api.huanwangai.com',
     'api.huanwangai.com.png',
-    'huanwangai.com.png',
   ]);
 
   checkFirst40(path.join(REPO_ROOT, 'README.zh-CN.md'), [
@@ -485,7 +484,6 @@ function checkReadmes() {
     'https://huanwangai.com',
     'https://api.huanwangai.com',
     'api.huanwangai.com.png',
-    'huanwangai.com.png',
   ]);
 
   const alias = path.join(REPO_ROOT, 'README.en.md');
