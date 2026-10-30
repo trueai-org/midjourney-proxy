@@ -6,7 +6,7 @@
 
 ## ⚡ 环网 AI · Midjourney 企业级 API
 
-**全程 FAST · 120 超高并发 · 永不封号 · 永久留存 · 永远随时衍生**
+**全程 FAST · 120 超高并发 · 永不封号 · 永久留存 · 永远随时衍生 · 原生支持 MCP**
 
 - 官网入口：<https://huanwangai.com>
 - API 控制台：<https://api.huanwangai.com>
