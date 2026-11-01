@@ -1,4 +1,4 @@
-﻿// Midjourney Proxy - Proxy for Midjourney's Discord, enabling AI drawings via API with one-click face swap. A free, non-profit drawing API project.
+﻿﻿// Midjourney Proxy - Proxy for Midjourney's Discord, enabling AI drawings via API with one-click face swap. A free, non-profit drawing API project.
 // Copyright (C) 2024 trueai.org
 
 // This program is free software: you can redistribute it and/or modify
@@ -99,6 +99,11 @@ namespace Midjourney.Base.Data
         /// 最终提示.
         /// </summary>
         public const string TASK_PROPERTY_FINAL_PROMPT = "finalPrompt";
+
+        /// <summary>
+        /// 图生文任务实际成功调用的上游接口次数（用于按实际次数累计每日图生文额度）。
+        /// </summary>
+        public const string TASK_PROPERTY_DESCRIBE_CALL_COUNT = "describeCallCount";
 
         /// <summary>
         /// 是否为重制 remix 模式

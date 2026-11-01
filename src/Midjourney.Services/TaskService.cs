@@ -1013,6 +1013,13 @@ namespace Midjourney.Services
             task.IsOfficial = targetTask.IsOfficial;
             task.IsPartner = targetTask.IsPartner;
 
+            // 动作类任务（如 describe 重试）没有 language 入参，继承父任务语言，保证翻译口径与原请求一致；
+            // 仅 describe 任务需要该口径，避免影响 PicReader 生成的 IMAGINE 等任务
+            if (task.Action == TaskAction.DESCRIBE)
+            {
+                task.Language = targetTask.Language;
+            }
+
             var messageFlags = targetTask.GetProperty<string>(Constants.TASK_PROPERTY_FLAGS, default)?.ToInt() ?? 0;
             var messageId = targetTask.GetProperty<string>(Constants.TASK_PROPERTY_MESSAGE_ID, default);
 

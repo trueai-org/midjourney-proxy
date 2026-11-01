@@ -85,7 +85,7 @@
     "summary": "描述鉴权与路径前缀、提交与任务接口、任务对象、回调以及错误与限流。",
     "order": 7,
     "version": "v12.1.6",
-    "lastUpdated": "2026-10-28"
+    "lastUpdated": "2026-11-01"
   },
   {
     "id": "07-admin-console",
@@ -96,7 +96,7 @@
     "summary": "按页面介绍管理后台的登录、账号与用户管理、任务查询、设置与日志查看。",
     "order": 8,
     "version": "v12.1.6",
-    "lastUpdated": "2026-10-28"
+    "lastUpdated": "2026-11-01"
   },
   {
     "id": "08-operations",

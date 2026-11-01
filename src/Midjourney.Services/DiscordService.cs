@@ -2282,7 +2282,7 @@ namespace Midjourney.Services
                                     {
                                         await info.SuccessAsync();
                                     }
-                                    else
+                                    else if (info.Status != TaskStatus.FAILURE)
                                     {
                                         info.Fail("操作失败，请稍后重试");
                                     }
@@ -2603,7 +2603,10 @@ namespace Midjourney.Services
                         // 图生文
                         if (info.Action == TaskAction.DESCRIBE)
                         {
-                            CounterHelper.DescribeIncrement(Account);
+                            // 悠船开启“返回 4 组词”后一次任务会并行调用多次上游接口，需按实际成功次数累计每日额度；
+                            // 其它路径未写入该属性，默认 1 次，与改造前一致。
+                            var describeCallCount = info.GetProperty(Constants.TASK_PROPERTY_DESCRIBE_CALL_COUNT, 1);
+                            CounterHelper.DescribeIncrement(Account, describeCallCount);
                         }
                         // 记录今日 relax / fast 次数
                         else if (info.Action != TaskAction.UPSCALE)

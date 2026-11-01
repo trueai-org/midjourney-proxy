@@ -233,6 +233,20 @@ namespace Midjourney.Base.Models
         public bool EnableYouChuanDescribeLink { get; set; } = false;
 
         /// <summary>
+        /// 悠船图生文返回 4 组词
+        /// 开启后同一次图生文任务会并行调用 4 次悠船图生文接口，合并去重后最多返回 4 组提示词，
+        /// 并按实际调用次数消耗悠船每日 200 次图生文额度；关闭时只调用 1 次并返回 1 组。默认关闭。
+        /// </summary>
+        public bool EnableYouChuanDescribeMultiGroups { get; set; } = false;
+
+        /// <summary>
+        /// 悠船图生文翻译英文
+        /// 开启后，当请求未指定中文（language 不是 zh/zh_cn）时，使用系统配置的翻译服务（百度/GPT）把悠船图生文结果转为英文；
+        /// 请求 language 为 zh/zh_cn 时保持原逻辑翻译为中文；未配置翻译服务时保留原文。默认关闭。
+        /// </summary>
+        public bool TranslateYouChuanDescribeEnglish { get; set; } = false;
+
+        /// <summary>
         /// 开启视频生成功能
         /// </summary>
         public bool EnableVideo { get; set; } = true;

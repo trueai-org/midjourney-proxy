@@ -876,7 +876,7 @@ namespace Midjourney.Base.Models
             {
                 // 如果 language 是 zh 或 zh_cn 且配置了翻译服务，则翻译结果
                 var translateService = GlobalConfiguration.TranslateService;
-                if ((Language == "zh" || Language == "zh_cn")
+                if (IsChineseLanguage(Language)
                     && !string.IsNullOrWhiteSpace(finalPrompt)
                     && translateService != null)
                 {
@@ -1241,6 +1241,17 @@ namespace Midjourney.Base.Models
                 Style = 2,
                 Type = 2
             });
+        }
+
+        /// <summary>
+        /// 判断请求语言是否为中文（zh / zh_cn，忽略大小写）。
+        /// </summary>
+        /// <param name="language">请求传入的 language，可能为 null 或空</param>
+        /// <returns>为 zh 或 zh_cn 时返回 true</returns>
+        public static bool IsChineseLanguage(string language)
+        {
+            return string.Equals(language, "zh", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(language, "zh_cn", StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>

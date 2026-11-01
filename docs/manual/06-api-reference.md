@@ -157,6 +157,10 @@
 
 **`POST /mj/submit/describe`**：`base64` 与 `link` 二选一，`link` 必须以 `http://` 或 `https://` 开头；`language` 为 `zh` 或 `zh_cn` 时，任务完成后尝试把结果翻译为中文（是否真正翻译取决于是否配置翻译服务）；支持 `botType` 与 `accountFilter`。
 
+使用悠船账号时，该接口受系统设置「悠船图生文返回 4 组词」影响：开启后同一次任务会并行调用 4 次悠船图生文接口并合并去重，最多返回 4 组提示词，按实际成功调用次数消耗每日图生文额度；关闭时只调用 1 次、返回 1 组。
+
+开启「悠船图生文翻译英文」后，当请求未指定 `language=zh`/`zh_cn` 时，结果会翻译为英文（需配置翻译服务，未配置时保留原文）；请求 `language=zh` 时保持翻译为中文。
+
 **`POST /mj/submit/shorten`**：使用与 `/imagine` 相同的 DTO，但只读取 `prompt`、`botType`、`state`、`notifyHook`、`accountFilter`。完成后缩短后的提示词出现在任务对象中。
 
 ### 提交参数与约束
