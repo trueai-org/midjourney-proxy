@@ -6,7 +6,7 @@ The world's largest and most complete free open-source Midjourney API — the mo
 
 ## ⚡ Huanwang AI · Enterprise Midjourney API
 
-**Always-on FAST · 120× ultra-high concurrency · Never banned · Permanent retention · Derivatives available anytime, forever**
+**Always-on FAST · 120× ultra-high concurrency · Never banned · Permanent retention · Derivatives available anytime, forever · Native MCP support**
 
 - Website: <https://huanwangai.com>
 - API console: <https://api.huanwangai.com>
