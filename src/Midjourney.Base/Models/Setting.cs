@@ -247,6 +247,27 @@ namespace Midjourney.Base.Models
         public bool TranslateYouChuanDescribeEnglish { get; set; } = false;
 
         /// <summary>
+        /// 悠船 MJ 默认版本
+        /// 用户提示词未声明 --v/--version 时，提交悠船前自动追加 --v 指定的版本；留空表示不追加。
+        /// 仅对悠船账号生效，不影响 Discord 和官方账号。
+        /// </summary>
+        public string YouChuanDefaultMjVersion { get; set; }
+
+        /// <summary>
+        /// 悠船 Niji 默认版本
+        /// 用户提示词只写了 --niji 未声明具体版本时，提交悠船前自动补全为 --niji 指定的版本；留空表示不补全。
+        /// 仅对悠船账号生效，不影响 Discord 和官方账号。
+        /// </summary>
+        public string YouChuanDefaultNijiVersion { get; set; }
+
+        /// <summary>
+        /// 悠船自动清除 --hd 高清参数
+        /// 开启后提交悠船前移除提示词中的 --hd，避免高清出图产生额外计费；默认关闭，保留用户传入的 --hd。
+        /// 仅对悠船账号生效，不影响 Discord 和官方账号。
+        /// </summary>
+        public bool EnableYouChuanRemoveHd { get; set; } = false;
+
+        /// <summary>
         /// 开启视频生成功能
         /// </summary>
         public bool EnableVideo { get; set; } = true;
