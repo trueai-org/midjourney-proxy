@@ -113,6 +113,11 @@
         /// <summary>
         /// 重启通知 - 用于 Consul 多节点
         /// </summary>
-        Restart = 10
+        Restart = 10,
+
+        /// <summary>
+        /// 上游订阅同步完成通知 - 用于多节点启动新增账号
+        /// </summary>
+        UpstreamAccountSynced = 12
     }
 }

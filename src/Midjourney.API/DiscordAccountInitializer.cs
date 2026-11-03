@@ -1630,6 +1630,13 @@ namespace Midjourney.API
                         }
                         break;
 
+                    case ENotificationType.UpstreamAccountSynced:
+                        {
+                            // 上游订阅同步产生了新增账号，各节点重新初始化账号，确保新账号尽快启动
+                            await Initialize();
+                        }
+                        break;
+
                     default:
                         break;
                 }

@@ -22,6 +22,7 @@
 // invasion of privacy, or any other unlawful purposes is strictly prohibited.
 // Violation of these terms may result in termination of the license and may subject the violator to legal action.
 
+using System.Text.Json.Serialization;
 using Midjourney.Base.Data;
 using Midjourney.Base.Options;
 using Serilog.Events;
@@ -805,6 +806,12 @@ namespace Midjourney.Base.Models
         /// 预警通知服务
         /// </summary>
         public AlertNotifyService AlertNotify { get; set; } = new();
+
+        /// <summary>
+        /// 上游订阅同步配置。
+        /// 启用后按配置频率从上游代理拉取账号并去重同步到本地账号列表。
+        /// </summary>
+        public UpstreamSubscriptionConfig UpstreamSubscription { get; set; } = new();
     }
 
     /// <summary>
@@ -851,6 +858,89 @@ namespace Midjourney.Base.Models
         /// 可用账号数
         /// </summary>
         public int AvailableAccountCount { get; set; } = 0;
+    }
+
+    /// <summary>
+    /// 上游订阅同步配置。
+    /// 访客模式下会把全部字段置空并序列化为空对象 {}，不返回任何上游地址或 token。
+    /// </summary>
+    public class UpstreamSubscriptionConfig
+    {
+        /// <summary>
+        /// 是否启用上游订阅同步，默认 false。
+        /// </summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public bool? Enable { get; set; } = false;
+
+        /// <summary>
+        /// 同步频率（分钟），默认 5，使用时夹到 1 - 60；空或非法值按 5 处理。
+        /// </summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public int? SyncIntervalMinutes { get; set; } = 5;
+
+        /// <summary>
+        /// 上游列表，可配置多个；为空时不执行同步。
+        /// </summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public List<UpstreamSubscriptionItem> Upstreams { get; set; } = [];
+
+        /// <summary>
+        /// 同步后账号的固定速度模式：FAST / RELAX / TURBO（不区分大小写）。
+        /// 空值、null 或非法值表示不限定固定速度，同步时会把账号的 Mode 清空。
+        /// </summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string DefaultMode { get; set; }
+
+        /// <summary>
+        /// 同步后账号的允许请求速度集合：FAST / RELAX / TURBO（不区分大小写）。
+        /// 空集合表示全部允许，同步时会把账号的 AllowModes 清空；非法项忽略。
+        /// </summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public List<string> DefaultAllowModes { get; set; } = [];
+
+        /// <summary>
+        /// 创建一个匿名的空配置：所有字段置空，序列化为 {}。
+        /// 用于访客模式，确保不暴露上游地址、token、同步频率等任何配置。
+        /// </summary>
+        /// <returns>空配置对象</returns>
+        public static UpstreamSubscriptionConfig CreateMasked()
+        {
+            return new UpstreamSubscriptionConfig
+            {
+                Enable = null,
+                SyncIntervalMinutes = null,
+                Upstreams = null,
+                DefaultMode = null,
+                DefaultAllowModes = null,
+            };
+        }
+    }
+
+    /// <summary>
+    /// 上游订阅项。
+    /// </summary>
+    public class UpstreamSubscriptionItem
+    {
+        /// <summary>
+        /// 上游名称，仅用于日志标识，可空。
+        /// </summary>
+        public string Name { get; set; }
+
+        /// <summary>
+        /// 上游地址，仅支持 http/https；为空时跳过该上游。
+        /// 可只填写上游根地址（如 https://circle.huanwangai.com/），同步时自动补齐 /mj/admin/accounts。
+        /// </summary>
+        public string Url { get; set; }
+
+        /// <summary>
+        /// 上游管理员 token，作为 mj-api-secret 请求头发送；为空时跳过该上游。
+        /// </summary>
+        public string Token { get; set; }
+
+        /// <summary>
+        /// 单条上游是否启用，默认 true。
+        /// </summary>
+        public bool Enable { get; set; } = true;
     }
 
     /// <summary>

@@ -2222,10 +2222,12 @@ namespace Midjourney.API.Controllers
         }
 
         /// <summary>
-        /// 获取系统配置
+        /// 获取系统配置。
+        /// 管理员返回完整配置；访客（<c>_isAnonymous</c>：非管理员且演示模式允许访问）返回脱敏后的配置，
+        /// 其中上游订阅板块只返回空对象 <c>{}</c>，不暴露上游地址、token 等任何配置。
         /// </summary>
-        /// <returns></returns>
-        /// <exception cref="LogicException"></exception>
+        /// <returns>当前系统配置（含升级信息）；访客为脱敏配置</returns>
+        /// <exception cref="LogicException">系统配置为空时抛出，提示重启服务</exception>
         [HttpGet("setting")]
         public Result<Setting> GetSetting()
         {
@@ -2317,6 +2319,9 @@ namespace Midjourney.API.Controllers
                 {
                     model.TwoCaptchaKey = "****";
                 }
+
+                // 上游订阅包含上游地址、token 和同步规则，访客不返回任何内容，只返回 {}
+                model.UpstreamSubscription = UpstreamSubscriptionConfig.CreateMasked();
             }
 
             model.UpgradeInfo = _upgradeService.UpgradeInfo;

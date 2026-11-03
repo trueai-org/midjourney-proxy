@@ -241,6 +241,10 @@ namespace Midjourney.API
                 services.AddSingleton<BannedWordTestService>();
                 services.AddHostedService(provider => provider.GetRequiredService<BannedWordTestService>());
 
+                // 上游订阅同步服务：按配置频率拉取上游账号并去重同步
+                services.AddSingleton<UpstreamSubscriptionSyncService>();
+                services.AddHostedService(provider => provider.GetRequiredService<UpstreamSubscriptionSyncService>());
+
                 // 注册 Consul
                 services.AddSingleton<IConsulService, ConsulService>();
 
