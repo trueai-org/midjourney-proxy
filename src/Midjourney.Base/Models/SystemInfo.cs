@@ -372,11 +372,11 @@ namespace Midjourney.Base.Models
             {
                 var assembly = System.Reflection.Assembly.GetExecutingAssembly();
                 var version = assembly.GetName().Version;
-                return $"V{version?.Major}.{version?.Minor}.{version?.Build}";
+                return $"v{version?.Major}.{version?.Minor}.{version?.Build}";
             }
             catch
             {
-                return "V1.0.0";
+                return "v1.0.0";
             }
         }
 

@@ -39,9 +39,27 @@ namespace Midjourney.Base
     public class GlobalConfiguration
     {
         /// <summary>
-        /// 版本号
+        /// 版本号。
+        /// 统一展示三位（major.minor.build），避免程序集元数据里的四位版本号（如 12.1.9.0）直接暴露到界面。
+        /// Consul 版本比较仍按 Version 解析，三位/四位均可正常工作。
         /// </summary>
-        public static string Version { get; set; } = $"v{(Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly()).GetName().Version}";
+        public static string Version { get; set; } = BuildVersion();
+
+        /// <summary>
+        /// 生成三位版本号字符串
+        /// </summary>
+        /// <returns>形如 v12.1.9 的版本号</returns>
+        private static string BuildVersion()
+        {
+            var version = (Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly()).GetName().Version;
+            if (version == null)
+            {
+                return "v1.0.0";
+            }
+
+            // 程序集版本在元数据中固定为四段，Version.ToString(3) 直接取 major.minor.build
+            return $"v{version.ToString(3)}";
+        }
 
         /// <summary>
         /// 创建一个全局可控的日志级别开关

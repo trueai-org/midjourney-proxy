@@ -1,5 +1,4 @@
-﻿using System.Reflection;
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace Midjourney.Base.Models
 {
@@ -61,9 +60,9 @@ namespace Midjourney.Base.Models
         public string Message { get; set; } = string.Empty;
 
         /// <summary>
-        /// 当前版本
+        /// 当前版本，统一复用全局三位版本号（如 v12.2.0），与界面展示保持一致
         /// </summary>
-        public string CurrentVersion { get; set; } = $"v{(Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly()).GetName().Version}";
+        public string CurrentVersion { get; set; } = GlobalConfiguration.Version;
 
         /// <summary>
         /// 最新版本
