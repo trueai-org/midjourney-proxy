@@ -485,19 +485,14 @@ namespace Midjourney.API
                 return UpstreamAccountSyncResult.Added;
             }
 
-            // 本地存在：只比较/更新受管字段，绝不覆盖并发、队列、备注、登录密码等本地配置
+            // 本地存在：只有凭证（token / cookie）不一致才需要同步。
+            // 账号与 token 一致说明本地已是最新，不再改动启用状态、速度等其他参数。
             var tokenChanged = IsUsableCredential(upstreamAccount.UserToken)
                 && !string.Equals(localAccount.UserToken, upstreamAccount.UserToken, StringComparison.Ordinal);
             var cookieChanged = IsUsableCredential(upstreamAccount.Cookie)
                 && !string.Equals(localAccount.Cookie, upstreamAccount.Cookie, StringComparison.Ordinal);
-            var enableChanged = localAccount.Enable != true;
-            var modeChanged = localAccount.Mode != defaultMode;
 
-            // AllowModes 忽略顺序和重复项后比较，避免上游顺序变化导致无意义的更新
-            var localAllowModes = new HashSet<GenerationSpeedMode>(localAccount.AllowModes ?? new List<GenerationSpeedMode>());
-            var allowModesChanged = !localAllowModes.SetEquals(defaultAllowModes);
-
-            if (!tokenChanged && !cookieChanged && !enableChanged && !modeChanged && !allowModesChanged)
+            if (!tokenChanged && !cookieChanged)
             {
                 return UpstreamAccountSyncResult.Unchanged;
             }
@@ -506,7 +501,7 @@ namespace Midjourney.API
             var newCookie = cookieChanged ? upstreamAccount.Cookie : localAccount.Cookie;
             var newAllowModes = new List<GenerationSpeedMode>(defaultAllowModes);
 
-            // 使用强类型 Set，一次写入全部受管字段；登录密码不参与同步
+            // 凭证变化时写入凭证，并按订阅配置覆盖启用状态与默认速度；登录密码不参与同步
             freeSql.Update<DiscordAccount>()
                 .Set(c => c.UserToken, newUserToken)
                 .Set(c => c.Cookie, newCookie)
