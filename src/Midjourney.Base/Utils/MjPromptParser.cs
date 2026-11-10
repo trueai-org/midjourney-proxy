@@ -700,7 +700,9 @@ namespace Midjourney.Base.Util
 
             // 核心正则: 匹配 --参数名 和可选的值
             // (?=\s+--|$) 前瞻断言确保在下一个参数或结尾处停止
-            var pattern = @"--([a-zA-Z]+)(?:\s+([^-]+?))?(?=\s+--|$)";
+            // A value may contain single hyphens (URLs such as https://a-b.example/x-y.png);
+            // only a following " --" parameter or the end of the prompt ends it.
+            var pattern = @"--([a-zA-Z]+)(?:\s+((?:[^-]|-(?!-))+?))?(?=\s+--|$)";
             var matches = Regex.Matches(prompt, pattern);
             var clean = prompt;
 
