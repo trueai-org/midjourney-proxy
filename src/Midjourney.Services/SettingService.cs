@@ -447,6 +447,7 @@ namespace Midjourney.Services
         /// 管理员显式保存系统配置。
         /// 启用 Consul 时：先以 CAS + Revision 写入 Consul KV，成功后再更新本地缓存和 Current；
         /// 提交的 Revision 与 Consul 当前版本不一致时直接失败，避免旧配置覆盖新配置。
+        /// 当前节点处于 Consul 模式、而本次提交显式关闭 Consul 时：不访问 Consul，直接按单机模式写本地并切换为本地模式。
         /// 未启用 Consul 时：只写本地 data/mj.json，并校验 Revision。
         /// 运行时降级状态不会调用本方法持久化。
         /// 同一进程内的加载和保存串行执行，避免运行时重载覆盖管理员刚保存的配置。
@@ -488,8 +489,18 @@ namespace Midjourney.Services
                 return SaveLocalAsAdmin(setting);
             }
 
-            if (setting.ConsulOptions == null && wasConsulMode)
-                return Result.Fail("Consul 配置不能为空");
+            // 管理员显式关闭 Consul：直接按单机模式写本地并切换为本地模式，不再回写 Consul。
+            // 关闭动作不能依赖 Consul 在线，否则 Consul 停机后节点将永远无法退出 Consul 模式；
+            // 这里只切换当前节点，其他节点仍会继续按各自配置从 Consul 加载共享配置。
+            if (wasConsulMode && !willConsulMode)
+            {
+                var disableResult = SaveLocalAsAdmin(setting);
+                if (disableResult.Success)
+                {
+                    Log.Information("Consul disabled by admin; switched to local mode, revision: {Revision}.", setting.Revision);
+                }
+                return disableResult;
+            }
 
             try
             {
